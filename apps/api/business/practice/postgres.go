@@ -39,7 +39,7 @@ func scan(row scanner) (*State, error) {
 	}
 	// Content is frozen in the saved snapshot. The expanded course must not
 	// invalidate sessions created with the reviewed original 21-word catalog.
-	supportedContent := st.Snapshot.ContentVersion == "starter-21-v1" || st.Snapshot.ContentVersion == ContentVersion
+	supportedContent := st.Snapshot.ContentVersion == "starter-21-v1" || st.Snapshot.ContentVersion == ContentVersion || st.Snapshot.ContentVersion == JourneyContentVersion
 	if len(st.Snapshot.Steps) == 0 || st.Index < 0 || st.Index > len(st.Snapshot.Steps) || !supportedContent || st.Snapshot.GradingVersion != GradingVersion {
 		return nil, ErrContentUnavailable
 	}
@@ -178,6 +178,9 @@ func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, req Start
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
+	}
+	if req.Mode == "journey" {
+		return r.startJourney(ctx, tx, u, req, key, fp, now)
 	}
 	sources := map[string]Source{}
 	if req.Mode == "mistakes" {

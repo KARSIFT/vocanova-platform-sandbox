@@ -22,6 +22,15 @@ const secondary =
   "inline-flex min-h-11 items-center justify-center rounded-lg border border-neutral-300 px-4 py-2 text-base font-semibold text-neutral-800 hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 const NO_DUE_DETAIL = "No words are due. Discover a word to start learning.";
 
+function automaticReviewDateLabel(instant: string, timeZone?: string) {
+  if (!timeZone || !Number.isFinite(Date.parse(instant))) return "Automatic";
+  try {
+    return `Automatic · ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone }).format(new Date(instant))}`;
+  } catch {
+    return "Automatic";
+  }
+}
+
 interface CompletionCheck {
   sessionId: string;
   revision: number;
@@ -49,8 +58,12 @@ export function DailyLessonPlayer({
   const [session, setSession] = useState(initialSession);
   const [dueCount, setDueCount] = useState(initialDueCount);
   const [choice, setChoice] = useState(() => savedChoice(initialSession));
+  const [nextReview, setNextReview] =
+    useState<NonNullable<DailyLessonAction["nextReview"]>>("automatic");
   const [busy, setBusy] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  // Server and first client render intentionally share the undated label.
+  const [reviewTimeZone, setReviewTimeZone] = useState<string>();
   const [error, setError] = useState("");
   const [uncertain, setUncertain] = useState(false);
   const [conflict, setConflict] = useState(false);
@@ -78,6 +91,14 @@ export function DailyLessonPlayer({
       : "loading";
   const completionCanContinue =
     dueCount > 0 || Boolean(completionCheck?.hasSession);
+
+  useEffect(() => {
+    try {
+      setReviewTimeZone(new Intl.DateTimeFormat().resolvedOptions().timeZone);
+    } catch {
+      // Without a usable device zone, keep the honest undated default.
+    }
+  }, []);
 
   useEffect(() => {
     if (session?.id)
@@ -145,6 +166,8 @@ export function DailyLessonPlayer({
     if (savedChoice(next)) setChoice(savedChoice(next));
     else if (next.id !== session?.id || next.currentStep?.id !== step?.id)
       setChoice("");
+    if (next.id !== session?.id || next.currentStep?.id !== step?.id)
+      setNextReview("automatic");
     focusResponse.current = true;
     setSession(next);
   }
@@ -263,6 +286,9 @@ export function DailyLessonPlayer({
         clientActionId: crypto.randomUUID(),
         action,
         ...(action === "answer" ? { choiceId: choice } : {}),
+        ...(action === "continue" && nextReview !== "automatic"
+          ? { nextReview }
+          : {}),
       };
     }
     const request = pending.current;
@@ -334,6 +360,7 @@ export function DailyLessonPlayer({
       pending.current = null;
       setUncertain(false);
       setConflict(false);
+      setNextReview("automatic");
       setError("");
     } catch (cause) {
       if (session?.status === "completed")
@@ -352,11 +379,9 @@ export function DailyLessonPlayer({
   }
 
   return (
-    <div className="mx-auto max-w-[38rem] pb-[8rem]">
+    <div className="mx-auto max-w-[38rem] pb-[10rem]">
       <div className="mb-3 flex items-center justify-between gap-4">
-        <p className="text-base font-semibold text-neutral-700">
-          Today’s lesson
-        </p>
+        <p className="text-base font-semibold text-neutral-700">Review words</p>
         {session && (
           <span className="text-sm font-semibold tabular-nums text-neutral-600">
             {session.completedWords} / {session.totalWords}
@@ -365,7 +390,7 @@ export function DailyLessonPlayer({
       </div>
       {session && (
         <progress
-          aria-label="Lesson progress"
+          aria-label="Review progress"
           className="mb-5 h-2 w-full accent-primary-700"
           max={Math.max(1, session.totalWords)}
           value={session.completedWords}
@@ -396,7 +421,7 @@ export function DailyLessonPlayer({
                 disabled={busy}
                 className={primary}
               >
-                {busy ? "Starting…" : "Start lesson"}
+                {busy ? "Starting…" : "Start review"}
               </button>
             ) : (
               <Link href="/discovery" className={primary}>
@@ -412,7 +437,11 @@ export function DailyLessonPlayer({
             tabIndex={-1}
             className="text-3xl font-bold tracking-tight text-neutral-900"
           >
-            Lesson complete
+            {completionStatus !== "ready"
+              ? "Review saved"
+              : completionCanContinue
+                ? "Review set complete"
+                : "You’ve finished your review"}
           </h1>
           <p className="mt-4 text-xl text-neutral-900">
             {session.creditedToday}{" "}
@@ -427,6 +456,11 @@ export function DailyLessonPlayer({
               Checking for more words…
             </p>
           )}
+          {completionStatus === "ready" && dueCount > 0 && (
+            <p className="mt-3 text-neutral-700">
+              {dueCount} {dueCount === 1 ? "word is" : "words are"} still ready.
+            </p>
+          )}
           <div className="mt-7 flex flex-wrap gap-3">
             {completionStatus === "ready" &&
               (completionCanContinue ? (
@@ -436,7 +470,7 @@ export function DailyLessonPlayer({
                   disabled={busy}
                   onClick={() => void start()}
                 >
-                  Next lesson
+                  Keep reviewing
                 </button>
               ) : (
                 <Link href="/discovery" className={primary}>
@@ -445,6 +479,9 @@ export function DailyLessonPlayer({
               ))}
             <Link href="/home" className={secondary}>
               Back to Home
+            </Link>
+            <Link href="/practice" className={secondary}>
+              Today’s practice
             </Link>
           </div>
         </section>
@@ -577,6 +614,11 @@ export function DailyLessonPlayer({
               {feedback.explanation && (
                 <p className="mt-2 text-sm">{feedback.explanation}</p>
               )}
+              {!feedback.skipped && feedback.reviewStep !== undefined && (
+                <p className="mt-2 text-sm font-semibold">
+                  Level {feedback.reviewStep + 1} of 8
+                </p>
+              )}
             </div>
           )}
           <SessionActions
@@ -584,14 +626,53 @@ export function DailyLessonPlayer({
             role="region"
             aria-label="Session actions"
           >
-            <button
-              type="button"
-              className="min-h-11 rounded-lg px-3 text-base font-semibold text-neutral-600 hover:text-neutral-900"
-              disabled={locked}
-              onClick={() => void submit("skip")}
-            >
-              Skip for now
-            </button>
+            {!feedback ? (
+              <button
+                type="button"
+                className="min-h-11 rounded-lg px-3 text-base font-semibold text-neutral-600 hover:text-neutral-900"
+                disabled={locked}
+                onClick={() => void submit("skip")}
+              >
+                Skip for now
+              </button>
+            ) : !feedback.skipped &&
+              feedback.nextReviewAt &&
+              feedback.reviewStep !== undefined ? (
+              <label className="min-w-0 flex-1 text-sm font-semibold text-neutral-700 sm:max-w-[20rem]">
+                Show this word again
+                <select
+                  value={nextReview}
+                  disabled={busy || uncertain || conflict}
+                  onChange={(event) =>
+                    setNextReview(
+                      event.target.value as NonNullable<
+                        DailyLessonAction["nextReview"]
+                      >,
+                    )
+                  }
+                  className="mt-1 block min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                >
+                  <option value="automatic">
+                    {feedback.correct
+                      ? automaticReviewDateLabel(
+                          feedback.nextReviewAt,
+                          reviewTimeZone,
+                        )
+                      : "Automatic · try again in this review"}
+                  </option>
+                  <option value="1d">In 1 day</option>
+                  <option value="3d">In 3 days</option>
+                  <option value="7d">In 7 days</option>
+                  <option value="14d">In 14 days</option>
+                  <option value="30d">In 30 days</option>
+                  <option value="60d">In 60 days</option>
+                  <option value="120d">In 120 days</option>
+                  <option value="known">I know this word</option>
+                </select>
+              </label>
+            ) : (
+              <span />
+            )}
             {feedback ? (
               <button
                 type="button"

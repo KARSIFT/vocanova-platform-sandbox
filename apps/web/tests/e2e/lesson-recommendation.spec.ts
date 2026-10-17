@@ -3,8 +3,14 @@ import { expect, test, type BrowserContext } from "@playwright/test";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
 
 const apiURL = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
-test("Home redirects when its daily lesson read sees an expired session", async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "e2e_daily_lesson_auth", value: "expired", url: baseURL! }]);
+test("Home redirects when its daily lesson read sees an expired session", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([
+    { name: "e2e_daily_lesson_auth", value: "expired", url: baseURL! },
+  ]);
   await page.goto("/home");
   await expect(page).toHaveURL(/\/login\?returnTo=%2Fhome$/);
 });
@@ -15,61 +21,151 @@ test.beforeEach(async ({ context, baseURL }) => {
   ]);
 });
 async function markTargetsKnown(context: BrowserContext) {
-  const csrf = (await context.cookies()).find(cookie => cookie.name === "vocanova_csrf")!.value;
+  const csrf = (await context.cookies()).find(
+    (cookie) => cookie.name === "vocanova_csrf",
+  )!.value;
   for (const slug of ["invite", "confirm", "reschedule"]) {
-    const { word } = await (await context.request.get(`${apiURL}/api/v1/canonical-words/${slug}`)).json();
-    expect((await context.request.patch(`${apiURL}/api/v1/meaning-knowledge/${word.meanings[0].id}`, {
-      headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
-      data: { selfReportedKnown: true },
-    })).ok()).toBe(true);
+    const { word } = await (
+      await context.request.get(`${apiURL}/api/v1/canonical-words/${slug}`)
+    ).json();
+    expect(
+      (
+        await context.request.patch(
+          `${apiURL}/api/v1/meaning-knowledge/${word.meanings[0].id}`,
+          {
+            headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+            data: { selfReportedKnown: true },
+          },
+        )
+      ).ok(),
+    ).toBe(true);
   }
 }
 for (const theme of ["light", "dark"] as const) {
-  test(`plan uses actual target coverage while Home leads with discovery without awarding completion (${theme})`, async ({ page, context, baseURL }) => {
-    await context.addCookies([{ name: "vocanova_theme", value: theme, url: baseURL! }]);
+  test(`plan uses actual target coverage while Home leads with discovery without awarding completion (${theme})`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await context.addCookies([
+      { name: "vocanova_theme", value: theme, url: baseURL! },
+    ]);
     await page.goto("/plan");
-    await expect(page.getByRole("main").getByRole("link", { name: /^Start lesson\s*:/ })).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("link", { name: /^Start lesson\s*:/ }),
+    ).toBeVisible();
     await markTargetsKnown(context);
     for (const path of ["/plan", "/home"]) {
       await page.goto(path);
       if (path === "/plan") {
-        const region = page.getByRole("main").getByRole("region", { name: "Your next lesson", exact: true });
-        await expect(region.getByText(/You have marked the remaining lesson meanings as known/)).toBeVisible();
-        await expect(region.getByRole("link", { name: /^Start lesson/ })).toHaveCount(0);
-        await expect(region.getByRole("link", { name: "All lessons", exact: true })).toHaveAttribute("href", "/courses");
+        const region = page
+          .getByRole("main")
+          .getByRole("region", { name: "Your next lesson", exact: true });
+        await expect(
+          region.getByText(
+            /You have marked the remaining lesson meanings as known/,
+          ),
+        ).toBeVisible();
+        await expect(
+          region.getByRole("link", { name: /^Start lesson/ }),
+        ).toHaveCount(0);
+        await expect(
+          region.getByRole("link", { name: "All lessons", exact: true }),
+        ).toHaveAttribute("href", "/courses");
       } else {
-        await expect(page.getByRole("region", { name: "Your next lesson", exact: true })).toHaveCount(0);
-        const region = page.getByRole("region", { name: "Today’s practice", exact: true });
-        await expect(region.getByRole("link", { name: "Discover words", exact: true })).toHaveAttribute("href", "/discovery");
-        await expect(region.getByText("Currently due: 0 words.", { exact: false })).toBeVisible();
-        await expect(region.getByRole("progressbar", { name: "Reviews today", exact: true })).toHaveAttribute("aria-valuenow", "0");
+        await expect(
+          page.getByRole("region", { name: "Your next lesson", exact: true }),
+        ).toHaveCount(0);
+        const region = page.getByRole("region", {
+          name: "Review words",
+          exact: true,
+        });
+        await expect(
+          region.getByRole("link", { name: "Discover words", exact: true }),
+        ).toHaveAttribute("href", "/discovery");
+        await expect(
+          region.getByText(
+            "No words are due. Discover something new whenever you like.",
+            { exact: true },
+          ),
+        ).toBeVisible();
+        await expect(
+          page
+            .getByRole("region", { name: "Review words", exact: true })
+            .getByText(/^Reviewed today:/),
+        ).toHaveText("Reviewed today: 0");
       }
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(page.viewportSize()!.width);
       const scan = await scanForAxeViolations(page);
-      expect(scan.criticalOrSerious, formatViolations(scan.criticalOrSerious).join("\n")).toEqual([]);
+      expect(
+        scan.criticalOrSerious,
+        formatViolations(scan.criticalOrSerious).join("\n"),
+      ).toEqual([]);
     }
-    const catalog = await (await context.request.get(apiURL + "/api/v1/lessons")).json();
-    expect(catalog.items[0]).toMatchObject({ status: "not_started", completedSteps: 0 });
+    const catalog = await (
+      await context.request.get(apiURL + "/api/v1/lessons")
+    ).json();
+    expect(catalog.items[0]).toMatchObject({
+      status: "not_started",
+      completedSteps: 0,
+    });
   });
 }
-test("an unfinished lesson stays resumable when its words are marked known", async ({ page, context }) => {
-  const csrf = (await context.cookies()).find(cookie => cookie.name === "vocanova_csrf")!.value;
-  expect((await context.request.post(apiURL + "/api/v1/lessons/conversation-basics/sessions", {
-    headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() }, data: {},
-  })).ok()).toBe(true);
+test("an unfinished lesson stays resumable when its words are marked known", async ({
+  page,
+  context,
+}) => {
+  const csrf = (await context.cookies()).find(
+    (cookie) => cookie.name === "vocanova_csrf",
+  )!.value;
+  expect(
+    (
+      await context.request.post(
+        apiURL + "/api/v1/lessons/conversation-basics/sessions",
+        {
+          headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+          data: {},
+        },
+      )
+    ).ok(),
+  ).toBe(true);
   await markTargetsKnown(context);
   await page.goto("/plan");
-  const region = page.getByRole("main").getByRole("region", { name: "Pick up your lesson" });
-  await expect(region.getByText("0 of 9 steps complete.", { exact: true })).toBeVisible();
+  const region = page
+    .getByRole("main")
+    .getByRole("region", { name: "Pick up your lesson" });
+  await expect(
+    region.getByText("0 of 9 steps complete.", { exact: true }),
+  ).toBeVisible();
   await region.getByRole("link", { name: /^Continue lesson\s*:/ }).click();
-  await expect(page.getByRole("main").getByRole("heading", { name: "invite", exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("main")
+      .getByRole("heading", { name: "invite", exact: true }),
+  ).toBeVisible();
 });
-test("recommendation failure leaves browsing available without claiming all words are known", async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "e2e_lessons", value: "unavailable", url: baseURL! }]);
+test("recommendation failure leaves browsing available without claiming all words are known", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([
+    { name: "e2e_lessons", value: "unavailable", url: baseURL! },
+  ]);
   await page.goto("/plan");
-  const region = page.getByRole("main").getByRole("region", { name: "Your next lesson" });
-  await expect(region.getByRole("status")).toHaveText("Your lesson recommendation is unavailable right now. You can still browse lessons or review your words.");
-  await expect(region.getByRole("link", { name: "All lessons", exact: true })).toBeVisible();
-  await expect(region.getByText(/You have marked the remaining/)).toHaveCount(0);
+  const region = page
+    .getByRole("main")
+    .getByRole("region", { name: "Your next lesson" });
+  await expect(region.getByRole("status")).toHaveText(
+    "Your lesson recommendation is unavailable right now. You can still browse lessons or review your words.",
+  );
+  await expect(
+    region.getByRole("link", { name: "All lessons", exact: true }),
+  ).toBeVisible();
+  await expect(region.getByText(/You have marked the remaining/)).toHaveCount(
+    0,
+  );
 });

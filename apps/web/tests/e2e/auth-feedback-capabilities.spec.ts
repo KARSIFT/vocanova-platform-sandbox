@@ -53,8 +53,14 @@ async function captureLayout(page: Page, testInfo: TestInfo, name: string) {
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
-  expect(overflow, "the authentication page must fit the viewport").toBeLessThanOrEqual(1);
-  await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
+  expect(
+    overflow,
+    "the authentication page must fit the viewport",
+  ).toBeLessThanOrEqual(1);
+  await page.screenshot({
+    path: testInfo.outputPath(`${name}.png`),
+    fullPage: true,
+  });
 }
 
 for (const colorScheme of ["light", "dark"] as const) {
@@ -73,7 +79,9 @@ for (const colorScheme of ["light", "dark"] as const) {
         oauthEnabled: true,
         passwordEnabled: false,
       });
-      await page.goto("/signin?oauth=cancelled&returnTo=%2Freviews%3Fmode%3Ddue");
+      await page.goto(
+        "/signin?oauth=cancelled&returnTo=%2Freviews%3Fmode%3Ddue",
+      );
 
       const alert = page.getByRole("main").getByRole("alert");
       await expect(alert).toContainText("Google sign-in was cancelled.");
@@ -101,17 +109,54 @@ for (const colorScheme of ["light", "dark"] as const) {
         });
         await rejectOAuthStart(page);
         await page.goto(route);
-        const google = page.getByRole("button", { name: "Continue with Google" });
+        const google = page.getByRole("button", {
+          name: "Continue with Google",
+        });
+        const remember = page.getByRole("checkbox", {
+          name: "Keep me signed in",
+        });
+        await expect(remember).toBeChecked();
+        await expect(
+          page.getByText("Up to 30 days on this device."),
+        ).toBeVisible();
+        const persistentStart = page.waitForRequest(
+          "**/api/v1/auth/oauth/google/start",
+        );
         await google.focus();
         await page.keyboard.press("Enter");
+        expect((await persistentStart).postDataJSON()).toMatchObject({
+          rememberMe: true,
+        });
 
         const alert = page.getByRole("main").getByRole("alert");
-        await expect(alert).toContainText("Google sign-in is unavailable right now.");
+        await expect(alert).toContainText(
+          "Google sign-in is unavailable right now.",
+        );
         await expect(alert).toContainText(/try again/i);
         await expect(alert).not.toContainText(/email|password|sign-in link/i);
         await expect(alert).not.toContainText("private-provider-diagnostic");
         await expect(google).toBeEnabled();
+        await expect(remember).toBeChecked();
+        // Keyboard selection and a failed provider start retain the shorter
+        // choice; retrying must send false rather than silently remembering.
+        await remember.focus();
+        await page.keyboard.press("Space");
+        await expect(remember).not.toBeChecked();
+        await expect(
+          page.getByText("A shorter session, up to 24 hours."),
+        ).toBeVisible();
+        const shortStart = page.waitForRequest(
+          "**/api/v1/auth/oauth/google/start",
+        );
+        await google.click();
+        expect((await shortStart).postDataJSON()).toMatchObject({
+          rememberMe: false,
+        });
+        await expect(google).toBeEnabled();
+        await expect(remember).not.toBeChecked();
         await captureLayout(page, testInfo, "google-only-failure");
+        const { criticalOrSerious } = await scanForAxeViolations(page);
+        expect(criticalOrSerious).toEqual([]);
       });
     }
 
@@ -128,17 +173,27 @@ for (const colorScheme of ["light", "dark"] as const) {
         });
         await rejectOAuthStart(page);
         await page.goto("/signin");
-        await page.getByRole("button", { name: "Continue with Google" }).click();
+        await page
+          .getByRole("button", { name: "Continue with Google" })
+          .click();
 
         const alert = page.getByRole("main").getByRole("alert");
         if (alternate === "password") {
           await expect(alert).toContainText(/email and password/i);
-          await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
-          await expect(page.getByRole("button", { name: "Send sign-in link" })).toHaveCount(0);
+          await expect(
+            page.getByLabel("Password", { exact: true }),
+          ).toBeVisible();
+          await expect(
+            page.getByRole("button", { name: "Send sign-in link" }),
+          ).toHaveCount(0);
         } else {
           await expect(alert).toContainText(/email sign-in link/i);
-          await expect(page.getByRole("button", { name: "Send sign-in link" })).toBeVisible();
-          await expect(page.getByLabel("Password", { exact: true })).toHaveCount(0);
+          await expect(
+            page.getByRole("button", { name: "Send sign-in link" }),
+          ).toBeVisible();
+          await expect(
+            page.getByLabel("Password", { exact: true }),
+          ).toHaveCount(0);
         }
       });
     }
@@ -156,25 +211,41 @@ for (const colorScheme of ["light", "dark"] as const) {
         });
         await rejectOAuthStart(page);
         await page.goto("/signup");
-        const google = page.getByRole("button", { name: "Continue with Google" });
+        const google = page.getByRole("button", {
+          name: "Continue with Google",
+        });
         await google.focus();
         await page.keyboard.press("Enter");
 
         const main = page.getByRole("main");
         const alert = main.getByRole("alert");
         await expect(alert).toContainText(/try again/i);
-        await expect(alert).not.toContainText(/private-provider-diagnostic|sign in with/i);
+        await expect(alert).not.toContainText(
+          /private-provider-diagnostic|sign in with/i,
+        );
         await expect(google).toBeEnabled();
-        await expect(main.getByRole("button", { name: "Send sign-in link" })).toHaveCount(0);
+        await expect(
+          main.getByRole("button", { name: "Send sign-in link" }),
+        ).toHaveCount(0);
 
         if (alternate === "password") {
-          await expect(alert).toContainText(/create (?:an|your) account with (?:your )?email and password/i);
-          await expect(main.getByLabel("Password", { exact: true })).toBeVisible();
-          await expect(main.getByRole("button", { name: "Create account", exact: true })).toBeVisible();
+          await expect(alert).toContainText(
+            /create (?:an|your) account with (?:your )?email and password/i,
+          );
+          await expect(
+            main.getByLabel("Password", { exact: true }),
+          ).toBeVisible();
+          await expect(
+            main.getByRole("button", { name: "Create account", exact: true }),
+          ).toBeVisible();
         } else {
           await expect(alert).not.toContainText(/email|password|sign-in link/i);
-          await expect(main.getByLabel("Password", { exact: true })).toHaveCount(0);
-          await expect(main.getByRole("button", { name: "Create account", exact: true })).toHaveCount(0);
+          await expect(
+            main.getByLabel("Password", { exact: true }),
+          ).toHaveCount(0);
+          await expect(
+            main.getByRole("button", { name: "Create account", exact: true }),
+          ).toHaveCount(0);
         }
         await captureLayout(page, testInfo, `signup-${alternate}-failure`);
       });
@@ -192,18 +263,28 @@ for (const colorScheme of ["light", "dark"] as const) {
       });
       await page.goto("/login?magicOnly=1&returnTo=%2Freviews%3Fmode%3Ddue");
       const status = page.getByRole("main").getByRole("status");
-      await expect(status).toContainText("Email sign-in links are unavailable right now.");
+      await expect(status).toContainText(
+        "Email sign-in links are unavailable right now.",
+      );
       await expect(status).toContainText(/email and password/i);
       await expect(status).not.toContainText(/Google/i);
-      await expect(page.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Continue with Google" }),
+      ).toHaveCount(0);
       await captureLayout(page, testInfo, "password-recovery-guidance");
 
-      const standardSignIn = page.getByRole("link", { name: "use the standard sign-in page" });
+      const standardSignIn = page.getByRole("link", {
+        name: "use the standard sign-in page",
+      });
       await standardSignIn.focus();
       await page.keyboard.press("Enter");
-      await expect(page).toHaveURL(/\/login\?returnTo=%2Freviews%3Fmode%3Ddue$/);
+      await expect(page).toHaveURL(
+        /\/login\?returnTo=%2Freviews%3Fmode%3Ddue$/,
+      );
       await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Send sign-in link" })).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Send sign-in link" }),
+      ).toHaveCount(0);
       await captureLayout(page, testInfo, "password-recovery-destination");
     });
 
@@ -219,12 +300,22 @@ for (const colorScheme of ["light", "dark"] as const) {
       });
       await page.goto("/login?magicOnly=1");
       const main = page.getByRole("main");
-      await expect(main.getByRole("status")).toContainText("Please try again later.");
-      await expect(main.getByRole("status")).not.toContainText(/Google|email and password/);
-      await expect(main.getByRole("alert")).toHaveText("Sign-in is temporarily unavailable. Please try again later.");
+      await expect(main.getByRole("status")).toContainText(
+        "Please try again later.",
+      );
+      await expect(main.getByRole("status")).not.toContainText(
+        /Google|email and password/,
+      );
+      await expect(main.getByRole("alert")).toHaveText(
+        "Sign-in is temporarily unavailable. Please try again later.",
+      );
       await expect(page.getByRole("textbox")).toHaveCount(0);
-      await expect(page.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
-      await expect(page.getByRole("link", { name: "use the standard sign-in page" })).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Continue with Google" }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("link", { name: "use the standard sign-in page" }),
+      ).toHaveCount(0);
     });
 
     test("password-only signup does not advertise disabled Google", async ({
@@ -238,9 +329,13 @@ for (const colorScheme of ["light", "dark"] as const) {
         passwordEnabled: true,
       });
       await page.goto("/signup");
-      await expect(page.getByRole("main")).toContainText("We'll email a verification link before your password can be used.");
+      await expect(page.getByRole("main")).toContainText(
+        "We'll email a verification link before your password can be used.",
+      );
       await expect(page.getByRole("main")).not.toContainText(/Google/);
-      await expect(page.getByRole("button", { name: "Create account" })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Create account" }),
+      ).toBeVisible();
     });
   });
 }

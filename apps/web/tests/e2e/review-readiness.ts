@@ -5,7 +5,12 @@ export type ReviewReadiness = "prompt" | "terminal";
 export function getTerminalReviewHeading(page: Page): Locator {
   return page
     .getByRole("heading", { name: "You’re ready for new words", level: 1 })
-    .or(page.getByRole("heading", { name: "Lesson complete", level: 1 }));
+    .or(
+      page.getByRole("heading", {
+        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        level: 1,
+      }),
+    );
 }
 
 export function getEnabledReviewPromptControl(page: Page): Locator {
@@ -13,7 +18,7 @@ export function getEnabledReviewPromptControl(page: Page): Locator {
 }
 
 export async function startReviewLesson(page: Page, timeout?: number) {
-  const start = page.getByRole("button", { name: "Start lesson", exact: true });
+  const start = page.getByRole("button", { name: "Start review", exact: true });
   await expect(
     start
       .or(getEnabledReviewPromptControl(page))

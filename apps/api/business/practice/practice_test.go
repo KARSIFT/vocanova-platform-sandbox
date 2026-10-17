@@ -1,6 +1,8 @@
 package practice
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -9,6 +11,170 @@ import (
 	"testing"
 	"time"
 )
+
+func TestJourneyBroadCatalogHasAvailableMeaningChoices(t *testing.T) {
+	raw, err := os.ReadFile("../knowledgecatalog/catalog.json.gz")
+	require.NoError(t, err)
+	reader, err := gzip.NewReader(bytes.NewReader(raw))
+	require.NoError(t, err)
+	defer reader.Close()
+	var catalog struct {
+		Items []struct {
+			Word, Definition string
+			MeaningID        string `json:"meaning_id"`
+		}
+	}
+	require.NoError(t, json.NewDecoder(reader).Decode(&catalog))
+	require.Len(t, catalog.Items, 10000)
+	pool := seedWords(t)
+	for _, entry := range catalog.Items {
+		w := Word{MeaningID: entry.MeaningID, WordText: entry.Word, Definition: entry.Definition}
+		step, err := journeyChoice(w, pool, "catalog-availability", "meaning_choice")
+		require.NoError(t, err, entry.Word)
+		require.GreaterOrEqual(t, len(step.Public.Choices), 3, entry.Word)
+		seen := map[string]bool{}
+		correct := 0
+		for _, choice := range step.Public.Choices {
+			require.False(t, seen[normalize(choice.Text)], entry.Word)
+			seen[normalize(choice.Text)] = true
+			if choice.ID == step.CorrectChoice {
+				correct++
+			}
+		}
+		require.Equal(t, 1, correct, entry.Word)
+	}
+}
+
+func TestPersonalJourneyMixedPracticeUsesOnlyAuthoredContextAndSeparatesProgress(t *testing.T) {
+	pool := seedWords(t)
+	pool[0].Example = "A greeting can start a conversation."
+	pool[1].Example = "We made small talk before the meeting."
+	known := []Word{pool[0], pool[1]}
+	familiar := map[string]bool{pool[0].MeaningID: true, pool[1].MeaningID: true}
+	snap, err := buildJourney(known, pool, familiar, 1, "journey-test")
+	require.NoError(t, err)
+	require.Equal(t, 6, len(snap.Steps))
+	require.Zero(t, snap.NewWords)
+	require.Equal(t, []string{"listening_choice", "gap_choice", "sentence_build", "listening_choice", "gap_choice", "sentence_build"}, []string{snap.Steps[0].Public.Kind, snap.Steps[1].Public.Kind, snap.Steps[2].Public.Kind, snap.Steps[3].Public.Kind, snap.Steps[4].Public.Kind, snap.Steps[5].Public.Kind})
+	require.NotContains(t, snap.Steps[1].Public.Context, "greeting")
+	require.Empty(t, snap.Steps[2].Public.Context)
+	st := State{ID: uuid.New(), Snapshot: snap, Index: 2}
+	initial := project(st)
+	require.Nil(t, initial.Feedback, "initial projection cannot leak token ordering")
+	step := snap.Steps[2]
+	bad := append([]string{}, step.CorrectTokens...)
+	bad[0], bad[1] = bad[1], bad[0]
+	a := Action{StepID: step.Public.ID, Action: "answer", TokenIDs: bad}
+	_, err = apply(&st, a, time.Now())
+	require.NoError(t, err)
+	require.False(t, st.Feedback.Correct)
+	require.Equal(t, step.CorrectTokens, st.Feedback.CorrectTokenIDs)
+	require.Equal(t, bad, st.Feedback.SelectedTokenIDs)
+	require.False(t, project(st).CanContinue)
+	_, err = apply(&st, Action{StepID: step.Public.ID, ExpectedRevision: st.Revision, Action: "continue"}, time.Now())
+	require.ErrorIs(t, err, ErrConflict)
+	a.ExpectedRevision = st.Revision
+	a.TokenIDs = step.CorrectTokens
+	_, err = apply(&st, a, time.Now())
+	require.NoError(t, err)
+	require.True(t, st.Feedback.Correct)
+	require.True(t, st.Feedback.Assisted)
+	require.Zero(t, st.FirstAnswersCorrect)
+	_, err = apply(&st, Action{StepID: step.Public.ID, ExpectedRevision: st.Revision, Action: "continue"}, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, 3, st.Index)
+
+	// A broad catalog meaning has no fabricated usage sentence: choose a safe
+	// meaning/listening task instead, preserving access beyond starter content.
+	broad := Word{MeaningID: uuid.NewString(), WordText: "unfamiliar-synthetic", Definition: "A synthetic distinct reference definition."}
+	fallback, err := buildJourney([]Word{broad}, pool, map[string]bool{broad.MeaningID: true}, 2, "fallback")
+	require.NoError(t, err)
+	require.Equal(t, 2, len(fallback.Steps))
+	require.Equal(t, "meaning_choice", fallback.Steps[1].Public.Kind)
+	for _, s := range fallback.Steps {
+		require.Empty(t, s.Public.Context)
+	}
+
+	third, err := buildJourney(known, pool, familiar, 3, "third")
+	require.NoError(t, err)
+	require.Equal(t, 1, third.NewWords)
+	var teaches int
+	for _, s := range third.Steps {
+		if s.Public.Kind == "teach" {
+			teaches++
+			require.False(t, familiar[s.Word.MeaningID])
+			require.True(t, project(State{Snapshot: Snapshot{Mode: "journey", Steps: []privateStep{s}}}).CanContinue)
+		}
+	}
+	require.Equal(t, 1, teaches)
+}
+
+func TestJourneyTeachingAndUnavailableAudioRemainHonest(t *testing.T) {
+	pool := seedWords(t)
+	snap, err := buildJourney(nil, pool, map[string]bool{}, 1, "newcomer")
+	require.NoError(t, err)
+	require.Equal(t, 2, snap.NewWords)
+	require.Equal(t, "teach", snap.Steps[0].Public.Kind)
+	st := State{Snapshot: snap}
+	require.Equal(t, snap.Steps[0].Word.MeaningID, project(st).CurrentStep.MeaningID)
+	for i, saved := range snap.Steps {
+		if saved.Public.Kind != "teach" {
+			projection := project(State{Snapshot: snap, Index: i})
+			require.Empty(t, projection.CurrentStep.MeaningID, "graded questions must not expose a picture hint")
+		}
+	}
+	_, err = apply(&st, Action{StepID: snap.Steps[0].Public.ID, Action: "answer", ChoiceID: "pretend"}, time.Now())
+	require.ErrorIs(t, err, ErrInvalid)
+	_, err = apply(&st, Action{StepID: snap.Steps[0].Public.ID, Action: "continue"}, time.Now())
+	require.NoError(t, err)
+	require.Zero(t, st.QuestionsAnswered)
+	step := st.Snapshot.Steps[st.Index]
+	var wrong string
+	for _, choice := range step.Public.Choices {
+		if choice.ID != step.CorrectChoice {
+			wrong = choice.ID
+			break
+		}
+	}
+	_, err = apply(&st, Action{StepID: step.Public.ID, ExpectedRevision: st.Revision, Action: "answer", ChoiceID: wrong}, time.Now())
+	require.NoError(t, err)
+	require.False(t, st.Feedback.Correct)
+	require.False(t, project(st).CanContinue)
+	_, err = apply(&st, Action{StepID: step.Public.ID, ExpectedRevision: st.Revision, Action: "reveal"}, time.Now())
+	require.NoError(t, err)
+	require.True(t, st.Feedback.Revealed)
+	require.True(t, st.Feedback.Assisted)
+	require.False(t, st.Feedback.Correct)
+	require.Zero(t, st.FirstAnswersCorrect)
+	require.True(t, project(st).CanContinue)
+	_, err = apply(&st, Action{StepID: step.Public.ID, ExpectedRevision: st.Revision, Action: "continue"}, time.Now())
+	require.NoError(t, err)
+}
+
+func TestJourneyAllKnownDoesNotInventNewAndTokenIdentityIsValidated(t *testing.T) {
+	pool := seedWords(t)
+	familiar := map[string]bool{}
+	for _, w := range pool {
+		familiar[w.MeaningID] = true
+	}
+	snap, err := buildJourney(pool[:2], pool, familiar, 3, "all-known")
+	require.NoError(t, err)
+	require.Zero(t, snap.NewWords)
+	for _, s := range snap.Steps {
+		require.NotEqual(t, "teach", s.Public.Kind)
+	}
+	// Equal visible words can use either token identity at the same position;
+	// tokens with different identities must each be used exactly once.
+	step := privateStep{Word: Word{Example: "We can can."}, Public: Step{ID: "tokens", Kind: "sentence_build", Choices: []Choice{{ID: "a", Text: "We"}, {ID: "b", Text: "can"}, {ID: "c", Text: "can"}}}, CorrectTokens: []string{"a", "b", "c"}}
+	st := State{Snapshot: Snapshot{Mode: "journey", Steps: []privateStep{step}}}
+	_, err = apply(&st, Action{StepID: "tokens", Action: "answer", TokenIDs: []string{"a", "a", "c"}}, time.Now())
+	require.ErrorIs(t, err, ErrInvalid)
+	_, err = apply(&st, Action{StepID: "tokens", Action: "answer", TokenIDs: []string{"a", "b", "foreign"}}, time.Now())
+	require.ErrorIs(t, err, ErrInvalid)
+	_, err = apply(&st, Action{StepID: "tokens", Action: "answer", TokenIDs: []string{"a", "c", "b"}}, time.Now())
+	require.NoError(t, err)
+	require.True(t, st.Feedback.Correct)
+}
 
 func seedWords(t *testing.T) []Word {
 	t.Helper()

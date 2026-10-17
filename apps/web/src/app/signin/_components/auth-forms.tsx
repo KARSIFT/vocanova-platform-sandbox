@@ -193,6 +193,7 @@ export function OAuthButton({
   capabilities,
   intent = "signin",
 }: OAuthButtonProps) {
+  const [rememberMe, setRememberMe] = useState(true);
   const [status, setStatus] = useState<{
     type: "idle" | "loading" | "error";
     message: string;
@@ -207,7 +208,7 @@ export function OAuthButton({
     try {
       rememberOAuthContinuation(returnTo);
       const redirectUri = `${getAppOrigin()}${oauthReturnTo(returnTo)}`;
-      const { data } = await client.startOAuth({ redirectUri });
+      const { data } = await client.startOAuth({ redirectUri, rememberMe });
       window.location.href = data.url;
     } catch (error) {
       clearOAuthContinuation();
@@ -225,6 +226,22 @@ export function OAuthButton({
 
   return (
     <div className="space-y-[var(--spacing-sm)]">
+      <label className="flex min-h-[var(--spacing-2xl)] cursor-pointer items-center gap-[var(--spacing-sm)] text-base text-neutral-900">
+        <input
+          type="checkbox"
+          checked={rememberMe}
+          onChange={(event) => setRememberMe(event.target.checked)}
+          disabled={status.type === "loading"}
+          aria-describedby="google-session-duration"
+          className="h-5 w-5 accent-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        />
+        Keep me signed in
+      </label>
+      <p id="google-session-duration" className="text-sm text-neutral-600">
+        {rememberMe
+          ? "Up to 30 days on this device."
+          : "A shorter session, up to 24 hours."}
+      </p>
       <button
         type="button"
         onClick={handleClick}

@@ -49,6 +49,27 @@ func TestPersonalDataExportHandlerPreservesLearningProjection(t *testing.T) {
 	for k, v := range learning {
 		projection[k] = v
 	}
+	// Exercise additive fields through the actual HTTP DTO. A repository-only
+	// export pass cannot detect silently dropped personal learning history.
+	practice := learning["practiceSessions"].([]any)[0].(map[string]any)
+	practice["journeyLesson"] = float64(2)
+	practice["newWords"] = float64(1)
+	practiceAction := practice["actions"].([]any)[0].(map[string]any)
+	practiceAction["action"].(map[string]any)["tokenIds"] = []any{"token-b", "token-a"}
+	practiceFeedback := practiceAction["feedback"].(map[string]any)
+	practiceFeedback["revealed"] = true
+	practiceFeedback["correctTokenIds"] = []any{"token-a", "token-b"}
+	practiceFeedback["selectedTokenIds"] = []any{"token-b", "token-a"}
+	practiceFeedback["correctChoiceId"] = "confirmed-choice"
+	var daily map[string]any
+	require.NoError(t, json.Unmarshal([]byte(`{
+	 "dailyLessons":[{"id":"daily","status":"in_progress","revision":3,"completedWords":1,"totalWords":2,"firstAnswersCorrect":1,"questionsAnswered":1,"creditedToday":1,"startedAt":"created","updatedAt":"updated","completedAt":null,"actions":[{"action":{"stepId":"word","action":"continue","nextReview":"7d"},"feedback":{"stepId":"word","correct":true,"answer":"Meaning","explanation":"Meaning","meaningId":"meaning","wordText":"menu","credited":true,"skipped":false,"correctChoiceId":"meaning","selectedChoiceId":"meaning","nextReviewAt":"2026-10-25T12:00:00Z","reviewStep":1},"createdAt":"created"}]}],
+	 "dailyReviewSuccesses":[{"meaningId":"meaning","localDate":"2026-10-18","reviewAttemptId":"attempt","dailySessionId":"daily","createdAt":"created"}]
+	}`), &daily))
+	for k, v := range daily {
+		learning[k] = v
+		projection[k] = v
+	}
 	payload, e := json.Marshal(projection)
 	require.NoError(t, e)
 	repo := &learningExportRepository{MemoryRepository: memory, payload: payload}
@@ -69,14 +90,14 @@ func TestPersonalDataExportHandlerPreservesLearningProjection(t *testing.T) {
 	for k, v := range learning {
 		require.Equal(t, v, got[k], "HTTP download must retain repository projection %s", k)
 	}
-	for _, key := range []string{"wordLists", "storySessions", "learningPreferences", "practiceSessions", "wordKnowledge", "guidedLessons"} {
+	for _, key := range []string{"wordLists", "storySessions", "learningPreferences", "practiceSessions", "wordKnowledge", "guidedLessons", "dailyLessons", "dailyReviewSuccesses"} {
 		require.Contains(t, a.OpenAPI().Components.Schemas.Map()["PersonalDataExportDTO"].Properties, key)
 	}
 
 	// Older repository exports and exact retries may lack newly introduced
 	// collections. Preserve their version and allow null rather than manufacture
 	// learning data or advertise a schema newer than the document actually used.
-	for _, field := range []string{"wordLists", "storySessions", "learningPreferences", "practiceSessions", "wordKnowledge", "guidedLessons"} {
+	for _, field := range []string{"wordLists", "storySessions", "learningPreferences", "practiceSessions", "wordKnowledge", "guidedLessons", "dailyLessons", "dailyReviewSuccesses"} {
 		delete(projection, field)
 	}
 	projection["schemaVersion"] = "1.2"
@@ -95,7 +116,7 @@ func TestPersonalDataExportHandlerPreservesLearningProjection(t *testing.T) {
 		require.Equal(t, value, legacy["profile"].(map[string]any)[key])
 	}
 	properties := a.OpenAPI().Components.Schemas.Map()["PersonalDataExportDTO"].Properties
-	for _, field := range []string{"wordLists", "storySessions", "learningPreferences", "practiceSessions", "wordKnowledge", "guidedLessons"} {
+	for _, field := range []string{"wordLists", "storySessions", "learningPreferences", "practiceSessions", "wordKnowledge", "guidedLessons", "dailyLessons", "dailyReviewSuccesses"} {
 		require.Nil(t, legacy[field], "absent historical %s must stay empty", field)
 		schema := properties[field]
 		if schema.Ref != "" {

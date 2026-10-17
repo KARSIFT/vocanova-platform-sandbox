@@ -16,6 +16,7 @@ import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError, isSessionExpiredError } from "@/lib/session";
 
+import { PracticeJourney } from "./practice-journey";
 import { practiceModes } from "./practice-modes";
 import { secondaryAction, textLink } from "./practice-styles";
 
@@ -25,12 +26,16 @@ export function PracticeEntry({
   initialLessonKey,
   initialLists,
   initialListId,
+  explicitSelection = false,
+  lessonsUnavailable = false,
 }: {
   initialSessions: PracticeSessionsResponse | null;
   lessons: LessonSummary[];
   initialLessonKey: string;
   initialLists: WordListSummary[] | null;
   initialListId: string;
+  explicitSelection?: boolean;
+  lessonsUnavailable?: boolean;
 }) {
   const router = useRouter();
   const [sessions, setSessions] = useState(initialSessions);
@@ -59,6 +64,8 @@ export function PracticeEntry({
   );
   const inFlight = useRef(false);
   const locked = busy || needsRetry || needsRefresh || expired.current;
+  const manualSessions =
+    sessions?.items.filter((item) => item.mode !== "journey") ?? [];
 
   async function start(mode?: PracticeMode) {
     if (inFlight.current || needsRefresh || expired.current) return;
@@ -67,9 +74,12 @@ export function PracticeEntry({
       pending.current = {
         body: {
           mode,
-          ...(mode !== "mistakes" && selectedList
+          ...(mode !== "mistakes" && mode !== "journey" && selectedList
             ? { listId: selectedList.id, listRevision: selectedList.revision }
-            : mode !== "mistakes" && selection && !selectedListId
+            : mode !== "mistakes" &&
+                mode !== "journey" &&
+                selection &&
+                !selectedListId
               ? { lessonKey: selection }
               : {}),
         },
@@ -152,157 +162,180 @@ export function PracticeEntry({
       <h2 id="focused-practice-heading" className="sr-only">
         Remember your words
       </h2>
-      {hasVocabularySelection ? (
-        <div className="mt-4 max-w-[40rem]">
-          <div className="flex items-center justify-between gap-3">
-            <label
-              htmlFor="practice-vocabulary"
-              className="font-semibold text-neutral-900"
-            >
-              Practice vocabulary
-            </label>
-            <button
-              type="button"
-              aria-label="Refresh practice sources"
-              disabled={busy || expired.current}
-              className={`${textLink} text-sm`}
-              onClick={() => void loadSessions()}
-            >
-              Refresh
-            </button>
-          </div>
-          <select
-            id="practice-vocabulary"
-            value={selection}
-            disabled={locked}
-            aria-describedby="practice-vocabulary-help"
-            onChange={(event) => setSelection(event.target.value)}
-            className="mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
-            <option value="">Mix from the full course</option>
-            {selectedListId && !selectedList && (
-              <option value={selection}>Selected list is unavailable</option>
-            )}
-            {lists && lists.length > 0 && (
-              <optgroup label="Personal lists">
-                {lists.map((list) => (
-                  <option key={list.id} value={`list:${list.id}`}>
-                    {list.name} ({list.usableMemberCount} practice meanings)
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {lessons.map((lesson) => (
-              <option key={lesson.key} value={lesson.key}>
-                {lesson.situationTitle}: {lesson.title}
-              </option>
-            ))}
-          </select>
-          <details className="mt-1">
-            <summary className="min-h-11 cursor-pointer content-center text-sm text-neutral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-              About this selection
-            </summary>
-            <p
-              id="practice-vocabulary-help"
-              className="pb-3 text-sm text-neutral-600"
-            >
-              {selection
-                ? "Practise these words by typing or listening."
-                : "A full-course mix can include words you have not studied yet."}{" "}
-              Mistake practice uses your past answers.
-            </p>
-          </details>
-        </div>
-      ) : null}
-      {selectedList && (
-        <p className="mt-3 text-neutral-700">
-          Selected list: {selectedList.name}. {selectedList.usableMemberCount}{" "}
-          of {selectedList.memberCount} words are available for practice.
-        </p>
-      )}
-      {unavailableSelection && (
-        <p role="status" className="mt-3 text-neutral-700">
-          {selectedList
-            ? "This list has no meanings available for focused practice. Add a supported meaning or choose another vocabulary source."
-            : "Your selected list could not be loaded. Load saved sessions to refresh your lists, or explicitly choose another vocabulary source."}
-        </p>
-      )}
-      {!lists && (
-        <div className="mt-3">
-          <p role="status" className="text-neutral-700">
-            Personal lists are unavailable. Refresh to try again.
+      <PracticeJourney
+        journey={sessions?.journey ?? null}
+        busy={locked}
+        onStart={() => void start("journey")}
+        onRefresh={() => void loadSessions()}
+      />
+      <details
+        open={explicitSelection}
+        className="mt-8 border-t border-neutral-200 pt-3"
+      >
+        <summary className="min-h-12 cursor-pointer content-center rounded-lg font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
+          More practice
+        </summary>
+        {lessonsUnavailable && (
+          <p role="status" className="mt-3 text-sm text-neutral-600">
+            Situation lesson choices are unavailable. Your personal practice
+            path is still available.
           </p>
-          {!hasVocabularySelection && (
-            <button
-              type="button"
-              aria-label="Refresh practice sources"
-              disabled={busy || expired.current}
-              className={`${textLink} text-sm`}
-              onClick={() => void loadSessions()}
-            >
-              Refresh
-            </button>
-          )}
-        </div>
-      )}
-      <div className="mt-4 divide-y divide-neutral-200 border-y border-neutral-200">
-        {(Object.keys(practiceModes) as PracticeMode[]).map((mode) => {
-          const content = practiceModes[mode];
-          const noMistakes =
-            mode === "mistakes" && sessions?.availableMistakes === 0;
-          const description =
-            mode === "mistakes" && sessions
-              ? noMistakes
-                ? "No past mistakes to revisit right now."
-                : `${sessions.availableMistakes} ${sessions.availableMistakes === 1 ? "word is" : "words are"} ready for another try.`
-              : content.description;
-          const label = (
-            <span className="min-w-0">
-              <span className="block text-lg font-semibold text-neutral-900">
-                {noMistakes ? content.title : content.startLabel}
-              </span>
-              <span
-                id={`practice-mode-${mode}-description`}
-                className="mt-1 block text-sm font-normal text-neutral-600"
+        )}
+        {hasVocabularySelection ? (
+          <div className="mt-4 max-w-[40rem]">
+            <div className="flex items-center justify-between gap-3">
+              <label
+                htmlFor="practice-vocabulary"
+                className="font-semibold text-neutral-900"
               >
-                {description}
-              </span>
-            </span>
-          );
-          return noMistakes ? (
-            <div key={mode} className="px-3 py-4">
-              {label}
+                Practice vocabulary
+              </label>
+              <button
+                type="button"
+                aria-label="Refresh practice sources"
+                disabled={busy || expired.current}
+                className={`${textLink} text-sm`}
+                onClick={() => void loadSessions()}
+              >
+                Refresh
+              </button>
             </div>
-          ) : (
-            <button
-              key={mode}
-              type="button"
-              aria-label={content.startLabel}
-              aria-describedby={`practice-mode-${mode}-description`}
-              disabled={locked || (mode !== "mistakes" && unavailableSelection)}
-              className="flex min-h-20 w-full items-center justify-between gap-4 rounded-lg px-3 py-4 text-left hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={() => void start(mode)}
+            <select
+              id="practice-vocabulary"
+              value={selection}
+              disabled={locked}
+              aria-describedby="practice-vocabulary-help"
+              onChange={(event) => setSelection(event.target.value)}
+              className="mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
             >
-              {label}
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="size-5 shrink-0 text-primary-700"
+              <option value="">Mix from the full course</option>
+              {selectedListId && !selectedList && (
+                <option value={selection}>Selected list is unavailable</option>
+              )}
+              {lists && lists.length > 0 && (
+                <optgroup label="Personal lists">
+                  {lists.map((list) => (
+                    <option key={list.id} value={`list:${list.id}`}>
+                      {list.name} ({list.usableMemberCount} practice meanings)
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {lessons.map((lesson) => (
+                <option key={lesson.key} value={lesson.key}>
+                  {lesson.situationTitle}: {lesson.title}
+                </option>
+              ))}
+            </select>
+            <details className="mt-1">
+              <summary className="min-h-11 cursor-pointer content-center text-sm text-neutral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+                About this selection
+              </summary>
+              <p
+                id="practice-vocabulary-help"
+                className="pb-3 text-sm text-neutral-600"
               >
-                <path d="m9 5 7 7-7 7" />
-              </svg>
-            </button>
-          );
-        })}
-      </div>
+                {selection
+                  ? "Practise these words by typing or listening."
+                  : "A full-course mix can include words you have not studied yet."}{" "}
+                Mistake practice uses your past answers.
+              </p>
+            </details>
+          </div>
+        ) : null}
+        {selectedList && (
+          <p className="mt-3 text-neutral-700">
+            Selected list: {selectedList.name}. {selectedList.usableMemberCount}{" "}
+            of {selectedList.memberCount} words are available for practice.
+          </p>
+        )}
+        {unavailableSelection && (
+          <p role="status" className="mt-3 text-neutral-700">
+            {selectedList
+              ? "This list has no meanings available for focused practice. Add a supported meaning or choose another vocabulary source."
+              : "Your selected list could not be loaded. Load saved sessions to refresh your lists, or explicitly choose another vocabulary source."}
+          </p>
+        )}
+        {!lists && (
+          <div className="mt-3">
+            <p role="status" className="text-neutral-700">
+              Personal lists are unavailable. Refresh to try again.
+            </p>
+            {!hasVocabularySelection && (
+              <button
+                type="button"
+                aria-label="Refresh practice sources"
+                disabled={busy || expired.current}
+                className={`${textLink} text-sm`}
+                onClick={() => void loadSessions()}
+              >
+                Refresh
+              </button>
+            )}
+          </div>
+        )}
+        <div className="mt-4 divide-y divide-neutral-200 border-y border-neutral-200">
+          {(Object.keys(practiceModes) as PracticeMode[])
+            .filter((mode) => mode !== "journey")
+            .map((mode) => {
+              const content = practiceModes[mode];
+              const noMistakes =
+                mode === "mistakes" && sessions?.availableMistakes === 0;
+              const description =
+                mode === "mistakes" && sessions
+                  ? noMistakes
+                    ? "No past mistakes to revisit right now."
+                    : `${sessions.availableMistakes} ${sessions.availableMistakes === 1 ? "word is" : "words are"} ready for another try.`
+                  : content.description;
+              const label = (
+                <span className="min-w-0">
+                  <span className="block text-lg font-semibold text-neutral-900">
+                    {noMistakes ? content.title : content.startLabel}
+                  </span>
+                  <span
+                    id={`practice-mode-${mode}-description`}
+                    className="mt-1 block text-sm font-normal text-neutral-600"
+                  >
+                    {description}
+                  </span>
+                </span>
+              );
+              return noMistakes ? (
+                <div key={mode} className="px-3 py-4">
+                  {label}
+                </div>
+              ) : (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-label={content.startLabel}
+                  aria-describedby={`practice-mode-${mode}-description`}
+                  disabled={
+                    locked || (mode !== "mistakes" && unavailableSelection)
+                  }
+                  className="flex min-h-20 w-full items-center justify-between gap-4 rounded-lg px-3 py-4 text-left hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => void start(mode)}
+                >
+                  {label}
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="size-5 shrink-0 text-primary-700"
+                  >
+                    <path d="m9 5 7 7-7 7" />
+                  </svg>
+                </button>
+              );
+            })}
+        </div>
 
-      <Link href="/lists" className={`${textLink} mt-2 text-sm`}>
-        Manage personal lists
-      </Link>
-
+        <Link href="/lists" className={`${textLink} mt-2 text-sm`}>
+          Manage personal lists
+        </Link>
+      </details>
       {busy && (
         <p role="status" className="mt-3 text-neutral-700">
           {openedSession ? "Opening your practice…" : "Loading your practice…"}
@@ -361,9 +394,9 @@ export function PracticeEntry({
         </div>
       )}
 
-      {sessions && sessions.items.length > 0 && (
+      {sessions && manualSessions.length > 0 && (
         <details
-          open={sessions.items.some(
+          open={manualSessions.some(
             (session) => session.status !== "completed",
           )}
           className="mt-4"
@@ -372,7 +405,7 @@ export function PracticeEntry({
             Recent practice
           </summary>
           <ul className="mt-2 divide-y divide-neutral-200">
-            {sessions.items.map((session) => (
+            {manualSessions.map((session) => (
               <li
                 key={session.id}
                 className="flex flex-wrap items-center justify-between gap-3 py-3"

@@ -84,7 +84,10 @@ test.describe("Review stale-card recovery", () => {
     await conflictFromOtherTab(page, 1, true);
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(
-      page.getByRole("heading", { name: "Lesson complete", exact: true }),
+      page.getByRole("heading", {
+        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        exact: true,
+      }),
     ).toBeFocused();
     await expect(
       page.getByText("0 words remembered for today.", { exact: true }),
@@ -98,7 +101,10 @@ test.describe("Review stale-card recovery", () => {
     await conflictFromOtherTab(page, 2, true);
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(
-      page.getByRole("heading", { name: "Lesson complete", exact: true }),
+      page.getByRole("heading", {
+        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        exact: true,
+      }),
     ).toBeFocused();
     await expect(
       page.getByText("1 word remembered for today.", { exact: true }),
@@ -120,7 +126,10 @@ test.describe("Review stale-card recovery", () => {
     await answerReviewWord(page, "definition for review word 2");
     await answerReviewWord(page, "definition for review word 3");
     await expect(
-      page.getByRole("heading", { name: "Lesson complete", exact: true }),
+      page.getByRole("heading", {
+        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        exact: true,
+      }),
     ).toBeFocused();
     await expect(
       page.getByText("3 words remembered for today.", { exact: true }),

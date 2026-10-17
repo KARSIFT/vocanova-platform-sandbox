@@ -19,6 +19,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/practice"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/pronunciation"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/stories"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
@@ -137,6 +138,7 @@ func NewContractAPI() huma.API {
 	RegisterLessonRecommendation(contractAPI, lessons.NewRecommendationService(lessons.NewPostgreSQLRepository(nil)))
 	RegisterWordKnowledge(contractAPI, wordknowledge.NewService(wordknowledge.NewPostgreSQLRepository(nil), clock.Real{}), svc)
 	RegisterPractice(contractAPI, practice.NewService(practice.NewPostgreSQLRepository(nil), clock.Real{}), svc)
+	RegisterPronunciation(contractAPI, pronunciation.NewService(nil, nil, false, clock.Real{}), svc)
 	RegisterWordLists(contractAPI, wordlists.NewService(wordlists.NewPostgreSQLRepository(nil), clock.Real{}), svc)
 	RegisterStories(contractAPI, stories.NewService(stories.NewPostgreSQLRepository(nil), clock.Real{}), svc)
 	RegisterAchievements(contractAPI, achievements.NewService(achievements.NewPostgreSQLRepository(nil)))

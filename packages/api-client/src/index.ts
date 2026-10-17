@@ -80,6 +80,8 @@ export interface DailyLesson {
     reason?: string;
     correctChoiceId?: string;
     selectedChoiceId?: string;
+    nextReviewAt?: string;
+    reviewStep?: number;
   } | null;
   canContinue: boolean;
   createdAt: string;
@@ -94,6 +96,8 @@ export interface DailyLessonAction {
   action: "answer" | "continue" | "skip";
   choiceId?: string;
   wasHintUsed?: boolean;
+  nextReview?:
+    "automatic" | "1d" | "3d" | "7d" | "14d" | "30d" | "60d" | "120d" | "known";
 }
 
 export interface CurrentUser {
@@ -188,10 +192,18 @@ export interface PasswordResetBody {
 
 export interface OAuthStartBody {
   redirectUri: string;
+  rememberMe?: boolean;
 }
 
 export interface OAuthStartResponse {
   url: string;
+}
+
+export interface PronunciationAudio {
+  audioBase64: string;
+  mimeType: "audio/mpeg";
+  voice: string;
+  cacheHit: boolean;
 }
 
 /**
@@ -522,7 +534,8 @@ export interface StoryAction {
   choiceId?: string;
 }
 
-export type PracticeMode = "typed_recall" | "listening_choice" | "mistakes";
+export type PracticeMode =
+  "typed_recall" | "listening_choice" | "mistakes" | "journey";
 
 export interface PracticeStartRequest {
   listId?: string;
@@ -532,6 +545,8 @@ export interface PracticeStartRequest {
 }
 
 export interface PracticeSessionSummary {
+  journeyLesson?: number;
+  newWords?: number;
   listId?: string;
   listName?: string;
   listRevision?: number;
@@ -553,14 +568,27 @@ export interface PracticeSessionSummary {
 
 export interface PracticeStep {
   id: string;
-  kind: "typed_recall" | "listening_choice";
+  /** Teaching-only visual context; absent from graded questions. */
+  meaningId?: string;
+  kind:
+    | "typed_recall"
+    | "listening_choice"
+    | "teach"
+    | "meaning_choice"
+    | "gap_choice"
+    | "sentence_build";
   prompt: string;
   choices: { id: string; text: string }[];
   speechText?: string;
   speechLanguage?: string;
+  wordText?: string;
+  context?: string;
 }
 
 export interface PracticeFeedback {
+  revealed?: boolean;
+  correctTokenIds?: string[];
+  selectedTokenIds?: string[];
   stepId: string;
   correct: boolean;
   /** Confirmed session choice, present only after a correct listening answer. */
@@ -582,6 +610,15 @@ export interface PracticeSession extends PracticeSessionSummary {
 export interface PracticeSessionsResponse {
   items: PracticeSessionSummary[];
   availableMistakes: number;
+  journey?: {
+    completedLessons: number;
+    currentSession: PracticeSessionSummary | null;
+    nextLesson: number;
+    supportedKnownWords: number;
+    totalKnownWords: number;
+    todayCompletedLessons: number;
+    dailyGoal: number;
+  };
 }
 
 export interface PracticeAction {
@@ -591,6 +628,7 @@ export interface PracticeAction {
   action: "answer" | "continue" | "reveal";
   typedAnswer?: string;
   choiceId?: string;
+  tokenIds?: string[];
 }
 
 export interface LessonSummary {
@@ -962,6 +1000,7 @@ export interface PersonalDataLearningAction {
   choiceId?: string;
   typedAnswer?: string;
   lessonKey?: string;
+  tokenIds?: string[];
 }
 export interface PersonalDataWordList {
   id: string;
@@ -989,6 +1028,8 @@ export interface PersonalDataPracticeSession extends PersonalDataSessionProgress
   listId: string | null;
   listName: string | null;
   listRevision: number | null;
+  journeyLesson: number | null;
+  newWords: number | null;
   contentVersion: string;
   gradingVersion: string;
   actions: Array<{
@@ -1049,7 +1090,7 @@ export interface PersonalDataExport {
     actions: Array<{
       action: Pick<
         DailyLessonAction,
-        "stepId" | "action" | "choiceId" | "wasHintUsed"
+        "stepId" | "action" | "choiceId" | "wasHintUsed" | "nextReview"
       >;
       feedback: DailyLesson["feedback"];
       createdAt: string;
@@ -1059,7 +1100,7 @@ export interface PersonalDataExport {
     meaningId: string;
     localDate: string;
     reviewAttemptId: string;
-    dailySessionId: string;
+    dailySessionId: string | null;
     createdAt: string;
   }> | null;
   wordKnowledge?: Array<{
@@ -1283,6 +1324,19 @@ export class VocanovaClient {
       init,
     );
     return { response };
+  }
+
+  async getPronunciation(
+    text: string,
+    init?: RequestInit,
+  ): Promise<{ data: PronunciationAudio; response: Response }> {
+    const response = await this.request(
+      "POST",
+      "/api/v1/pronunciation",
+      { text },
+      init,
+    );
+    return { data: (await response.json()) as PronunciationAudio, response };
   }
 
   async listJourneySituations(

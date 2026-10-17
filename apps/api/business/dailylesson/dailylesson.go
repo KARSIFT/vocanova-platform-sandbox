@@ -39,17 +39,19 @@ type DailyLessonStep struct {
 	Choices      []Choice `json:"choices"`
 }
 type DailyLessonFeedback struct {
-	StepID           string `json:"stepId"`
-	Correct          bool   `json:"correct"`
-	Answer           string `json:"answer"`
-	Explanation      string `json:"explanation"`
-	MeaningID        string `json:"meaningId"`
-	WordText         string `json:"wordText"`
-	Credited         bool   `json:"credited"`
-	Skipped          bool   `json:"skipped"`
-	Reason           string `json:"reason,omitempty"`
-	CorrectChoiceID  string `json:"correctChoiceId,omitempty"`
-	SelectedChoiceID string `json:"selectedChoiceId,omitempty"`
+	StepID           string     `json:"stepId"`
+	Correct          bool       `json:"correct"`
+	Answer           string     `json:"answer"`
+	Explanation      string     `json:"explanation"`
+	MeaningID        string     `json:"meaningId"`
+	WordText         string     `json:"wordText"`
+	Credited         bool       `json:"credited"`
+	Skipped          bool       `json:"skipped"`
+	Reason           string     `json:"reason,omitempty"`
+	CorrectChoiceID  string     `json:"correctChoiceId,omitempty"`
+	SelectedChoiceID string     `json:"selectedChoiceId,omitempty"`
+	NextReviewAt     *time.Time `json:"nextReviewAt,omitempty"`
+	ReviewStep       *int       `json:"reviewStep,omitempty"`
 }
 type DailyLessonSession struct {
 	Attribution         knowledgecatalog.Attribution `json:"attribution"`
@@ -79,6 +81,7 @@ type DailyLessonAction struct {
 	Action           string `json:"action" enum:"answer,continue,skip"`
 	ChoiceID         string `json:"choiceId,omitempty" maxLength:"100"`
 	WasHintUsed      bool   `json:"wasHintUsed,omitempty"`
+	NextReview       string `json:"nextReview,omitempty" enum:"automatic,1d,3d,7d,14d,30d,60d,120d,known"`
 }
 
 // Domain aliases keep callers concise while schema names remain unique.
@@ -95,6 +98,7 @@ type word struct {
 	Public                        Step
 	AnswerID, Definition          string
 	Answered, Resolved            bool
+	KnowledgeUpdatedAt            *time.Time
 }
 type state struct {
 	ID, UserID                                                                      uuid.UUID
@@ -365,6 +369,9 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 	if u == uuid.Nil || id == uuid.Nil || !validKey(key) || !validKey(a.ClientActionID) || !validKey(a.StepID) || a.ExpectedRevision < 0 || len(a.ChoiceID) > 100 || (a.Action != "answer" && a.Action != "continue" && a.Action != "skip") {
 		return nil, ErrInvalid
 	}
+	if a.NextReview != "" && (a.Action != "continue" || !validNextReview(a.NextReview)) {
+		return nil, ErrInvalid
+	}
 	tx, e := s.db.BeginTx(ctx, nil)
 	if e != nil {
 		return nil, e
@@ -398,7 +405,18 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 		if st.Feedback == nil || a.ChoiceID != "" || a.WasHintUsed {
 			return nil, ErrInvalid
 		}
-		if !st.Feedback.Correct && !st.Feedback.Skipped {
+		if a.NextReview != "" && a.NextReview != "automatic" {
+			if e = reschedule(ctx, tx, u, w, st.Feedback, a.NextReview, now); e != nil {
+				return nil, e
+			}
+			// An explicit later date or self-assessment replaces this session's
+			// deferred retry. It never turns an incorrect answer into a credit.
+			if !w.Resolved {
+				w.Resolved = true
+				st.CompletedWords++
+			}
+		}
+		if !w.Resolved && !st.Feedback.Correct && !st.Feedback.Skipped {
 			// A correction is not an answer. Retry as a separate new question at the end.
 			st.Queue = append(st.Queue, st.Queue[0])
 			w.Public.ID = uuid.NewString()
@@ -447,7 +465,8 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 		var deleted sql.NullTime
 		var due sql.NullTime
 		var known bool
-		e = tx.QueryRowContext(ctx, `SELECT total_review_count,status,deleted_at,next_review_at,EXISTS(SELECT 1 FROM user_word_knowledge k WHERE k.user_id=$2 AND k.meaning_id=uw.meaning_id AND k.self_reported_known) FROM user_words uw WHERE id=$1 AND user_id=$2 FOR UPDATE`, w.UserWordID, u).Scan(&count, &status, &deleted, &due, &known)
+		var knowledgeUpdated sql.NullTime
+		e = tx.QueryRowContext(ctx, `SELECT total_review_count,status,deleted_at,next_review_at,EXISTS(SELECT 1 FROM user_word_knowledge k WHERE k.user_id=$2 AND k.meaning_id=uw.meaning_id AND k.self_reported_known),(SELECT k.updated_at FROM user_word_knowledge k WHERE k.user_id=$2 AND k.meaning_id=uw.meaning_id) FROM user_words uw WHERE id=$1 AND user_id=$2 FOR UPDATE`, w.UserWordID, u).Scan(&count, &status, &deleted, &due, &known, &knowledgeUpdated)
 		if errors.Is(e, sql.ErrNoRows) {
 			reason = "removed"
 		} else if e != nil {
@@ -488,9 +507,18 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 			}
 			w.ReviewCount++
 			w.Answered = true
-			if e = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM daily_review_successes WHERE review_attempt_id=$1)", attempt.ID).Scan(&fb.Credited); e != nil {
+			if knowledgeUpdated.Valid {
+				w.KnowledgeUpdatedAt = &knowledgeUpdated.Time
+			} else {
+				w.KnowledgeUpdatedAt = nil
+			}
+			var confirmedDue time.Time
+			var confirmedStep int
+			if e = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM daily_review_successes WHERE review_attempt_id=$1),next_review_at,review_step FROM user_words WHERE id=$2 AND user_id=$3", attempt.ID, w.UserWordID, u).Scan(&fb.Credited, &confirmedDue, &confirmedStep); e != nil {
 				return nil, e
 			}
+			fb.NextReviewAt = &confirmedDue
+			fb.ReviewStep = &confirmedStep
 
 			if correct {
 				fb.Explanation = "Correct. This word is reviewed for today."
@@ -514,6 +542,52 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 		return nil, e
 	}
 	return project(st), tx.Commit()
+}
+
+func validNextReview(value string) bool {
+	switch value {
+	case "automatic", "1d", "3d", "7d", "14d", "30d", "60d", "120d", "known":
+		return true
+	default:
+		return false
+	}
+}
+
+// reschedule is a separate learner preference, not a second graded review.
+// The parent transaction already owns the user/session locks. Compare the
+// schedule and assessment seen by Answer so Continue cannot overwrite newer
+// reviews, removals, notes or knowledge decisions from another tab.
+func reschedule(ctx context.Context, tx *sql.Tx, u uuid.UUID, w *word, fb *Feedback, value string, now time.Time) error {
+	if fb.Skipped || !w.Answered || fb.NextReviewAt == nil || fb.ReviewStep == nil {
+		return ErrInvalid
+	}
+	var count, step int
+	var status string
+	var deleted, due, knowledgeUpdated sql.NullTime
+	var known bool
+	err := tx.QueryRowContext(ctx, `SELECT uw.total_review_count,uw.review_step,uw.status,uw.deleted_at,uw.next_review_at,COALESCE(k.self_reported_known,false),k.updated_at
+ FROM user_words uw LEFT JOIN user_word_knowledge k ON k.user_id=uw.user_id AND k.meaning_id=uw.meaning_id
+ WHERE uw.id=$1 AND uw.user_id=$2 AND uw.meaning_id=$3 FOR UPDATE OF uw`, w.UserWordID, u, w.MeaningID).Scan(&count, &step, &status, &deleted, &due, &known, &knowledgeUpdated)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrConflict
+	}
+	if err != nil {
+		return err
+	}
+	if deleted.Valid || known || (status != "new" && status != "learning" && status != "reviewing") || count != w.ReviewCount || step != *fb.ReviewStep || !due.Valid || !due.Time.Equal(*fb.NextReviewAt) || knowledgeUpdated.Valid != (w.KnowledgeUpdatedAt != nil) || (knowledgeUpdated.Valid && !knowledgeUpdated.Time.Equal(*w.KnowledgeUpdatedAt)) {
+		return ErrConflict
+	}
+	if value == "known" {
+		_, err = tx.ExecContext(ctx, `INSERT INTO user_word_knowledge(user_id,meaning_id,self_reported_known,note,updated_at) VALUES($1,$2,true,'',$3)
+ ON CONFLICT(user_id,meaning_id) DO UPDATE SET self_reported_known=true,updated_at=EXCLUDED.updated_at`, u, w.MeaningID, now)
+		return err
+	}
+	days := map[string]int{"1d": 1, "3d": 3, "7d": 7, "14d": 14, "30d": 30, "60d": 60, "120d": 120}[value]
+	if days == 0 {
+		return ErrInvalid
+	}
+	_, err = tx.ExecContext(ctx, `UPDATE user_words SET next_review_at=$3,updated_at=$4 WHERE id=$1 AND user_id=$2`, w.UserWordID, u, now.Add(time.Duration(days)*24*time.Hour), now)
+	return err
 }
 
 // Only this lesson's successful receipts on the current learner-local date count

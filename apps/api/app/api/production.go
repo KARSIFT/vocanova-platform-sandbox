@@ -27,6 +27,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/practice"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/pronunciation"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/stories"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
@@ -774,6 +775,8 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	// Never present deterministic test-provider output as real learner feedback.
 	// Keep non-AI learning available when a provider is missing or disabled.
 	aiGenerationEnabled := productionAIGenerationEnabled(cfg)
+	pronunciationEnabled := aiGenerationEnabled && cfg.APIProvider == providerCloudflare && strings.TrimSpace(cfg.APIAccountID) != ""
+	pronunciationSvc := pronunciation.NewService(db, pronunciation.NewCloudflareProvider(pronunciation.CloudflareConfig{APIToken: cfg.APIKey, AccountID: cfg.APIAccountID}), pronunciationEnabled, clk)
 	aiGate := aifeedback.GenerationGate(aifeedback.NewAlwaysEnabledGate())
 	if !aiGenerationEnabled {
 		aiGate = aifeedback.NewDisabledGate()
@@ -837,6 +840,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	RegisterLessonRecommendation(api, lessons.NewRecommendationService(lessons.NewPostgreSQLRepository(db)))
 	RegisterWordKnowledge(api, knowledgeSvc, authSvc)
 	RegisterPractice(api, practiceSvc, authSvc)
+	RegisterPronunciation(api, pronunciationSvc, authSvc)
 	RegisterWordLists(api, wordlists.NewService(wordlists.NewPostgreSQLRepository(db), clk), authSvc)
 	RegisterStories(api, stories.NewService(stories.NewPostgreSQLRepository(db), clk), authSvc)
 	RegisterAchievements(api, achievements.NewService(achievements.NewPostgreSQLRepository(db)))

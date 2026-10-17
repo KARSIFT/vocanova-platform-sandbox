@@ -1,11 +1,46 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer } from "@/ui/surface";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { StartDailyLessonButton } from "../reviews/_components/daily-lesson-start";
+import { PracticeJourney } from "../practice/_components/practice-journey";
+import {
+  ApiResponseError,
+  type PracticeSessionsResponse,
+} from "@vocanova/api-client";
+
+async function HomePractice({
+  read,
+}: {
+  read: Promise<PromiseSettledResult<{ data: PracticeSessionsResponse }>>;
+}) {
+  const result = await read;
+  if (
+    result.status === "rejected" &&
+    result.reason instanceof ApiResponseError &&
+    result.reason.status === 401
+  )
+    requireAuthRedirect(result.reason, "/home");
+  return (
+    <PracticeJourney
+      journey={
+        result.status === "fulfilled"
+          ? (result.value.data.journey ?? null)
+          : null
+      }
+      compact
+    />
+  );
+}
 
 export default async function HomePage() {
   const client = await createServerApiClient();
+  // Start the secondary read concurrently, capturing rejection immediately.
+  // Its latency or recoverable failure must not block the primary review card.
+  const practiceRead = Promise.allSettled([client.listPracticeSessions()]).then(
+    ([result]) => result,
+  );
   let savedWordsResponse: Awaited<ReturnType<typeof client.listSavedWords>>;
   let dailyLessonResponse: Awaited<
     ReturnType<typeof client.getCurrentDailyLesson>
@@ -25,29 +60,24 @@ export default async function HomePage() {
   const dueReviewWords = dailyLessonResponse.data.dueCount;
   const currentLesson = dailyLessonResponse.data.session;
   const mission = dailyMissionResponse.data;
-  const { reviewTarget, reviewsCompleted, streak } = mission;
-  const complete = mission.status === "completed";
+  const { reviewsCompleted, streak } = mission;
   const action = currentLesson
     ? {
         href: "/review",
-        label: "Continue lesson",
-        title: "Pick up where you left off.",
+        label: "Continue review",
+        title: "Review words",
       }
     : dueReviewWords > 0
       ? {
           href: "/review",
-          label: "Start today’s lesson",
-          title: "Remember today’s words.",
+          label: "Start review",
+          title: "Review words",
         }
       : {
           href: "/discovery",
           label: "Discover words",
-          title: "Meet your next useful word.",
+          title: "Review complete",
         };
-  const progress =
-    reviewTarget > 0
-      ? Math.min(100, Math.round((reviewsCompleted / reviewTarget) * 100))
-      : 0;
 
   return (
     <PageContainer className="learning-overview max-w-[72rem]">
@@ -74,21 +104,15 @@ export default async function HomePage() {
       </header>
       <div className="study-desk">
         <div className="study-next">
-          <section
-            aria-label={complete ? "Mission complete" : "Today’s practice"}
-            className="daily-focus"
-          >
-            <div className="daily-focus-top">
-              <span className="text-sm font-semibold text-primary-700">
-                {complete ? "Mission complete" : "Today’s practice"}
-              </span>
-              {complete && (
-                <span aria-hidden="true" className="text-primary-700">
-                  ✓
-                </span>
-              )}
-            </div>
+          <section aria-label="Review words" className="daily-focus">
             <h2 id="todays-mission-heading">{action.title}</h2>
+            <p className="mt-2 text-neutral-600">
+              {currentLesson
+                ? "Pick up where you left off."
+                : dueReviewWords > 0
+                  ? `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`
+                  : "No words are due. Discover something new whenever you like."}
+            </p>
             {!currentLesson && dueReviewWords > 0 ? (
               <StartDailyLessonButton
                 className="learning-primary"
@@ -102,31 +126,34 @@ export default async function HomePage() {
             <div className="daily-meter">
               <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm text-neutral-600">
                 <span>
-                  Reviews today:{" "}
+                  Reviewed today:{" "}
                   <strong className="text-neutral-900">
-                    {reviewsCompleted} of {reviewTarget}
+                    {reviewsCompleted}
                   </strong>
                 </span>
-                <span>
-                  Currently due: {dueReviewWords}{" "}
-                  {dueReviewWords === 1 ? "word" : "words"}.
-                </span>
-              </div>
-              <div
-                role="progressbar"
-                aria-label="Reviews today"
-                aria-valuemin={0}
-                aria-valuemax={reviewTarget}
-                aria-valuenow={Math.min(reviewsCompleted, reviewTarget)}
-                className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-200"
-              >
-                <div
-                  className="h-full rounded-full bg-primary-700"
-                  style={{ width: `${progress}%` }}
-                />
               </div>
             </div>
           </section>
+          <div className="mt-6">
+            <Suspense
+              fallback={
+                <section
+                  aria-label="Your learning path"
+                  aria-busy="true"
+                  className="min-h-[25rem] rounded-2xl border border-neutral-200 bg-white p-5 sm:min-h-[23rem]"
+                >
+                  <h2 className="text-2xl font-bold text-neutral-900">
+                    Today’s practice
+                  </h2>
+                  <p role="status" className="mt-2 text-neutral-600">
+                    Loading practice…
+                  </p>
+                </section>
+              }
+            >
+              <HomePractice read={practiceRead} />
+            </Suspense>
+          </div>
           <Link
             href="/knowledge-map"
             className="mt-6 flex min-h-16 items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white p-4 text-lg font-semibold text-neutral-900 hover:border-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700"

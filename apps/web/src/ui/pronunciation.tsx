@@ -2,7 +2,104 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-import { deviceSpeech, type PronunciationState } from "@/lib/speech";
+import {
+  availableEnglishVoices,
+  DEFAULT_SPEECH_PREFERENCES,
+  deviceSpeech,
+  pronunciationCaption,
+  readSpeechPreferences,
+  saveSpeechPreferences,
+  subscribeSpeechPreferences,
+  type PronunciationState,
+  type SpeechPreferences,
+} from "@/lib/speech";
+
+/** Preferences contain voice/speed only, never the authored or learner text. */
+export function useSpeechPreferences() {
+  const [preferences, setPreferences] = useState<SpeechPreferences>(
+    DEFAULT_SPEECH_PREFERENCES,
+  );
+  useEffect(() => {
+    const refresh = () => setPreferences(readSpeechPreferences());
+    refresh();
+    return subscribeSpeechPreferences(refresh);
+  }, []);
+  function update(patch: Partial<SpeechPreferences>) {
+    setPreferences(saveSpeechPreferences(patch));
+  }
+  return { preferences, update };
+}
+
+export function SpeechSettings({ disabled = false }: { disabled?: boolean }) {
+  const { preferences, update } = useSpeechPreferences();
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const id = useId();
+  useEffect(() => {
+    const refresh = () => setVoices(availableEnglishVoices());
+    refresh();
+    window.speechSynthesis?.addEventListener?.("voiceschanged", refresh);
+    return () =>
+      window.speechSynthesis?.removeEventListener?.("voiceschanged", refresh);
+  }, []);
+
+  return (
+    <details className="min-w-0 max-w-full text-sm text-neutral-700">
+      <summary className="min-h-11 cursor-pointer content-center rounded-md px-3 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+        Voice &amp; speed
+      </summary>
+      <div className="space-y-3 rounded-xl border border-neutral-200 p-3">
+        <div>
+          <label htmlFor={`${id}-speed`} className="mb-1 block font-medium">
+            Playback speed
+          </label>
+          <select
+            id={`${id}-speed`}
+            value={preferences.rate}
+            disabled={disabled}
+            onChange={(event) => update({ rate: Number(event.target.value) })}
+            className="min-h-11 w-full rounded-md border border-neutral-300 bg-white px-2 text-neutral-900"
+          >
+            <option value={0.7}>Extra slow</option>
+            <option value={0.85}>Learning pace</option>
+            <option value={1}>Normal pace</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor={`${id}-voice`} className="mb-1 block font-medium">
+            English voice
+          </label>
+          <select
+            id={`${id}-voice`}
+            value={preferences.voiceURI}
+            disabled={disabled || voices.length === 0}
+            onChange={(event) => update({ voiceURI: event.target.value })}
+            className="min-h-11 w-full rounded-md border border-neutral-300 bg-white px-2 text-neutral-900"
+          >
+            <option value="">Natural voice when available</option>
+            {preferences.voiceURI &&
+            !voices.some((voice) => voice.voiceURI === preferences.voiceURI) ? (
+              <option value={preferences.voiceURI}>
+                Previous voice unavailable
+              </option>
+            ) : null}
+            {voices.map((voice) => (
+              <option
+                key={`${voice.voiceURI}-${voice.lang}`}
+                value={voice.voiceURI}
+              >
+                {voice.name} ({voice.lang})
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="text-xs text-neutral-600">
+          Choose a device voice for offline audio. These choices apply to all
+          audio.
+        </p>
+      </div>
+    </details>
+  );
+}
 
 interface ListenButtonProps {
   /** Authored vocabulary or examples only; never pass a learner's draft. */
@@ -20,7 +117,8 @@ export function ListenButton({
 }: ListenButtonProps) {
   const owner = useRef(Symbol("pronunciation"));
   const [state, setState] = useState<PronunciationState>({ status: "idle" });
-  const [slow, setSlow] = useState(false);
+  const { preferences, update } = useSpeechPreferences();
+  const slow = preferences.rate === 0.7;
   const descriptionId = useId();
   const active = state.status === "starting" || state.status === "playing";
 
@@ -49,7 +147,7 @@ export function ListenButton({
           }
           onClick={() => {
             if (active) deviceSpeech.stop(owner.current);
-            else deviceSpeech.play(owner.current, text, slow, setState);
+            else deviceSpeech.play(owner.current, text, false, setState);
           }}
           className="inline-flex min-h-11 min-w-11 items-center gap-[var(--spacing-xs)] rounded-md px-[var(--spacing-sm)] text-sm font-semibold text-primary-700 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
@@ -75,11 +173,12 @@ export function ListenButton({
           aria-label={`Slow pronunciation of ${label}`}
           aria-pressed={slow}
           disabled={active}
-          onClick={() => setSlow((previous) => !previous)}
+          onClick={() => update({ rate: slow ? 0.85 : 0.7 })}
           className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-neutral-200 px-[var(--spacing-sm)] text-sm ${slow ? "text-primary-800" : "text-neutral-700"} hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 aria-pressed:border-primary-600 aria-pressed:bg-primary-50 disabled:cursor-default disabled:opacity-60`}
         >
           Slow
         </button>
+        <SpeechSettings disabled={active} />
       </div>
       {showCaption || state.message ? (
         <p
@@ -87,7 +186,7 @@ export function ListenButton({
           role={state.message ? "status" : undefined}
           className="text-xs text-neutral-600"
         >
-          {state.message ?? "Device pronunciation"}
+          {state.message ?? pronunciationCaption(state)}
         </p>
       ) : null}
     </div>

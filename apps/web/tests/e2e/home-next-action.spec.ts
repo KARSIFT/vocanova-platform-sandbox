@@ -20,10 +20,11 @@ test.describe("Daily learning entry", () => {
       await page.goto("/home");
       await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
       const action = hasReviews
-        ? page.getByRole("button", { name: "Start today’s lesson", exact: true })
+        ? page.getByRole("button", { name: "Start review", exact: true })
         : page.getByRole("link", { name: "Discover words", exact: true });
       await expect(action).toBeVisible();
-      if (!hasReviews) await expect(action).toHaveAttribute("href", "/discovery");
+      if (!hasReviews)
+        await expect(action).toHaveAttribute("href", "/discovery");
       const actionBox = await action.boundingBox();
       const navigationBox = await page
         .getByRole("navigation", { name: "Primary" })

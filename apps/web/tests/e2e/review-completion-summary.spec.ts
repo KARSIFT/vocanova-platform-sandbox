@@ -32,7 +32,10 @@ async function seed(page: Page, count: number) {
   await page.goto("/reviews");
 }
 const completed = (page: Page) =>
-  page.getByRole("heading", { name: "Lesson complete", level: 1 });
+  page.getByRole("heading", {
+    name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+    level: 1,
+  });
 const actions = "**/api/v1/daily-lessons/*/actions";
 
 test.describe("Review completion summary", () => {
@@ -60,14 +63,16 @@ test.describe("Review completion summary", () => {
         ).toBeVisible();
         if (index < 51)
           await page
-            .getByRole("button", { name: "Next lesson", exact: true })
+            .getByRole("button", { name: "Keep reviewing", exact: true })
             .click();
       }
     }
     await page.goto("/home");
     await expect(
-      page.getByRole("progressbar", { name: "Reviews today" }),
-    ).toHaveAttribute("aria-valuenow", "51");
+      page
+        .getByRole("region", { name: "Review words", exact: true })
+        .getByText(/^Reviewed today:/),
+    ).toHaveText("Reviewed today: 51");
   });
 
   test("does not count a rejected answer before its successful keyboard retry", async ({

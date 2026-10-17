@@ -15,6 +15,8 @@ test.beforeEach(async ({ context, baseURL }) => {
 
 async function start(page: Page, name = "Start typed recall") {
   await page.goto("/practice");
+  if (name !== "Start practice lesson")
+    await main(page).getByText("More practice", { exact: true }).click();
   const response = page.waitForResponse(
     (r) =>
       r.request().method() === "POST" &&
@@ -72,6 +74,7 @@ test("returning through Practice navigation offers the saved session and a fresh
     .getByRole("link", { name: "Back to Practice", exact: true })
     .click();
   await expect(page).toHaveURL(/\/practice$/);
+  await main(page).getByText("More practice", { exact: true }).click();
   await expect(
     main(page).getByRole("button", { name: "Start typed recall", exact: true }),
   ).toBeEnabled();
@@ -292,6 +295,7 @@ test("past mistakes come from a submitted wrong answer and resolve only in indep
   page,
 }) => {
   await page.goto("/practice");
+  await main(page).getByText("More practice", { exact: true }).click();
   await expect(
     main(page).getByText("No past mistakes to revisit right now.", {
       exact: true,
@@ -306,6 +310,7 @@ test("past mistakes come from a submitted wrong answer and resolve only in indep
   expect(assisted.feedback).toMatchObject({ correct: false, assisted: true });
   await act(page, "Finish practice");
   await page.goto("/practice");
+  await main(page).getByText("More practice", { exact: true }).click();
   await expect(
     main(page).getByText("1 word is ready for another try.", { exact: true }),
   ).toBeVisible();
@@ -317,6 +322,7 @@ test("past mistakes come from a submitted wrong answer and resolve only in indep
   result = await act(page, "Finish practice");
   expect(result.firstAnswersCorrect).toBe(1);
   await page.goto("/practice");
+  await main(page).getByText("More practice", { exact: true }).click();
   await expect(
     main(page).getByText("No past mistakes to revisit right now.", {
       exact: true,
@@ -332,6 +338,7 @@ test("a lost start response opens the same practice session on retry", async ({
   page,
 }) => {
   await page.goto("/practice");
+  await main(page).getByText("More practice", { exact: true }).click();
   const requests: { key: string | undefined; body: string | null }[] = [];
   let createdID = "";
   await page.route("**/api/v1/practice-sessions", async (route) => {
@@ -440,7 +447,7 @@ for (const theme of ["light", "dark"] as const) {
     await main(page)
       .getByRole("button", { name: "Play audio", exact: true })
       .click();
-    await expect.poll(calls).toEqual([{ text: "invite", rate: 1 }]);
+    await expect.poll(calls).toEqual([{ text: "invite", rate: 0.85 }]);
     await main(page)
       .getByRole("button", { name: "Slower audio", exact: true })
       .click();
@@ -448,8 +455,8 @@ for (const theme of ["light", "dark"] as const) {
       .getByRole("button", { name: "Play audio", exact: true })
       .click();
     await expect.poll(calls).toEqual([
-      { text: "invite", rate: 1 },
-      { text: "invite", rate: 0.75 },
+      { text: "invite", rate: 0.85 },
+      { text: "invite", rate: 0.7 },
     ]);
     expect((await saved(page, session.id)).questionsAnswered).toBe(0);
     const options = main(page).getByRole("group", { name: "Answer choices" });
@@ -523,4 +530,197 @@ test("unsupported listening keeps its ungraded session and offers another mode",
   await expect(
     main(page).getByRole("button", { name: "Play audio", exact: true }),
   ).toBeVisible();
+});
+
+test("personal path mixes teaching, listening, gap fill and accessible sentence building", async ({
+  page,
+}) => {
+  let session = await start(page, "Start practice lesson");
+  expect(session.mode).toBe("journey");
+  const teachingPicture = main(page)
+    .getByTestId("meaning-picture")
+    .getByRole("img");
+  await expect(teachingPicture).toBeVisible();
+  await expect
+    .poll(() =>
+      teachingPicture.evaluate(
+        (image) => (image as HTMLImageElement).naturalWidth,
+      ),
+    )
+    .toBeGreaterThan(0);
+
+  await expect(
+    main(page).getByRole("heading", { name: "invite", exact: true }),
+  ).toBeVisible();
+  await expect(
+    main(page).getByRole("button", { name: "Continue", exact: true }),
+  ).toBeEnabled();
+  session = await act(page, "Continue");
+  expect(session.currentStep?.kind).toBe("listening_choice");
+  await expect(main(page).getByTestId("meaning-picture")).toHaveCount(0);
+  const wrong = session.currentStep!.choices[1]!;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await main(page)
+      .getByRole("radio", { name: wrong.text, exact: true })
+      .check();
+    session = await act(page, "Check answer");
+    expect(session.canContinue).toBe(false);
+    await expect(
+      main(page).getByRole("button", { name: "Continue", exact: true }),
+    ).toHaveCount(0);
+  }
+  session = await act(page, "Continue with help");
+  expect(session.feedback).toMatchObject({ correct: false, assisted: true });
+  expect(session.firstAnswersCorrect).toBe(0);
+  session = await act(page, "Continue");
+  expect(session.currentStep?.kind).toBe("gap_choice");
+  await expect(main(page).getByTestId("meaning-picture")).toHaveCount(0);
+  await expect(
+    main(page).getByText("We _____ our friends.", { exact: true }),
+  ).toBeVisible();
+  await main(page)
+    .getByRole("radio", {
+      name: session.currentStep!.choices[0]!.text,
+      exact: true,
+    })
+    .check();
+  await act(page, "Check answer");
+  session = await act(page, "Continue");
+  expect(session.currentStep?.kind).toBe("sentence_build");
+  await expect(main(page).getByTestId("meaning-picture")).toHaveCount(0);
+  const available = main(page).getByRole("group", { name: "Available words" });
+  for (const token of ["We", "our", "invite", "friends."])
+    await available.getByRole("button", { name: token, exact: true }).click();
+  const sentence = main(page).getByRole("group", { name: "Your sentence" });
+  await sentence.getByRole("button", { name: /^our, position 2\./ }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    sentence.getByRole("button", { name: /^our, position 3\./ }),
+  ).toBeFocused();
+  await main(page)
+    .getByRole("button", { name: "Undo last word", exact: true })
+    .click();
+  await available
+    .getByRole("button", { name: "friends.", exact: true })
+    .click();
+  session = await act(page, "Check answer");
+  expect(session.feedback).toMatchObject({
+    correct: true,
+    answer: "We invite our friends.",
+  });
+  expect(session.feedback!.selectedTokenIds).toHaveLength(4);
+  await page.reload();
+  await expect(
+    sentence.getByRole("button", { name: /^We, position 1\./ }),
+  ).toBeDisabled();
+  session = await act(page, "Continue");
+  expect(session.currentStep?.kind).toBe("meaning_choice");
+  await expect(main(page).getByTestId("meaning-picture")).toHaveCount(0);
+  await main(page)
+    .getByRole("radio", {
+      name: session.currentStep!.choices[0]!.text,
+      exact: true,
+    })
+    .check();
+  await act(page, "Check answer");
+  session = await act(page, "Finish practice");
+  expect(session).toMatchObject({
+    status: "completed",
+    questionsAnswered: 4,
+    firstAnswersCorrect: 3,
+  });
+  await main(page)
+    .getByRole("link", { name: "Back to your path", exact: true })
+    .click();
+  const path = main(page).getByRole("region", { name: "Your learning path" });
+  await expect(
+    path.getByText("1 lesson completed", { exact: true }),
+  ).toBeVisible();
+  await expect(path.getByText("Lesson 2", { exact: true })).toBeVisible();
+  await expect(
+    path.getByRole("button", { name: "Start practice lesson", exact: true }),
+  ).toBeVisible();
+});
+
+test("journey audio unavailable continues with honest assisted credit", async ({
+  page,
+}) => {
+  await installAudio(page, true);
+  await start(page, "Start practice lesson");
+  let session = await act(page, "Continue");
+  await main(page)
+    .getByRole("button", { name: "Play audio", exact: true })
+    .click();
+  await expect(
+    main(page).getByText("Pronunciation is not available in this browser.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  session = await act(page, "Can’t listen now");
+  expect(session).toMatchObject({
+    questionsAnswered: 1,
+    firstAnswersCorrect: 0,
+    canContinue: true,
+  });
+  expect(session.feedback).toMatchObject({ correct: false, assisted: true });
+  await page.reload();
+  await expect(
+    main(page).getByRole("button", { name: "Continue", exact: true }),
+  ).toBeEnabled();
+  session = await act(page, "Continue");
+  expect(session.currentStep?.kind).toBe("gap_choice");
+});
+
+test("sentence submission retries the identical token order after a lost response", async ({
+  page,
+}) => {
+  await start(page, "Start practice lesson");
+  await act(page, "Continue");
+  await act(page, "Can’t listen now");
+  await act(page, "Continue");
+  await act(page, "Show answer");
+  const current = await act(page, "Continue");
+  expect(current.currentStep?.kind).toBe("sentence_build");
+  const available = main(page).getByRole("group", { name: "Available words" });
+  for (const word of ["We", "invite", "our", "friends."])
+    await available.getByRole("button", { name: word, exact: true }).click();
+  const requests: { key: string | undefined; body: string | null }[] = [];
+  await page.route(
+    `**/api/v1/practice-sessions/${current.id}/actions`,
+    async (route) => {
+      requests.push({
+        key: route.request().headers()["idempotency-key"],
+        body: route.request().postData(),
+      });
+      if (requests.length === 1) {
+        const response = await route.fetch();
+        expect(response.status()).toBe(200);
+        return route.abort("failed");
+      }
+      return route.continue();
+    },
+  );
+  await main(page)
+    .getByRole("button", { name: "Check answer", exact: true })
+    .click();
+  await expect(main(page).getByRole("alert")).toBeVisible();
+  await expect(
+    main(page).getByRole("button", { name: "Undo last word", exact: true }),
+  ).toBeDisabled();
+  await main(page)
+    .getByRole("button", { name: "Retry answer", exact: true })
+    .click();
+  await expect(
+    main(page).getByRole("button", { name: "Continue", exact: true }),
+  ).toBeEnabled();
+  expect(requests).toHaveLength(2);
+  expect(requests[0]!.key).toBeTruthy();
+  expect(requests[1]).toEqual(requests[0]);
+  expect(JSON.parse(requests[0]!.body!).tokenIds).toHaveLength(4);
+  const confirmed = await saved(page, current.id);
+  expect(confirmed).toMatchObject({
+    firstAnswersCorrect: 1,
+    questionsAnswered: 3,
+  });
+  expect(confirmed.feedback?.correct).toBe(true);
 });

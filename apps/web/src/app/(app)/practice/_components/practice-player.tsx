@@ -12,6 +12,7 @@ import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { Surface } from "@/ui/surface";
+import { MeaningPicture } from "@/ui/meaning-picture";
 import { SessionActions } from "@/ui/session";
 
 import { PracticeAudio } from "./practice-audio";
@@ -26,6 +27,11 @@ export function PracticePlayer({
   const [session, setSession] = useState(initialSession);
   const [answer, setAnswer] = useState("");
   const [selectedChoice, setSelectedChoice] = useState("");
+  const [tokenIds, setTokenIds] = useState<string[]>(() =>
+    initialSession.feedback?.stepId === initialSession.currentStep?.id
+      ? (initialSession.feedback?.selectedTokenIds ?? [])
+      : [],
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -35,6 +41,7 @@ export function PracticePlayer({
   const pending = useRef<PracticeAction | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const feedback = useRef<HTMLDivElement>(null);
+  const errorRegion = useRef<HTMLDivElement>(null);
   const focusAfterResponse = useRef(false);
   const priorStep = useRef(initialSession.currentStep?.id);
   const answerId = useId();
@@ -47,6 +54,14 @@ export function PracticePlayer({
     ? (checked.correctChoiceId ?? selectedChoice)
     : selectedChoice;
   const locked = busy || needsRetry || needsRefresh;
+  const journey = session.mode === "journey";
+  const teaching = step?.kind === "teach";
+  const assembly = step?.kind === "sentence_build";
+  const shownTokens = checked?.correct
+    ? (checked.selectedTokenIds ?? tokenIds)
+    : tokenIds;
+  const answerLocked =
+    locked || Boolean(checked?.correct || (journey && session.canContinue));
 
   useEffect(() => {
     if (!focusAfterResponse.current) return;
@@ -60,6 +75,10 @@ export function PracticePlayer({
     priorStep.current = session.currentStep?.id;
   }, [session]);
 
+  useEffect(() => {
+    if (error) errorRegion.current?.focus();
+  }, [error]);
+
   function accept(next: PracticeSession) {
     // A response can acknowledge a replay after another request advanced the
     // session. Only the returned authoritative revision changes the UI.
@@ -67,6 +86,7 @@ export function PracticePlayer({
     if (next.currentStep?.id !== session.currentStep?.id) {
       setAnswer("");
       setSelectedChoice("");
+      setTokenIds([]);
     } else if (next.feedback && !next.feedback.correct) {
       setSelectedChoice("");
     }
@@ -91,6 +111,9 @@ export function PracticePlayer({
           ? { typedAnswer: answer }
           : {}),
         ...(action === "answer" && choiceId ? { choiceId } : {}),
+        ...(action === "answer" && step.kind === "sentence_build"
+          ? { tokenIds: [...tokenIds] }
+          : {}),
       };
     }
     const request = pending.current;
@@ -156,14 +179,25 @@ export function PracticePlayer({
     }
   }
 
+  function moveToken(index: number, direction: -1 | 1) {
+    if (answerLocked) return;
+    const destination = index + direction;
+    if (destination < 0 || destination >= tokenIds.length) return;
+    setTokenIds((previous) => {
+      const next = [...previous];
+      [next[index], next[destination]] = [next[destination]!, next[index]!];
+      return next;
+    });
+  }
+
   return (
-    <div className="pb-[7rem]">
+    <div className="mx-auto max-w-[42rem] pb-[9rem]">
       <div className="mb-5 mt-3">
         <p className="text-sm font-semibold text-primary-700">
           {practiceModes[session.mode].title}
         </p>
         <p className="mt-2 text-sm text-neutral-700">
-          {session.completedSteps} of {session.totalSteps} questions completed
+          {session.completedSteps} of {session.totalSteps} steps completed
         </p>
         <progress
           className="mt-2 h-2 w-full accent-primary-700"
@@ -187,11 +221,12 @@ export function PracticePlayer({
             on your first try without help.
           </p>
           <p className="mt-2 text-neutral-700">
-            You took time to remember and use these words. Come back for another
-            try whenever you like.
+            {journey
+              ? "Your next step is ready on your learning path."
+              : "Come back for another try whenever you like."}
           </p>
           <Link href="/practice" className={`${primaryAction} mt-5`}>
-            Choose another practice
+            {journey ? "Back to your path" : "Choose another practice"}
           </Link>
         </Surface>
       ) : step ? (
@@ -201,9 +236,119 @@ export function PracticePlayer({
             tabIndex={-1}
             className="text-2xl font-bold leading-snug text-neutral-900"
           >
-            {step.prompt}
+            {teaching ? step.wordText : step.prompt}
           </h1>
-          {step.kind === "typed_recall" ? (
+          {teaching ? (
+            <div className="mt-5">
+              <p className="text-lg text-neutral-700">{step.prompt}</p>
+              {step.meaningId && (
+                <MeaningPicture meaningId={step.meaningId} priority />
+              )}
+              {step.context && (
+                <p className="mt-4 text-lg leading-relaxed text-neutral-700">
+                  {step.context}
+                </p>
+              )}
+              {step.speechText && <PracticeAudio text={step.speechText} />}
+              <p className="mt-4 text-sm text-neutral-600">
+                A new word for your practice path.
+              </p>
+            </div>
+          ) : assembly ? (
+            <form
+              id={answerFormId}
+              className="mt-5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (tokenIds.length) void submit("answer");
+              }}
+            >
+              {step.speechText && <PracticeAudio text={step.speechText} />}
+              <p id={helpId} className="text-sm text-neutral-600">
+                Tap words in order. Tap a chosen word to remove it; use arrow
+                keys to move it.
+              </p>
+              <div
+                role="group"
+                aria-label="Your sentence"
+                aria-describedby={helpId}
+                className="mt-3 flex min-h-24 flex-wrap content-start gap-2 rounded-xl border-2 border-neutral-300 p-3"
+              >
+                {!shownTokens.length && (
+                  <span className="py-2 text-neutral-500">
+                    Build your sentence here
+                  </span>
+                )}
+                {shownTokens.map((id, index) => {
+                  const token = step.choices.find((choice) => choice.id === id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      disabled={answerLocked}
+                      className={secondaryAction}
+                      aria-label={`${token?.text ?? "Word"}, position ${index + 1}. Remove word; arrow keys move it.`}
+                      onClick={() =>
+                        setTokenIds((previous) =>
+                          previous.filter((item) => item !== id),
+                        )
+                      }
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "ArrowLeft" ||
+                          event.key === "ArrowRight"
+                        ) {
+                          event.preventDefault();
+                          moveToken(index, event.key === "ArrowLeft" ? -1 : 1);
+                        }
+                      }}
+                    >
+                      {token?.text}
+                    </button>
+                  );
+                })}
+              </div>
+              <div
+                className="mt-4 flex flex-wrap gap-2"
+                role="group"
+                aria-label="Available words"
+              >
+                {step.choices.map((token) => (
+                  <button
+                    key={token.id}
+                    type="button"
+                    disabled={answerLocked || shownTokens.includes(token.id)}
+                    onClick={() =>
+                      setTokenIds((previous) => [...previous, token.id])
+                    }
+                    className={`${secondaryAction} disabled:opacity-40`}
+                  >
+                    {token.text}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-4">
+                <button
+                  type="button"
+                  disabled={answerLocked || !tokenIds.length}
+                  onClick={() =>
+                    setTokenIds((previous) => previous.slice(0, -1))
+                  }
+                  className={textLink}
+                >
+                  Undo last word
+                </button>
+                <button
+                  type="button"
+                  disabled={answerLocked || !tokenIds.length}
+                  onClick={() => setTokenIds([])}
+                  className={textLink}
+                >
+                  Start over
+                </button>
+              </div>
+            </form>
+          ) : step.kind === "typed_recall" ? (
             <form
               id={answerFormId}
               className="mt-5"
@@ -223,7 +368,7 @@ export function PracticePlayer({
                 type="text"
                 value={answer}
                 onChange={(event) => setAnswer(event.target.value)}
-                disabled={locked || Boolean(checked?.correct)}
+                disabled={answerLocked}
                 maxLength={200}
                 autoComplete="off"
                 autoCapitalize="none"
@@ -238,9 +383,19 @@ export function PracticePlayer({
             </form>
           ) : (
             <div className="mt-4">
+              {step.wordText && (
+                <p className="mb-3 text-3xl font-bold text-neutral-900">
+                  {step.wordText}
+                </p>
+              )}
+              {step.context && (
+                <p className="mb-4 text-lg leading-relaxed text-neutral-700">
+                  {step.context}
+                </p>
+              )}
               {step.speechText ? (
                 <PracticeAudio text={step.speechText} />
-              ) : (
+              ) : !journey ? (
                 <p
                   role="status"
                   className="rounded-xl bg-secondary-50 p-4 text-neutral-800"
@@ -248,7 +403,7 @@ export function PracticePlayer({
                   The audio for this question is unavailable. You can show the
                   answer or return to Practice for another activity.
                 </p>
-              )}
+              ) : null}
               <form
                 id={answerFormId}
                 onSubmit={(event) => {
@@ -256,10 +411,7 @@ export function PracticePlayer({
                   if (selectedChoice) void submit("answer", selectedChoice);
                 }}
               >
-                <fieldset
-                  disabled={locked || Boolean(checked?.correct)}
-                  className="grid gap-3"
-                >
+                <fieldset disabled={answerLocked} className="grid gap-3">
                   <legend className="sr-only">Answer choices</legend>
                   {step.choices.map((choice) => (
                     <label
@@ -294,7 +446,7 @@ export function PracticePlayer({
             </div>
           )}
 
-          {!checked && (
+          {!checked && !journey && (
             <p className="mt-5 text-sm text-neutral-600">
               Showing the answer counts as practice with help.
             </p>
@@ -311,7 +463,7 @@ export function PracticePlayer({
                   ? checked.assisted
                     ? "Practised with help"
                     : "You remembered it"
-                  : checked.assisted
+                  : checked.assisted && (!journey || session.canContinue)
                     ? "Answer shown"
                     : "Keep practising"}
               </h2>
@@ -319,10 +471,11 @@ export function PracticePlayer({
                 {checked.answer}
               </p>
               <p className="mt-2 text-neutral-700">{checked.explanation}</p>
-              {!checked.correct && (
+              {!checked.correct && !(journey && session.canContinue) && (
                 <p className="mt-2 text-sm text-neutral-700">
-                  Try again with the answer in view, or continue. Another try
-                  here counts as practice with help.
+                  {journey
+                    ? "Try again, or continue with help. Another try counts as practice with help."
+                    : "Try again with the answer in view, or continue. Another try here counts as practice with help."}
                 </p>
               )}
               <Link
@@ -334,31 +487,39 @@ export function PracticePlayer({
             </div>
           )}
           <SessionActions>
-            {!checked && (
+            {(!checked || (journey && !session.canContinue)) && !teaching && (
               <button
                 type="button"
                 disabled={locked}
                 onClick={() => void submit("reveal")}
                 className={secondaryAction}
               >
-                Show answer
+                {checked && journey
+                  ? "Continue with help"
+                  : journey && (step.kind === "listening_choice" || assembly)
+                    ? "Can’t listen now"
+                    : "Show answer"}
               </button>
             )}
-            {!checked?.correct && (
-              <button
-                type="submit"
-                form={answerFormId}
-                disabled={
-                  locked ||
-                  (step.kind === "typed_recall"
-                    ? !answer.trim()
-                    : !selectedChoice)
-                }
-                className={`${session.canContinue ? secondaryAction : primaryAction} grow`}
-              >
-                {busy ? "Checking…" : "Check answer"}
-              </button>
-            )}
+            {!teaching &&
+              !checked?.correct &&
+              !(journey && session.canContinue) && (
+                <button
+                  type="submit"
+                  form={answerFormId}
+                  disabled={
+                    locked ||
+                    (step.kind === "typed_recall"
+                      ? !answer.trim()
+                      : assembly
+                        ? !tokenIds.length
+                        : !selectedChoice)
+                  }
+                  className={`${session.canContinue ? secondaryAction : primaryAction} grow`}
+                >
+                  {busy ? "Checking…" : "Check answer"}
+                </button>
+              )}
             {session.canContinue && (
               <button
                 type="button"
@@ -398,6 +559,8 @@ export function PracticePlayer({
 
       {error && (
         <div
+          ref={errorRegion}
+          tabIndex={-1}
           role="alert"
           className="mt-4 rounded-xl border border-secondary-300 bg-secondary-50 p-4 text-neutral-900"
         >

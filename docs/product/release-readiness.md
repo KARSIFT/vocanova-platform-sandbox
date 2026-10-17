@@ -1,5 +1,55 @@
 # Vocanova release readiness
 
+## Separate review, practice and pronunciation — local acceptance, 18 October 2026
+
+The [integrated delivery](../design/review-practice-and-pronunciation.md) passes
+the full Go suite against PostgreSQL after all 45 forward migrations. Targeted
+OAuth persistence, review scheduling, practice, pronunciation and actual HTTP
+export checks also pass, including independent reviews and race detection.
+A deterministic audio test failed with two paid permits across midnight before
+the cache-key lock fix; it now proves one permit and one durable cache owner.
+Practice fixtures were isolated after reproducing interference from another
+package's temporary canonical archival. Product availability checks remain intact.
+
+The final affected browser matrix passes **429/429**, with no failures, skips,
+flaky results or retries, across 360px, 430px and desktop. It covers initial and
+Back/Forward discovery history, device-local review dates through reload,
+explicit scheduling/known choices without extra credit, mixed lesson durability,
+teaching pictures excluded from questions, speech permission recovery and Home
+remaining usable during a slow or failed secondary read. The 401 case redirects;
+other path failures offer retry without inventing zero progress. Thirty actual
+viewport captures were inspected in both themes; controls fit and no horizontal
+overflow was found.
+
+Earlier failed runs are preserved: **392/408**, **409/414** and **414/420** passed.
+They exposed discovery history bypass/initial-effect ordering, a phone action
+behind navigation, and faulty fixture setup, inactive-page selectors and speech
+timing assertions. Demonstrated defects and test assumptions were corrected
+before the fresh matrix. One first-run loading-text failure remains unexplained;
+it passed its unchanged isolated diagnostic and the subsequent full matrices.
+No specific loading fix is claimed for that observation.
+
+The full API check also exposed a missing public export projection. Download
+DTOs now retain actual daily-review and mixed-practice history; real HTTP export
+matches the repository without private snapshots, answer maps or receipt keys.
+Formatting, lint/vet, web/E2E types, 272 foundation, 60 client and 204 web-helper
+tests and production web/API builds pass. Atlas validates the migration history.
+New required CI steps enforce PostgreSQL auth, practice, audio and HTTP download
+acceptance without skips.
+
+All 12 local Lighthouse audits pass on the final production build: performance
+100, accessibility 100 and best practices 96 across Home, Journey, Review and
+Progress at the three supported widths. These lab results do not establish live
+network latency or replace the staging journeys.
+
+At this local checkpoint, hosted checks/review, merge and actual staging remain
+pending. The real staging maturity journey now verifies durable mixed practice
+without SRS credit, then requests only the public word `invite`, checks cached
+byte identity and decodes the real MP3 in Chromium. Its validated public clip is
+retained for owner listening; synthetic audio does not establish provider quality.
+Final staging appearance and owner/provider acceptance remain distinct evidence.
+Production promotion is outside this phase.
+
 ## Daily lesson completion — staging repair, 17 October 2026
 
 [PR #1493](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1493)

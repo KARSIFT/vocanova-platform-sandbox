@@ -240,25 +240,25 @@ func (r *PostgreSQLRepository) AttachMagicLinkUser(ctx context.Context, id uuid.
 	return nil
 }
 
-func (r *PostgreSQLRepository) CreateOAuthState(ctx context.Context, tokenHash []byte, environment, provider, appReturnURL string, createdAt, expiresAt time.Time) (*OAuthState, error) {
+func (r *PostgreSQLRepository) CreateOAuthState(ctx context.Context, tokenHash []byte, environment, provider, appReturnURL string, createdAt, expiresAt time.Time, sessionPersistent bool) (*OAuthState, error) {
 	id := uuid.New()
 	_, err := r.db.ExecContext(ctx,
-		`INSERT INTO oauth_states (id, token_hash, environment, provider, app_return_url, created_at, expires_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		id, tokenHash, environment, provider, appReturnURL, createdAt, expiresAt)
+		`INSERT INTO oauth_states (id, token_hash, environment, provider, app_return_url, created_at, expires_at, session_persistent)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		id, tokenHash, environment, provider, appReturnURL, createdAt, expiresAt, sessionPersistent)
 	if err != nil {
 		return nil, fmt.Errorf("create oauth state: %w", err)
 	}
-	return &OAuthState{ID: id, Environment: environment, Provider: provider, AppReturnURL: appReturnURL, CreatedAt: createdAt, ExpiresAt: expiresAt}, nil
+	return &OAuthState{SessionPersistent: sessionPersistent, ID: id, Environment: environment, Provider: provider, AppReturnURL: appReturnURL, CreatedAt: createdAt, ExpiresAt: expiresAt}, nil
 }
 
 func (r *PostgreSQLRepository) GetOAuthStateByTokenHash(ctx context.Context, tokenHash []byte) (*OAuthState, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, environment, provider, app_return_url, created_at, expires_at, consumed_at
+		`SELECT id, environment, provider, app_return_url, created_at, expires_at, consumed_at, session_persistent
 		 FROM oauth_states WHERE token_hash = $1`, tokenHash)
 	var o OAuthState
 	var consumedAt sql.NullTime
-	err := row.Scan(&o.ID, &o.Environment, &o.Provider, &o.AppReturnURL, &o.CreatedAt, &o.ExpiresAt, &consumedAt)
+	err := row.Scan(&o.ID, &o.Environment, &o.Provider, &o.AppReturnURL, &o.CreatedAt, &o.ExpiresAt, &consumedAt, &o.SessionPersistent)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("oauth state not found")
 	}

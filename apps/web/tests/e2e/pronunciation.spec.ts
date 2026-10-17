@@ -5,6 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 interface SpeechCapture {
   calls: { text: string; lang: string; rate: number }[];
   cancellations: number;
+  selectedVoiceURI?: string;
   finish: () => void;
   fail: () => void;
 }
@@ -17,13 +18,14 @@ declare global {
 
 async function installSpeech(
   page: Page,
-  mode: "ready" | "unsupported" | "no-english" = "ready",
+  mode: "ready" | "unsupported" | "no-english" | "enhanced" = "ready",
 ) {
   await page.addInitScript((speechMode) => {
     type Utterance = {
       text: string;
       lang: string;
       rate: number;
+      voice?: { voiceURI: string };
       onstart?: () => void;
       onend?: () => void;
       onerror?: () => void;
@@ -53,9 +55,27 @@ async function installSpeech(
           ? [{ lang: "fr-FR", localService: true, default: true }]
           : [
               { lang: "fr-FR", localService: true, default: true },
-              { lang: "en-GB", localService: true, default: false },
+              {
+                lang: "en-GB",
+                name: "English UK",
+                voiceURI: "english-uk",
+                localService: true,
+                default: true,
+              },
+              ...(speechMode === "enhanced"
+                ? [
+                    {
+                      lang: "en-US",
+                      name: "Google US English",
+                      voiceURI: "google-us",
+                      localService: false,
+                      default: false,
+                    },
+                  ]
+                : []),
             ],
       speak: (utterance: Utterance) => {
+        capture.selectedVoiceURI = utterance.voice?.voiceURI;
         capture.calls.push({
           text: utterance.text,
           lang: utterance.lang,
@@ -145,12 +165,15 @@ for (const theme of ["light", "dark"] as const) {
         exact: true,
       });
       await expect(
-        word.getByText("Device pronunciation", { exact: true }),
+        word.getByText("English pronunciation", { exact: true }),
       ).toBeVisible();
       const slow = word.getByRole("button", {
         name: "Slow pronunciation of pour",
       });
-      await slow.press("Space");
+      if (surface === "search") {
+        await expect(slow).toHaveAttribute("aria-pressed", "false");
+        await slow.press("Space");
+      }
       await expect(slow).toHaveAttribute("aria-pressed", "true");
       const listen = word.getByRole("button", {
         name: "Listen to pour",
@@ -161,9 +184,11 @@ for (const theme of ["light", "dark"] as const) {
         word.getByRole("button", { name: "Stop listening to pour" }),
       ).toBeVisible();
       await expect(slow).toBeDisabled();
-      expect(
-        await page.evaluate(() => window.__pronunciationTest.calls),
-      ).toEqual([{ text: "pour", lang: "en-GB", rate: 0.75 }]);
+      // Stop is available while loading too. Wait for actual native playback
+      // after the asynchronous natural-audio fallback, rather than that label.
+      await expect
+        .poll(() => page.evaluate(() => window.__pronunciationTest.calls))
+        .toEqual([{ text: "pour", lang: "en-GB", rate: 0.7 }]);
 
       const example = main.getByRole("button", {
         name: "Listen to example: Could you pour me a cup of coffee?",
@@ -174,16 +199,23 @@ for (const theme of ["light", "dark"] as const) {
       expect(
         await page.evaluate(() => window.__pronunciationTest.cancellations),
       ).toBe(1);
-      expect(
-        await page.evaluate(() => window.__pronunciationTest.calls.at(-1)),
-      ).toEqual({
-        text: "Could you pour me a cup of coffee?",
-        lang: "en-GB",
-        rate: 1,
-      });
+      await expect
+        .poll(() =>
+          page.evaluate(() => window.__pronunciationTest.calls.at(-1)),
+        )
+        .toEqual({
+          text: "Could you pour me a cup of coffee?",
+          lang: "en-GB",
+          rate: 0.7,
+        });
       await page.evaluate(() => window.__pronunciationTest.finish());
       await expect(example).toBeVisible();
       await listen.click();
+      await expect
+        .poll(() =>
+          page.evaluate(() => window.__pronunciationTest.calls.length),
+        )
+        .toBe(3);
       const stop = word.getByRole("button", { name: "Stop listening to pour" });
       const box = await stop.boundingBox();
       expect(box!.height).toBeGreaterThanOrEqual(44);
@@ -198,6 +230,11 @@ for (const theme of ["light", "dark"] as const) {
       });
       if (surface === "discovery") {
         await listen.click();
+        await expect
+          .poll(() =>
+            page.evaluate(() => window.__pronunciationTest.calls.length),
+          )
+          .toBe(4);
         const cancellations = await page.evaluate(
           () => window.__pronunciationTest.cancellations,
         );
@@ -212,6 +249,286 @@ for (const theme of ["light", "dark"] as const) {
     }
   });
 }
+
+test("voice and learner speed choices survive reload and apply to replay", async ({
+  page,
+}) => {
+  await installSpeech(page, "enhanced");
+  await page.goto("/vocabulary/pour");
+  const word = page.getByRole("group", {
+    name: "Pronunciation of pour",
+    exact: true,
+  });
+  const listen = word.getByRole("button", {
+    name: "Listen to pour",
+    exact: true,
+  });
+  await listen.click();
+  await expect(
+    word.getByRole("button", { name: "Stop listening to pour", exact: true }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__pronunciationTest.selectedVoiceURI),
+    )
+    .toBe("google-us");
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.rate),
+  ).toBe(0.85);
+  await page.evaluate(() => window.__pronunciationTest.finish());
+  await word.getByText("Voice & speed", { exact: true }).click();
+  await word
+    .getByLabel("English voice", { exact: true })
+    .selectOption("english-uk");
+  await word.getByLabel("Playback speed", { exact: true }).selectOption("0.7");
+  await listen.click();
+  await expect(
+    word.getByRole("button", { name: "Stop listening to pour", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.selectedVoiceURI),
+  ).toBe("english-uk");
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.rate),
+  ).toBe(0.7);
+  await page.evaluate(() => window.__pronunciationTest.finish());
+  await page.reload();
+  await word.getByText("Voice & speed", { exact: true }).click();
+  await expect(word.getByLabel("English voice", { exact: true })).toHaveValue(
+    "english-uk",
+  );
+  await expect(word.getByLabel("Playback speed", { exact: true })).toHaveValue(
+    "0.7",
+  );
+  await listen.click();
+  await expect(
+    word.getByRole("button", { name: "Stop listening to pour", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.selectedVoiceURI),
+  ).toBe("english-uk");
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.rate),
+  ).toBe(0.7);
+});
+
+test("natural pronunciation requests only authored text with CSRF and replays at learner pace", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await installSpeech(page);
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "vocanova_csrf", value: "natural-audio-csrf", url: baseURL! },
+  ]);
+  const requests: { text: string; csrf: string | undefined }[] = [];
+  await page.route("**/api/v1/pronunciation", async (route) => {
+    requests.push({
+      text: route.request().postDataJSON().text,
+      csrf: route.request().headers()["x-csrf-token"],
+    });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        audioBase64: "aWQz",
+        mimeType: "audio/mpeg",
+        voice: "luna",
+        cacheHit: requests.length > 1,
+      }),
+    });
+  });
+  await page.addInitScript(() => {
+    const state = {
+      plays: [] as { rate: number; preservesPitch: boolean }[],
+      paused: 0,
+      active: null as null | { onended: (() => void) | null },
+    };
+    Object.defineProperty(window, "__naturalAudioTest", { value: state });
+    class AudioFixture {
+      playbackRate = 1;
+      preservesPitch = false;
+      onended: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      preload = "auto";
+      async play() {
+        state.active = this;
+        state.plays.push({
+          rate: this.playbackRate,
+          preservesPitch: this.preservesPitch,
+        });
+      }
+      pause() {
+        state.paused++;
+      }
+    }
+    Object.defineProperty(window, "Audio", {
+      configurable: true,
+      value: AudioFixture,
+    });
+  });
+  await page.goto("/vocabulary/pour");
+  const word = page.getByRole("group", {
+    name: "Pronunciation of pour",
+    exact: true,
+  });
+  const listen = word.getByRole("button", {
+    name: "Listen to pour",
+    exact: true,
+  });
+  await listen.click();
+  await expect(
+    word.getByRole("button", { name: "Stop listening to pour", exact: true }),
+  ).toBeVisible();
+  await expect(
+    word.getByText("Natural pronunciation", { exact: true }),
+  ).toBeVisible();
+  expect(requests).toEqual([{ text: "pour", csrf: "natural-audio-csrf" }]);
+  const capture = () =>
+    page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __naturalAudioTest: {
+              plays: { rate: number; preservesPitch: boolean }[];
+            };
+          }
+        ).__naturalAudioTest.plays,
+    );
+  expect(await capture()).toEqual([{ rate: 0.85, preservesPitch: true }]);
+  expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual(
+    [],
+  );
+  await page.evaluate(() =>
+    (
+      window as unknown as {
+        __naturalAudioTest: { active: { onended: (() => void) | null } };
+      }
+    ).__naturalAudioTest.active.onended?.(),
+  );
+  await expect(listen).toBeVisible();
+  await word
+    .getByRole("button", { name: "Slow pronunciation of pour", exact: true })
+    .click();
+  await listen.click();
+  await expect(
+    word.getByRole("button", { name: "Stop listening to pour", exact: true }),
+  ).toBeVisible();
+  await expect.poll(capture).toEqual([
+    { rate: 0.85, preservesPitch: true },
+    { rate: 0.7, preservesPitch: true },
+  ]);
+  expect(requests).toHaveLength(2);
+  await word
+    .getByRole("button", { name: "Stop listening to pour", exact: true })
+    .click();
+});
+
+test("blocked natural audio retries the prepared clip inside the next click", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await installSpeech(page);
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "vocanova_csrf", value: "gesture-audio-csrf", url: baseURL! },
+  ]);
+  let requests = 0;
+  await page.route("**/api/v1/pronunciation", async (route) => {
+    requests++;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        audioBase64: "aWQz",
+        mimeType: "audio/mpeg",
+        voice: "luna",
+        cacheHit: false,
+      }),
+    });
+  });
+  await page.addInitScript(() => {
+    const state = { gesture: false, attempts: [] as boolean[], revoked: 0 };
+    Object.defineProperty(window, "__gestureAudioTest", { value: state });
+    // Keep permission through the click's complete dispatch, including React's
+    // root bubble handler. A capture-listener microtask can run before that
+    // handler in a trusted browser click, incorrectly denying synchronous play.
+    window.addEventListener(
+      "click",
+      () => {
+        state.gesture = true;
+      },
+      true,
+    );
+    window.addEventListener("click", () => {
+      state.gesture = false;
+    });
+    const revoke = URL.revokeObjectURL.bind(URL);
+    URL.revokeObjectURL = (url) => {
+      state.revoked++;
+      revoke(url);
+    };
+    class GestureAudio {
+      playbackRate = 1;
+      preservesPitch = false;
+      preload = "auto";
+      onended: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      play() {
+        state.attempts.push(state.gesture);
+        return state.gesture
+          ? Promise.resolve()
+          : Promise.reject(
+              new DOMException("Gesture required", "NotAllowedError"),
+            );
+      }
+      pause() {}
+    }
+    Object.defineProperty(window, "Audio", {
+      configurable: true,
+      value: GestureAudio,
+    });
+  });
+  await page.goto("/vocabulary/pour");
+  const word = page.getByRole("group", {
+    name: "Pronunciation of pour",
+    exact: true,
+  });
+  const listen = word.getByRole("button", {
+    name: "Listen to pour",
+    exact: true,
+  });
+  await listen.click();
+  await expect(word.getByRole("status")).toHaveText(
+    "Tap Listen to play pronunciation.",
+  );
+  const capture = () =>
+    page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __gestureAudioTest: { attempts: boolean[]; revoked: number };
+          }
+        ).__gestureAudioTest,
+    );
+  expect((await capture()).attempts).toEqual([false]);
+  expect((await capture()).revoked).toBe(0);
+  expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual(
+    [],
+  );
+  await listen.click();
+  await expect(
+    word.getByText("Natural pronunciation", { exact: true }),
+  ).toBeVisible();
+  expect((await capture()).attempts).toEqual([false, true]);
+  expect(requests).toBe(1);
+  await word
+    .getByRole("button", { name: "Stop listening to pour", exact: true })
+    .click();
+  expect((await capture()).revoked).toBe(1);
+});
 
 for (const mode of ["unsupported", "no-english"] as const) {
   test(`pronunciation explains ${mode} availability without hiding word content`, async ({
@@ -254,6 +571,9 @@ test("device playback errors allow another explicit attempt", async ({
     exact: true,
   });
   await listen.click();
+  await expect
+    .poll(() => page.evaluate(() => window.__pronunciationTest.calls.length))
+    .toBe(1);
   await page.evaluate(() => window.__pronunciationTest.fail());
   await expect(word.getByRole("status")).toHaveText(
     "Pronunciation could not play. Please try again.",
@@ -262,9 +582,9 @@ test("device playback errors allow another explicit attempt", async ({
   await expect(
     word.getByRole("button", { name: "Stop listening to pour" }),
   ).toBeVisible();
-  expect(
-    await page.evaluate(() => window.__pronunciationTest.calls),
-  ).toHaveLength(2);
+  await expect
+    .poll(() => page.evaluate(() => window.__pronunciationTest.calls))
+    .toHaveLength(2);
 });
 
 test("canonical word detail preserves authentication and missing-word handling", async ({
@@ -402,7 +722,7 @@ test("daily lesson audio stops when muted and on route exit without changing gra
   expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual(
     [],
   );
-  await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+  await page.getByRole("button", { name: "Start review", exact: true }).click();
   await expect
     .poll(() =>
       page.evaluate(() =>

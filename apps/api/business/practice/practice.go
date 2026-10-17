@@ -29,7 +29,7 @@ const ContentVersion = "starter-90-v2"
 const GradingVersion = "exact-recall-v1"
 
 type PracticeStartRequest struct {
-	Mode         string `json:"mode" enum:"typed_recall,listening_choice,mistakes"`
+	Mode         string `json:"mode" enum:"typed_recall,listening_choice,mistakes,journey"`
 	LessonKey    string `json:"lessonKey,omitempty" maxLength:"100"`
 	ListID       string `json:"listId,omitempty" format:"uuid"`
 	ListRevision *int   `json:"listRevision,omitempty" minimum:"1"`
@@ -39,25 +39,33 @@ type PracticeChoice struct {
 	Text string `json:"text"`
 }
 type PracticeStep struct {
+	MeaningID      string   `json:"meaningId,omitempty" doc:"Teaching-only visual context; absent from graded questions."`
 	ID             string   `json:"id"`
-	Kind           string   `json:"kind" enum:"typed_recall,listening_choice"`
+	Kind           string   `json:"kind" enum:"typed_recall,listening_choice,teach,meaning_choice,gap_choice,sentence_build"`
+	WordText       string   `json:"wordText,omitempty"`
+	Context        string   `json:"context,omitempty"`
 	Prompt         string   `json:"prompt"`
 	Choices        []Choice `json:"choices"`
 	SpeechText     string   `json:"speechText,omitempty"`
 	SpeechLanguage string   `json:"speechLanguage,omitempty"`
 }
 type PracticeFeedback struct {
-	StepID          string `json:"stepId"`
-	Correct         bool   `json:"correct"`
-	CorrectChoiceID string `json:"correctChoiceId,omitempty" doc:"Confirmed choice identity, present only after a correct listening answer."`
-	Assisted        bool   `json:"assisted"`
-	Answer          string `json:"answer"`
-	Explanation     string `json:"explanation"`
-	WordText        string `json:"wordText"`
-	WordSlug        string `json:"wordSlug"`
-	MeaningID       string `json:"meaningId"`
+	Revealed         bool     `json:"revealed,omitempty"`
+	CorrectTokenIDs  []string `json:"correctTokenIds,omitempty"`
+	SelectedTokenIDs []string `json:"selectedTokenIds,omitempty"`
+	StepID           string   `json:"stepId"`
+	Correct          bool     `json:"correct"`
+	CorrectChoiceID  string   `json:"correctChoiceId,omitempty" doc:"Confirmed choice identity, present only after a correct choice answer."`
+	Assisted         bool     `json:"assisted"`
+	Answer           string   `json:"answer"`
+	Explanation      string   `json:"explanation"`
+	WordText         string   `json:"wordText"`
+	WordSlug         string   `json:"wordSlug"`
+	MeaningID        string   `json:"meaningId"`
 }
 type PracticeSummary struct {
+	JourneyLesson       int        `json:"journeyLesson,omitempty"`
+	NewWords            int        `json:"newWords,omitempty"`
 	ListID              string     `json:"listId,omitempty"`
 	ListName            string     `json:"listName,omitempty"`
 	ListRevision        *int       `json:"listRevision,omitempty"`
@@ -85,18 +93,20 @@ type PracticeSession struct {
 type PracticeList struct {
 	Items             []Summary `json:"items"`
 	AvailableMistakes int       `json:"availableMistakes"`
+	Journey           *Journey  `json:"journey,omitempty"`
 }
 type PracticeAction struct {
-	StepID           string `json:"stepId" minLength:"1" maxLength:"100"`
-	ExpectedRevision int    `json:"expectedRevision" minimum:"0"`
-	ClientActionID   string `json:"clientActionId" minLength:"1" maxLength:"128"`
-	Action           string `json:"action" enum:"answer,continue,reveal"`
-	TypedAnswer      string `json:"typedAnswer,omitempty" maxLength:"200"`
-	ChoiceID         string `json:"choiceId,omitempty" maxLength:"100"`
+	StepID           string   `json:"stepId" minLength:"1" maxLength:"100"`
+	ExpectedRevision int      `json:"expectedRevision" minimum:"0"`
+	ClientActionID   string   `json:"clientActionId" minLength:"1" maxLength:"128"`
+	Action           string   `json:"action" enum:"answer,continue,reveal"`
+	TypedAnswer      string   `json:"typedAnswer,omitempty" maxLength:"200"`
+	ChoiceID         string   `json:"choiceId,omitempty" maxLength:"100"`
+	TokenIDs         []string `json:"tokenIds,omitempty" maxItems:"40"`
 }
 
 // Private types are persisted only; public responses always pass through project.
-type Word struct{ MeaningID, WordText, WordSlug, Definition, LessonKey string }
+type Word struct{ MeaningID, WordText, WordSlug, Definition, LessonKey, Example string }
 type Source struct {
 	Kind, ID  string
 	CreatedAt time.Time
@@ -106,9 +116,11 @@ type privateStep struct {
 	Word          Word
 	Accepted      []string
 	CorrectChoice string
+	CorrectTokens []string `json:",omitempty"`
 	Source        *Source
 }
 type Snapshot struct {
+	JourneyLesson, NewWords                         int    `json:",omitempty"`
 	ListID, ListName                                string `json:",omitempty"`
 	ListRevision                                    *int   `json:",omitempty"`
 	Mode, LessonKey, ContentVersion, GradingVersion string
@@ -151,6 +163,14 @@ func (s *Service) List(ctx context.Context, u uuid.UUID) (*List, error) {
 	for _, st := range states {
 		out.Items = append(out.Items, project(st).Summary)
 	}
+	if repo, ok := s.repo.(interface {
+		Journey(context.Context, uuid.UUID, time.Time) (*Journey, error)
+	}); ok {
+		out.Journey, err = repo.Journey(ctx, u, s.clock.Now())
+		if err != nil {
+			return nil, err
+		}
+	}
 	return out, nil
 }
 func validKey(k string) bool {
@@ -160,7 +180,10 @@ func (s *Service) Start(ctx context.Context, u uuid.UUID, req StartRequest, key 
 	if u == uuid.Nil {
 		return nil, ErrNotFound
 	}
-	if !validKey(key) || !validLesson(req.LessonKey) || (req.Mode != "typed_recall" && req.Mode != "listening_choice" && req.Mode != "mistakes") {
+	if !validKey(key) || !validLesson(req.LessonKey) || (req.Mode != "typed_recall" && req.Mode != "listening_choice" && req.Mode != "mistakes" && req.Mode != "journey") {
+		return nil, ErrInvalid
+	}
+	if req.Mode == "journey" && (req.LessonKey != "" || req.ListID != "" || req.ListRevision != nil) {
 		return nil, ErrInvalid
 	}
 	if req.ListID != "" {
@@ -195,6 +218,14 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 	if !validKey(key) || !validKey(a.ClientActionID) || a.ExpectedRevision < 0 || a.StepID == "" || len(a.StepID) > 100 || len(a.ChoiceID) > 100 || !utf8.ValidString(a.TypedAnswer) || strings.ContainsRune(a.TypedAnswer, 0) || utf8.RuneCountInString(a.TypedAnswer) > 200 || (a.Action != "answer" && a.Action != "continue" && a.Action != "reveal") {
 		return nil, ErrInvalid
 	}
+	if len(a.TokenIDs) > 40 {
+		return nil, ErrInvalid
+	}
+	for _, id := range a.TokenIDs {
+		if !validKey(id) {
+			return nil, ErrInvalid
+		}
+	}
 	st, err := s.repo.Act(ctx, u, id, a, key, s.clock.Now())
 	if err != nil {
 		return nil, err
@@ -208,16 +239,23 @@ func project(st State) Session {
 		status = "completed"
 	}
 	p := Session{Summary: Summary{ListID: st.Snapshot.ListID, ListName: st.Snapshot.ListName, ListRevision: st.Snapshot.ListRevision, ID: st.ID.String(), Mode: st.Snapshot.Mode, LessonKey: st.Snapshot.LessonKey, ContentVersion: st.Snapshot.ContentVersion, GradingVersion: st.Snapshot.GradingVersion, Status: status, Revision: st.Revision, CompletedSteps: st.Index, TotalSteps: len(st.Snapshot.Steps), FirstAnswersCorrect: st.FirstAnswersCorrect, QuestionsAnswered: st.QuestionsAnswered, CreatedAt: st.CreatedAt, UpdatedAt: st.UpdatedAt, CompletedAt: st.CompletedAt}}
+	p.JourneyLesson, p.NewWords = st.Snapshot.JourneyLesson, st.Snapshot.NewWords
 	if st.CompletedAt == nil && st.Index < len(st.Snapshot.Steps) {
 		savedStep := st.Snapshot.Steps[st.Index]
 		step := savedStep.Public
+		// Expose visual context only while teaching. Derive it from the frozen
+		// word so historical sessions also work without rewriting snapshots.
+		step.MeaningID = ""
+		if step.Kind == "teach" {
+			step.MeaningID = savedStep.Word.MeaningID
+		}
 		p.CurrentStep = &step
 		if st.Feedback != nil {
 			// Derive presentation data from the frozen session snapshot, including
 			// historical feedback that predates this field. Do not mutate receipts.
 			feedback := *st.Feedback
 			feedback.CorrectChoiceID = ""
-			if feedback.StepID == step.ID && feedback.Correct && step.Kind == "listening_choice" {
+			if feedback.StepID == step.ID && feedback.Correct && (step.Kind == "listening_choice" || step.Kind == "meaning_choice" || step.Kind == "gap_choice") {
 				for _, choice := range step.Choices {
 					if choice.ID == savedStep.CorrectChoice {
 						feedback.CorrectChoiceID = choice.ID
@@ -227,7 +265,10 @@ func project(st State) Session {
 			}
 			p.Feedback = &feedback
 		}
-		p.CanContinue = st.Feedback != nil
+		p.CanContinue = st.Feedback != nil || step.Kind == "teach"
+		if st.Snapshot.Mode == "journey" && st.Feedback != nil {
+			p.CanContinue = st.Feedback.Correct || st.Feedback.Revealed
+		}
 	}
 	return p
 }
@@ -251,10 +292,13 @@ func apply(st *State, a Action, now time.Time) (bool, error) {
 	}
 	resolved := false
 	if a.Action == "continue" {
-		if a.TypedAnswer != "" || a.ChoiceID != "" {
+		if a.TypedAnswer != "" || a.ChoiceID != "" || len(a.TokenIDs) != 0 {
 			return false, ErrInvalid
 		}
-		if st.Feedback == nil {
+		if st.Feedback == nil && step.Public.Kind != "teach" {
+			return false, ErrConflict
+		}
+		if st.Snapshot.Mode == "journey" && step.Public.Kind != "teach" && !st.Feedback.Correct && !st.Feedback.Revealed {
 			return false, ErrConflict
 		}
 		st.Index++
@@ -264,19 +308,53 @@ func apply(st *State, a Action, now time.Time) (bool, error) {
 		}
 	}
 	if a.Action == "answer" || a.Action == "reveal" {
-		if st.Feedback != nil && (st.Feedback.Correct || a.Action == "reveal") {
+		if step.Public.Kind == "teach" {
+			return false, ErrInvalid
+		}
+		if st.Feedback != nil && (st.Feedback.Correct || (a.Action == "reveal" && st.Snapshot.Mode != "journey")) {
 			return false, ErrConflict
 		}
 		first := st.Feedback == nil
 		assisted := !first
 		correct := false
 		if a.Action == "reveal" {
-			if a.TypedAnswer != "" || a.ChoiceID != "" {
+			if a.TypedAnswer != "" || a.ChoiceID != "" || len(a.TokenIDs) != 0 {
 				return false, ErrInvalid
 			}
 			assisted = true
+		} else if step.Public.Kind == "sentence_build" {
+			if a.TypedAnswer != "" || a.ChoiceID != "" || len(a.TokenIDs) != len(step.CorrectTokens) {
+				return false, ErrInvalid
+			}
+			seen := map[string]bool{}
+			correct = true
+			for i, id := range a.TokenIDs {
+				valid := false
+				for _, c := range step.Public.Choices {
+					if c.ID == id {
+						valid = true
+						break
+					}
+				}
+				if !valid || seen[id] {
+					return false, ErrInvalid
+				}
+				seen[id] = true
+				var actual, expected string
+				for _, c := range step.Public.Choices {
+					if c.ID == id {
+						actual = c.Text
+					}
+					if c.ID == step.CorrectTokens[i] {
+						expected = c.Text
+					}
+				}
+				if actual != expected {
+					correct = false
+				}
+			}
 		} else if step.Public.Kind == "typed_recall" {
-			if a.ChoiceID != "" || normalize(a.TypedAnswer) == "" {
+			if a.ChoiceID != "" || len(a.TokenIDs) != 0 || normalize(a.TypedAnswer) == "" {
 				return false, ErrInvalid
 			}
 			for _, v := range step.Accepted {
@@ -285,7 +363,7 @@ func apply(st *State, a Action, now time.Time) (bool, error) {
 				}
 			}
 		} else {
-			if a.TypedAnswer != "" || a.ChoiceID == "" {
+			if a.TypedAnswer != "" || len(a.TokenIDs) != 0 || a.ChoiceID == "" {
 				return false, ErrInvalid
 			}
 			valid := false
@@ -311,6 +389,12 @@ func apply(st *State, a Action, now time.Time) (bool, error) {
 			explanation += " This answer was practised with help."
 		}
 		st.Feedback = &Feedback{StepID: a.StepID, Correct: correct, Assisted: assisted, Answer: step.Word.WordText, Explanation: explanation, WordText: step.Word.WordText, WordSlug: step.Word.WordSlug, MeaningID: step.Word.MeaningID}
+		st.Feedback.Revealed = a.Action == "reveal"
+		if step.Public.Kind == "sentence_build" {
+			st.Feedback.Answer = step.Word.Example
+			st.Feedback.CorrectTokenIDs = append([]string{}, step.CorrectTokens...)
+			st.Feedback.SelectedTokenIDs = append([]string{}, a.TokenIDs...)
+		}
 	}
 	st.Revision++
 	st.UpdatedAt = now

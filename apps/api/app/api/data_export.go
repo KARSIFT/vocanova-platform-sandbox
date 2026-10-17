@@ -32,6 +32,8 @@ type PersonalDataExportDTO struct {
 	StorySessions           []PersonalDataStorySessionDTO       `json:"storySessions"`
 	LearningPreferences     *PersonalDataLearningPreferencesDTO `json:"learningPreferences"`
 	PracticeSessions        []PersonalDataPracticeSessionDTO    `json:"practiceSessions"`
+	DailyLessons            []PersonalDataDailyLessonDTO        `json:"dailyLessons"`
+	DailyReviewSuccesses    []PersonalDataDailyReviewSuccessDTO `json:"dailyReviewSuccesses"`
 	WordKnowledge           []PersonalDataWordKnowledgeDTO      `json:"wordKnowledge"`
 	GuidedLessons           []PersonalDataGuidedLessonDTO       `json:"guidedLessons"`
 	SchemaVersion           string                              `json:"schemaVersion"`
@@ -90,11 +92,12 @@ type PersonalDataSessionProgressDTO struct {
 	CompletedAt         *string `json:"completedAt"`
 }
 type PersonalDataLearningActionDTO struct {
-	StepID      *string `json:"stepId,omitempty"`
-	Action      *string `json:"action,omitempty"`
-	ChoiceID    *string `json:"choiceId,omitempty"`
-	TypedAnswer *string `json:"typedAnswer,omitempty"`
-	LessonKey   *string `json:"lessonKey,omitempty"`
+	StepID      *string  `json:"stepId,omitempty"`
+	Action      *string  `json:"action,omitempty"`
+	ChoiceID    *string  `json:"choiceId,omitempty"`
+	TypedAnswer *string  `json:"typedAnswer,omitempty"`
+	LessonKey   *string  `json:"lessonKey,omitempty"`
+	TokenIDs    []string `json:"tokenIds,omitempty"`
 }
 type PersonalDataStorySessionDTO struct {
 	PersonalDataSessionProgressDTO
@@ -123,6 +126,8 @@ type PersonalDataPracticeSessionDTO struct {
 	ListID         *string                         `json:"listId"`
 	ListName       *string                         `json:"listName"`
 	ListRevision   *int                            `json:"listRevision"`
+	JourneyLesson  *int                            `json:"journeyLesson"`
+	NewWords       *int                            `json:"newWords"`
 	ContentVersion string                          `json:"contentVersion"`
 	GradingVersion string                          `json:"gradingVersion"`
 	Actions        []PersonalDataPracticeActionDTO `json:"actions"`
@@ -135,15 +140,68 @@ type PersonalDataPracticeActionDTO struct {
 	CreatedAt string                           `json:"createdAt"`
 }
 type PersonalDataPracticeFeedbackDTO struct {
-	_           struct{} `nullable:"true"`
-	StepID      string   `json:"stepId"`
-	Correct     bool     `json:"correct"`
-	Assisted    bool     `json:"assisted"`
-	Answer      string   `json:"answer"`
-	Explanation string   `json:"explanation"`
-	WordText    string   `json:"wordText"`
-	WordSlug    string   `json:"wordSlug"`
-	MeaningID   string   `json:"meaningId"`
+	Revealed         bool     `json:"revealed,omitempty"`
+	CorrectTokenIDs  []string `json:"correctTokenIds,omitempty"`
+	SelectedTokenIDs []string `json:"selectedTokenIds,omitempty"`
+	CorrectChoiceID  string   `json:"correctChoiceId,omitempty"`
+	_                struct{} `nullable:"true"`
+	StepID           string   `json:"stepId"`
+	Correct          bool     `json:"correct"`
+	Assisted         bool     `json:"assisted"`
+	Answer           string   `json:"answer"`
+	Explanation      string   `json:"explanation"`
+	WordText         string   `json:"wordText"`
+	WordSlug         string   `json:"wordSlug"`
+	MeaningID        string   `json:"meaningId"`
+}
+type PersonalDataDailyLessonDTO struct {
+	ID                  string                             `json:"id"`
+	Status              string                             `json:"status"`
+	Revision            int                                `json:"revision"`
+	CompletedWords      int                                `json:"completedWords"`
+	TotalWords          int                                `json:"totalWords"`
+	FirstAnswersCorrect int                                `json:"firstAnswersCorrect"`
+	QuestionsAnswered   int                                `json:"questionsAnswered"`
+	CreditedToday       int                                `json:"creditedToday"`
+	StartedAt           string                             `json:"startedAt"`
+	UpdatedAt           string                             `json:"updatedAt"`
+	CompletedAt         *string                            `json:"completedAt"`
+	Actions             []PersonalDataDailyLessonActionDTO `json:"actions"`
+}
+type PersonalDataDailyLessonActionDTO struct {
+	Action    PersonalDataDailyActionDTO    `json:"action"`
+	Feedback  *PersonalDataDailyFeedbackDTO `json:"feedback"`
+	CreatedAt string                        `json:"createdAt"`
+}
+type PersonalDataDailyActionDTO struct {
+	StepID      *string `json:"stepId,omitempty"`
+	Action      *string `json:"action,omitempty"`
+	ChoiceID    *string `json:"choiceId,omitempty"`
+	WasHintUsed *bool   `json:"wasHintUsed,omitempty"`
+	NextReview  *string `json:"nextReview,omitempty"`
+}
+type PersonalDataDailyFeedbackDTO struct {
+	_                struct{} `nullable:"true"`
+	StepID           string   `json:"stepId"`
+	Correct          bool     `json:"correct"`
+	Answer           string   `json:"answer"`
+	Explanation      string   `json:"explanation"`
+	MeaningID        string   `json:"meaningId"`
+	WordText         string   `json:"wordText"`
+	Credited         bool     `json:"credited"`
+	Skipped          bool     `json:"skipped"`
+	Reason           string   `json:"reason,omitempty"`
+	CorrectChoiceID  string   `json:"correctChoiceId,omitempty"`
+	SelectedChoiceID string   `json:"selectedChoiceId,omitempty"`
+	NextReviewAt     *string  `json:"nextReviewAt,omitempty"`
+	ReviewStep       *int     `json:"reviewStep,omitempty"`
+}
+type PersonalDataDailyReviewSuccessDTO struct {
+	MeaningID       string  `json:"meaningId"`
+	LocalDate       string  `json:"localDate"`
+	ReviewAttemptID string  `json:"reviewAttemptId"`
+	DailySessionID  *string `json:"dailySessionId"`
+	CreatedAt       string  `json:"createdAt"`
 }
 type PersonalDataGuidedLessonDTO struct {
 	PersonalDataSessionProgressDTO

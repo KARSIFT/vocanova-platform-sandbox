@@ -723,3 +723,123 @@ func TestPostgreSQLFreshSaveKeysLockUserBeforeForeignKeyClaims(t *testing.T) {
 	require.Equal(t, 1, words)
 	require.Equal(t, 2, keys)
 }
+
+func TestPostgreSQLDailyReviewNextDateAndKnowledgeAreIndependentOfGrade(t *testing.T) {
+	for _, tc := range []struct {
+		name, next string
+		correct    bool
+	}{
+		{"correct later", "7d", true}, {"wrong later", "3d", false}, {"wrong known", "known", false}, {"correct known", "known", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := setup(t, 2)
+			// Exercise PostgreSQL's microsecond precision against a real-clock-shaped value.
+			f.svc.clock = clock.Fixed{T: f.now.Add(321 * time.Nanosecond)}
+			s, err := f.svc.Start(t.Context(), f.u, "start")
+			require.NoError(t, err)
+			w := f.state(t, s).Words[0]
+			_, err = f.db.Exec("INSERT INTO user_word_knowledge(user_id,meaning_id,self_reported_known,note,updated_at)VALUES($1,$2,false,'keep this note',$3)", f.u, w.MeaningID, f.now)
+			require.NoError(t, err)
+			s = f.answer(t, s, tc.correct)
+			require.NotNil(t, s.Feedback.NextReviewAt)
+			require.NotNil(t, s.Feedback.ReviewStep)
+			var beforePoints int
+			require.NoError(t, f.db.QueryRow("SELECT COALESCE(sum(amount),0) FROM confidence_point_ledger WHERE user_id=$1", f.u).Scan(&beforePoints))
+			request := Action{StepID: s.CurrentStep.ID, ExpectedRevision: s.Revision, ClientActionID: uuid.NewString(), Action: "continue", NextReview: tc.next}
+			key := uuid.NewString()
+			out, err := f.svc.Act(t.Context(), f.u, uuid.MustParse(s.ID), request, key)
+			require.NoError(t, err)
+			require.Equal(t, 1, out.CompletedWords)
+			require.NotEqual(t, s.CurrentStep.ID, out.CurrentStep.ID)
+			var total, successes, points, step int
+			var due time.Time
+			require.NoError(t, f.db.QueryRow("SELECT total_review_count,review_step,next_review_at FROM user_words WHERE id=$1", w.UserWordID).Scan(&total, &step, &due))
+			require.Equal(t, 1, total)
+			require.Equal(t, *s.Feedback.ReviewStep, step)
+			require.NoError(t, f.db.QueryRow("SELECT count(*) FROM daily_review_successes WHERE user_id=$1", f.u).Scan(&successes))
+			if tc.correct {
+				require.Equal(t, 1, successes)
+			} else {
+				require.Zero(t, successes)
+			}
+			require.NoError(t, f.db.QueryRow("SELECT COALESCE(sum(amount),0) FROM confidence_point_ledger WHERE user_id=$1", f.u).Scan(&points))
+			require.Equal(t, beforePoints, points)
+			var known bool
+			var note string
+			require.NoError(t, f.db.QueryRow("SELECT self_reported_known,note FROM user_word_knowledge WHERE user_id=$1 AND meaning_id=$2", f.u, w.MeaningID).Scan(&known, &note))
+			require.Equal(t, "keep this note", note)
+			require.Equal(t, tc.next == "known", known)
+			if tc.next != "known" {
+				days := 3
+				if tc.next == "7d" {
+					days = 7
+				}
+				require.WithinDuration(t, f.svc.clock.Now().Add(time.Duration(days)*24*time.Hour), due, time.Microsecond)
+			}
+			replay, err := f.svc.Act(t.Context(), f.u, uuid.MustParse(s.ID), request, key)
+			require.NoError(t, err)
+			require.Equal(t, out, replay)
+			request.NextReview = "120d"
+			_, err = f.svc.Act(t.Context(), f.u, uuid.MustParse(s.ID), request, key)
+			require.ErrorIs(t, err, ErrConflict)
+		})
+	}
+}
+
+func TestPostgreSQLDailyReviewPreferenceCannotOverwriteAnotherTab(t *testing.T) {
+	for _, change := range []string{"review_count", "schedule", "knowledge_note", "known", "removed", "status"} {
+		t.Run(change, func(t *testing.T) {
+			f := setup(t, 1)
+			s, err := f.svc.Start(t.Context(), f.u, "start")
+			require.NoError(t, err)
+			w := f.state(t, s).Words[0]
+			s = f.answer(t, s, true)
+			switch change {
+			case "review_count":
+				_, err = f.db.Exec("UPDATE user_words SET total_review_count=total_review_count+1 WHERE id=$1", w.UserWordID)
+			case "schedule":
+				_, err = f.db.Exec("UPDATE user_words SET next_review_at=next_review_at+interval '1 hour' WHERE id=$1", w.UserWordID)
+			case "knowledge_note":
+				_, err = f.db.Exec("INSERT INTO user_word_knowledge(user_id,meaning_id,self_reported_known,note,updated_at)VALUES($1,$2,false,'new note',$3)", f.u, w.MeaningID, f.now.Add(time.Second))
+			case "known":
+				_, err = f.db.Exec("INSERT INTO user_word_knowledge(user_id,meaning_id,self_reported_known,note,updated_at)VALUES($1,$2,true,'new note',$3)", f.u, w.MeaningID, f.now.Add(time.Second))
+			case "removed":
+				_, err = f.db.Exec("UPDATE user_words SET deleted_at=$2 WHERE id=$1", w.UserWordID, f.now)
+			case "status":
+				_, err = f.db.Exec("UPDATE user_words SET status='archived' WHERE id=$1", w.UserWordID)
+			}
+			require.NoError(t, err)
+			_, err = f.svc.Act(t.Context(), f.u, uuid.MustParse(s.ID), Action{StepID: s.CurrentStep.ID, ExpectedRevision: s.Revision, ClientActionID: uuid.NewString(), Action: "continue", NextReview: "7d"}, "schedule")
+			require.ErrorIs(t, err, ErrConflict)
+			reloaded, err := f.svc.Get(t.Context(), f.u, uuid.MustParse(s.ID))
+			require.NoError(t, err)
+			require.Equal(t, s.Revision, reloaded.Revision)
+			require.Equal(t, s.CurrentStep, reloaded.CurrentStep)
+			// Automatic Continue remains an escape from stale preference metadata.
+			completed := f.next(t, reloaded)
+			require.Equal(t, "completed", completed.Status)
+		})
+	}
+}
+
+func TestPostgreSQLDailyReviewLegacyFeedbackAndPreferenceValidation(t *testing.T) {
+	f := setup(t, 1)
+	s, err := f.svc.Start(t.Context(), f.u, "start")
+	require.NoError(t, err)
+	_, err = f.svc.Act(t.Context(), f.u, uuid.MustParse(s.ID), Action{StepID: s.CurrentStep.ID, ExpectedRevision: s.Revision, ClientActionID: uuid.NewString(), Action: "answer", ChoiceID: "missing", NextReview: "known"}, "invalid-answer")
+	require.ErrorIs(t, err, ErrInvalid)
+	s = f.answer(t, s, true)
+	st := f.state(t, s)
+	st.Feedback.NextReviewAt = nil
+	st.Feedback.ReviewStep = nil
+	data, err := json.Marshal(st)
+	require.NoError(t, err)
+	_, err = f.db.Exec("UPDATE daily_lesson_sessions SET state=$2 WHERE id=$1", s.ID, string(data))
+	require.NoError(t, err)
+	for _, value := range []string{"7d", "invalid"} {
+		_, err = f.svc.Act(t.Context(), f.u, uuid.MustParse(s.ID), Action{StepID: s.CurrentStep.ID, ExpectedRevision: s.Revision, ClientActionID: uuid.NewString(), Action: "continue", NextReview: value}, "invalid-"+value)
+		require.ErrorIs(t, err, ErrInvalid)
+	}
+	out := f.next(t, s)
+	require.Equal(t, "completed", out.Status)
+}

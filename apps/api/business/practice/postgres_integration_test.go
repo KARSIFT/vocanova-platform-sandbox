@@ -5,13 +5,214 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 )
+
+func TestPracticePostgreSQLPersonalJourneyAuthorityAndLocalDay(t *testing.T) {
+	db := practiceDB(t)
+	ctx := t.Context()
+	u, other, broadWord, broadMeaning := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	now := time.Date(2026, 10, 18, 20, 29, 0, 0, time.UTC)
+	exec := func(q string, args ...any) {
+		t.Helper()
+		_, err := db.ExecContext(ctx, q, args...)
+		require.NoError(t, err)
+	}
+	for _, id := range []uuid.UUID{u, other} {
+		exec(`INSERT INTO users(id,email,status,created_at,updated_at)VALUES($1,$2,'active',$3,$3)`, id, id.String()+"@personal-journey.invalid", now)
+	}
+	exec(`INSERT INTO user_settings(id,user_id,timezone,daily_review_target,created_at,updated_at)VALUES(gen_random_uuid(),$1,'Asia/Tehran',5,$2,$2)`, u, now)
+	exec(`INSERT INTO canonical_words(id,text,normalized_text,language_code,status,created_at,updated_at)VALUES($1,'synthetic-broad-target','synthetic-broad-target','en','active',$2,$2)`, broadWord, now)
+	exec(`INSERT INTO word_meanings(id,word_id,part_of_speech,short_definition,meaning_order,status,created_at,updated_at)VALUES($1,$2,'noun','A distinct synthetic broad-catalog target meaning.',1,'active',$3,$3)`, broadMeaning, broadWord, now)
+	exec(`INSERT INTO user_word_knowledge(user_id,meaning_id,self_reported_known,note,updated_at)VALUES($1,$2,true,'Preserve my private note',$3)`, u, broadMeaning, now)
+	t.Cleanup(func() {
+		for _, id := range []uuid.UUID{u, other} {
+			for _, table := range []string{"practice_mistake_resolutions", "practice_actions", "practice_sessions", "user_word_knowledge", "user_settings"} {
+				_, _ = db.ExecContext(context.Background(), "DELETE FROM "+table+" WHERE user_id=$1", id)
+			}
+			_, _ = db.ExecContext(context.Background(), "DELETE FROM users WHERE id=$1", id)
+		}
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM word_meanings WHERE id=$1", broadMeaning)
+		_, _ = db.ExecContext(context.Background(), "DELETE FROM canonical_words WHERE id=$1", broadWord)
+	})
+	repo := NewPostgreSQLRepository(db)
+	svc := NewService(repo, clock.Fixed{T: now})
+	before, err := svc.List(ctx, u)
+	require.NoError(t, err)
+	require.Equal(t, 1, before.Journey.TotalKnownWords)
+	require.Equal(t, 3, before.Journey.DailyGoal)
+	var wg sync.WaitGroup
+	started := make(chan *Session, 4)
+	errs := make(chan error, 4)
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s, e := svc.Start(ctx, u, StartRequest{Mode: "journey"}, uuid.NewString())
+			started <- s
+			errs <- e
+		}()
+	}
+	wg.Wait()
+	close(started)
+	close(errs)
+	for e := range errs {
+		require.NoError(t, e)
+	}
+	var current *Session
+	for s := range started {
+		if current == nil {
+			current = s
+		} else {
+			require.Equal(t, current.ID, s.ID)
+		}
+	}
+	require.Equal(t, 1, current.JourneyLesson)
+	require.Zero(t, current.NewWords)
+	require.Equal(t, 2, current.TotalSteps)
+	sid := uuid.MustParse(current.ID)
+	_, err = svc.Get(ctx, other, sid)
+	require.ErrorIs(t, err, ErrNotFound)
+	alias, err := svc.Start(ctx, u, StartRequest{Mode: "journey"}, "lost-start-response")
+	require.NoError(t, err)
+	require.Equal(t, sid.String(), alias.ID)
+	for current.Status != "completed" {
+		st, e := repo.Get(ctx, u, sid)
+		require.NoError(t, e)
+		step := st.Snapshot.Steps[st.Index]
+		a := Action{StepID: step.Public.ID, ExpectedRevision: current.Revision, ClientActionID: uuid.NewString(), Action: "answer", ChoiceID: step.CorrectChoice}
+		if step.Public.Kind == "teach" {
+			a.Action = "continue"
+			a.ChoiceID = ""
+		}
+		if step.Public.Kind == "sentence_build" {
+			a.ChoiceID = ""
+			a.TokenIDs = step.CorrectTokens
+		}
+		current, e = svc.Act(ctx, u, sid, a, a.ClientActionID)
+		require.NoError(t, e)
+		ack, e := svc.Act(ctx, u, sid, a, a.ClientActionID)
+		require.NoError(t, e)
+		require.Equal(t, current.Revision, ack.Revision)
+		if a.Action == "continue" {
+			continue
+		}
+		next := Action{StepID: step.Public.ID, ExpectedRevision: current.Revision, ClientActionID: uuid.NewString(), Action: "continue"}
+		current, e = svc.Act(ctx, u, sid, next, next.ClientActionID)
+		require.NoError(t, e)
+	}
+	list, err := svc.List(ctx, u)
+	require.NoError(t, err)
+	require.Equal(t, 1, list.Journey.CompletedLessons)
+	require.Equal(t, 1, list.Journey.TodayCompletedLessons)
+	require.Equal(t, 2, list.Journey.NextLesson)
+	require.Nil(t, list.Journey.CurrentSession)
+	// Tehran midnight, not UTC midnight, resets today's count. Total journey
+	// completion and the saved completed session remain unchanged.
+	svc.clock = clock.Fixed{T: now.Add(2 * time.Minute)}
+	list, err = svc.List(ctx, u)
+	require.NoError(t, err)
+	require.Zero(t, list.Journey.TodayCompletedLessons)
+	require.Equal(t, 1, list.Journey.CompletedLessons)
+	replayed, err := svc.Start(ctx, u, StartRequest{Mode: "journey"}, "lost-start-response")
+	require.NoError(t, err)
+	require.Equal(t, "completed", replayed.Status)
+	require.Equal(t, sid.String(), replayed.ID)
+	for _, table := range []string{"user_words", "review_attempts", "daily_review_successes", "daily_mission_snapshots", "confidence_point_ledger"} {
+		var n int
+		require.NoError(t, db.QueryRowContext(ctx, "SELECT count(*) FROM "+table+" WHERE user_id=$1", u).Scan(&n))
+		require.Zero(t, n, table)
+	}
+	var note string
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT note FROM user_word_knowledge WHERE user_id=$1 AND meaning_id=$2`, u, broadMeaning).Scan(&note))
+	require.Equal(t, "Preserve my private note", note)
+	data, err := accounts.NewPostgreSQLRepository(db).ExportPersonalData(ctx, u)
+	require.NoError(t, err)
+	var exported map[string]any
+	require.NoError(t, json.Unmarshal(data, &exported))
+	var foundJourney bool
+	for _, entry := range exported["practiceSessions"].([]any) {
+		session := entry.(map[string]any)
+		if session["id"] == sid.String() {
+			require.Equal(t, float64(1), session["journeyLesson"])
+			foundJourney = true
+		}
+	}
+	require.True(t, foundJourney)
+	require.NotContains(t, string(data), "CorrectTokens")
+	require.NotContains(t, string(data), "lost-start-response")
+	// A familiar authored word and a broad familiar word produce a genuinely
+	// mixed lesson without displacing the learner's general vocabulary.
+	greeting := catalog[0]
+	exampleID := uuid.New()
+	exec(`INSERT INTO user_word_knowledge(user_id,meaning_id,self_reported_known,note,updated_at)VALUES($1,$2,true,'',$3)`, u, greeting.MeaningID, now)
+	exec(`INSERT INTO word_examples(id,meaning_id,example_text,example_order,status,created_at,updated_at)VALUES($1,$2,'A greeting can start a conversation.',0,'active',$3,$3)`, exampleID, greeting.MeaningID, now)
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM word_examples WHERE id=$1`, exampleID)
+	})
+	current, err = svc.Start(ctx, u, StartRequest{Mode: "journey"}, "mixed-next")
+	require.NoError(t, err)
+	require.Equal(t, 2, current.JourneyLesson)
+	require.Zero(t, current.NewWords)
+	require.Equal(t, 5, current.TotalSteps)
+	sid = uuid.MustParse(current.ID)
+	sawBuild, sawGap := false, false
+	for current.Status != "completed" {
+		state, e := repo.Get(ctx, u, sid)
+		require.NoError(t, e)
+		step := state.Snapshot.Steps[state.Index]
+		a := Action{StepID: step.Public.ID, ExpectedRevision: current.Revision, ClientActionID: uuid.NewString(), Action: "answer", ChoiceID: step.CorrectChoice}
+		if step.Public.Kind == "gap_choice" {
+			sawGap = true
+			require.NotContains(t, step.Public.Context, "greeting")
+		}
+		if step.Public.Kind == "sentence_build" {
+			sawBuild = true
+			a.ChoiceID = ""
+			a.TokenIDs = append([]string{}, step.CorrectTokens...)
+			a.TokenIDs[0], a.TokenIDs[1] = a.TokenIDs[1], a.TokenIDs[0]
+			current, e = svc.Act(ctx, u, sid, a, a.ClientActionID)
+			require.NoError(t, e)
+			require.False(t, current.Feedback.Correct)
+			require.False(t, current.CanContinue)
+			reloaded, e := svc.Get(ctx, u, sid)
+			require.NoError(t, e)
+			require.Equal(t, a.TokenIDs, reloaded.Feedback.SelectedTokenIDs)
+			require.Equal(t, step.CorrectTokens, reloaded.Feedback.CorrectTokenIDs)
+			a.ExpectedRevision = current.Revision
+			a.ClientActionID = uuid.NewString()
+			a.TokenIDs = step.CorrectTokens
+		}
+		current, e = svc.Act(ctx, u, sid, a, a.ClientActionID)
+		require.NoError(t, e)
+		require.True(t, current.Feedback.Correct)
+		ack, e := svc.Act(ctx, u, sid, a, a.ClientActionID)
+		require.NoError(t, e)
+		require.Equal(t, current.Feedback, ack.Feedback)
+		a = Action{StepID: step.Public.ID, ExpectedRevision: current.Revision, ClientActionID: uuid.NewString(), Action: "continue"}
+		current, e = svc.Act(ctx, u, sid, a, a.ClientActionID)
+		require.NoError(t, e)
+	}
+	require.True(t, sawBuild)
+	require.True(t, sawGap)
+	list, err = svc.List(ctx, u)
+	require.NoError(t, err)
+	require.Equal(t, 2, list.Journey.CompletedLessons)
+	require.Equal(t, 1, list.Journey.TodayCompletedLessons)
+	data, err = accounts.NewPostgreSQLRepository(db).ExportPersonalData(ctx, u)
+	require.NoError(t, err)
+	require.Contains(t, string(data), "tokenIds")
+	require.NotContains(t, string(data), "CorrectTokens")
+}
 
 func practiceDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -19,9 +220,43 @@ func practiceDB(t *testing.T) *sql.DB {
 	if dsn == "" {
 		t.Skip("VOCANOVA_TEST_POSTGRES_DSN unset")
 	}
-	db, err := sql.Open("postgres", dsn)
+	admin, err := sql.Open("postgres", dsn)
 	require.NoError(t, err)
-	t.Cleanup(func() { db.Close() })
+	schema := "practice_test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	_, err = admin.ExecContext(t.Context(), "CREATE SCHEMA "+pq.QuoteIdentifier(schema))
+	require.NoError(t, err)
+	db, err := sql.Open("postgres", practiceScopedDSN(t, dsn, schema))
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		db.Close()
+		_, err := admin.ExecContext(context.Background(), "DROP SCHEMA "+pq.QuoteIdentifier(schema)+" CASCADE")
+		require.NoError(t, err)
+		admin.Close()
+	})
+	paths, err := filepath.Glob("../../migrations/*.sql")
+	require.NoError(t, err)
+	for _, path := range paths {
+		raw, err := os.ReadFile(path)
+		require.NoError(t, err)
+		_, err = db.ExecContext(t.Context(), string(raw))
+		require.NoError(t, err, path)
+	}
+	seedPracticeCanonical(t, db)
+	return db
+}
+
+func practiceScopedDSN(t *testing.T, dsn, schema string) string {
+	t.Helper()
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+		var err error
+		dsn, err = pq.ParseURL(dsn)
+		require.NoError(t, err)
+	}
+	return dsn + " search_path=" + schema
+}
+
+func seedPracticeCanonical(t *testing.T, db *sql.DB) {
+	t.Helper()
 	raw, err := os.ReadFile("../../cmd/seed/voc026-p1.json")
 	require.NoError(t, err)
 	var seed map[string][]map[string]any
@@ -36,7 +271,47 @@ func practiceDB(t *testing.T) *sql.DB {
 			require.NoError(t, e)
 		}
 	}
-	return db
+}
+
+func TestPracticePostgreSQLFixtureIsolatesExternalCanonicalChanges(t *testing.T) {
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN unset")
+	}
+	admin, err := sql.Open("postgres", dsn)
+	require.NoError(t, err)
+	externalSchema := "practice_external_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	_, err = admin.ExecContext(t.Context(), "CREATE SCHEMA "+pq.QuoteIdentifier(externalSchema))
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, err := admin.ExecContext(context.Background(), "DROP SCHEMA "+pq.QuoteIdentifier(externalSchema)+" CASCADE")
+		require.NoError(t, err)
+		admin.Close()
+	})
+	for _, table := range []string{"canonical_words", "word_meanings"} {
+		_, err = admin.ExecContext(t.Context(), "CREATE TABLE "+pq.QuoteIdentifier(externalSchema)+"."+table+" (LIKE "+table+" INCLUDING ALL)")
+		require.NoError(t, err)
+	}
+	externalDSN := practiceScopedDSN(t, dsn, externalSchema)
+	external, err := sql.Open("postgres", externalDSN)
+	require.NoError(t, err)
+	t.Cleanup(func() { external.Close() })
+	seedPracticeCanonical(t, external)
+	// Reproduce another package's committed content-unavailability fixture and
+	// keep it changed throughout this check, rather than hoping to win a race.
+	_, err = external.ExecContext(t.Context(), `UPDATE word_meanings SET status='archived' WHERE id=$1`, catalog[0].MeaningID)
+	require.NoError(t, err)
+	t.Setenv("VOCANOVA_TEST_POSTGRES_DSN", externalDSN)
+	fixture := practiceDB(t)
+	tx, err := fixture.BeginTx(t.Context(), nil)
+	require.NoError(t, err)
+	defer tx.Rollback()
+	words, err := loadWords(t.Context(), tx)
+	require.NoError(t, err, "practice fixtures must not read another package's temporary canonical changes")
+	require.Len(t, words, len(catalog))
+	var status string
+	require.NoError(t, external.QueryRowContext(t.Context(), `SELECT status FROM word_meanings WHERE id=$1`, catalog[0].MeaningID).Scan(&status))
+	require.Equal(t, "archived", status, "fixture setup must preserve external data")
 }
 func TestPracticePostgreSQLAuthorityReplayMistakesExportPurge(t *testing.T) {
 	db := practiceDB(t)

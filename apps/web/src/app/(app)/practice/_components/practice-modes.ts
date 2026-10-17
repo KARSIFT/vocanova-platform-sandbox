@@ -8,6 +8,11 @@ export const practiceModes: Record<
     startLabel: string;
   }
 > = {
+  journey: {
+    title: "Today’s practice",
+    description: "Listen, complete sentences and use your words.",
+    startLabel: "Start practice lesson",
+  },
   typed_recall: {
     title: "Type the word",
     description: "See a meaning, then type the word you remember.",

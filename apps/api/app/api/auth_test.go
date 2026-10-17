@@ -237,6 +237,71 @@ func TestLogoutEndpointClearsCookie(t *testing.T) {
 	assert.True(t, clearCSRFCookie.Expires.Before(time.Now()) || clearCSRFCookie.MaxAge < 0)
 }
 
+func TestOAuthRememberMeControlsCookieAndServerExpiry(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		body       string
+		persistent bool
+		duration   time.Duration
+	}{
+		{"older client", `{"redirectUri":"https://test.example.com/app"}`, true, 30 * 24 * time.Hour},
+		{"remember device", `{"redirectUri":"https://test.example.com/app","rememberMe":true}`, true, 30 * 24 * time.Hour},
+		{"short session", `{"redirectUri":"https://test.example.com/app","rememberMe":false}`, false, 24 * time.Hour},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			api, svc, repo, _, c := testAuthAPI(t)
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/google/start", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			api.Adapter().ServeHTTP(w, req)
+			require.Equal(t, http.StatusOK, w.Code)
+			var start struct {
+				URL string `json:"url"`
+			}
+			require.NoError(t, jsonDecode(w.Body.String(), &start))
+			u, err := url.Parse(start.URL)
+			require.NoError(t, err)
+			state := u.Query().Get("state")
+			stateCookie := findCookie(w.Result().Cookies(), "vocanova_oauth_state")
+			require.NotNil(t, stateCookie)
+			// Callback parameters cannot override the stored duration choice.
+			w = httptest.NewRecorder()
+			req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?code=auth-code&state="+url.QueryEscape(state)+"&rememberMe=true", nil)
+			req.AddCookie(stateCookie)
+			api.Adapter().ServeHTTP(w, req)
+			require.Equal(t, http.StatusFound, w.Code)
+			cookie := findCookie(w.Result().Cookies(), "vocanova_session")
+			require.NotNil(t, cookie)
+			require.True(t, cookie.HttpOnly)
+			require.False(t, cookie.Secure, "local test config must be preserved")
+			require.Equal(t, http.SameSiteStrictMode, cookie.SameSite)
+			require.Equal(t, 0, cookie.MaxAge)
+			require.Equal(t, !tc.persistent, cookie.Expires.IsZero())
+			_, hash, err := auth.TokenAndHash(cookie.Value)
+			require.NoError(t, err)
+			session, err := repo.GetSessionByTokenHash(context.Background(), hash)
+			require.NoError(t, err)
+			require.Equal(t, c.Now().Add(tc.duration), session.ExpiresAt)
+			if tc.persistent {
+				require.True(t, cookie.Expires.Equal(session.ExpiresAt))
+			}
+			csrf := findCookie(w.Result().Cookies(), "vocanova_csrf")
+			require.NotNil(t, csrf)
+			w = httptest.NewRecorder()
+			req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
+			req.AddCookie(cookie)
+			req.AddCookie(csrf)
+			req.Header.Set("X-CSRF-Token", csrf.Value)
+			api.Adapter().ServeHTTP(w, req)
+			require.Equal(t, http.StatusNoContent, w.Code)
+			require.Less(t, findCookie(w.Result().Cookies(), "vocanova_session").MaxAge, 0)
+			require.Less(t, findCookie(w.Result().Cookies(), "vocanova_csrf").MaxAge, 0)
+			_, err = svc.ValidateSession(context.Background(), cookie.Value)
+			require.ErrorIs(t, err, auth.ErrAuthenticationRequired)
+		})
+	}
+}
+
 func TestOAuthStartEndpointReturnsURLAndSetsCookie(t *testing.T) {
 	api, _, _, _, _ := testAuthAPI(t)
 

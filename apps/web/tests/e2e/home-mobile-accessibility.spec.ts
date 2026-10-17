@@ -348,7 +348,7 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     await page.goto("/home");
 
     await expect(
-      page.getByRole("region", { name: /Today.s practice|Mission complete/ }),
+      page.getByRole("region", { name: "Review words" }),
     ).toBeVisible();
 
     const { criticalOrSerious } = await scanForAxeViolations(page);
@@ -366,10 +366,16 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     // state in text, not just color.
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/home",
-      requireText: ["text=Reviews today", "text=day streak", "text=Currently due"],
+      requireText: [
+        "text=Reviewed today",
+        "text=day streak",
+        "text=Review complete",
+      ],
     });
     await expect(
-      page.getByRole("progressbar", { name: "Reviews today" }),
-    ).toHaveAttribute("aria-valuenow", "0");
+      page
+        .getByRole("region", { name: "Review words", exact: true })
+        .getByText(/^Reviewed today:/),
+    ).toHaveText("Reviewed today: 0");
   });
 });
