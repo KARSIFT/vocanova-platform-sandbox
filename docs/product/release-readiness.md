@@ -1,5 +1,30 @@
 # Vocanova release readiness
 
+## Daily lesson completion — staging repair, 17 October 2026
+
+[PR #1493](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1493)
+merged as `b9e72ff4`. Applicable hosted checks and the protected queue passed;
+staging deployment `38984022446` served matching web/API version 0.4.2 and passed
+health, database and controlled-signup readiness. Its real core journey then
+failed after recording a verified answer: completion briefly exposed Next lesson
+using the previous due count before the authoritative remaining-word read finished.
+The maturity journey did not run. That release is not accepted by these checks.
+
+A controlled delayed-read regression reproduced the stale action. Completion
+now waits for the server's current lesson/count before offering Next or discovery.
+Failed reads remain unknown and offer recovery. Only the exact no-due rejection
+reconciles the remaining queue; other failures retain their retry key. Recovery
+acknowledges an ambiguous Start with that same key, then reads saved progress
+beyond its immutable receipt, choosing the newer revision for the same session.
+The staging journey also waits for a settled enabled completion action.
+
+The rebuilt local preview passes all 111 affected daily/discovery, pronunciation
+and completion-summary cases across 360px, 430px and desktop. Web lint, web/E2E
+types, whitespace checks and the production web build pass. Independent source
+and contract review found no remaining demonstrated blocker. These are local
+and synthetic checks; hosted verification, both real staging journeys and final
+staging appearance inspection remain required. Production is not promoted.
+
 ## Discovery and daily review — local acceptance, 17 October 2026
 
 The integrated behavior and private-recording observations are described in

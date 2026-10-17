@@ -20,6 +20,14 @@ const primary =
   "inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-6 py-3 text-base font-bold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-default disabled:bg-neutral-200 disabled:text-neutral-600";
 const secondary =
   "inline-flex min-h-11 items-center justify-center rounded-lg border border-neutral-300 px-4 py-2 text-base font-semibold text-neutral-800 hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
+const NO_DUE_DETAIL = "No words are due. Discover a word to start learning.";
+
+interface CompletionCheck {
+  sessionId: string;
+  revision: number;
+  status: "loading" | "ready" | "error";
+  hasSession?: boolean;
+}
 
 function savedChoice(session: DailyLesson | null) {
   const feedback = session?.feedback;
@@ -46,6 +54,9 @@ export function DailyLessonPlayer({
   const [error, setError] = useState("");
   const [uncertain, setUncertain] = useState(false);
   const [conflict, setConflict] = useState(false);
+  const [completionCheck, setCompletionCheck] =
+    useState<CompletionCheck | null>(null);
+  const completionGeneration = useRef(0);
   const inFlight = useRef(false);
   const startKey = useRef<string | null>(null);
   const pending = useRef<DailyLessonAction | null>(null);
@@ -58,6 +69,15 @@ export function DailyLessonPlayer({
   const feedback =
     session?.feedback?.stepId === step?.id ? session?.feedback : null;
   const locked = busy || uncertain || conflict || Boolean(feedback);
+  // A new completed session/revision is unconfirmed on its first render,
+  // before effects run. The preceding lesson's due count cannot enable Next.
+  const completionStatus =
+    completionCheck?.sessionId === session?.id &&
+    completionCheck?.revision === session?.revision
+      ? completionCheck?.status
+      : "loading";
+  const completionCanContinue =
+    dueCount > 0 || Boolean(completionCheck?.hasSession);
 
   useEffect(() => {
     if (session?.id)
@@ -89,28 +109,39 @@ export function DailyLessonPlayer({
   useEffect(() => {
     if (session?.status !== "completed") return;
     let active = true;
+    const generation = ++completionGeneration.current;
+    const identity = { sessionId: session.id, revision: session.revision };
+    setCompletionCheck({ ...identity, status: "loading" });
     void createApiClient()
       .getCurrentDailyLesson()
       .then(({ data }) => {
-        if (active) setDueCount(data.dueCount);
+        if (!active || generation !== completionGeneration.current) return;
+        setDueCount(data.dueCount);
+        setCompletionCheck({
+          ...identity,
+          status: "ready",
+          hasSession: Boolean(data.session),
+        });
       })
       .catch((cause: unknown) => {
-        if (active)
-          setError(
-            handleApiError(
-              cause,
-              "Refresh to check whether more words are ready.",
-            ),
-          );
+        if (!active || generation !== completionGeneration.current) return;
+        setCompletionCheck({ ...identity, status: "error" });
+        setError(
+          handleApiError(
+            cause,
+            "Refresh to check whether more words are ready.",
+          ),
+        );
       });
     return () => {
       active = false;
     };
-  }, [session?.id, session?.status]);
+  }, [session?.id, session?.status, session?.revision]);
 
   function accept(next: DailyLesson) {
     if (session && next.id === session.id && next.revision < session.revision)
       return;
+    completionGeneration.current += 1;
     if (savedChoice(next)) setChoice(savedChoice(next));
     else if (next.id !== session?.id || next.currentStep?.id !== step?.id)
       setChoice("");
@@ -118,8 +149,14 @@ export function DailyLessonPlayer({
     setSession(next);
   }
 
-  async function start() {
-    if (inFlight.current) return;
+  async function start(loadSavedProgress = false) {
+    if (
+      inFlight.current ||
+      (session?.status === "completed" &&
+        completionStatus !== "ready" &&
+        !startKey.current)
+    )
+      return;
     inFlight.current = true;
     setBusy(true);
     setError("");
@@ -134,22 +171,77 @@ export function DailyLessonPlayer({
           headers: { "X-CSRF-Token": token },
         },
       );
-      accept(data);
+      // The POST acknowledges this key, but a replayed receipt is an immutable
+      // snapshot. Saved-progress recovery must read the current lesson too.
+      startKey.current = null;
+      let confirmed = data;
+      if (loadSavedProgress) {
+        const [current, saved] = await Promise.all([
+          createApiClient().getCurrentDailyLesson(),
+          createApiClient().getDailyLesson(data.id),
+        ]);
+        const active = current.data.session;
+        confirmed =
+          active &&
+          (active.id !== saved.data.id || active.revision > saved.data.revision)
+            ? active
+            : saved.data;
+        setDueCount(current.data.dueCount);
+      }
+      accept(confirmed);
       window.history.replaceState(
         window.history.state,
         "",
-        `/review/session?lesson=${encodeURIComponent(data.id)}`,
+        `/review/session?lesson=${encodeURIComponent(confirmed.id)}`,
       );
-      startKey.current = null;
       setUncertain(false);
       setConflict(false);
     } catch (cause) {
-      setError(
-        handleApiError(
-          cause,
-          "We could not start your lesson. Try again safely.",
-        ),
-      );
+      if (
+        cause instanceof ApiResponseError &&
+        cause.status === 409 &&
+        cause.body?.detail === NO_DUE_DETAIL
+      ) {
+        // This exact rejection rolls back without consuming the start key.
+        // Reconcile once; an ambiguous Start error must still replay its key.
+        try {
+          const { data } = await createApiClient().getCurrentDailyLesson();
+          setDueCount(data.dueCount);
+          if (data.session) accept(data.session);
+          else if (session?.status === "completed")
+            setCompletionCheck({
+              sessionId: session.id,
+              revision: session.revision,
+              status: "ready",
+              hasSession: false,
+            });
+          else setSession(null);
+          startKey.current = null;
+          setUncertain(false);
+          setConflict(false);
+          setError("");
+        } catch (recoveryFailure) {
+          if (session?.status === "completed")
+            setCompletionCheck({
+              sessionId: session.id,
+              revision: session.revision,
+              status: "error",
+            });
+          setError(
+            handleApiError(
+              recoveryFailure,
+              "We could not check your remaining words. Load saved progress to try again.",
+            ),
+          );
+        }
+      } else {
+        setError(
+          handleApiError(
+            cause,
+            "We could not start your lesson. Try again safely.",
+          ),
+        );
+      }
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -208,18 +300,43 @@ export function DailyLessonPlayer({
 
   async function refresh() {
     if (inFlight.current) return;
+    // A read cannot acknowledge an ambiguous Start. Confirm its same receipt
+    // before loading progress, so a later Next cannot replay the old lesson.
+    if (startKey.current) {
+      await start(true);
+      return;
+    }
     inFlight.current = true;
     setBusy(true);
+    if (session?.status === "completed")
+      setCompletionCheck({
+        sessionId: session.id,
+        revision: session.revision,
+        status: "loading",
+      });
     try {
       const { data } = await createApiClient().getCurrentDailyLesson();
       if (data.session) accept(data.session);
       else if (session?.status !== "completed") setSession(null);
       setDueCount(data.dueCount);
+      if (!data.session && session?.status === "completed")
+        setCompletionCheck({
+          sessionId: session.id,
+          revision: session.revision,
+          status: "ready",
+          hasSession: false,
+        });
       pending.current = null;
       setUncertain(false);
       setConflict(false);
       setError("");
     } catch (cause) {
+      if (session?.status === "completed")
+        setCompletionCheck({
+          sessionId: session.id,
+          revision: session.revision,
+          status: "error",
+        });
       setError(
         handleApiError(cause, "We could not load your lesson. Try again."),
       );
@@ -300,21 +417,27 @@ export function DailyLessonPlayer({
           <p className="mt-3 text-base text-neutral-600">
             {session.firstAnswersCorrect} correct on the first try.
           </p>
+          {completionStatus === "loading" && (
+            <p role="status" className="mt-3 text-neutral-700">
+              Checking for more words…
+            </p>
+          )}
           <div className="mt-7 flex flex-wrap gap-3">
-            {dueCount > 0 ? (
-              <button
-                type="button"
-                className={primary}
-                disabled={busy}
-                onClick={() => void start()}
-              >
-                Next lesson
-              </button>
-            ) : (
-              <Link href="/discovery" className={primary}>
-                Discover words
-              </Link>
-            )}
+            {completionStatus === "ready" &&
+              (completionCanContinue ? (
+                <button
+                  type="button"
+                  className={primary}
+                  disabled={busy}
+                  onClick={() => void start()}
+                >
+                  Next lesson
+                </button>
+              ) : (
+                <Link href="/discovery" className={primary}>
+                  Discover words
+                </Link>
+              ))}
             <Link href="/home" className={secondary}>
               Back to Home
             </Link>

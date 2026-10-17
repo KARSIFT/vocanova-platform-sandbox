@@ -533,7 +533,22 @@ async function reviewOneCard(
       const next = page.getByRole("button", {
         name: "Next lesson",
         exact: true,
+        disabled: false,
       });
+      const caughtUp = page.getByRole("link", {
+        name: "Discover words",
+        exact: true,
+      });
+      const error = page.getByRole("main").getByRole("alert");
+      // The completion heading arrives before the authoritative remaining-word
+      // read settles. Neither a stale nor disabled Next button proves readiness.
+      await expect(next.or(caughtUp).or(error).first()).toBeVisible({
+        timeout: 120_000,
+      });
+      if (await error.isVisible())
+        throw new Error(
+          "The completed lesson could not confirm its next action.",
+        );
       if (await next.isVisible()) {
         await next.click();
         continue;

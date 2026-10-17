@@ -20,6 +20,13 @@ credit, once per meaning and learner-local day. Incorrect retries earn no daily
 lesson rating points. Existing due timestamps survive the new eight-box schedule.
 Situation courses remain at `/courses`; sentence writing is an optional tool.
 
+Completed lessons wait for confirmed remaining words before offering another
+lesson or discovery. Saved-progress recovery confirms uncertain Start requests
+with their original key and then reads the latest server session, rather than
+treating an immutable replay receipt as current progress. See the
+[readiness record](release-readiness.md) for the staging-discovered defect and
+separate follow-up acceptance gates.
+
 See [discovery and daily review](../design/discovery-daily-review.md) for recording
 evidence, interaction decisions and acceptance boundaries. The delivery has two
 forward migrations (42 total) and personal export schema 1.6. Local validation,

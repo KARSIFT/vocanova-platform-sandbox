@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import type { KnowledgeMap } from "@vocanova/api-client";
+import type { DailyLesson, KnowledgeMap } from "@vocanova/api-client";
 import { scanForAxeViolations } from "./axe-helper";
 
 async function learner(page: Page, count = 2) {
@@ -43,6 +43,14 @@ async function correct(page: Page, index: number) {
   await expect(page.getByRole("status").filter({ hasText: /^Correct/ })).toBeVisible();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
 }
+async function otherActorPost(page: Page, endpoint: string, data: unknown = {}) {
+  const response = await page.request.post(`http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}${endpoint}`, {
+    headers: { "X-CSRF-Token": "daily-browser-csrf", "Idempotency-Key": randomUUID() },
+    data,
+  });
+  expect(response.status()).toBe(200);
+  return (await response.json()) as DailyLesson;
+}
 
 test("Home starts once, choices stay stable through refresh, completion has a durable address", async ({ page }) => {
   await learner(page);
@@ -68,6 +76,234 @@ test("Home starts once, choices stay stable through refresh, completion has a du
   await expect(page.getByRole("heading", { name: "Lesson complete", exact: true })).toBeVisible();
   expect(page.url()).toBe(lessonUrl);
   expect(starts).toBe(1);
+});
+
+test("completion waits for the confirmed remaining words before offering another lesson", async ({ page }) => {
+  await start(page, 1);
+  await page.getByRole("radio", { name: "definition for review word 1", exact: true }).check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
+  let release!: () => void;
+  let gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/v1/daily-lessons/current", async (route) => {
+    await gate;
+    await route.continue();
+  });
+  try {
+    const checking = page.waitForRequest((request) => new URL(request.url()).pathname === "/api/v1/daily-lessons/current", { timeout: 5000 });
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await checking;
+    await expect(page.getByRole("heading", { name: "Lesson complete", exact: true })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Next lesson", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Discover words", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("status").filter({ hasText: "Checking for more words…" })).toBeVisible();
+    release();
+    await expect(page.getByRole("link", { name: "Discover words", exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+    // A completed server-rendered session also starts unconfirmed; its old
+    // zero count must not show a premature caught-up action before this read.
+    gate = new Promise<void>((resolve) => { release = resolve; });
+    const rechecking = page.waitForRequest((request) => new URL(request.url()).pathname === "/api/v1/daily-lessons/current", { timeout: 5000 });
+    await page.reload();
+    await rechecking;
+    await expect(page.getByRole("button", { name: "Next lesson", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Discover words", exact: true })).toHaveCount(0);
+    release();
+    await expect(page.getByRole("link", { name: "Discover words", exact: true })).toBeVisible();
+  } finally {
+    release();
+    await page.unrouteAll({ behavior: "wait" });
+  }
+});
+
+test("completion offers Next only after a positive remaining-word read and uses a fresh start key", async ({ page }) => {
+  const keys: Array<string | undefined> = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname === "/api/v1/daily-lessons") keys.push(request.headers()["idempotency-key"]);
+  });
+  await start(page, 11);
+  for (let word = 1; word < 10; word++) await correct(page, word);
+  await page.getByRole("radio", { name: "definition for review word 10", exact: true }).check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/v1/daily-lessons/current", async (route) => { await gate; await route.continue(); });
+  try {
+    const checking = page.waitForRequest((request) => new URL(request.url()).pathname === "/api/v1/daily-lessons/current", { timeout: 5000 });
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await checking;
+    await expect(page.getByRole("button", { name: "Next lesson", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Discover words", exact: true })).toHaveCount(0);
+    release();
+    const next = page.getByRole("button", { name: "Next lesson", exact: true });
+    await expect(next).toBeEnabled();
+    await next.click();
+    await expect(page.getByRole("heading", { name: "Review word 11", exact: true })).toBeFocused();
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBeTruthy();
+    expect(keys[1]).not.toBe(keys[0]);
+  } finally {
+    release();
+    await page.unrouteAll({ behavior: "wait" });
+  }
+});
+
+test("a failed completion read leaves availability unknown until explicit saved-progress recovery", async ({ page }) => {
+  await start(page, 1);
+  await page.route("**/api/v1/daily-lessons/current", (route) => route.fulfill({ status: 503, contentType: "application/problem+json", body: JSON.stringify({ detail: "Remaining words could not load." }) }), { times: 1 });
+  await correct(page, 1);
+  const error = page.getByRole("main").getByRole("alert");
+  await expect(error).toContainText("Remaining words could not load.");
+  await expect(page.getByRole("button", { name: "Next lesson", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Discover words", exact: true })).toHaveCount(0);
+  await error.getByRole("button", { name: "Load saved progress", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Discover words", exact: true })).toBeVisible();
+  await expect(error).toHaveCount(0);
+});
+
+test("a definitive no-due start reconciles another actor finishing the last word", async ({ page }) => {
+  await learner(page, 1);
+  await page.goto("/reviews");
+  await expect(page.getByRole("button", { name: "Start lesson", exact: true })).toBeVisible();
+  // Exercise the actual synthetic API with a second actor while this page
+  // retains its earlier one-word due snapshot.
+  let other = await otherActorPost(page, "/api/v1/daily-lessons");
+  other = await otherActorPost(page, `/api/v1/daily-lessons/${other.id}/actions`, { action: "answer", choiceId: "meaning-a", stepId: other.currentStep!.id, expectedRevision: other.revision, clientActionId: randomUUID() });
+  other = await otherActorPost(page, `/api/v1/daily-lessons/${other.id}/actions`, { action: "continue", stepId: other.currentStep!.id, expectedRevision: other.revision, clientActionId: randomUUID() });
+  expect(other.status).toBe("completed");
+  const rejected = page.waitForResponse((response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/api/v1/daily-lessons");
+  await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+  expect((await rejected).status()).toBe(409);
+  await expect(page.getByRole("heading", { name: "You’re ready for new words", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Discover words", exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+});
+
+test("no-due reconciliation resumes an active session even when the fresh due count is zero", async ({ page }) => {
+  await learner(page, 1);
+  await page.goto("/reviews");
+  const active = await otherActorPost(page, "/api/v1/daily-lessons");
+  // A concurrent actor can create a saved session after the rejected Start.
+  // This bounded transport case supplies that real fixture session with zero
+  // currently due words; its snapshot still needs to remain resumable.
+  await page.route("**/api/v1/daily-lessons", (route) => route.fulfill({ status: 409, contentType: "application/problem+json", body: JSON.stringify({ detail: "No words are due. Discover a word to start learning." }) }), { times: 1 });
+  await page.route("**/api/v1/daily-lessons/current", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ session: active, dueCount: 0 }) }), { times: 1 });
+  await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Review word 1", exact: true })).toBeFocused();
+  await expect(page).toHaveURL(new RegExp(`/review/session\\?lesson=${active.id}$`));
+  await expect(page.getByRole("radio")).toHaveCount(4);
+  await expect(page.getByRole("heading", { name: "You’re ready for new words", exact: true })).toHaveCount(0);
+});
+
+test("failed no-due reconciliation preserves the exact start key for a later acknowledged retry", async ({ page }) => {
+  await learner(page, 1);
+  await page.goto("/reviews");
+  const keys: Array<string | undefined> = [];
+  await page.route("**/api/v1/daily-lessons", async (route) => {
+    keys.push(route.request().headers()["idempotency-key"]);
+    if (keys.length === 1) await route.fulfill({ status: 409, contentType: "application/problem+json", body: JSON.stringify({ detail: "No words are due. Discover a word to start learning." }) });
+    else await route.continue();
+  });
+  await page.route("**/api/v1/daily-lessons/current", (route) => route.fulfill({ status: 503, contentType: "application/problem+json", body: JSON.stringify({ detail: "Remaining words unavailable." }) }), { times: 1 });
+  await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Remaining words unavailable.");
+  await expect(page.getByRole("heading", { name: "You’re ready for new words", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Review word 1", exact: true })).toBeFocused();
+  expect(keys).toHaveLength(2);
+  expect(keys[0]).toBeTruthy();
+  expect(keys[1]).toBe(keys[0]);
+});
+
+for (const failure of ["generic-conflict", "untyped-no-due", "server-error", "lost-response"] as const) {
+  test(`an uncertain ${failure} start never becomes a no-due claim or changes its retry key`, async ({ page }) => {
+    await learner(page, 1);
+    await page.goto("/reviews");
+    const keys: Array<string | undefined> = [];
+    let reconciliationReads = 0;
+    page.on("request", (request) => { if (new URL(request.url()).pathname === "/api/v1/daily-lessons/current") reconciliationReads++; });
+    await page.route("**/api/v1/daily-lessons", async (route) => {
+      keys.push(route.request().headers()["idempotency-key"]);
+      if (keys.length > 1) { await route.continue(); return; }
+      if (failure === "lost-response") { await route.fetch(); await route.abort("failed"); return; }
+      await route.fulfill({
+        status: failure === "server-error" ? 503 : 409,
+        contentType: failure === "untyped-no-due" ? "application/json" : "application/problem+json",
+        body: JSON.stringify({ detail: failure === "generic-conflict" ? "This lesson changed. Reload it to continue." : failure === "untyped-no-due" ? "No words are due. Discover a word to start learning." : "Temporary failure." }),
+      });
+    });
+    await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+    await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "You’re ready for new words", exact: true })).toHaveCount(0);
+    expect(reconciliationReads).toBe(0);
+    await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Review word 1", exact: true })).toBeFocused();
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBe(keys[0]);
+  });
+}
+
+test("saved-progress recovery acknowledges a lost Start before a later Next uses a new key", async ({ page }) => {
+  await learner(page, 11);
+  await page.goto("/reviews");
+  const keys: Array<string | undefined> = [];
+  await page.route("**/api/v1/daily-lessons", async (route) => {
+    keys.push(route.request().headers()["idempotency-key"]);
+    if (keys.length === 1) { await route.fetch(); await route.abort("failed"); }
+    else await route.continue();
+  });
+  await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+  const error = page.getByRole("main").getByRole("alert");
+  await expect(error).toBeVisible();
+  await error.getByRole("button", { name: "Load saved progress", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Review word 1", exact: true })).toBeFocused();
+  expect(keys).toHaveLength(2);
+  expect(keys[0]).toBeTruthy();
+  expect(keys[1]).toBe(keys[0]);
+  for (let word = 1; word <= 10; word++) await correct(page, word);
+  await page.getByRole("button", { name: "Next lesson", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Review word 11", exact: true })).toBeFocused();
+  expect(keys).toHaveLength(3);
+  expect(keys[2]).toBeTruthy();
+  expect(keys[2]).not.toBe(keys[0]);
+});
+
+test("saved-progress recovery reads beyond an immutable Start receipt after another actor completes the lesson", async ({ page }) => {
+  await learner(page, 1);
+  await page.goto("/reviews");
+  const keys: Array<string | undefined> = [];
+  let initial: DailyLesson;
+  await page.route("**/api/v1/daily-lessons", async (route) => {
+    keys.push(route.request().headers()["idempotency-key"]);
+    if (keys.length === 1) {
+      const committed = await route.fetch();
+      initial = await committed.json() as DailyLesson;
+      await route.abort("failed");
+    } else {
+      // The real API replays the original receipt, not the mutable session.
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(initial) });
+    }
+  });
+  await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+  const error = page.getByRole("main").getByRole("alert");
+  await expect(error).toBeVisible();
+  let other = initial!;
+  other = await otherActorPost(page, `/api/v1/daily-lessons/${other.id}/actions`, { action: "answer", choiceId: "meaning-a", stepId: other.currentStep!.id, expectedRevision: other.revision, clientActionId: randomUUID() });
+  other = await otherActorPost(page, `/api/v1/daily-lessons/${other.id}/actions`, { action: "continue", stepId: other.currentStep!.id, expectedRevision: other.revision, clientActionId: randomUUID() });
+  expect(other.status).toBe("completed");
+  // Current and specific reads can observe different snapshots. Even when
+  // Current captured this same session before completion, the newer specific
+  // revision must win rather than reopening its initial question.
+  await page.route("**/api/v1/daily-lessons/current", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ session: initial, dueCount: 1 }) }), { times: 1 });
+  await error.getByRole("button", { name: "Load saved progress", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Lesson complete", exact: true })).toBeFocused();
+  await expect(page.getByText("1 word remembered for today.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Discover words", exact: true })).toBeVisible();
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  expect(keys).toHaveLength(2);
+  expect(keys[0]).toBeTruthy();
+  expect(keys[1]).toBe(keys[0]);
 });
 
 test("a mistake earns no credit, keeps the chosen answer on refresh, and returns after another word", async ({ page }) => {
