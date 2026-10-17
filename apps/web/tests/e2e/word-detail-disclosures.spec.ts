@@ -45,7 +45,7 @@ test("native writing opened before hydration preserves its reload target", async
       exact: true,
     });
     await expect(writing).toBeVisible();
-    // React has not attached either its activation or toggle handler yet.
+    // React has not attached its activation handler yet.
     await expect(nativePage).not.toHaveURL(/#sentence-practice$/);
     expect(deadlineReleased).toBe(false);
     const historyLength = await nativePage.evaluate(() => history.length);
@@ -122,15 +122,25 @@ for (const theme of ["light", "dark"] as const) {
       "open",
       "",
     );
-    await practice.click();
-    await expect(writing).toBeHidden();
-    await page.evaluate(() => {
-      window.location.hash = "";
-    });
-    await page.evaluate(() => {
+    // Close using real native activation, then follow a new fragment in the
+    // same task. The queued close toggle must not erase that newer target
+    // before hashchange opens the writing disclosure again.
+    const immediate = await page.evaluate(() => {
+      const disclosure =
+        document.querySelector<HTMLDetailsElement>("#sentence-practice")!;
+      const wasOpen = disclosure.open;
+      disclosure.querySelector("summary")!.click();
       window.location.hash = "sentence-practice";
+      return { wasOpen, closed: !disclosure.open, hash: window.location.hash };
+    });
+    expect(immediate).toEqual({
+      wasOpen: true,
+      closed: true,
+      hash: "#sentence-practice",
     });
     await expect(writing).toBeVisible();
+    await expect(page).toHaveURL(/#sentence-practice$/);
+    await expect(writing).toHaveValue("I pour coffee before work.");
     const tools = page.locator("summary").filter({ hasText: "Personal tools" });
     await expect(
       page.getByRole("button", { name: "Edit knowledge and note" }),

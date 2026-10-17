@@ -52,6 +52,21 @@ those contracts. The patched runtime passes all 12 local Lighthouse audits
 (performance 100, accessibility 100, best practices 96); these lab scores do not
 establish live network latency.
 
+The broad hosted browser run on `43cc8a9f` finished successfully with 1,080
+passes, two first-attempt failures that passed their configured retry, and 31
+existing scope skips. Both failures concerned rapid fragment reopening of
+optional writing. The full log is preserved; that successful workflow did not
+upload failure traces. A native close followed immediately by a fresh fragment
+reproduced the problem deterministically: the queued close toggle removed the
+new target before its navigation handler ran. The disclosure now writes its
+fragment during native summary activation; delayed toggle notifications cannot
+overwrite newer navigation. Mount/hydration recovery, native keyboard behavior
+and mounted drafts remain intact. The existing regression exercises this exact
+sequence in both themes. A fresh build and all 15 affected disclosure/draft
+recovery checks pass at three widths, including pre-hydration interaction and
+401 recovery. Independent review accepts the narrow correction. Final-head
+hosted acceptance remains required; no unchanged rerun replaces the evidence.
+
 ## Discovery and daily review — local acceptance, 17 October 2026
 
 The integrated behavior and private-recording observations are described in

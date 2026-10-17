@@ -44,7 +44,7 @@ export function WordPracticeDisclosure({
       disclosure.current.scrollIntoView({ block: "start" });
     };
     revealTarget();
-    // Native details can be activated before hydration attaches onToggle.
+    // Native details can be activated before hydration attaches onClick.
     // Reconcile that already-open state before a reload or sign-in return.
     if (disclosure.current?.open) persistDisclosureTarget(anchor, true);
     window.addEventListener("hashchange", revealTarget);
@@ -56,9 +56,6 @@ export function WordPracticeDisclosure({
       ref={disclosure}
       id={anchor}
       className="mt-4 scroll-mt-24 border-t border-neutral-200 pt-2"
-      onToggle={(event) => {
-        persistDisclosureTarget(anchor, event.currentTarget.open);
-      }}
     >
       <summary
         className="min-h-12 cursor-pointer content-center font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
