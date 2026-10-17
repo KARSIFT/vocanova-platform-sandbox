@@ -25,6 +25,21 @@ and contract review found no remaining demonstrated blocker. These are local
 and synthetic checks; hosted verification, both real staging journeys and final
 staging appearance inspection remain required. Production is not promoted.
 
+A fresh dependency audit also found published patches for the web runtime:
+Next 16.3.8, sharp 0.35.5 and source-map-js 1.2.2 are now selected without major
+upgrades. The production dependency audit reports zero known advisories. The
+full audit retains one unpatched development-only `braces` advisory through the
+Next ESLint plugin's fixed repository globs; no application request uses that
+chain. The registry has no published 3.0.4, so no nonexistent fix or audit
+suppression is configured. See the official
+[Next release](https://github.com/vercel/next.js/releases/tag/v16.3.8),
+[sharp release](https://github.com/lovell/sharp/releases/tag/v0.35.5) and
+[remaining advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm).
+The patched build again passes the 111 affected browser cases, 272 foundation
+and 185 web-helper tests, lint and E2E types. Frozen installation succeeds;
+unrelated development-tool resolution changes were restored. Independent
+dependency/lock review found no blocker. Hosted checks apply to the final head.
+
 ## Discovery and daily review — local acceptance, 17 October 2026
 
 The integrated behavior and private-recording observations are described in
