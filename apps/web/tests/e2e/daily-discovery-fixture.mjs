@@ -81,7 +81,10 @@ export async function handleDailyDiscovery({ req, res, url, cookies, state, json
     const active = [...state.dailySessions.values()].find((s) => s.status === "in_progress");
     if (active) { state.dailyStartReceipts.set(key, active.id); return send(200, active); }
     const words = dueWords().items.slice(0, 10);
-    if (!words.length) return send(409, { detail: "No words due" });
+    if (!words.length) {
+      jsonResponse(res, 409, { status: 409, detail: "No words are due. Discover a word to start learning." }, { "Content-Type": "application/problem+json" });
+      return true;
+    }
     const now = new Date().toISOString();
     const session = { attribution, id: randomUUID(), status: "in_progress", revision: 1, completedWords: 0, totalWords: words.length, firstAnswersCorrect: 0, questionsAnswered: 0, creditedToday: 0, currentStep: step(words[0]), feedback: null, canContinue: false, createdAt: now, updatedAt: now };
     state.dailyWords ??= new Map(); state.dailyRetries ??= new Map();

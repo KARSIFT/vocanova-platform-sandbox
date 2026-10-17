@@ -1,5 +1,72 @@
 # Vocanova release readiness
 
+## Daily lesson completion — staging repair, 17 October 2026
+
+[PR #1493](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1493)
+merged as `b9e72ff4`. Applicable hosted checks and the protected queue passed;
+staging deployment `38984022446` served matching web/API version 0.4.2 and passed
+health, database and controlled-signup readiness. Its real core journey then
+failed after recording a verified answer: completion briefly exposed Next lesson
+using the previous due count before the authoritative remaining-word read finished.
+The maturity journey did not run. That release is not accepted by these checks.
+
+A controlled delayed-read regression reproduced the stale action. Completion
+now waits for the server's current lesson/count before offering Next or discovery.
+Failed reads remain unknown and offer recovery. Only the exact no-due rejection
+reconciles the remaining queue; other failures retain their retry key. Recovery
+acknowledges an ambiguous Start with that same key, then reads saved progress
+beyond its immutable receipt, choosing the newer revision for the same session.
+The staging journey also waits for a settled enabled completion action.
+
+The rebuilt local preview passes all 111 affected daily/discovery, pronunciation
+and completion-summary cases across 360px, 430px and desktop. Web lint, web/E2E
+types, whitespace checks and the production web build pass. Independent source
+and contract review found no remaining demonstrated blocker. These are local
+and synthetic checks; hosted verification, both real staging journeys and final
+staging appearance inspection remain required. Production is not promoted.
+
+A fresh dependency audit also found published patches for the web runtime:
+Next 16.3.8, sharp 0.35.5 and source-map-js 1.2.2 are now selected without major
+upgrades. The production dependency audit reports zero known advisories. The
+full audit retains one unpatched development-only `braces` advisory through the
+Next ESLint plugin's fixed repository globs; no application request uses that
+chain. The registry has no published 3.0.4, so no nonexistent fix or audit
+suppression is configured. See the official
+[Next release](https://github.com/vercel/next.js/releases/tag/v16.3.8),
+[sharp release](https://github.com/lovell/sharp/releases/tag/v0.35.5) and
+[remaining advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm).
+The patched build again passes the 111 affected browser cases, 272 foundation
+and 185 web-helper tests, lint and E2E types. Frozen installation succeeds;
+unrelated development-tool resolution changes were restored. Independent
+dependency/lock review found no blocker. Hosted checks apply to the final head.
+
+Actual automated review also identified misleading fallback wording when Start
+was acknowledged but a subsequent progress read failed. The message now
+distinguishes saved progress from a failed Start. A network-failure regression
+recovers another actor's newer answer by GET without another Start request;
+the rebuilt affected matrix passes all 114 cases. Independent contract review
+verified that `/current` returns only in-progress sessions and a fresh Start key
+resumes an existing active lesson under the owner lock; the review's proposed
+completed-current stall and active-session abandonment are not reachable under
+those contracts. The patched runtime passes all 12 local Lighthouse audits
+(performance 100, accessibility 100, best practices 96); these lab scores do not
+establish live network latency.
+
+The broad hosted browser run on `43cc8a9f` finished successfully with 1,080
+passes, two first-attempt failures that passed their configured retry, and 31
+existing scope skips. Both failures concerned rapid fragment reopening of
+optional writing. The full log is preserved; that successful workflow did not
+upload failure traces. A native close followed immediately by a fresh fragment
+reproduced the problem deterministically: the queued close toggle removed the
+new target before its navigation handler ran. The disclosure now writes its
+fragment during native summary activation; delayed toggle notifications cannot
+overwrite newer navigation. Mount/hydration recovery, native keyboard behavior
+and mounted drafts remain intact. The existing regression exercises this exact
+sequence in both themes. A fresh build and all 15 affected disclosure/draft
+recovery checks pass at three widths, including pre-hydration interaction and
+401 recovery. Independent review accepts the narrow correction. Final-head
+hosted acceptance remains required; no unchanged rerun replaces the evidence.
+
 ## Discovery and daily review — local acceptance, 17 October 2026
 
 The integrated behavior and private-recording observations are described in
