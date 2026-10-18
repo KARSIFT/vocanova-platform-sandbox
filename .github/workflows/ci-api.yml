@@ -96,7 +96,7 @@ jobs:
           trap 'rm -f "$test_log"' EXIT
           go test -race ./business/knowledgecatalog ./business/dailylesson ./business/reviews \
             -count=1 -v | tee "$test_log"
-          for case in TestPostgreSQLCompleteCatalogSeedAndConsistentBandCounts TestPostgreSQLDiscoveryAtomicChoicesIsolationHistoryAndReplay TestPostgreSQLDailyLessonAuthorityRetryCreditResumeAndExport TestPostgreSQLFullCatalogHasEnoughDailyLessonChoices TestPostgreSQLVerifiedTodayDueConsistencyAcrossRestorePaths TestPostgreSQLFreshSaveKeysLockUserBeforeForeignKeyClaims TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock; do
+          for case in TestPostgreSQLCompleteCatalogSeedAndConsistentBandCounts TestPostgreSQLDiscoveryAtomicChoicesIsolationHistoryAndReplay TestPostgreSQLDailyLessonAuthorityOnceDailyCreditResumeAndExport TestPostgreSQLFullCatalogHasEnoughDailyLessonChoices TestPostgreSQLVerifiedTodayDueConsistencyAcrossRestorePaths TestPostgreSQLFreshSaveKeysLockUserBeforeForeignKeyClaims TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock TestPostgreSQLReviewOncePerCanonicalWordForCorrectWrongAndSkip TestPostgreSQLLegacyPrunedQuestionCanBeAnsweredAfterReload TestPostgreSQLReviewAuditUsesDSTLocalBoundariesAndServerCreationTime TestPostgreSQLWrongAndSkipRestoreDueConsistencyAcrossLearnerSurfaces; do
             grep -Eq "^--- PASS: $case " "$test_log"
           done
           if grep -Eq '^[[:space:]]*--- SKIP:' "$test_log"; then

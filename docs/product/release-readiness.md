@@ -22,6 +22,17 @@ missing Persian; an empty suggestion group with an invalid ARIA label; and old
 fixtures that assumed same-day retries or duplicate saved-meaning identities.
 The corrected fixtures retain pagination, reward and nonvacuous live-review gates.
 
+A final projection audit reproduced the knowledge map retaining its old
+success-only eligibility after wrong/skip plus remove/restore. It now uses the
+same canonical daily rule; actual PostgreSQL checks cover the map, queue,
+counts, saved list/detail and Current together. The final full Go suite against
+PostgreSQL passes **2,534 test/subtest checks**, with zero failures or test skips;
+vet and build pass, and map consistency also passes a focused race run. Hosted
+CI initially failed because its mandatory PASS-name check still referenced the
+renamed same-day-retry test. The assertion now requires its once-daily successor
+and the new regressions. All 11 required names are present and passed locally;
+the no-skip gate remains enforced. Foundation/workflow-contract checks pass.
+
 A bounded PostgreSQL TEMP-table probe covers 12 combinations of 100/10,000 saved
 meanings, one/five meanings per canonical word and 0/50/500 daily attempts. The
 first implementation rescanned daily audit rows and took 906.298 ms in the worst
