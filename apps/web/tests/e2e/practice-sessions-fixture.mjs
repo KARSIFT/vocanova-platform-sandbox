@@ -1,6 +1,6 @@
 // Synthetic transport fixtures, not production grading or durability evidence.
 // Keep this small: three canonical meanings, deterministic order, opaque IDs.
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 const normalize = (value) => value.trim().replace(/\s+/gu, " ").toLowerCase();
 
@@ -45,12 +45,46 @@ export async function handlePracticeSessions({
       meaningId: meaning.id,
       wordText: word.text,
       wordSlug: slug,
+      partOfSpeech: meaning.partOfSpeech,
       definition: meaning.shortDefinition,
     };
   });
+  const projectStep = (entry) => {
+    const frozen = entry.steps[entry.summary.completedSteps];
+    if (!frozen) return null;
+    const step = { ...frozen.public };
+    delete step.meaningId;
+    delete step.pronunciationMeaningId;
+    delete step.pronunciationRevision;
+    step.partOfSpeech = frozen.word.partOfSpeech;
+    if (step.speechText) {
+      step.pronunciationMeaningId = frozen.word.meaningId;
+      const identity = [
+        frozen.word.meaningId,
+        frozen.word.wordText,
+        frozen.word.partOfSpeech,
+        frozen.word.definition,
+      ];
+      if (
+        identity.every((value) => typeof value === "string" && value.length > 0)
+      ) {
+        // Match meaningidentity.Revision, including Go encoding/json's HTML escaping.
+        const encoded = JSON.stringify(identity).replace(
+          /[<>&\u2028\u2029]/gu,
+          (character) =>
+            `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+        );
+        step.pronunciationRevision = createHash("sha256")
+          .update(encoded)
+          .digest("hex");
+      }
+    }
+    if (step.kind === "teach") step.meaningId = frozen.word.meaningId;
+    return step;
+  };
   const project = (entry) => ({
     ...entry.summary,
-    currentStep: entry.steps[entry.summary.completedSteps]?.public ?? null,
+    currentStep: projectStep(entry),
     feedback: entry.feedback,
     canContinue:
       entry.steps[entry.summary.completedSteps]?.public.kind === "teach" ||
@@ -226,7 +260,7 @@ export async function handlePracticeSessions({
                 : "typed_recall",
             prompt:
               body.mode === "listening_choice"
-                ? "Listen with device pronunciation. Which meaning matches?"
+                ? "Listen and choose the meaning."
                 : `Type the word or phrase you learned: ${word.definition}`,
             choices,
             ...(body.mode === "listening_choice"

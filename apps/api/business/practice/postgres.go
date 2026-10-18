@@ -126,7 +126,7 @@ func loadReferences(ctx context.Context, tx *sql.Tx, refs []reference) ([]Word, 
 	for i, r := range refs {
 		ids[i] = r.MeaningID
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT wm.id,cw.text,wm.short_definition FROM word_meanings wm JOIN canonical_words cw ON cw.id=wm.word_id WHERE wm.id=ANY($1::uuid[]) AND wm.status='active' AND cw.status='active'`, pq.Array(ids))
+	rows, err := tx.QueryContext(ctx, `SELECT wm.id,cw.text,wm.short_definition,wm.part_of_speech FROM word_meanings wm JOIN canonical_words cw ON cw.id=wm.word_id WHERE wm.id=ANY($1::uuid[]) AND wm.status='active' AND cw.status='active'`, pq.Array(ids))
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func loadReferences(ctx context.Context, tx *sql.Tx, refs []reference) ([]Word, 
 	out := []Word{}
 	for rows.Next() {
 		var w Word
-		if err = rows.Scan(&w.MeaningID, &w.WordText, &w.Definition); err != nil {
+		if err = rows.Scan(&w.MeaningID, &w.WordText, &w.Definition, &w.PartOfSpeech); err != nil {
 			return nil, err
 		}
 		ref, ok := referenceFor(w.MeaningID)

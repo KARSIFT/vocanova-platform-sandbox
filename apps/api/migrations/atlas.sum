@@ -1,4 +1,4 @@
-h1:1NdJp7EzKCTPSCBR5KLyVjq9lERO6nMjPqVdwsF1uA4=
+h1:mrWe2dV120byVjsmnUgblHLQS7AL+T8QFxDuSjmsbrU=
 20260724210000_identity_foundation.sql h1:kCE91pYCtOUccWkoJGp8Ow1N7oOWjxAvGcPQtSIC17k=
 20260724210001_oauth_state.sql h1:8UfSmhz20WitPSfl/I/KlApBO0VK39xYS053oC3IEiU=
 20260725100000_voc026_p1_content_tables.sql h1:rTIXQ0O1B1X6fu82HtnYS3xb0KU3yYQO/kJmui0C9j8=
@@ -44,3 +44,4 @@ h1:1NdJp7EzKCTPSCBR5KLyVjq9lERO6nMjPqVdwsF1uA4=
 20261018100000_oauth_session_persistence.sql h1:xbO8oaNe6oIHuVNWno81r4X8UXSHZbZJYwA+mx/B1vY=
 20261018120000_practice_journey.sql h1:DqrQFY1X70+5ui84n2YEQvR1krnZ52JKiCYc78eDBOU=
 20261018130000_pronunciation_audio.sql h1:tbSyF8rk0ioGY+C1CRy6FxoEJnmAhke2w2TrSsrG6QM=
+20261018150000_pronunciation_generation_budget.sql h1:/8ywYbMy0i9tgOoS6fa4llqSHP9ga9baIoBjR/cpHLQ=

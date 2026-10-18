@@ -36,7 +36,9 @@ export function WordDetailContent({
         <h1 className="text-2xl font-semibold text-neutral-900">
           {wordData.text}
         </h1>
-        <ListenButton text={wordData.text} />
+        {wordData.meanings.length === 0 && (
+          <ListenButton text={wordData.text} />
+        )}
         <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
           {wordData.wordType.replaceAll("_", " ")}
           {wordData.difficultyLevel
@@ -72,6 +74,7 @@ export function WordDetailContent({
                     <p className="font-medium text-neutral-900">
                       {meaning.partOfSpeech}
                     </p>
+                    <ListenButton text={wordData.text} meaningId={meaning.id} />
                     <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
                       {meaning.shortDefinition}
                     </p>

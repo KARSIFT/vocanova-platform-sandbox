@@ -52,11 +52,8 @@ func build(req StartRequest, words []Word, sources map[string]Source, seed strin
 		}
 		if req.Mode == "listening_choice" {
 			step.Public.Kind = "listening_choice"
-			step.Public.Prompt = "Listen with device pronunciation. Which meaning matches?"
-			step.Public.SpeechText = w.WordText
-			if w.WordText == "resume" {
-				step.Public.SpeechText = "résumé"
-			}
+			step.Public.Prompt = "Listen and choose the meaning."
+			step.Public.SpeechText = pronunciationText(w)
 			step.Public.SpeechLanguage = "en-US"
 			options := []Word{}
 			for _, o := range words {

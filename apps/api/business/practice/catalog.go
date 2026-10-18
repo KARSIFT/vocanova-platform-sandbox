@@ -1,5 +1,7 @@
 package practice
 
+import "github.com/KARSIFT/vocanova-platform/apps/api/business/meaninguses"
+
 // This original practice catalog pins the 90 reviewed starter-course meanings.
 // Additions/answer changes require a content/grading version bump; active sessions
 // retain their original private snapshot. Lesson progress is never changed.
@@ -160,5 +162,5 @@ func recallDefinition(w Word) string {
 // SupportsMeaning reports whether a canonical meaning has reviewed practice content.
 func SupportsMeaning(id, text, definition string) bool {
 	ref, ok := referenceFor(id)
-	return ok && ref.WordText == text && definition != ""
+	return (ok && ref.WordText == text && definition != "") || meaninguses.SupportsMeaning(id, text, definition)
 }

@@ -140,6 +140,7 @@ type PersonalDataPracticeActionDTO struct {
 	CreatedAt string                           `json:"createdAt"`
 }
 type PersonalDataPracticeFeedbackDTO struct {
+	PartOfSpeech     string   `json:"partOfSpeech,omitempty"`
 	Revealed         bool     `json:"revealed,omitempty"`
 	CorrectTokenIDs  []string `json:"correctTokenIds,omitempty"`
 	SelectedTokenIDs []string `json:"selectedTokenIds,omitempty"`

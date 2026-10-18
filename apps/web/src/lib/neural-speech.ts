@@ -25,7 +25,14 @@ export interface NeuralSpeechEnvironment {
   request(
     text: string,
     signal: AbortSignal,
-  ): Promise<{ audioBase64: string; mimeType: string }>;
+    meaningId?: string,
+    meaningRevision?: string,
+  ): Promise<{
+    audioBase64: string;
+    mimeType: string;
+    meaningId?: string;
+    meaningRevision?: string;
+  }>;
   createMedia(response: { audioBase64: string; mimeType: string }): {
     media: PronunciationMedia;
     dispose(): void;
@@ -43,6 +50,8 @@ export function createPronunciationController(
   type Request = {
     owner: symbol;
     text: string;
+    meaningId?: string;
+    meaningRevision?: string;
     notify: (state: PronunciationState) => void;
     phase: "request" | "audio" | "device";
     blocked: boolean;
@@ -127,6 +136,8 @@ export function createPronunciationController(
       text: string,
       slow: boolean,
       notify: (state: PronunciationState) => void,
+      meaningId?: string,
+      meaningRevision?: string,
     ) {
       if (!text.trim()) return;
       let environment: NeuralSpeechEnvironment | null = null;
@@ -148,9 +159,11 @@ export function createPronunciationController(
         active?.blocked &&
         active.owner === owner &&
         active.text === text &&
+        active.meaningId === meaningId &&
+        active.meaningRevision === meaningRevision &&
         active.clip &&
         environment &&
-        !preferences.voiceURI
+        (!preferences.voiceURI || meaningId)
       ) {
         const request = active;
         const clip = request.clip!;
@@ -179,6 +192,8 @@ export function createPronunciationController(
       const request: Request = {
         owner,
         text,
+        meaningId,
+        meaningRevision,
         notify,
         phase: "request",
         blocked: false,
@@ -195,6 +210,15 @@ export function createPronunciationController(
         } catch {
           /* Release URLs even on media errors. */
         }
+        if (meaningId) {
+          active = null;
+          notify({
+            status: "unavailable",
+            message:
+              "Pronunciation for this meaning is unavailable. Try Listen again.",
+          });
+          return;
+        }
         device.play(owner, text, slow, (state) => {
           if (active !== request || request.phase !== "device") return;
           notify({ ...state, source: "device" });
@@ -203,11 +227,11 @@ export function createPronunciationController(
         });
       }
       request.fallback = fallback;
-      // A selected device voice is an explicit override. Long stories retain
-      // device playback; the server accepts bounded public teaching text only.
+      // A device override is safe only for general audio. Meaning-specific
+      // playback needs the server's confirmed context and must never guess.
       if (
         !environment ||
-        preferences.voiceURI ||
+        (preferences.voiceURI && !meaningId) ||
         Array.from(text).length > 500
       ) {
         fallback();
@@ -218,8 +242,17 @@ export function createPronunciationController(
       request.timer = setTimeout(fallback, timeoutMs);
       void (async () => {
         try {
-          const response = await neural.request(text, request.abort.signal);
+          const response = await neural.request(
+            text,
+            request.abort.signal,
+            meaningId,
+            meaningRevision,
+          );
           if (active !== request || request.phase !== "request") return;
+          if (meaningId && response.meaningId !== meaningId)
+            throw new Error("Pronunciation meaning did not match");
+          if (meaningRevision && response.meaningRevision !== meaningRevision)
+            throw new Error("Pronunciation meaning revision did not match");
           const clip = neural.createMedia(response);
           request.clip = clip;
           request.phase = "audio";

@@ -18,13 +18,66 @@ for (const theme of ["light", "dark"])
     await context.addCookies([
       { name: "vocanova_theme", value: theme, url: baseURL! },
     ]);
-    // No audio availability: text help must permit progress without automatic playback.
-    await page.addInitScript(() =>
+    const requests: { text: string; meaningId: string }[] = [];
+    let wrongMeaning = true;
+    await page.route("**/api/v1/pronunciation", async (route) => {
+      const body = route.request().postDataJSON();
+      requests.push(body);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          audioBase64: Buffer.from(
+            JSON.stringify({ text: body.text }),
+          ).toString("base64"),
+          mimeType: "audio/mpeg",
+          voice: "coral",
+          cacheHit: false,
+          meaningId: wrongMeaning ? "a-different-use" : body.meaningId,
+          meaningRevision: body.meaningRevision,
+        }),
+      });
+    });
+    await page.addInitScript(() => {
+      const calls: { text: string; rate: number }[] = [];
+      Object.defineProperty(window, "__guidedAudioCalls", { value: calls });
+      const blobs = new Map<string, Blob>();
+      const create = URL.createObjectURL.bind(URL);
+      const revoke = URL.revokeObjectURL.bind(URL);
+      URL.createObjectURL = (blob) => {
+        const url = create(blob);
+        if (blob instanceof Blob) blobs.set(url, blob);
+        return url;
+      };
+      URL.revokeObjectURL = (url) => {
+        blobs.delete(url);
+        revoke(url);
+      };
+      class AuthoredAudio {
+        playbackRate = 1;
+        preservesPitch = false;
+        onended: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor(private url: string) {}
+        async play() {
+          const body = JSON.parse(await blobs.get(this.url)!.text()) as {
+            text: string;
+          };
+          calls.push({ text: body.text, rate: this.playbackRate });
+          queueMicrotask(() => this.onended?.());
+        }
+        pause() {}
+      }
+      Object.defineProperty(window, "Audio", {
+        configurable: true,
+        value: AuthoredAudio,
+      });
+      // Contextual AI audio must work even when device synthesis is unavailable.
       Object.defineProperty(window, "speechSynthesis", {
         value: undefined,
         configurable: true,
-      }),
-    );
+      });
+    });
     await page.goto("/learn/conversation-basics");
     const start = page.waitForResponse(
       (r) => r.request().method() === "POST" && r.url().endsWith("/sessions"),
@@ -67,13 +120,52 @@ for (const theme of ["light", "dark"])
         has: page.getByRole("heading", { name: "That’s right", exact: true }),
       }),
     ).toBeFocused();
+    const nextAudio = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        /\/lesson-sessions\/[^/]+\/actions$/u.test(
+          new URL(response.url()).pathname,
+        ),
+    );
     await page.getByRole("button", { name: "Continue", exact: true }).click();
+    const listeningStep = (await (await nextAudio).json()).currentStep;
     await expect(
       page.getByRole("button", { name: "Listen to lesson audio", exact: true }),
     ).toBeVisible();
+    expect(requests).toEqual([]);
     await page
       .getByRole("button", { name: "Listen to lesson audio", exact: true })
       .click();
+    const audioCalls = () =>
+      page.evaluate(
+        () =>
+          (
+            window as unknown as {
+              __guidedAudioCalls: { text: string; rate: number }[];
+            }
+          ).__guidedAudioCalls,
+      );
+    await expect(
+      page.getByText(
+        "Pronunciation for this meaning is unavailable. Try Listen again.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    expect(await audioCalls()).toEqual([]);
+    wrongMeaning = false;
+    await page
+      .getByRole("button", { name: "Listen to lesson audio", exact: true })
+      .click();
+    await expect.poll(audioCalls).toEqual([{ text: "reschedule", rate: 0.85 }]);
+    expect(requests).toEqual(
+      Array.from({ length: 2 }, () => ({
+        text: "reschedule",
+        meaningId: session.words[2].meaningId,
+        ...(listeningStep.pronunciationRevision
+          ? { meaningRevision: listeningStep.pronunciationRevision }
+          : {}),
+      })),
+    );
     const help = page.locator("summary").filter({ hasText: "Show audio text" });
     await help.focus();
     await page.keyboard.press("Enter");

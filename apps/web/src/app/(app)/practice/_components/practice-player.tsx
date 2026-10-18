@@ -238,6 +238,9 @@ export function PracticePlayer({
           >
             {teaching ? step.wordText : step.prompt}
           </h1>
+          {step.partOfSpeech && (
+            <p className="mt-2 text-sm text-neutral-600">{step.partOfSpeech}</p>
+          )}
           {teaching ? (
             <div className="mt-5">
               <p className="text-lg text-neutral-700">{step.prompt}</p>
@@ -249,7 +252,13 @@ export function PracticePlayer({
                   {step.context}
                 </p>
               )}
-              {step.speechText && <PracticeAudio text={step.speechText} />}
+              {step.speechText && (
+                <PracticeAudio
+                  text={step.speechText}
+                  meaningId={step.pronunciationMeaningId}
+                  meaningRevision={step.pronunciationRevision}
+                />
+              )}
               <p className="mt-4 text-sm text-neutral-600">
                 A new word for your practice path.
               </p>
@@ -263,7 +272,13 @@ export function PracticePlayer({
                 if (tokenIds.length) void submit("answer");
               }}
             >
-              {step.speechText && <PracticeAudio text={step.speechText} />}
+              {step.speechText && (
+                <PracticeAudio
+                  text={step.speechText}
+                  meaningId={step.pronunciationMeaningId}
+                  meaningRevision={step.pronunciationRevision}
+                />
+              )}
               <p id={helpId} className="text-sm text-neutral-600">
                 Tap words in order. Tap a chosen word to remove it; use arrow
                 keys to move it.
@@ -394,7 +409,11 @@ export function PracticePlayer({
                 </p>
               )}
               {step.speechText ? (
-                <PracticeAudio text={step.speechText} />
+                <PracticeAudio
+                  text={step.speechText}
+                  meaningId={step.pronunciationMeaningId}
+                  meaningRevision={step.pronunciationRevision}
+                />
               ) : !journey ? (
                 <p
                   role="status"

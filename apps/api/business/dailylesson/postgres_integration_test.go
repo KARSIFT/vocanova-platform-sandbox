@@ -12,6 +12,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
@@ -842,4 +843,55 @@ func TestPostgreSQLDailyReviewLegacyFeedbackAndPreferenceValidation(t *testing.T
 	}
 	out := f.next(t, s)
 	require.Equal(t, "completed", out.Status)
+}
+
+func TestDailyPronunciationProjectionUsesFrozenQueuedSense(t *testing.T) {
+	noun, verb := uuid.NewString(), uuid.NewString()
+	nounDefinition := "Information kept for later use."
+	verbDefinition := strings.Repeat("To store information for later use. ", 24)
+	st := &state{ID: uuid.New(), Words: []word{
+		{MeaningID: noun, Definition: nounDefinition, Public: Step{ID: "noun", WordText: "record", PartOfSpeech: "noun", PronunciationMeaningID: "stale-public-identity", PronunciationRevision: "stale-public-revision"}},
+		{MeaningID: verb, Definition: verbDefinition, Public: Step{ID: "verb", WordText: "record", PartOfSpeech: "verb", PronunciationMeaningID: "stale-public-identity", PronunciationRevision: "stale-public-revision"}},
+	}, Queue: []int{1, 0}}
+	first := project(st)
+	require.Equal(t, verb, first.CurrentStep.PronunciationMeaningID, "queue identity, not first matching spelling")
+	require.Equal(t, "verb", first.CurrentStep.PartOfSpeech)
+	require.Equal(t, meaningidentity.Revision(verb, "record", "verb", verbDefinition), first.CurrentStep.PronunciationRevision)
+	require.NotEqual(t, meaningidentity.Revision(verb, "record", "verb", verbDefinition[:500]), first.CurrentStep.PronunciationRevision)
+	raw, err := json.Marshal(st)
+	require.NoError(t, err)
+	var resumed state
+	require.NoError(t, json.Unmarshal(raw, &resumed))
+	require.Equal(t, first.CurrentStep, project(&resumed).CurrentStep)
+	require.Equal(t, "stale-public-revision", st.Words[1].Public.PronunciationRevision, "projection cannot rewrite persisted snapshots")
+	resumed.Queue = []int{0}
+	second := project(&resumed)
+	require.Equal(t, noun, second.CurrentStep.PronunciationMeaningID)
+	require.Equal(t, meaningidentity.Revision(noun, "record", "noun", nounDefinition), second.CurrentStep.PronunciationRevision)
+	require.NotEqual(t, first.CurrentStep.PronunciationRevision, second.CurrentStep.PronunciationRevision)
+}
+
+func TestDailyPronunciationProjectionHistoricalIncompleteMetadata(t *testing.T) {
+	for _, field := range []string{"meaning", "spelling", "pos", "definition"} {
+		t.Run(field, func(t *testing.T) {
+			w := word{MeaningID: uuid.NewString(), Definition: "A saved definition.", Public: Step{ID: "old", WordText: "record", PartOfSpeech: "verb", PronunciationRevision: "must-not-trust"}}
+			switch field {
+			case "meaning":
+				w.MeaningID = ""
+			case "spelling":
+				w.Public.WordText = ""
+			case "pos":
+				w.Public.PartOfSpeech = ""
+			case "definition":
+				w.Definition = ""
+			}
+			st := &state{Words: []word{w}, Queue: []int{0}}
+			current := project(st).CurrentStep
+			require.NotNil(t, current)
+			require.Empty(t, current.PronunciationRevision, "historical incomplete metadata must not invent a matching sense")
+			require.Equal(t, w.MeaningID, current.PronunciationMeaningID)
+		})
+	}
+	completed := time.Now()
+	require.Nil(t, project(&state{CompletedAt: &completed}).CurrentStep)
 }

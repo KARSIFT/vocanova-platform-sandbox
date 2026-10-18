@@ -20,6 +20,30 @@ async function installSpeech(
   page: Page,
   mode: "ready" | "unsupported" | "no-english" | "enhanced" = "ready",
 ) {
+  await page.route("**/api/v1/pronunciation", async (route) => {
+    const body = route.request().postDataJSON();
+    if (mode === "unsupported" || mode === "no-english") {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ title: "Unavailable" }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        audioBase64: Buffer.from(JSON.stringify({ text: body.text })).toString(
+          "base64",
+        ),
+        mimeType: "audio/mpeg",
+        voice: "coral",
+        cacheHit: false,
+        meaningId: body.meaningId,
+      }),
+    });
+  });
   await page.addInitScript((speechMode) => {
     type Utterance = {
       text: string;
@@ -99,6 +123,62 @@ async function installSpeech(
         this.text = text;
       }
     }
+    // Synthetic transport/media fixture, not a real MP3 or a voice-quality test.
+    const audioBlobs = new Map<string, Blob>();
+    const createObjectURL = URL.createObjectURL.bind(URL);
+    const revokeObjectURL = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = (blob) => {
+      const url = createObjectURL(blob);
+      if (blob instanceof Blob) audioBlobs.set(url, blob);
+      return url;
+    };
+    URL.revokeObjectURL = (url) => {
+      audioBlobs.delete(url);
+      revokeObjectURL(url);
+    };
+    class AuthoredAudio {
+      playbackRate = 1;
+      preservesPitch = false;
+      onended: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private utterance: Utterance | null = null;
+      private paused = false;
+      constructor(private url: string) {}
+      async play() {
+        this.paused = false;
+        const blob = audioBlobs.get(this.url);
+        if (!blob) throw new Error("Synthetic audio was disposed");
+        const body = JSON.parse(await blob.text()) as {
+          text: string;
+        };
+        if (this.paused) return;
+        const utterance: Utterance = {
+          text: body.text,
+          lang: "en-GB",
+          rate: this.playbackRate,
+          onend: () => this.onended?.(),
+          onerror: () => this.onerror?.(),
+        };
+        this.utterance = utterance;
+        active = utterance;
+        capture.calls.push({
+          text: utterance.text,
+          lang: utterance.lang,
+          rate: utterance.rate,
+        });
+      }
+      pause() {
+        this.paused = true;
+        if (active && active === this.utterance) {
+          capture.cancellations++;
+          active = null;
+        }
+      }
+    }
+    Object.defineProperty(window, "Audio", {
+      configurable: true,
+      value: AuthoredAudio,
+    });
     window.__pronunciationTest = capture;
     Object.defineProperty(window, "speechSynthesis", {
       configurable: true,
@@ -250,7 +330,7 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
-test("voice and learner speed choices survive reload and apply to replay", async ({
+test("learner pace survives reload and meaning audio stays contextual despite a saved device voice", async ({
   page,
 }) => {
   await installSpeech(page, "enhanced");
@@ -271,10 +351,12 @@ test("voice and learner speed choices survive reload and apply to replay", async
     .poll(() =>
       page.evaluate(() => window.__pronunciationTest.selectedVoiceURI),
     )
-    .toBe("google-us");
-  expect(
-    await page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.rate),
-  ).toBe(0.85);
+    .toBeUndefined();
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.rate),
+    )
+    .toBe(0.85);
   await page.evaluate(() => window.__pronunciationTest.finish());
   await word.getByText("Voice & speed", { exact: true }).click();
   await word
@@ -287,10 +369,12 @@ test("voice and learner speed choices survive reload and apply to replay", async
   ).toBeVisible();
   expect(
     await page.evaluate(() => window.__pronunciationTest.selectedVoiceURI),
-  ).toBe("english-uk");
-  expect(
-    await page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.rate),
-  ).toBe(0.7);
+  ).toBeUndefined();
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.rate),
+    )
+    .toBe(0.7);
   await page.evaluate(() => window.__pronunciationTest.finish());
   await page.reload();
   await word.getByText("Voice & speed", { exact: true }).click();
@@ -306,13 +390,15 @@ test("voice and learner speed choices survive reload and apply to replay", async
   ).toBeVisible();
   expect(
     await page.evaluate(() => window.__pronunciationTest.selectedVoiceURI),
-  ).toBe("english-uk");
-  expect(
-    await page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.rate),
-  ).toBe(0.7);
+  ).toBeUndefined();
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.rate),
+    )
+    .toBe(0.7);
 });
 
-test("an unavailable saved device voice can be explicitly cleared for natural playback", async ({
+test("an unavailable saved device voice does not block contextual audio and can still be cleared", async ({
   page,
   context,
   baseURL,
@@ -335,6 +421,7 @@ test("an unavailable saved device voice can be explicitly cleared for natural pl
         audioBase64: "aWQz",
         mimeType: "audio/mpeg",
         voice: "luna",
+        meaningId: route.request().postDataJSON().meaningId,
         cacheHit: false,
       }),
     });
@@ -378,10 +465,10 @@ test("an unavailable saved device voice can be explicitly cleared for natural pl
   await word
     .getByRole("button", { name: "Listen to pour", exact: true })
     .click();
-  await expect(word.getByRole("status")).toHaveText(
-    "An English voice is not ready on this device. Please try again.",
-  );
-  expect(requests).toEqual([]);
+  await expect(
+    word.getByText("AI pronunciation", { exact: true }),
+  ).toBeVisible();
+  expect(requests).toEqual([{ text: "pour", csrf: "reset-voice-csrf" }]);
   expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual(
     [],
   );
@@ -401,9 +488,12 @@ test("an unavailable saved device voice can be explicitly cleared for natural pl
     .getByRole("button", { name: "Listen to pour", exact: true })
     .click();
   await expect(
-    word.getByText("Natural pronunciation", { exact: true }),
+    word.getByText("AI pronunciation", { exact: true }),
   ).toBeVisible();
-  expect(requests).toEqual([{ text: "pour", csrf: "reset-voice-csrf" }]);
+  expect(requests).toEqual([
+    { text: "pour", csrf: "reset-voice-csrf" },
+    { text: "pour", csrf: "reset-voice-csrf" },
+  ]);
   expect(
     await page.evaluate(
       () =>
@@ -421,7 +511,7 @@ test("an unavailable saved device voice can be explicitly cleared for natural pl
   await word.getByText("Voice & speed", { exact: true }).click();
   await expect(voice).toHaveValue("");
   await expect(speed).toHaveValue("0.7");
-  expect(requests).toHaveLength(1);
+  expect(requests).toHaveLength(2);
 });
 
 test("natural pronunciation requests only authored text with CSRF and replays at learner pace", async ({
@@ -434,10 +524,15 @@ test("natural pronunciation requests only authored text with CSRF and replays at
     { name: "vocanova_session", value: randomUUID(), url: baseURL! },
     { name: "vocanova_csrf", value: "natural-audio-csrf", url: baseURL! },
   ]);
-  const requests: { text: string; csrf: string | undefined }[] = [];
+  const requests: {
+    text: string;
+    meaningId: string;
+    csrf: string | undefined;
+  }[] = [];
   await page.route("**/api/v1/pronunciation", async (route) => {
     requests.push({
       text: route.request().postDataJSON().text,
+      meaningId: route.request().postDataJSON().meaningId,
       csrf: route.request().headers()["x-csrf-token"],
     });
     await route.fulfill({
@@ -447,6 +542,7 @@ test("natural pronunciation requests only authored text with CSRF and replays at
         audioBase64: "aWQz",
         mimeType: "audio/mpeg",
         voice: "luna",
+        meaningId: route.request().postDataJSON().meaningId,
         cacheHit: requests.length > 1,
       }),
     });
@@ -494,9 +590,11 @@ test("natural pronunciation requests only authored text with CSRF and replays at
     word.getByRole("button", { name: "Stop listening to pour", exact: true }),
   ).toBeVisible();
   await expect(
-    word.getByText("Natural pronunciation", { exact: true }),
+    word.getByText("AI pronunciation", { exact: true }),
   ).toBeVisible();
-  expect(requests).toEqual([{ text: "pour", csrf: "natural-audio-csrf" }]);
+  expect(requests).toEqual([
+    { text: "pour", meaningId: "mean-pour", csrf: "natural-audio-csrf" },
+  ]);
   const capture = () =>
     page.evaluate(
       () =>
@@ -557,6 +655,7 @@ test("blocked natural audio retries the prepared clip inside the next click", as
         audioBase64: "aWQz",
         mimeType: "audio/mpeg",
         voice: "luna",
+        meaningId: route.request().postDataJSON().meaningId,
         cacheHit: false,
       }),
     });
@@ -632,7 +731,7 @@ test("blocked natural audio retries the prepared clip inside the next click", as
   );
   await listen.click();
   await expect(
-    word.getByText("Natural pronunciation", { exact: true }),
+    word.getByText("AI pronunciation", { exact: true }),
   ).toBeVisible();
   expect((await capture()).attempts).toEqual([false, true]);
   expect(requests).toBe(1);
@@ -656,9 +755,7 @@ for (const mode of ["unsupported", "no-english"] as const) {
       .getByRole("group", { name: "Pronunciation of pour", exact: true })
       .getByRole("status");
     await expect(status).toHaveText(
-      mode === "unsupported"
-        ? "Pronunciation is not available in this browser."
-        : "An English voice is not ready on this device. Please try again.",
+      "Pronunciation for this meaning is unavailable. Try Listen again.",
     );
     await expect(
       main.getByText("Could you pour me a cup of coffee?", { exact: true }),
@@ -669,7 +766,7 @@ for (const mode of ["unsupported", "no-english"] as const) {
   });
 }
 
-test("device playback errors allow another explicit attempt", async ({
+test("meaning-specific playback errors allow another explicit attempt without guessed device audio", async ({
   page,
 }) => {
   await installSpeech(page);
@@ -688,7 +785,7 @@ test("device playback errors allow another explicit attempt", async ({
     .toBe(1);
   await page.evaluate(() => window.__pronunciationTest.fail());
   await expect(word.getByRole("status")).toHaveText(
-    "Pronunciation could not play. Please try again.",
+    "Pronunciation for this meaning is unavailable. Try Listen again.",
   );
   await listen.click();
   await expect(
@@ -697,6 +794,115 @@ test("device playback errors allow another explicit attempt", async ({
   await expect
     .poll(() => page.evaluate(() => window.__pronunciationTest.calls))
     .toHaveLength(2);
+});
+
+test("a mismatched meaning response never plays and an explicit retry stays available", async ({
+  page,
+}) => {
+  await installSpeech(page);
+  let matching = false;
+  await page.route("**/api/v1/pronunciation", async (route) => {
+    const body = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        audioBase64: Buffer.from(JSON.stringify({ text: body.text })).toString(
+          "base64",
+        ),
+        mimeType: "audio/mpeg",
+        voice: "coral",
+        cacheHit: false,
+        meaningId: matching ? body.meaningId : "an-unrelated-meaning",
+      }),
+    });
+  });
+  await page.goto("/vocabulary/pour");
+  const word = page.getByRole("group", {
+    name: "Pronunciation of pour",
+    exact: true,
+  });
+  const listen = word.getByRole("button", {
+    name: "Listen to pour",
+    exact: true,
+  });
+  await listen.click();
+  await expect(word.getByRole("status")).toHaveText(
+    "Pronunciation for this meaning is unavailable. Try Listen again.",
+  );
+  expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual(
+    [],
+  );
+  matching = true;
+  await listen.click();
+  await expect
+    .poll(() => page.evaluate(() => window.__pronunciationTest.calls.length))
+    .toBe(1);
+  await expect(
+    word.getByText("AI pronunciation", { exact: true }),
+  ).toBeVisible();
+});
+
+test("same-spelling meanings send separate identities and switching stops the previous clip", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await installSpeech(page);
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "vocanova_csrf", value: "meaning-audio-csrf", url: baseURL! },
+    { name: "e2e_teaching", value: "true", url: baseURL! },
+  ]);
+  const requests: { text: string; meaningId: string }[] = [];
+  await page.route("**/api/v1/pronunciation", async (route) => {
+    const body = route.request().postDataJSON();
+    requests.push(body);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        audioBase64: Buffer.from(JSON.stringify({ text: body.text })).toString(
+          "base64",
+        ),
+        mimeType: "audio/mpeg",
+        voice: "coral",
+        cacheHit: false,
+        meaningId: body.meaningId,
+      }),
+    });
+  });
+  await page.goto("/vocabulary/deadline");
+  const work = page.locator("#meaning-b571a540-89bb-533b-be81-9cedf443a64a");
+  const study = page.locator("#meaning-f582a137-c77d-58df-942e-884fe336cd64");
+  await work
+    .getByRole("button", { name: "Listen to deadline", exact: true })
+    .click();
+  await expect
+    .poll(() => page.evaluate(() => window.__pronunciationTest.calls.length))
+    .toBe(1);
+  await study
+    .getByRole("button", { name: "Listen to deadline", exact: true })
+    .click();
+  await expect
+    .poll(() => page.evaluate(() => window.__pronunciationTest.calls.length))
+    .toBe(2);
+  expect(requests).toEqual([
+    { text: "deadline", meaningId: "b571a540-89bb-533b-be81-9cedf443a64a" },
+    { text: "deadline", meaningId: "f582a137-c77d-58df-942e-884fe336cd64" },
+  ]);
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.cancellations),
+  ).toBe(1);
+  await expect(
+    work.getByRole("button", { name: "Listen to deadline", exact: true }),
+  ).toBeVisible();
+  await expect(
+    study.getByRole("button", {
+      name: "Stop listening to deadline",
+      exact: true,
+    }),
+  ).toBeVisible();
 });
 
 test("canonical word detail preserves authentication and missing-word handling", async ({

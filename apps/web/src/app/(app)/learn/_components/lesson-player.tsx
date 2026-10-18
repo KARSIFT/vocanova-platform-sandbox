@@ -318,7 +318,11 @@ export function LessonPlayer({
                 >
                   {step.word.wordText}
                 </h1>
-                <ListenButton text={step.word.wordText} />
+                <ListenButton
+                  text={step.word.wordText}
+                  meaningId={step.pronunciationMeaningId ?? step.word.meaningId}
+                  meaningRevision={step.pronunciationRevision}
+                />
               </div>
             ) : (
               <h1
@@ -328,6 +332,11 @@ export function LessonPlayer({
               >
                 {step.prompt}
               </h1>
+            )}
+            {step.kind !== "teach" && step.partOfSpeech && (
+              <p className="mt-2 text-sm text-neutral-600">
+                {step.partOfSpeech}
+              </p>
             )}
             {step.kind === "teach" ? (
               <div className="mt-3">
@@ -344,7 +353,11 @@ export function LessonPlayer({
                 <div className="mt-2">
                   <ListenButton
                     text={step.word.example}
+                    meaningId={
+                      step.pronunciationMeaningId ?? step.word.meaningId
+                    }
                     label="Listen to example"
+                    meaningRevision={step.pronunciationRevision}
                     showCaption={false}
                   />
                 </div>
@@ -367,7 +380,13 @@ export function LessonPlayer({
                   </p>
                 )}
                 {step.kind === "listening_choice" && step.speechText && (
-                  <LessonAudio text={step.speechText} />
+                  <LessonAudio
+                    text={step.speechText}
+                    meaningRevision={step.pronunciationRevision}
+                    meaningId={
+                      step.pronunciationMeaningId ?? step.word.meaningId
+                    }
+                  />
                 )}
                 {step.kind === "typed_recall" ? (
                   <form

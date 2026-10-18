@@ -95,7 +95,7 @@ export function SpeechSettings({ disabled = false }: { disabled?: boolean }) {
           </select>
         </div>
         <p className="text-xs text-neutral-600">
-          Choose a device voice for offline audio. These choices apply to all
+          Meaning-specific audio uses AI pronunciation. Speed applies to all
           audio.
         </p>
       </div>
@@ -106,6 +106,8 @@ export function SpeechSettings({ disabled = false }: { disabled?: boolean }) {
 interface ListenButtonProps {
   /** Authored vocabulary or examples only; never pass a learner's draft. */
   text: string;
+  meaningId?: string;
+  meaningRevision?: string;
   label?: string;
   showCaption?: boolean;
   autoPlay?: boolean;
@@ -113,6 +115,8 @@ interface ListenButtonProps {
 
 export function ListenButton({
   text,
+  meaningId,
+  meaningRevision,
   label = text,
   showCaption = true,
   autoPlay = false,
@@ -128,9 +132,17 @@ export function ListenButton({
     const currentOwner = owner.current;
     deviceSpeech.prepare();
     setState({ status: "idle" });
-    if (autoPlay) deviceSpeech.play(currentOwner, text, false, setState);
+    if (autoPlay)
+      deviceSpeech.play(
+        currentOwner,
+        text,
+        false,
+        setState,
+        meaningId,
+        meaningRevision,
+      );
     return () => deviceSpeech.release(currentOwner);
-  }, [text, autoPlay]);
+  }, [text, meaningId, meaningRevision, autoPlay]);
 
   return (
     <div
@@ -138,6 +150,7 @@ export function ListenButton({
       role="group"
       aria-label={`Pronunciation of ${label}`}
     >
+      {meaningId && <span className="sr-only">AI-generated pronunciation</span>}
       <div className="flex flex-wrap items-center gap-[var(--spacing-xs)]">
         <button
           type="button"
@@ -149,7 +162,15 @@ export function ListenButton({
           }
           onClick={() => {
             if (active) deviceSpeech.stop(owner.current);
-            else deviceSpeech.play(owner.current, text, false, setState);
+            else
+              deviceSpeech.play(
+                owner.current,
+                text,
+                false,
+                setState,
+                meaningId,
+                meaningRevision,
+              );
           }}
           className="inline-flex min-h-11 min-w-11 items-center gap-[var(--spacing-xs)] rounded-md px-[var(--spacing-sm)] text-sm font-semibold text-primary-700 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >

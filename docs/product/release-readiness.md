@@ -1,5 +1,19 @@
 # Vocanova release readiness
 
+## Meaning-specific speech — acceptance in progress, 18 October 2026
+
+The new delivery follows the owner's rejection of the earlier Luna sample. It
+adds a pinned OpenAI speech model, separate persisted meaning/context clips,
+frozen exercise revisions and 19 additional uses across 12 common words. Initial
+real PostgreSQL race checks pass for pronunciation, personal practice and daily
+review. The unbound Go suite and vet pass; database-dependent cases in that
+unbound run may skip and are covered separately. The local production web bundle
+builds. Browser, real speech generation, hosted checks and staging acceptance are
+still pending. No subjective voice-quality approval is claimed.
+
+The previous delivery's evidence below applies to its release, not automatically
+to this new branch. Production has not been promoted by this task.
+
 ## Separate review, practice and pronunciation — local acceptance, 18 October 2026
 
 The [integrated delivery](../design/review-practice-and-pronunciation.md) passes

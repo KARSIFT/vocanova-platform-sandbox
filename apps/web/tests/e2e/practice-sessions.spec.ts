@@ -381,21 +381,75 @@ test("a lost start response opens the same practice session on retry", async ({
 });
 
 async function installAudio(page: Page, unsupported = false) {
+  const requests: { text: string; meaningId: string }[] = [];
+  let wrongMeaning = false;
+  await page.route("**/api/v1/pronunciation", async (route) => {
+    const body = route.request().postDataJSON();
+    requests.push(body);
+    if (unsupported) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ title: "Unavailable" }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        audioBase64: Buffer.from(JSON.stringify({ text: body.text })).toString(
+          "base64",
+        ),
+        mimeType: "audio/mpeg",
+        voice: "coral",
+        cacheHit: false,
+        meaningId: wrongMeaning ? "a-different-use" : body.meaningId,
+        meaningRevision: body.meaningRevision,
+      }),
+    });
+  });
   await page.addInitScript((unavailable) => {
     const calls: { text: string; rate: number }[] = [];
+    const blobs = new Map<string, Blob>();
+    const create = URL.createObjectURL.bind(URL);
+    const revoke = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = (blob) => {
+      const url = create(blob);
+      if (blob instanceof Blob) blobs.set(url, blob);
+      return url;
+    };
+    URL.revokeObjectURL = (url) => {
+      blobs.delete(url);
+      revoke(url);
+    };
+    class AuthoredAudio {
+      playbackRate = 1;
+      preservesPitch = false;
+      onended: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor(private url: string) {}
+      async play() {
+        const body = JSON.parse(await blobs.get(this.url)!.text()) as {
+          text: string;
+        };
+        calls.push({ text: body.text, rate: this.playbackRate });
+        queueMicrotask(() => this.onended?.());
+      }
+      pause() {}
+    }
+    Object.defineProperty(window, "Audio", {
+      configurable: true,
+      value: AuthoredAudio,
+    });
     const synthesis = {
       speaking: false,
       pending: false,
       getVoices: () => [{ lang: "en-GB", localService: true, default: true }],
-      speak: (utterance: {
-        text: string;
-        rate: number;
-        onstart?: () => void;
-        onend?: () => void;
-      }) => {
-        calls.push({ text: utterance.text, rate: utterance.rate });
-        utterance.onstart?.();
-        utterance.onend?.();
+      speak: () => {
+        throw new Error(
+          "Meaning-aware playback must not guess with a device voice",
+        );
       },
       cancel: () => undefined,
     };
@@ -413,6 +467,12 @@ async function installAudio(page: Page, unsupported = false) {
           },
     });
   }, unsupported);
+  return {
+    requests,
+    setWrongMeaning(value: boolean) {
+      wrongMeaning = value;
+    },
+  };
 }
 
 for (const theme of ["light", "dark"] as const) {
@@ -425,7 +485,7 @@ for (const theme of ["light", "dark"] as const) {
     await context.addCookies([
       { name: "vocanova_theme", value: theme, url: baseURL },
     ]);
-    await installAudio(page);
+    const audio = await installAudio(page);
     const session = await start(page, "Start listening practice");
     const calls = () =>
       page.evaluate(
@@ -444,6 +504,25 @@ for (const theme of ["light", "dark"] as const) {
     // Speech text must not leak through headings, accessible names or tooltips.
     expect(await main(page).innerText()).not.toMatch(/\binvite\b/iu);
     expect(await main(page).ariaSnapshot()).not.toMatch(/\binvite\b/iu);
+    expect(session.currentStep!.pronunciationMeaningId).toBeTruthy();
+    expect(session.currentStep!.partOfSpeech).toBe("verb");
+    expect(session.currentStep!.pronunciationRevision).toMatch(
+      /^[0-9a-f]{64}$/u,
+    );
+    expect(session.currentStep!.meaningId).toBeUndefined();
+    audio.setWrongMeaning(true);
+    await main(page)
+      .getByRole("button", { name: "Play audio", exact: true })
+      .click();
+    await expect(
+      main(page).getByText(
+        "Pronunciation for this meaning is unavailable. Try Listen again.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    expect(await calls()).toEqual([]);
+    expect((await saved(page, session.id)).questionsAnswered).toBe(0);
+    audio.setWrongMeaning(false);
     await main(page)
       .getByRole("button", { name: "Play audio", exact: true })
       .click();
@@ -458,6 +537,15 @@ for (const theme of ["light", "dark"] as const) {
       { text: "invite", rate: 0.85 },
       { text: "invite", rate: 0.7 },
     ]);
+    expect(audio.requests).toEqual(
+      Array.from({ length: 3 }, () => ({
+        text: "invite",
+        meaningId: session.currentStep!.pronunciationMeaningId,
+        ...(session.currentStep!.pronunciationRevision
+          ? { meaningRevision: session.currentStep!.pronunciationRevision }
+          : {}),
+      })),
+    );
     expect((await saved(page, session.id)).questionsAnswered).toBe(0);
     const options = main(page).getByRole("group", { name: "Answer choices" });
     await expect(options.getByRole("radio")).toHaveCount(3);
@@ -510,9 +598,12 @@ test("unsupported listening keeps its ungraded session and offers another mode",
     .getByRole("button", { name: "Play audio", exact: true })
     .click();
   await expect(
-    main(page).getByText("Pronunciation is not available in this browser.", {
-      exact: true,
-    }),
+    main(page).getByText(
+      "Pronunciation for this meaning is unavailable. Try Listen again.",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
   await expect(
     main(page).getByRole("link", { name: "Choose another practice mode" }),
@@ -652,7 +743,7 @@ test("journey audio unavailable continues with honest assisted credit", async ({
     .getByRole("button", { name: "Play audio", exact: true })
     .click();
   await expect(
-    main(page).getByText("Pronunciation is not available in this browser.", {
+    main(page).getByText("Pronunciation for this meaning is unavailable. Try Listen again.", {
       exact: true,
     }),
   ).toBeVisible();

@@ -11,7 +11,7 @@ export interface PronunciationState {
 
 export function pronunciationCaption(state: PronunciationState) {
   return state.source === "neural"
-    ? "Natural pronunciation"
+    ? "AI pronunciation"
     : state.source === "device"
       ? "Device pronunciation"
       : "English pronunciation";
@@ -335,17 +335,27 @@ export const deviceSpeech = createPronunciationController(
     )
       return null;
     return {
-      async request(text: string, signal: AbortSignal) {
+      async request(
+        text: string,
+        signal: AbortSignal,
+        meaningId?: string,
+        meaningRevision?: string,
+      ) {
         const [{ createApiClient }, { getOrRefreshCSRFToken }] =
           await Promise.all([import("./api"), import("./csrf")]);
         if (signal.aborted) throw new DOMException("Cancelled", "AbortError");
         const token = await getOrRefreshCSRFToken();
         if (signal.aborted) throw new DOMException("Cancelled", "AbortError");
         if (!token) throw new Error("Pronunciation session is unavailable");
-        const { data } = await createApiClient().getPronunciation(text, {
-          signal,
-          headers: { "X-CSRF-Token": token },
-        });
+        const { data } = await createApiClient().getPronunciation(
+          text,
+          {
+            signal,
+            headers: { "X-CSRF-Token": token },
+          },
+          meaningId,
+          meaningRevision,
+        );
         return data;
       },
       createMedia: createPronunciationMedia,

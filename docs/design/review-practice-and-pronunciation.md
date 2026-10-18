@@ -59,23 +59,54 @@ extra slow is 0.7, and normal speed/device voice selection are under **Voice &
 speed**. Only these preferences persist locally. Natural/enhanced device voices
 rank above basic voices when available.
 
-Default authenticated playback uses the existing configured Cloudflare AI
-service, Deepgram Aura 2 English (`luna`). Only exact active canonical word text
-or reviewed starter examples, up to 500 characters, may be synthesized. Learner
-drafts, notes and arbitrary input are rejected. Shared public MP3s are cached by
-text/model/voice. A database-enforced cap reserves at most 1,000 new characters
-per UTC day per environment before a paid call. Ambiguous failures are not
-automatically retried or refunded. A cache-key lock prevents duplicate generation
-across midnight. At the currently documented [Cloudflare price](https://developers.cloudflare.com/workers-ai/models/aura-2-en/),
-the cap is roughly $1/month per environment.
+Meaning-specific authenticated playback uses OpenAI's pinned
+`gpt-4o-mini-tts-2025-12-15` model and `marin` voice. Server-owned guidance includes
+the actual selected part of speech, definition and reviewed context. The input
+contains only the word or exact approved example to speak. Nouns, verbs,
+adjectives, adverbs and other catalogued uses share this contract; present/past
+`read` have distinct meanings and guidance. It does not invent forms absent from
+the catalog. See the [official speech guide](https://developers.openai.com/api/docs/guides/text-to-speech).
 
-Disabled AI, provider/quota/network failure or unsupported audio falls back to
-the device voice. Explicit device voice selection bypasses generation. The UI
-labels the actual source. Stop, replay, navigation and another control cancel
+The initial supplement adds 19 original uses across 12 existing words. Canonical
+word and primary meaning IDs, the 10,000-entry rank map and learner state stay
+unchanged. Personal practice randomizes equally recent eligible meanings once
+when saving the session, preserving least-practised priority. Unfamiliar sibling
+uses enter explicit teaching at the existing teaching interval. Review continues
+to follow its due schedule and grades the exact selected meaning.
+
+Requests carry a meaning ID. Saved lesson questions also carry a revision of the
+frozen spelling, POS and full definition. Changed live content fails closed before
+generation; the client rejects a mismatched meaning/revision before playback.
+Historical incomplete snapshots retain compatible optional metadata. Examples
+must belong to the requested meaning and pass the reviewed-content boundary.
+Learner drafts, notes, arbitrary text, client instructions and voice overrides
+are rejected. A noun `resume` may use the reviewed `résumé` spelling; the verb
+does not inherit that alias.
+
+Shared public MP3s persist by exact meaning/context, provider, model, voice and
+instruction version. Database reservations bound new generation to 20 calls and
+1,000 input characters per UTC day per environment. Provider reference guidance
+is separately bounded. Failures consume the reservation and are not automatically
+retried or refunded. A cache-key lock prevents duplicate generation across
+midnight. These are request limits, not a promise of a particular monthly bill.
+
+Meaning-specific requests cannot fall back to a guessed device pronunciation or
+the legacy text-only provider. Failures offer retry without changing learning
+progress. Context-free speech retains device fallback and voice selection. The UI
+identifies AI pronunciation. Stop, replay, navigation and another control cancel
 owned playback; late audio cannot interrupt the next word. Browser autoplay
 denial is respected. Synthetic clips prove control behavior only; real provider
 availability, decoding and perceived voice quality require staging evidence and
-listening feedback.
+owner listening feedback. Decoding alone cannot establish correct stress or tense.
+
+Staging receives the existing GitHub `OPENAI_API_KEY` as a dedicated speech key;
+text feedback configuration stays independent. Missing credentials stop deployment
+before rewriting configuration. The manual production workflow has the same
+speech binding for a future authorized promotion; this task does not dispatch it.
+An opt-in same-repository PR label
+`audio-audition` generates at most six fixed public samples, stops on the first
+failure, and preserves the first results in a seven-day artifact. Routine CI,
+fork PRs and merge-queue runs do not call the paid speech provider.
 
 ## Sign-in and data
 

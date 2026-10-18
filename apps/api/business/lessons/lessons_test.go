@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
@@ -211,4 +212,59 @@ func TestLessonChoiceOrderStableWithinSessionVariesBetweenSessions(t *testing.T)
 	words[0].WordText = "another sense"
 	_, err = buildSnapshot(d, words, "test")
 	require.ErrorIs(t, err, ErrContentUnavailable)
+}
+
+func TestGuidedPronunciationProjectionUsesFrozenStepSense(t *testing.T) {
+	noun := Word{MeaningID: uuid.NewString(), WordText: "record", PartOfSpeech: "noun", Definition: "Information kept for later use."}
+	verb := Word{MeaningID: uuid.NewString(), WordText: "record", PartOfSpeech: "verb", Definition: strings.Repeat("To store information for later use. ", 24)}
+	st := State{ID: uuid.New(), Snapshot: Snapshot{Words: []Word{noun, verb}, Steps: []privateStep{
+		{Step: Step{ID: "verb", Kind: "listening_choice", SpeechText: "record", Word: verb}},
+		{Step: Step{ID: "noun", Kind: "listening_choice", SpeechText: "record", Word: noun}},
+	}}}
+	first := project(st)
+	require.Equal(t, verb.MeaningID, first.CurrentStep.PronunciationMeaningID, "the frozen step identifies the use, not the first same-spelling vocabulary item")
+	require.Equal(t, "verb", first.CurrentStep.PartOfSpeech)
+	require.Equal(t, meaningidentity.Revision(verb.MeaningID, verb.WordText, verb.PartOfSpeech, verb.Definition), first.CurrentStep.PronunciationRevision)
+	require.NotEqual(t, meaningidentity.Revision(verb.MeaningID, verb.WordText, verb.PartOfSpeech, verb.Definition[:500]), first.CurrentStep.PronunciationRevision)
+	raw, err := json.Marshal(st)
+	require.NoError(t, err)
+	var resumed State
+	require.NoError(t, json.Unmarshal(raw, &resumed))
+	require.Equal(t, first.CurrentStep, project(resumed).CurrentStep)
+	require.Empty(t, st.Snapshot.Steps[0].Step.PronunciationMeaningID, "projection cannot rewrite the historical snapshot")
+	resumed.Index = 1
+	second := project(resumed)
+	require.Equal(t, noun.MeaningID, second.CurrentStep.PronunciationMeaningID)
+	require.Equal(t, "noun", second.CurrentStep.PartOfSpeech)
+	require.Equal(t, meaningidentity.Revision(noun.MeaningID, noun.WordText, noun.PartOfSpeech, noun.Definition), second.CurrentStep.PronunciationRevision)
+	require.NotEqual(t, first.CurrentStep.PronunciationRevision, second.CurrentStep.PronunciationRevision)
+	// Speech aliases must not replace the canonical spelling used in the revision.
+	resume := Word{MeaningID: uuid.NewString(), WordText: "resume", PartOfSpeech: "noun", Definition: "A summary of work experience."}
+	resumed.Index = 0
+	resumed.Snapshot.Steps[0].Step = Step{Kind: "listening_choice", SpeechText: "résumé", Word: resume}
+	current := project(resumed).CurrentStep
+	require.Equal(t, meaningidentity.Revision(resume.MeaningID, resume.WordText, resume.PartOfSpeech, resume.Definition), current.PronunciationRevision)
+}
+
+func TestGuidedPronunciationProjectionHistoricalIncompleteMetadata(t *testing.T) {
+	for _, field := range []string{"meaning", "spelling", "pos", "definition"} {
+		t.Run(field, func(t *testing.T) {
+			w := Word{MeaningID: uuid.NewString(), WordText: "record", PartOfSpeech: "verb", Definition: "A saved definition."}
+			switch field {
+			case "meaning":
+				w.MeaningID = ""
+			case "spelling":
+				w.WordText = ""
+			case "pos":
+				w.PartOfSpeech = ""
+			case "definition":
+				w.Definition = ""
+			}
+			st := State{Snapshot: Snapshot{Words: []Word{{MeaningID: "another-sense", WordText: "record", PartOfSpeech: "noun", Definition: "Must not substitute this matching spelling."}}, Steps: []privateStep{{Step: Step{Kind: "listening_choice", SpeechText: "record", Word: w, PronunciationRevision: "untrusted-old-value"}}}}}
+			current := project(st).CurrentStep
+			require.NotNil(t, current)
+			require.Equal(t, w.MeaningID, current.PronunciationMeaningID)
+			require.Empty(t, current.PronunciationRevision)
+		})
+	}
 }

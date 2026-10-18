@@ -1,5 +1,20 @@
 # Vocanova current product state
 
+## Meaning-specific speech and varied uses — implementation, 18 October 2026
+
+The current delivery adds cached OpenAI speech for the exact selected meaning,
+including adjectives, adverbs and tense-dependent uses. An initial original
+supplement provides 19 additional uses across 12 words without changing the
+10,000 ranked primary entries. Personal practice mixes equally recent eligible
+uses and explicitly teaches unfamiliar sibling meanings. Due review scheduling
+and credit remain independent. Saved exercise revisions prevent changed catalog
+content from playing audio for a different use. See the updated
+[speech contract](../design/review-practice-and-pronunciation.md#pronunciation).
+
+Local database and browser checks, real provider generation, hosted CI, staging
+deployment and owner judgement of voice quality are separate acceptance gates.
+This implementation section does not establish deployment or listening approval.
+
 ## Separate review and personal practice — integrated delivery, 18 October 2026
 
 The consolidated delivery separates due-word review from a durable mixed

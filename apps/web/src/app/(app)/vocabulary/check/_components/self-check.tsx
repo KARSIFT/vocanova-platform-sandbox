@@ -202,7 +202,11 @@ export function VocabularySelfCheck({
       </h2>
       <p className="mt-1 text-sm text-neutral-600">{item.partOfSpeech}</p>
       <p className="mt-4 text-lg text-neutral-900">{item.shortDefinition}</p>
-      <ListenButton key={item.meaningId} text={item.wordText} />
+      <ListenButton
+        key={item.meaningId}
+        text={item.wordText}
+        meaningId={item.meaningId}
+      />
       <div className="mt-4 grid grid-cols-2 gap-3">
         <button
           type="button"

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaninguses"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
@@ -87,25 +88,27 @@ func (r *PostgreSQLRepository) startJourney(ctx context.Context, tx *sql.Tx, u u
 		return nil, err
 	}
 	// Prefer the least recently practised familiar words, rather than always
-	// selecting a learner's first page of saved words.
+	// selecting a learner's first page of saved words. Randomize only equal-recency
+	// ties, once per frozen session, so all eligible uses have a fair turn.
+	id := uuid.New()
 	coreIDs := make([]string, len(catalog))
 	for i, ref := range catalog {
 		coreIDs[i] = ref.MeaningID
 	}
 	rows, err := tx.QueryContext(ctx, familiarSQL+`, candidates AS (
- SELECT wm.id,cw.text,wm.short_definition,wm.id=ANY($2::uuid[]) authored,
+ SELECT wm.id,cw.text,wm.short_definition,wm.part_of_speech,wm.id=ANY($2::uuid[]) authored,
  (SELECT max(pa.created_at) FROM practice_actions pa WHERE pa.user_id=$1 AND pa.meaning_id=wm.id) last_practised
  FROM familiar f JOIN word_meanings wm ON wm.id=f.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id
  WHERE wm.status='active' AND cw.status='active' AND wm.short_definition<>''
- ), ranked AS(SELECT *,row_number() OVER(PARTITION BY authored ORDER BY last_practised ASC NULLS FIRST,id) ordinal FROM candidates)
- SELECT id,text,short_definition FROM ranked WHERE ordinal<=12 ORDER BY last_practised ASC NULLS FIRST,id`, u, pq.Array(coreIDs))
+ ), ranked AS(SELECT *,row_number() OVER(PARTITION BY authored ORDER BY last_practised ASC NULLS FIRST,md5($3::text||id::text)) ordinal FROM candidates)
+ SELECT id,text,short_definition,part_of_speech FROM ranked WHERE ordinal<=12 ORDER BY last_practised ASC NULLS FIRST,md5($3::text||id::text)`, u, pq.Array(coreIDs), id.String())
 	if err != nil {
 		return nil, err
 	}
 	known := []Word{}
 	for rows.Next() {
 		var w Word
-		if err = rows.Scan(&w.MeaningID, &w.WordText, &w.Definition); err != nil {
+		if err = rows.Scan(&w.MeaningID, &w.WordText, &w.Definition, &w.PartOfSpeech); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -122,18 +125,55 @@ func (r *PostgreSQLRepository) startJourney(ctx context.Context, tx *sql.Tx, u u
 	if err != nil {
 		return nil, err
 	}
+	// Other active uses of a familiar spelling are eligible for explicit teaching,
+	// not silently treated as known. Keep the pool bounded and never invent a POS.
+	siblings, err := tx.QueryContext(ctx, familiarSQL+`SELECT DISTINCT wm.id,cw.text,wm.short_definition,wm.part_of_speech,md5($2::text||wm.id::text) tie
+ FROM familiar f JOIN word_meanings familiar_meaning ON familiar_meaning.id=f.meaning_id
+ JOIN word_meanings wm ON wm.word_id=familiar_meaning.word_id JOIN canonical_words cw ON cw.id=wm.word_id
+ WHERE familiar_meaning.status='active' AND wm.status='active' AND cw.status='active' AND cw.language_code='en' AND wm.short_definition<>''
+ AND NOT EXISTS(SELECT 1 FROM familiar existing WHERE existing.meaning_id=wm.id)
+ ORDER BY tie LIMIT 24`, u, id.String())
+	if err != nil {
+		return nil, err
+	}
+	poolIDs := map[string]bool{}
+	for _, w := range pool {
+		poolIDs[w.MeaningID] = true
+	}
+	for siblings.Next() {
+		var w Word
+		var tie string
+		if err = siblings.Scan(&w.MeaningID, &w.WordText, &w.Definition, &w.PartOfSpeech, &tie); err != nil {
+			siblings.Close()
+			return nil, err
+		}
+		if !poolIDs[w.MeaningID] {
+			w.WordSlug = strings.ReplaceAll(strings.ToLower(w.WordText), " ", "-")
+			pool = append(pool, w)
+			poolIDs[w.MeaningID] = true
+		}
+	}
+	err = siblings.Err()
+	siblings.Close()
+	if err != nil {
+		return nil, err
+	}
 	examples, err := tx.QueryContext(ctx, `SELECT DISTINCT ON(meaning_id) meaning_id,example_text FROM word_examples WHERE status='active' ORDER BY meaning_id,example_order,id`)
 	if err != nil {
 		return nil, err
 	}
 	byExample := map[string]string{}
+	reviewedExamples := map[string]string{}
+	for _, entry := range meaninguses.Entries() {
+		reviewedExamples[entry.MeaningID.String()] = entry.Example
+	}
 	for examples.Next() {
 		var id, text string
 		if err = examples.Scan(&id, &text); err != nil {
 			examples.Close()
 			return nil, err
 		}
-		if _, ok := referenceFor(id); ok {
+		if _, ok := referenceFor(id); ok || (reviewedExamples[id] != "" && reviewedExamples[id] == text) {
 			byExample[id] = text
 		}
 	}
@@ -168,7 +208,6 @@ func (r *PostgreSQLRepository) startJourney(ctx context.Context, tx *sql.Tx, u u
 	if err != nil {
 		return nil, err
 	}
-	id := uuid.New()
 	snap, err := buildJourney(known, pool, familiar, completed+1, id.String())
 	if err != nil {
 		return nil, err
@@ -213,7 +252,18 @@ func buildJourney(known, pool []Word, familiar map[string]bool, ordinal int, see
 	newTargets := map[string]bool{}
 	if len(selected) == 0 || ordinal%3 == 0 {
 		candidates := append([]Word{}, pool...)
+		familiarSpellings := map[string]bool{}
+		for _, w := range known {
+			familiarSpellings[normalize(w.WordText)] = true
+		}
 		sort.Slice(candidates, func(i, j int) bool {
+			// At the normal teaching interval, introduce a different actual use of
+			// a familiar word before unrelated new vocabulary. Never skip teaching.
+			iSibling := familiarSpellings[normalize(candidates[i].WordText)]
+			jSibling := familiarSpellings[normalize(candidates[j].WordText)]
+			if iSibling != jSibling {
+				return iSibling
+			}
 			return order(seed, candidates[i].MeaningID) < order(seed, candidates[j].MeaningID)
 		})
 		want := 1
@@ -241,7 +291,7 @@ func buildJourney(known, pool []Word, familiar map[string]bool, ordinal int, see
 	snap.NewWords = len(newTargets)
 	for _, w := range selected {
 		if newTargets[w.MeaningID] {
-			snap.Steps = append(snap.Steps, privateStep{Word: w, Public: Step{ID: uuid.NewString(), Kind: "teach", WordText: w.WordText, Prompt: w.Definition, Context: w.Example, SpeechText: pronunciationText(w.WordText), SpeechLanguage: "en-US", Choices: []Choice{}}})
+			snap.Steps = append(snap.Steps, privateStep{Word: w, Public: Step{ID: uuid.NewString(), Kind: "teach", WordText: w.WordText, Prompt: w.Definition, Context: w.Example, SpeechText: pronunciationText(w), SpeechLanguage: "en-US", Choices: []Choice{}}})
 		}
 		listen, err := journeyChoice(w, pool, seed, "listening_choice")
 		if err != nil {
@@ -294,11 +344,13 @@ func blankExample(example, target string) (string, bool) {
 	return pattern.ReplaceAllString(example, "_____"), true
 }
 
-func pronunciationText(word string) string {
-	if word == "resume" {
+func pronunciationText(word Word) string {
+	// Retain the reviewed noun alias for historical snapshots without POS, but
+	// never turn the verb (to continue) into the CV noun pronunciation.
+	if word.WordText == "resume" && (word.PartOfSpeech == "noun" || word.PartOfSpeech == "") {
 		return "résumé"
 	}
-	return word
+	return word.WordText
 }
 
 func journeyChoice(w Word, pool []Word, seed, kind string) (privateStep, error) {
@@ -308,7 +360,7 @@ func journeyChoice(w Word, pool []Word, seed, kind string) (privateStep, error) 
 	if kind == "listening_choice" {
 		step.Public.WordText = ""
 		step.Public.Prompt = "Listen and choose the meaning."
-		step.Public.SpeechText = pronunciationText(w.WordText)
+		step.Public.SpeechText = pronunciationText(w)
 		step.Public.SpeechLanguage = "en-US"
 	}
 	if kind == "gap_choice" {

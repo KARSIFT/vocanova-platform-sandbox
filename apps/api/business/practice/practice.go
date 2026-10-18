@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
 	"github.com/google/uuid"
 	"golang.org/x/text/unicode/norm"
 	"strings"
@@ -39,17 +40,21 @@ type PracticeChoice struct {
 	Text string `json:"text"`
 }
 type PracticeStep struct {
-	MeaningID      string   `json:"meaningId,omitempty" doc:"Teaching-only visual context; absent from graded questions."`
-	ID             string   `json:"id"`
-	Kind           string   `json:"kind" enum:"typed_recall,listening_choice,teach,meaning_choice,gap_choice,sentence_build"`
-	WordText       string   `json:"wordText,omitempty"`
-	Context        string   `json:"context,omitempty"`
-	Prompt         string   `json:"prompt"`
-	Choices        []Choice `json:"choices"`
-	SpeechText     string   `json:"speechText,omitempty"`
-	SpeechLanguage string   `json:"speechLanguage,omitempty"`
+	PronunciationRevision  string   `json:"pronunciationRevision,omitempty" doc:"Revision of the frozen pronunciation meaning metadata; absent for historical incomplete snapshots."`
+	PronunciationMeaningID string   `json:"pronunciationMeaningId,omitempty" doc:"Frozen meaning identity for pronunciation; does not identify the correct choice."`
+	PartOfSpeech           string   `json:"partOfSpeech,omitempty"`
+	MeaningID              string   `json:"meaningId,omitempty" doc:"Teaching-only visual context; absent from graded questions."`
+	ID                     string   `json:"id"`
+	Kind                   string   `json:"kind" enum:"typed_recall,listening_choice,teach,meaning_choice,gap_choice,sentence_build"`
+	WordText               string   `json:"wordText,omitempty"`
+	Context                string   `json:"context,omitempty"`
+	Prompt                 string   `json:"prompt"`
+	Choices                []Choice `json:"choices"`
+	SpeechText             string   `json:"speechText,omitempty"`
+	SpeechLanguage         string   `json:"speechLanguage,omitempty"`
 }
 type PracticeFeedback struct {
+	PartOfSpeech     string   `json:"partOfSpeech,omitempty"`
 	Revealed         bool     `json:"revealed,omitempty"`
 	CorrectTokenIDs  []string `json:"correctTokenIds,omitempty"`
 	SelectedTokenIDs []string `json:"selectedTokenIds,omitempty"`
@@ -106,7 +111,7 @@ type PracticeAction struct {
 }
 
 // Private types are persisted only; public responses always pass through project.
-type Word struct{ MeaningID, WordText, WordSlug, Definition, LessonKey, Example string }
+type Word struct{ MeaningID, WordText, WordSlug, Definition, LessonKey, Example, PartOfSpeech string }
 type Source struct {
 	Kind, ID  string
 	CreatedAt time.Time
@@ -246,6 +251,13 @@ func project(st State) Session {
 		// Expose visual context only while teaching. Derive it from the frozen
 		// word so historical sessions also work without rewriting snapshots.
 		step.MeaningID = ""
+		step.PartOfSpeech = savedStep.Word.PartOfSpeech
+		step.PronunciationMeaningID = ""
+		step.PronunciationRevision = ""
+		if step.SpeechText != "" {
+			step.PronunciationMeaningID = savedStep.Word.MeaningID
+			step.PronunciationRevision = meaningidentity.Revision(savedStep.Word.MeaningID, savedStep.Word.WordText, savedStep.Word.PartOfSpeech, savedStep.Word.Definition)
+		}
 		if step.Kind == "teach" {
 			step.MeaningID = savedStep.Word.MeaningID
 		}
@@ -254,6 +266,7 @@ func project(st State) Session {
 			// Derive presentation data from the frozen session snapshot, including
 			// historical feedback that predates this field. Do not mutate receipts.
 			feedback := *st.Feedback
+			feedback.PartOfSpeech = savedStep.Word.PartOfSpeech
 			feedback.CorrectChoiceID = ""
 			if feedback.StepID == step.ID && feedback.Correct && (step.Kind == "listening_choice" || step.Kind == "meaning_choice" || step.Kind == "gap_choice") {
 				for _, choice := range step.Choices {

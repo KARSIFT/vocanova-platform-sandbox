@@ -66,6 +66,8 @@ export interface DailyLesson {
     wordText: string;
     wordSlug: string;
     partOfSpeech: string;
+    pronunciationMeaningId?: string;
+    pronunciationRevision?: string;
     choices: { id: string; text: string }[];
   } | null;
   feedback: {
@@ -204,6 +206,9 @@ export interface PronunciationAudio {
   mimeType: "audio/mpeg";
   voice: string;
   cacheHit: boolean;
+  meaningId?: string;
+  meaningRevision?: string;
+  partOfSpeech?: string;
 }
 
 /**
@@ -567,6 +572,9 @@ export interface PracticeSessionSummary {
 }
 
 export interface PracticeStep {
+  pronunciationMeaningId?: string;
+  pronunciationRevision?: string;
+  partOfSpeech?: string;
   id: string;
   /** Teaching-only visual context; absent from graded questions. */
   meaningId?: string;
@@ -586,6 +594,7 @@ export interface PracticeStep {
 }
 
 export interface PracticeFeedback {
+  partOfSpeech?: string;
   revealed?: boolean;
   correctTokenIds?: string[];
   selectedTokenIds?: string[];
@@ -671,6 +680,9 @@ export interface LessonWord {
 }
 
 export interface LessonStep {
+  pronunciationMeaningId?: string;
+  pronunciationRevision?: string;
+  partOfSpeech?: string;
   id: string;
   kind: "teach" | "recall" | "context" | "typed_recall" | "listening_choice";
   speechText?: string;
@@ -1329,11 +1341,17 @@ export class VocanovaClient {
   async getPronunciation(
     text: string,
     init?: RequestInit,
+    meaningId?: string,
+    meaningRevision?: string,
   ): Promise<{ data: PronunciationAudio; response: Response }> {
     const response = await this.request(
       "POST",
       "/api/v1/pronunciation",
-      { text },
+      {
+        text,
+        ...(meaningId ? { meaningId } : {}),
+        ...(meaningRevision ? { meaningRevision } : {}),
+      },
       init,
     );
     return { data: (await response.json()) as PronunciationAudio, response };
