@@ -628,30 +628,24 @@ for (const initiallySaved of [false, true]) {
     });
     const actions = reviewSeedActions(initiallySaved);
     for (let index = 0; index < actions.length; index++) {
-      const action = actions[index]!;
       await save.click();
       await expect.poll(() => observed.length).toBe(index + 1);
       expect(observed[index]!.status).toBeGreaterThanOrEqual(200);
       expect(observed[index]!.status).toBeLessThan(300);
-      expect(observed[index]!.method).toBe(
-        action === "remove" ? "DELETE" : "POST",
-      );
-      if (action === "save")
-        expect(observed[index]!.meaningId).toBe("mean-pour");
-      await expect(save).toHaveAttribute(
-        "aria-pressed",
-        String(action === "save"),
-      );
+      expect(observed[index]!.method).toBe("POST");
+      expect(observed[index]!.meaningId).toBe("mean-pour");
+      await expect(save).toHaveAttribute("aria-pressed", "true");
       const library = await context.request.get(libraryURL);
       expect(library.ok()).toBe(true);
       const body = await library.json();
       expect(
         body.items.map((item: { meaningId: string }) => item.meaningId),
-      ).toEqual(action === "save" ? ["mean-pour"] : []);
+      ).toEqual(["mean-pour"]);
       await expect(slow).toHaveAttribute("aria-pressed", "false");
     }
     await page.reload();
     await expect(save).toHaveAttribute("aria-pressed", "true");
+    expect(observed).toHaveLength(initiallySaved ? 0 : 1);
     await openOptionalWriting(page);
     await expect(
       page.getByRole("heading", { name: "Practice with pour", exact: true }),

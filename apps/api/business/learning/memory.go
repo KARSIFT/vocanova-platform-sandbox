@@ -236,8 +236,7 @@ func (r *MemoryRepository) SavedWordStates(ctx context.Context, userID uuid.UUID
 			if uw.UserID != userID || uw.MeaningID != meaningID || uw.DeletedAt != nil {
 				continue
 			}
-			due := (uw.Status == "new" || uw.Status == "learning" || uw.Status == "reviewing") &&
-				(uw.NextReviewAt == nil || !uw.NextReviewAt.After(now))
+			due := r.memoryDue(uw, now)
 			out[meaningID] = content.SavedWordState{UserWordID: uw.ID, Status: reviewState(uw), Due: due}
 			break
 		}
@@ -307,7 +306,7 @@ func (r *MemoryRepository) activeSavedMeanings(userID uuid.UUID) []SavedMeaning 
 			ShortDefinition: m.ShortDefinition,
 			Status:          uw.Status,
 			ReviewState:     reviewState(uw),
-			Due:             (uw.Status == "new" || uw.Status == "learning" || uw.Status == "reviewing") && (uw.NextReviewAt == nil || !uw.NextReviewAt.After(now)),
+			Due:             r.memoryDue(uw, now),
 			Source:          uw.Source,
 			Saved:           true,
 			AddedAt:         uw.AddedAt,
@@ -369,4 +368,43 @@ func wordSlug(normalized string) string {
 		}
 	}
 	return out
+}
+
+// memoryDue mirrors the canonical representative rule without coupling the
+// independent learning/review test repositories. Production owns the audit.
+func (r *MemoryRepository) memoryDue(word MemoryUserWord, now time.Time) bool {
+	eligible := func(w MemoryUserWord) bool {
+		return w.DeletedAt == nil && (w.Status == "new" || w.Status == "learning" || w.Status == "reviewing") && (w.NextReviewAt == nil || !w.NextReviewAt.After(now))
+	}
+	if !eligible(word) {
+		return false
+	}
+	identity := func(id uuid.UUID) uuid.UUID {
+		if meaning, ok := r.findMeaning(id); ok {
+			return meaning.WordID
+		}
+		return id
+	}
+	canonical := identity(word.MeaningID)
+	for _, earlier := range r.userWords {
+		if earlier.ID == word.ID || earlier.UserID != word.UserID || identity(earlier.MeaningID) != canonical || !eligible(earlier) {
+			continue
+		}
+		if earlier.NextReviewAt == nil && word.NextReviewAt != nil {
+			return false
+		}
+		if earlier.NextReviewAt != nil && word.NextReviewAt == nil {
+			continue
+		}
+		if earlier.NextReviewAt != nil && !earlier.NextReviewAt.Equal(*word.NextReviewAt) {
+			if earlier.NextReviewAt.Before(*word.NextReviewAt) {
+				return false
+			}
+			continue
+		}
+		if earlier.ID.String() < word.ID.String() {
+			return false
+		}
+	}
+	return true
 }

@@ -77,7 +77,7 @@ func TestApplyReviewEasyCapsAtSeven(t *testing.T) {
 	assert.Equal(t, now.Add(StepInterval(7)), res.NextReviewAt)
 }
 
-func TestApplyReviewTwoConsecutiveIncorrectResetsStep(t *testing.T) {
+func TestApplyReviewTwoConsecutiveIncorrectEachDropOneStep(t *testing.T) {
 	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
 	state := ReviewState{ReviewStep: 4, Counters: ReviewCounters{
 		TotalReviewCount:          3,
@@ -99,7 +99,7 @@ func TestApplyReviewTwoConsecutiveIncorrectResetsStep(t *testing.T) {
 		Rating: RatingAgain,
 	}, now)
 	require.NoError(t, err)
-	assert.Equal(t, 0, second.ReviewStep)
+	assert.Equal(t, 2, second.ReviewStep)
 	assert.Equal(t, 2, second.Counters.ConsecutiveIncorrectCount)
 	assert.Equal(t, 5, second.Counters.TotalReviewCount)
 	assert.Equal(t, 2, second.Counters.CorrectReviewCount)
@@ -194,12 +194,12 @@ func TestStepIntervalForEveryStep(t *testing.T) {
 	for i := 0; i <= 7; i++ {
 		assert.Positive(t, StepInterval(i))
 	}
-	assert.Equal(t, StepInterval(0), 10*time.Minute)
+	assert.Equal(t, StepInterval(0), 24*time.Hour)
 	assert.Equal(t, StepInterval(1), 24*time.Hour)
 }
 
 func TestLeitnerIntervalsAndCorrectWordWaitsAtLeastOneDay(t *testing.T) {
-	expected := []time.Duration{10 * time.Minute, 24 * time.Hour, 3 * 24 * time.Hour, 7 * 24 * time.Hour, 14 * 24 * time.Hour, 30 * 24 * time.Hour, 60 * 24 * time.Hour, 120 * 24 * time.Hour}
+	expected := []time.Duration{24 * time.Hour, 24 * time.Hour, 3 * 24 * time.Hour, 7 * 24 * time.Hour, 14 * 24 * time.Hour, 30 * 24 * time.Hour, 60 * 24 * time.Hour, 120 * 24 * time.Hour}
 	now := time.Date(2026, 10, 17, 23, 0, 0, 0, time.UTC)
 	for step, want := range expected {
 		require.Equal(t, want, StepInterval(step))
@@ -207,6 +207,18 @@ func TestLeitnerIntervalsAndCorrectWordWaitsAtLeastOneDay(t *testing.T) {
 			got, e := ApplyReview(ReviewState{ReviewStep: step}, ApplyReviewRequest{Result: ResultCorrect, Rating: rating}, now)
 			require.NoError(t, e)
 			require.False(t, got.NextReviewAt.Before(now.Add(24*time.Hour)))
+		}
+	}
+}
+
+func TestEveryWrongAnswerDropsExactlyOneStepAndWaitsAtLeastOneDay(t *testing.T) {
+	now := time.Date(2026, 10, 19, 18, 0, 0, 0, time.UTC)
+	for step := 0; step <= 7; step++ {
+		for _, previousWrong := range []int{0, 1, 3} {
+			got, err := ApplyReview(ReviewState{ReviewStep: step, Counters: ReviewCounters{ConsecutiveIncorrectCount: previousWrong}}, ApplyReviewRequest{Result: ResultIncorrect, Rating: RatingAgain}, now)
+			require.NoError(t, err)
+			require.Equal(t, max(0, step-1), got.ReviewStep, "a wrong answer always moves exactly one level")
+			require.False(t, got.NextReviewAt.Before(now.Add(24*time.Hour)), "wrong words cannot retry in ten minutes")
 		}
 	}
 }

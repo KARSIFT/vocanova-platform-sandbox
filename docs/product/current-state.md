@@ -1,5 +1,19 @@
 # Vocanova current product state
 
+## Daily review and language selection — implementation, 18 October 2026
+
+Following the owner's **Vocanova 3** recording, review finishes each canonical
+word for the learner's local day after a correct, incorrect or skipped answer.
+Incorrect recall moves back exactly one Leitner level; every outcome waits at
+least 24 hours. Due lists, counts and legacy sessions share the same rule,
+including sibling meanings, midnight transitions and remove/restore recovery.
+Practice retains its separate correction flow. Registration now offers Persian
+and a searchable 40-language list with custom entries. The review schedule has
+a styled keyboard-accessible menu aligned with Continue. See [the behavior
+contract](../design/review-practice-and-pronunciation.md) and [release evidence](release-readiness.md).
+Local fixture checks, actual database checks, hosted CI and live staging remain
+distinct gates; this section does not establish deployment.
+
 ## Meaning-specific speech and varied uses — implementation, 18 October 2026
 
 The current delivery adds cached OpenAI speech for the exact selected meaning,

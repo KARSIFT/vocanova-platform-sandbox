@@ -88,8 +88,11 @@ Prompt types: `meaning_choice`, `word_choice`, `self_check` (see [05](05-databas
 full prompt-type list including `typing`/`sentence_usage`, which are a later superset — these three
 were the initial MVP set). `result` and `rating` are distinct. Objective incorrect answers record
 `Again`; objective correct answers allow Hard/Good/Easy; self-check result derives from the rating.
-Again steps back with a floor of 0, two consecutive incorrect/Again attempts reset to 0, Hard stays,
-and Good/Easy step forward with a cap of 7. The backend owns scheduling logic.
+Again steps back exactly once with a floor of 0, Hard stays, and Good/Easy step
+forward with a cap of 7. Every outcome waits at least 24 hours. The review queue
+excludes a canonical word after any attempt on the learner's local day, including
+its other meanings and remove/restore transitions. Exact mutation retries retain
+their original receipt without recording another attempt. The backend owns scheduling logic.
 
 ## Daily mission
 

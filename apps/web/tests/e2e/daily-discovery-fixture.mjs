@@ -302,10 +302,8 @@ export async function handleDailyDiscovery({
             }),
       });
     }
-    if (!session.feedback.correct && !session.feedback.skipped && !manual) {
-      // A corrected mistake appears after the other words, with a new question.
-      words.push(words.splice(session.completedWords, 1)[0]);
-    } else session.completedWords += 1;
+    // Every outcome finishes this word for today's review. Practice is separate.
+    session.completedWords += 1;
     session.feedback = null;
     session.canContinue = false;
     if (session.completedWords === session.totalWords) {
@@ -315,6 +313,7 @@ export async function handleDailyDiscovery({
     } else session.currentStep = step(words[session.completedWords]);
   } else if (["answer", "skip"].includes(body.action) && !session.feedback) {
     const correct = body.action === "answer" && body.choiceId === "meaning-a";
+    state.dailyDeferredMeaningIds.add(word.meaningId);
     if (body.action === "answer") {
       session.questionsAnswered += 1;
       if (correct && !retries.has(word.meaningId))
@@ -333,9 +332,7 @@ export async function handleDailyDiscovery({
             nextReviewAt:
               cookies.e2e_daily_review_at === "2026-10-18T22:30:00.000Z"
                 ? cookies.e2e_daily_review_at
-                : new Date(
-                    Date.now() + (correct ? 86400000 : 600000),
-                  ).toISOString(),
+                : new Date(Date.now() + 86400000).toISOString(),
           }
         : {}),
       stepId: session.currentStep.id,

@@ -67,7 +67,7 @@ type ApplyReviewResult struct {
 func StepInterval(step int) time.Duration {
 	switch step {
 	case 0:
-		return 10 * time.Minute
+		return 24 * time.Hour
 	case 1:
 		return 24 * time.Hour
 	case 2:
@@ -83,7 +83,7 @@ func StepInterval(step int) time.Duration {
 	case 7:
 		return 120 * 24 * time.Hour
 	default:
-		return 10 * time.Minute
+		return 24 * time.Hour
 	}
 }
 
@@ -91,9 +91,9 @@ func StepInterval(step int) time.Duration {
 // and a single review outcome. It is pure (no IO, no Ent writes) and deterministic
 // so the transaction layer can call it exactly once per submission.
 //
-// Rules per DOC-06 §10:
+// Review policy: one assessment per learner-local day.
 //   - Again / incorrect → step back, floor 0.
-//   - Two consecutive Again / incorrect attempts → reset to step 0.
+//   - Every incorrect answer moves back exactly one step, regardless of streak.
 //   - Hard → same step.
 //   - Good / Easy → step forward, cap 7.
 //   - Counters are updated and next_review_at is derived from the new step.
@@ -130,11 +130,7 @@ func ApplyReview(prior ReviewState, req ApplyReviewRequest, now time.Time) (Appl
 	case isIncorrect:
 		counters.ConsecutiveCorrectCount = 0
 		counters.ConsecutiveIncorrectCount++
-		if counters.ConsecutiveIncorrectCount >= 2 {
-			newStep = 0
-		} else {
-			newStep = max(0, prior.ReviewStep-1)
-		}
+		newStep = max(0, prior.ReviewStep-1)
 	default:
 		// Correct: hard keeps the step, good/easy advances, empty rating defaults
 		// to good.
@@ -155,7 +151,7 @@ func ApplyReview(prior ReviewState, req ApplyReviewRequest, now time.Time) (Appl
 	}
 
 	next := now.Add(StepInterval(newStep))
-	if req.Result == ResultCorrect && !isIncorrect && next.Before(now.Add(24*time.Hour)) {
+	if next.Before(now.Add(24 * time.Hour)) {
 		next = now.Add(24 * time.Hour)
 	}
 	return ApplyReviewResult{

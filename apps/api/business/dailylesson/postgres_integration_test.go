@@ -13,6 +13,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/revieweligibility"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
@@ -134,7 +135,7 @@ func (f *fixture) next(t *testing.T, s *Session) *Session {
 	require.NoError(t, e)
 	return out
 }
-func TestPostgreSQLDailyLessonAuthorityRetryCreditResumeAndExport(t *testing.T) {
+func TestPostgreSQLDailyLessonAuthorityOnceDailyCreditResumeAndExport(t *testing.T) {
 	f := setup(t, 2)
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 	defer cancel()
@@ -158,17 +159,14 @@ func TestPostgreSQLDailyLessonAuthorityRetryCreditResumeAndExport(t *testing.T) 
 	require.NoError(t, f.db.QueryRow("SELECT reviews_completed FROM daily_mission_snapshots WHERE user_id=$1", f.u).Scan(&mission))
 	require.Zero(t, mission)
 	s = f.next(t, s)
-	second := s.CurrentStep.ID
 	s = f.answer(t, s, true)
 	require.True(t, s.Feedback.Correct)
 	require.Equal(t, 1, s.CreditedToday)
 	s = f.next(t, s)
-	require.NotEqual(t, second, s.CurrentStep.ID)
-	s = f.answer(t, s, true)
-	require.Equal(t, 2, s.CreditedToday)
+	require.Nil(t, s.CurrentStep)
+	require.Equal(t, 1, s.CreditedToday)
 	require.Equal(t, 1, s.FirstAnswersCorrect)
 	require.Equal(t, 2, s.QuestionsAnswered)
-	s = f.next(t, s)
 	require.Equal(t, "completed", s.Status)
 	require.Nil(t, s.CurrentStep)
 	current, e := f.svc.Current(ctx, f.u)
@@ -179,7 +177,7 @@ func TestPostgreSQLDailyLessonAuthorityRetryCreditResumeAndExport(t *testing.T) 
 	require.NoError(t, f.db.QueryRow("SELECT count(*) FROM user_words WHERE user_id=$1 AND next_review_at<$2", f.u, f.now.Add(24*time.Hour)).Scan(&due))
 	require.Zero(t, due)
 	require.NoError(t, f.db.QueryRow("SELECT reviews_completed FROM daily_mission_snapshots WHERE user_id=$1", f.u).Scan(&mission))
-	require.Equal(t, 2, mission)
+	require.Equal(t, 1, mission)
 	export, e := accounts.NewPostgreSQLRepository(f.db).ExportPersonalData(ctx, f.u)
 	require.NoError(t, e)
 	require.Contains(t, string(export), "\"dailyLessons\"")
@@ -278,7 +276,7 @@ func TestPostgreSQLDailyLessonRollbackAndKnown(t *testing.T) {
 }
 
 func TestPostgreSQLDailyLessonDailyReceiptLocalDateHintAndPurge(t *testing.T) {
-	f := setup(t, 1)
+	f := setup(t, 2)
 	// Just after Tehran midnight, while UTC is still on the previous date.
 	f.now = time.Date(2026, 10, 17, 20, 31, 0, 0, time.UTC)
 	gam := gamification.NewService(gamification.NewRepository(f.db))
@@ -308,7 +306,7 @@ func TestPostgreSQLDailyLessonDailyReceiptLocalDateHintAndPurge(t *testing.T) {
 	require.ErrorIs(t, e, reviews.ErrNotDue)
 	var n int
 	require.NoError(t, f.db.QueryRow("SELECT count(*) FROM review_attempts WHERE user_id=$1", f.u).Scan(&n))
-	require.Equal(t, 2, n, "hinted attempt plus later correct answer; denied legacy attempt writes nothing")
+	require.Equal(t, 2, n, "hinted attempt plus correct answer on a different word; denied legacy attempt writes nothing")
 	require.NoError(t, f.db.QueryRow("SELECT count(*) FROM daily_review_successes WHERE user_id=$1", f.u).Scan(&n))
 	require.Equal(t, 1, n)
 	require.NoError(t, f.db.QueryRow("SELECT reviews_completed FROM daily_mission_snapshots WHERE user_id=$1", f.u).Scan(&n))
@@ -339,10 +337,13 @@ func TestPostgreSQLDailyLessonLiveGenerationAndAccountClosure(t *testing.T) {
 	// A different review owns the new generation. The open daily session cannot apply it again.
 	_, e = f.review.SubmitReview(t.Context(), reviews.SubmitReviewRequest{UserID: f.u, UserWordID: uuid.MustParse(w.UserWordID), MeaningID: uuid.MustParse(w.MeaningID), Source: "review", AttemptType: "review", PromptType: "self_check", Result: "correct", Rating: "good", AnsweredAt: f.now, ClientAttemptID: "external", IdempotencyKey: "external"})
 	require.NoError(t, e)
-	s = f.answer(t, s, true)
-	require.True(t, s.Feedback.Skipped)
-	require.Equal(t, "already_reviewed", s.Feedback.Reason)
-	require.Zero(t, s.CreditedToday)
+	_, e = f.svc.Act(t.Context(), f.u, st.ID, Action{StepID: s.CurrentStep.ID, ExpectedRevision: s.Revision, ClientActionID: "stale-answer", Action: "answer", ChoiceID: w.AnswerID}, "stale-answer")
+	require.ErrorIs(t, e, ErrConflict, "an externally reviewed word is removed before a stale answer can apply")
+	s, e = f.svc.Get(t.Context(), f.u, st.ID)
+	require.NoError(t, e)
+	require.Equal(t, "completed", s.Status)
+	require.Nil(t, s.CurrentStep)
+	require.Zero(t, s.CreditedToday, "a standalone review cannot claim verified daily lesson credit")
 	_, e = f.db.Exec("UPDATE users SET deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=$1", f.u)
 	require.NoError(t, e)
 	_, e = f.svc.Get(t.Context(), f.u, st.ID)
@@ -505,19 +506,18 @@ func TestPostgreSQLDailyLessonEditorialSynonymsCannotBecomeWrongOptions(t *testi
 }
 
 func TestPostgreSQLDailyWrongRetriesCannotFarmRatingPoints(t *testing.T) {
-	f := setup(t, 1)
+	f := setup(t, 2)
 	s, e := f.svc.Start(t.Context(), f.u, "xp")
 	require.NoError(t, e)
-	for range 2 {
-		s = f.answer(t, s, false)
-		s = f.next(t, s)
-	}
+	s = f.answer(t, s, false)
+	s = f.next(t, s)
+	require.NotNil(t, s.CurrentStep, "the next card is a different word, never a retry of the wrong answer")
 	var count, balance int
 	require.NoError(t, f.db.QueryRow("SELECT count(*),COALESCE(sum(amount),0) FROM confidence_point_ledger WHERE user_id=$1", f.u).Scan(&count, &balance))
 	require.Zero(t, count)
 	require.Zero(t, balance)
 	st := f.state(t, s)
-	w := st.Words[0]
+	w := st.Words[st.Queue[0]]
 	a := Action{StepID: s.CurrentStep.ID, ExpectedRevision: s.Revision, ClientActionID: "correct-xp", Action: "answer", ChoiceID: w.AnswerID}
 	correct, e := f.svc.Act(t.Context(), f.u, st.ID, a, "correct-xp")
 	require.NoError(t, e)
@@ -537,8 +537,8 @@ func TestPostgreSQLDailyWrongRetriesCannotFarmRatingPoints(t *testing.T) {
 	require.NoError(t, lockUser(t.Context(), tx, f.u))
 	req := reviews.SubmitReviewRequest{UserID: f.u, UserWordID: uuid.MustParse(w.UserWordID), MeaningID: uuid.MustParse(w.MeaningID), Source: "review_session", AttemptType: "review", PromptType: "self_check", Result: "correct", Rating: "good", AnsweredAt: f.now, ClientAttemptID: "duplicate-xp", IdempotencyKey: "duplicate-xp"}
 	_, e = f.review.SubmitDailyReviewTx(t.Context(), tx, req, st.ID)
-	require.NoError(t, e)
-	require.NoError(t, tx.Commit())
+	require.ErrorIs(t, e, reviews.ErrNotDue)
+	require.NoError(t, tx.Rollback())
 	require.NoError(t, f.db.QueryRow("SELECT count(*),COALESCE(sum(amount),0) FROM confidence_point_ledger WHERE user_id=$1", f.u).Scan(&count, &balance))
 	require.Equal(t, 1, count)
 	require.Equal(t, gamification.RewardReviewGood, balance)
@@ -546,7 +546,7 @@ func TestPostgreSQLDailyWrongRetriesCannotFarmRatingPoints(t *testing.T) {
 	// success today keeps the existing legacy Again rating award.
 	legacyWord := uuid.New()
 	var legacyMeaning uuid.UUID
-	require.NoError(t, f.db.QueryRow(`SELECT id FROM word_meanings WHERE id<>$1 ORDER BY id LIMIT 1`, w.MeaningID).Scan(&legacyMeaning))
+	require.NoError(t, f.db.QueryRow(`SELECT wm.id FROM word_meanings wm WHERE NOT EXISTS (SELECT 1 FROM user_words uw JOIN word_meanings saved ON saved.id=uw.meaning_id WHERE uw.user_id=$1 AND saved.word_id=wm.word_id) ORDER BY wm.id LIMIT 1`, f.u).Scan(&legacyMeaning))
 	_, e = f.db.Exec(`INSERT INTO user_words(id,user_id,meaning_id,status,source,review_step,added_at,created_at,updated_at)VALUES($1,$2,$3,'new','manual',0,$4,$4,$4)`, legacyWord, f.u, legacyMeaning, f.now)
 	require.NoError(t, e)
 	req.UserWordID = legacyWord
@@ -663,6 +663,8 @@ func TestPostgreSQLVerifiedTodayDueConsistencyAcrossRestorePaths(t *testing.T) {
 			require.Equal(t, 1, attempts)
 			// Yesterday's receipt must not suppress today's genuinely due word.
 			_, e = f.db.Exec(`UPDATE daily_review_successes SET local_date=local_date-1 WHERE user_id=$1`, f.u)
+			require.NoError(t, e)
+			_, e = f.db.Exec(`UPDATE review_attempts SET created_at=created_at-INTERVAL '1 day' WHERE user_id=$1`, f.u)
 			require.NoError(t, e)
 			check(1)
 		})
@@ -894,4 +896,279 @@ func TestDailyPronunciationProjectionHistoricalIncompleteMetadata(t *testing.T) 
 	}
 	completed := time.Now()
 	require.Nil(t, project(&state{CompletedAt: &completed}).CurrentStep)
+}
+
+func TestPostgreSQLReviewOncePerCanonicalWordForCorrectWrongAndSkip(t *testing.T) {
+	for _, action := range []string{"correct", "wrong", "skip"} {
+		t.Run(action, func(t *testing.T) {
+			f := setup(t, 1)
+			ctx := t.Context()
+			var baseMeaning, wordID uuid.UUID
+			require.NoError(t, f.db.QueryRow(`SELECT uw.meaning_id,wm.word_id FROM user_words uw JOIN word_meanings wm ON wm.id=uw.meaning_id WHERE uw.id=$1`, f.words[0]).Scan(&baseMeaning, &wordID))
+			siblingMeaning, siblingSaved := uuid.New(), uuid.New()
+			_, err := f.db.Exec(`INSERT INTO word_meanings(id,word_id,part_of_speech,short_definition,meaning_order,status,created_at,updated_at)VALUES($1,$2,'verb','A separately saved synthetic use.',2,'active',$3,$3)`, siblingMeaning, wordID, f.now)
+			require.NoError(t, err)
+			_, err = f.db.Exec(`INSERT INTO user_words(id,user_id,meaning_id,status,source,review_step,added_at,created_at,updated_at)VALUES($1,$2,$3,'new','search',2,$4,$4,$4)`, siblingSaved, f.u, siblingMeaning, f.now)
+			require.NoError(t, err)
+			_, err = f.db.Exec(`UPDATE user_words SET review_step=2,consecutive_incorrect_count=3 WHERE user_id=$1`, f.u)
+			require.NoError(t, err)
+			session, err := f.svc.Start(ctx, f.u, "once-start")
+			require.NoError(t, err)
+			require.Equal(t, 1, session.TotalWords)
+			frozen := f.state(t, session)
+			selected := frozen.Words[frozen.Queue[0]]
+			if action == "skip" {
+				session, err = f.svc.Act(ctx, f.u, frozen.ID, Action{StepID: session.CurrentStep.ID, ExpectedRevision: session.Revision, ClientActionID: "skip-once", Action: "skip"}, "skip-once")
+				require.NoError(t, err)
+				require.True(t, session.Feedback.Skipped)
+				require.Zero(t, session.QuestionsAnswered)
+			} else {
+				session = f.answer(t, session, action == "correct")
+			}
+			require.Equal(t, 1, session.CompletedWords)
+			if action == "wrong" {
+				require.Equal(t, 1, *session.Feedback.ReviewStep, "wrong 3-day use drops once to1day even after consecutive errors")
+			}
+			feedback := session.Feedback
+			resumed, err := f.svc.Get(ctx, f.u, frozen.ID)
+			require.NoError(t, err)
+			require.Equal(t, feedback, resumed.Feedback)
+			session = f.next(t, session)
+			require.Equal(t, "completed", session.Status)
+			require.Nil(t, session.CurrentStep)
+			// Neither a reset schedule nor another saved meaning can bypass today's audit.
+			_, err = f.db.Exec(`UPDATE user_words SET next_review_at=NULL,last_reviewed_at=NULL WHERE user_id=$1`, f.u)
+			require.NoError(t, err)
+			current, err := f.svc.Current(ctx, f.u)
+			require.NoError(t, err)
+			require.Zero(t, current.DueCount)
+			due, err := f.review.ListDueWords(ctx, reviews.ListDueWordsRequest{UserID: f.u})
+			require.NoError(t, err)
+			require.Zero(t, due.TotalCount)
+			learner := learning.NewPostgreSQLRepository(f.db)
+			saved, err := learner.ListSavedWords(ctx, learning.ListSavedWordsRequest{UserID: f.u, DueOnly: true})
+			require.NoError(t, err)
+			require.Zero(t, saved.TotalCount)
+			summary, err := learner.GetKnowledgeSummary(ctx, f.u)
+			require.NoError(t, err)
+			require.Zero(t, summary.Due)
+			states, err := learner.SavedWordStates(ctx, f.u, []uuid.UUID{baseMeaning, siblingMeaning})
+			require.NoError(t, err)
+			for _, state := range states {
+				require.False(t, state.Due)
+			}
+			_, err = f.svc.Start(ctx, f.u, "no-repeat")
+			require.ErrorIs(t, err, ErrNoDue)
+			other := siblingSaved
+			otherMeaning := siblingMeaning
+			if selected.UserWordID == siblingSaved.String() {
+				other = f.words[0]
+				otherMeaning = baseMeaning
+			}
+			_, err = f.review.SubmitReview(ctx, reviews.SubmitReviewRequest{UserID: f.u, UserWordID: other, MeaningID: otherMeaning, PromptType: reviews.PromptTypeSelfCheck, Result: reviews.ResultIncorrect, Rating: reviews.RatingAgain, AnsweredAt: f.now.Add(-24 * time.Hour), ClientAttemptID: "different-use", IdempotencyKey: "different-use", AllowSessionRetry: true})
+			require.ErrorIs(t, err, reviews.ErrNotDue)
+			var count int
+			require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM review_attempts WHERE user_id=$1`, f.u).Scan(&count))
+			require.Equal(t, 1, count)
+			require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM daily_review_successes WHERE user_id=$1`, f.u).Scan(&count))
+			if action == "correct" {
+				require.Equal(t, 1, count)
+			} else {
+				require.Zero(t, count)
+			}
+		})
+	}
+}
+
+func TestPostgreSQLLegacyPrunedQuestionCanBeAnsweredAfterReload(t *testing.T) {
+	f := setup(t, 2)
+	ctx := t.Context()
+	session, err := f.svc.Start(ctx, f.u, "legacy-start")
+	require.NoError(t, err)
+	original := f.state(t, session)
+	a, b := original.Queue[0], original.Queue[1]
+	session = f.answer(t, session, false)
+	legacy := f.state(t, session)
+	legacy.Feedback = nil
+	legacy.CompletedWords = 0
+	legacy.CompletedAt = nil
+	legacy.Words[a].Resolved = false
+	legacy.Queue = []int{a, b, a}
+	raw, err := json.Marshal(legacy)
+	require.NoError(t, err)
+	_, err = f.db.Exec(`UPDATE daily_lesson_sessions SET state=$2,status='in_progress',completed_at=NULL WHERE id=$1`, legacy.ID, string(raw))
+	require.NoError(t, err)
+	reloaded, err := f.svc.Get(ctx, f.u, legacy.ID)
+	require.NoError(t, err)
+	require.Equal(t, legacy.Words[b].Public.ID, reloaded.CurrentStep.ID, "pending old retry is hidden on read")
+	request := Action{StepID: reloaded.CurrentStep.ID, ExpectedRevision: reloaded.Revision, ClientActionID: "answer-pruned-b", Action: "answer", ChoiceID: legacy.Words[b].AnswerID}
+	answered, err := f.svc.Act(ctx, f.u, legacy.ID, request, "answer-pruned-b")
+	require.NoError(t, err)
+	replay, err := f.svc.Act(ctx, f.u, legacy.ID, request, "answer-pruned-b")
+	require.NoError(t, err)
+	require.Equal(t, answered, replay)
+	require.True(t, answered.Feedback.Correct)
+	require.Equal(t, 2, answered.CompletedWords)
+	answered = f.next(t, answered)
+	require.Equal(t, "completed", answered.Status)
+	var count int
+	require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM review_attempts WHERE user_id=$1`, f.u).Scan(&count))
+	require.Equal(t, 2, count)
+}
+
+func TestPostgreSQLReviewAuditUsesDSTLocalBoundariesAndServerCreationTime(t *testing.T) {
+	f := setup(t, 1)
+	ctx := t.Context()
+	_, err := f.db.Exec(`UPDATE user_settings SET timezone='America/New_York' WHERE user_id=$1`, f.u)
+	require.NoError(t, err)
+	var meaning, wordID uuid.UUID
+	require.NoError(t, f.db.QueryRow(`SELECT uw.meaning_id,wm.word_id FROM user_words uw JOIN word_meanings wm ON wm.id=uw.meaning_id WHERE uw.id=$1`, f.words[0]).Scan(&meaning, &wordID))
+	for _, day := range []struct{ start, inside, end time.Time }{
+		{time.Date(2026, 3, 8, 5, 0, 0, 0, time.UTC), time.Date(2026, 3, 9, 3, 59, 0, 0, time.UTC), time.Date(2026, 3, 9, 4, 0, 0, 0, time.UTC)},
+		{time.Date(2026, 11, 1, 4, 0, 0, 0, time.UTC), time.Date(2026, 11, 2, 4, 59, 0, 0, time.UTC), time.Date(2026, 11, 2, 5, 0, 0, 0, time.UTC)},
+	} {
+		_, err = f.db.Exec(`DELETE FROM review_attempts WHERE user_id=$1`, f.u)
+		require.NoError(t, err)
+		_, err = f.db.Exec(`INSERT INTO review_attempts(id,user_id,user_word_id,meaning_id,attempt_type,prompt_type,result,rating,review_step_before,review_step_after,answered_at,source,created_at,updated_at)VALUES(gen_random_uuid(),$1,$2,$3,'review','self_check','skipped',NULL,0,0,$4,'review',$5,$5)`, f.u, f.words[0], meaning, day.start.Add(-30*24*time.Hour), day.start)
+		require.NoError(t, err)
+		check := func(at time.Time, want bool) {
+			t.Helper()
+			var reviewed bool
+			err := f.db.QueryRowContext(ctx, `SELECT `+revieweligibility.ReviewedToday("$1", "$2", "$3"), f.u, wordID, at).Scan(&reviewed)
+			require.NoError(t, err)
+			require.Equal(t, want, reviewed)
+		}
+		check(day.start, true)
+		check(day.inside, true)
+		check(day.end, false)
+	}
+}
+
+func TestDailyLessonCompletedLegacySiblingHistoryPreservesTotals(t *testing.T) {
+	completed := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
+	st := &state{
+		Words:          []word{{WordID: "same-word", MeaningID: "noun", Answered: true, Resolved: true}, {WordID: "same-word", MeaningID: "verb", Answered: true, Resolved: true}},
+		CompletedWords: 2, FirstAnswersCorrect: 2, QuestionsAnswered: 2, CreditedToday: 2, CompletedAt: &completed,
+	}
+	out := project(st)
+	require.Equal(t, "completed", out.Status)
+	require.Equal(t, 2, out.TotalWords, "historical snapshot cardinality is preserved")
+	require.Equal(t, 2, out.CompletedWords)
+	require.Equal(t, 2, out.FirstAnswersCorrect, "earned historical answers are never clamped")
+	require.Equal(t, 2, out.QuestionsAnswered)
+	require.Equal(t, 2, out.CreditedToday)
+	require.Nil(t, out.CurrentStep)
+}
+
+func TestPostgreSQLLegacyActiveSiblingPruningPreservesEarnedAnswers(t *testing.T) {
+	f := setup(t, 3)
+	ctx := t.Context()
+	session, err := f.svc.Start(ctx, f.u, "legacy-siblings-start")
+	require.NoError(t, err)
+	original := f.state(t, session)
+	a, b, sibling := original.Queue[0], original.Queue[1], original.Queue[2]
+	session = f.answer(t, session, true)
+	legacy := f.state(t, session)
+	// Reproduce an old frozen session containing a second use of the answered
+	// canonical word, before sessions selected only one use per word.
+	legacy.Words[sibling].WordID = legacy.Words[a].WordID
+	legacy.Feedback = nil
+	legacy.Queue = []int{a, sibling, b}
+	raw, err := json.Marshal(legacy)
+	require.NoError(t, err)
+	_, err = f.db.Exec(`UPDATE daily_lesson_sessions SET state=$2 WHERE id=$1`, legacy.ID, string(raw))
+	require.NoError(t, err)
+	reloaded, err := f.svc.Get(ctx, f.u, legacy.ID)
+	require.NoError(t, err)
+	require.Equal(t, 3, reloaded.TotalWords, "the original frozen denominator is unchanged")
+	require.Equal(t, 2, reloaded.CompletedWords, "the pending sibling is passively skipped")
+	require.Equal(t, 1, reloaded.FirstAnswersCorrect, "the earned answer is unchanged")
+	require.Equal(t, legacy.Words[b].Public.ID, reloaded.CurrentStep.ID)
+	answered, err := f.svc.Act(ctx, f.u, legacy.ID, Action{StepID: reloaded.CurrentStep.ID, ExpectedRevision: reloaded.Revision, ClientActionID: "legacy-siblings-answer", Action: "answer", ChoiceID: legacy.Words[b].AnswerID}, "legacy-siblings-answer")
+	require.NoError(t, err)
+	finished := f.next(t, answered)
+	require.Equal(t, "completed", finished.Status)
+	require.Equal(t, 3, finished.TotalWords)
+	require.Equal(t, 3, finished.CompletedWords)
+	require.Equal(t, 2, finished.FirstAnswersCorrect)
+	require.Equal(t, 2, finished.QuestionsAnswered)
+	var attempts int
+	require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM review_attempts WHERE user_id=$1`, f.u).Scan(&attempts))
+	require.Equal(t, 2, attempts, "passive sibling pruning grants neither an attempt nor credit")
+}
+
+// advancingOperationClock crosses learner midnight on the second observation.
+// It is deliberately shared with the review repository in one subcase, so the
+// entire transaction must use the daily action's single server-owned snapshot.
+type advancingOperationClock struct {
+	first, later time.Time
+	calls        int
+}
+
+func (c *advancingOperationClock) Now() time.Time {
+	c.calls++
+	if c.calls == 1 {
+		return c.first
+	}
+	return c.later
+}
+
+func TestPostgreSQLDailyActionUsesOneTimestampAcrossLearnerMidnight(t *testing.T) {
+	for _, sharedReviewClock := range []bool{false, true} {
+		name := "final_projection_clock"
+		if sharedReviewClock {
+			name = "shared_review_clock"
+		}
+		t.Run(name, func(t *testing.T) {
+			f := setup(t, 2)
+			// UTC date stays fixed while the learner-local date changes.
+			before := time.Date(2026, 10, 17, 20, 29, 59, 0, time.UTC)
+			after := before.Add(2 * time.Second)
+			gam := gamification.NewService(gamification.NewRepository(f.db))
+			mis := missions.NewService(missions.NewRepository(f.db), gam)
+			reviewClock := clock.Clock(clock.Fixed{T: before})
+			f.review = reviews.NewPostgreSQLRepository(f.db, reviewClock, reviews.WithGamificationService(gam), reviews.WithMissionsService(mis))
+			f.svc = NewService(f.db, f.review, clock.Fixed{T: before})
+			session, err := f.svc.Start(t.Context(), f.u, "midnight-start")
+			require.NoError(t, err)
+			frozen := f.state(t, session)
+			w := frozen.Words[frozen.Queue[0]]
+			operationClock := &advancingOperationClock{first: before, later: after}
+			f.svc.clock = operationClock
+			if sharedReviewClock {
+				f.review = reviews.NewPostgreSQLRepository(f.db, operationClock, reviews.WithGamificationService(gam), reviews.WithMissionsService(mis))
+				f.svc.reviews = f.review
+			}
+			action := Action{StepID: session.CurrentStep.ID, ExpectedRevision: session.Revision, ClientActionID: "midnight-answer", Action: "answer", ChoiceID: w.AnswerID}
+			answered, err := f.svc.Act(t.Context(), f.u, frozen.ID, action, "midnight-answer")
+			require.NoError(t, err)
+			require.True(t, answered.Feedback.Credited)
+			require.Equal(t, 1, answered.CreditedToday, "the action response and receipt use the captured learner day")
+			require.Equal(t, before, answered.UpdatedAt)
+			var auditAt, answeredAt, lastReviewAt, nextReviewAt, receiptAt time.Time
+			var localDate string
+			require.NoError(t, f.db.QueryRow(`SELECT a.created_at,a.answered_at,uw.last_reviewed_at,uw.next_review_at,d.local_date::text,d.created_at FROM review_attempts a JOIN user_words uw ON uw.id=a.user_word_id JOIN daily_review_successes d ON d.review_attempt_id=a.id WHERE a.user_id=$1`, f.u).Scan(&auditAt, &answeredAt, &lastReviewAt, &nextReviewAt, &localDate, &receiptAt))
+			require.Equal(t, before, auditAt, "audit eligibility uses the operation's server time")
+			require.Equal(t, before, answeredAt)
+			require.Equal(t, before, lastReviewAt)
+			require.Equal(t, before, receiptAt)
+			require.Equal(t, before.Add(24*time.Hour), nextReviewAt)
+			require.Equal(t, "2026-10-17", localDate)
+			require.Equal(t, 1, operationClock.calls, "nested review and projection cannot resample the operation clock")
+			// A retry after midnight returns exactly the committed response and
+			// never samples a new time or grants another answer/credit.
+			replayed, err := f.svc.Act(t.Context(), f.u, frozen.ID, action, "midnight-answer")
+			require.NoError(t, err)
+			require.Equal(t, answered, replayed)
+			require.Equal(t, 1, operationClock.calls)
+			reloaded, err := f.svc.Get(t.Context(), f.u, frozen.ID)
+			require.NoError(t, err)
+			require.Zero(t, reloaded.CreditedToday, "a separate read uses the new learner day")
+			var attempts, credits int
+			require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM review_attempts WHERE user_id=$1`, f.u).Scan(&attempts))
+			require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM daily_review_successes WHERE user_id=$1`, f.u).Scan(&credits))
+			require.Equal(t, 1, attempts)
+			require.Equal(t, 1, credits)
+		})
+	}
 }

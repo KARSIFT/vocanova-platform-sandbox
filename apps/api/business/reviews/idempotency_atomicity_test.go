@@ -21,7 +21,7 @@ type simultaneousReviewChecks struct {
 
 func TestMemoryReviewKeyExpiryAndRollback(t *testing.T) {
 	userID, meaningID, userWordID := uuid.New(), uuid.New(), uuid.New()
-	repo := NewMemoryRepository(MemoryRepositoryData{UserWords: []MemoryUserWord{{
+	repo := NewMemoryRepository(MemoryRepositoryData{Meanings: []MemoryMeaning{{ID: meaningID, WordID: uuid.New(), Status: "active"}}, UserWords: []MemoryUserWord{{
 		ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new",
 	}}})
 	c := &clock.Fixed{T: time.Now().UTC()}
@@ -67,7 +67,7 @@ func (s *simultaneousReviewChecks) Check(ctx context.Context, userID uuid.UUID, 
 
 func TestConcurrentReviewKeyRejectsDifferentAttemptBeforeEffects(t *testing.T) {
 	userID, meaningID, userWordID := uuid.New(), uuid.New(), uuid.New()
-	repo := NewMemoryRepository(MemoryRepositoryData{UserWords: []MemoryUserWord{{
+	repo := NewMemoryRepository(MemoryRepositoryData{Meanings: []MemoryMeaning{{ID: meaningID, WordID: uuid.New(), Status: "active"}}, UserWords: []MemoryUserWord{{
 		ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new",
 	}}})
 	store := &simultaneousReviewChecks{MemoryIdempotencyStore: learning.NewMemoryIdempotencyStore()}

@@ -78,5 +78,7 @@ func (ReviewAttempt) Indexes() []ent.Index {
 		index.Fields("user_id", "answered_at"),
 		index.Fields("user_word_id", "answered_at"),
 		index.Fields("meaning_id", "answered_at"),
+		index.Fields("user_id", "created_at", "meaning_id").
+			StorageKey("review_attempts_user_id_created_at_meaning_id_idx"),
 	}
 }

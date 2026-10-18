@@ -13,7 +13,9 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/revieweligibility"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -132,6 +134,10 @@ func fingerprint(v any) string {
 	h := sha256.Sum256(b)
 	return hex.EncodeToString(h[:])
 }
+
+// project preserves the original frozen snapshot denominator, including completed
+// historical sessions that allowed multiple uses of a canonical word. New session
+// selection already contains one use per canonical word.
 func project(st *state) *Session {
 	out := &Session{Attribution: knowledgecatalog.SourceAttribution(), ID: st.ID.String(), Status: "in_progress", Revision: st.Revision, CompletedWords: st.CompletedWords, TotalWords: len(st.Words), FirstAnswersCorrect: st.FirstAnswersCorrect, QuestionsAnswered: st.QuestionsAnswered, CreditedToday: st.CreditedToday, Feedback: st.Feedback, CanContinue: st.Feedback != nil, CreatedAt: st.CreatedAt, UpdatedAt: st.UpdatedAt, CompletedAt: st.CompletedAt}
 	if st.CompletedAt != nil {
@@ -175,14 +181,88 @@ func (s *Service) Get(ctx context.Context, u, id uuid.UUID) (*Session, error) {
 	if e != nil {
 		return nil, e
 	}
+	if e = pruneQueue(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+		return nil, e
+	}
 	if e = refreshCredits(ctx, tx, st, s.clock.Now().UTC()); e != nil {
 		return nil, e
 	}
 	return project(st), tx.Commit()
 }
 func dueSQL() string {
-	return ` FROM user_words uw JOIN word_meanings wm ON wm.id=uw.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id WHERE uw.user_id=$1 AND uw.deleted_at IS NULL AND uw.status IN('new','learning','reviewing') AND(wm.status='active' AND cw.status='active') AND(uw.next_review_at IS NULL OR uw.next_review_at<=$2) AND NOT EXISTS(SELECT 1 FROM user_word_knowledge k WHERE k.user_id=$1 AND k.meaning_id=uw.meaning_id AND k.self_reported_known) AND NOT EXISTS(SELECT 1 FROM daily_review_successes d WHERE d.user_id=$1 AND d.meaning_id=uw.meaning_id AND d.local_date=($2 AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=$1),'UTC'))::date)`
+	return ` FROM user_words uw JOIN word_meanings wm ON wm.id=uw.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id WHERE uw.user_id=$1 AND ` + revieweligibility.Due("uw", "$2", true)
 }
+
+func wordKey(w word) string {
+	if w.WordID != "" {
+		return w.WordID
+	}
+	return w.MeaningID
+}
+
+// pruneQueue removes legacy delayed retries and sibling uses without changing a
+// frozen question or grading it. The current answer feedback stays until Continue.
+func pruneQueue(ctx context.Context, tx *sql.Tx, st *state, now time.Time) error {
+	if st.CompletedAt != nil {
+		return nil
+	}
+	ids := []string{}
+	for _, w := range st.Words {
+		if _, err := uuid.Parse(w.WordID); err == nil {
+			ids = append(ids, w.WordID)
+		}
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT DISTINCT wm.word_id::text FROM word_meanings wm WHERE wm.word_id=ANY($3::uuid[]) AND `+revieweligibility.ReviewedToday("$1", "wm.word_id", "$2"), st.UserID, now, pq.Array(ids))
+	if err != nil {
+		return err
+	}
+	reviewed := map[string]bool{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		reviewed[id] = true
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	queue := []int{}
+	seen := map[string]bool{}
+	for position, index := range st.Queue {
+		w := &st.Words[index]
+		key := wordKey(*w)
+		if position == 0 && st.Feedback != nil {
+			queue = append(queue, index)
+			seen[key] = true
+			continue
+		}
+		if seen[key] || w.Resolved || w.Answered || reviewed[key] {
+			continue
+		}
+		queue = append(queue, index)
+		seen[key] = true
+	}
+	st.Queue = queue
+	pending := map[string]bool{}
+	for _, index := range queue {
+		if !st.Words[index].Resolved {
+			pending[wordKey(st.Words[index])] = true
+		}
+	}
+	// Keep the original frozen snapshot denominator and earned answer history.
+	// Legacy sibling cards removed from the queue are completed as passive skips;
+	// they must not shrink historical accuracy below already earned answers.
+	st.CompletedWords = len(st.Words) - len(pending)
+	if len(queue) == 0 {
+		st.CompletedAt = &now
+	}
+	return nil
+}
+
 func (s *Service) Current(ctx context.Context, u uuid.UUID) (*Current, error) {
 	tx, e := s.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	if e != nil {
@@ -199,6 +279,9 @@ func (s *Service) Current(ctx context.Context, u uuid.UUID) (*Current, error) {
 	out := &Current{}
 	st, e := scan(tx.QueryRowContext(ctx, "SELECT state FROM daily_lesson_sessions WHERE user_id=$1 AND status='in_progress'", u))
 	if e == nil {
+		if e = pruneQueue(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+			return nil, e
+		}
 		if e = refreshCredits(ctx, tx, st, s.clock.Now().UTC()); e != nil {
 			return nil, e
 		}
@@ -282,10 +365,28 @@ func (s *Service) Start(ctx context.Context, u uuid.UUID, key string) (*Session,
 		return out, tx.Commit()
 	}
 	st, e := scan(tx.QueryRowContext(ctx, "SELECT state FROM daily_lesson_sessions WHERE user_id=$1 AND status='in_progress' FOR UPDATE", u))
+	if e == nil {
+		if e = pruneQueue(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+			return nil, e
+		}
+		if st.CompletedAt != nil {
+			previous := st
+			if e = save(ctx, tx, previous); e != nil {
+				return nil, e
+			}
+			st, e = s.build(ctx, tx, u, s.clock.Now().UTC())
+			if errors.Is(e, ErrNoDue) {
+				st, e = previous, nil
+			}
+		}
+	}
 	if errors.Is(e, ErrNotFound) {
 		st, e = s.build(ctx, tx, u, s.clock.Now().UTC())
 	}
 	if e != nil {
+		return nil, e
+	}
+	if e = pruneQueue(ctx, tx, st, s.clock.Now().UTC()); e != nil {
 		return nil, e
 	}
 	if e = refreshCredits(ctx, tx, st, s.clock.Now().UTC()); e != nil {
@@ -398,6 +499,12 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 	if e != nil {
 		return nil, e
 	}
+	// One locked action owns one server time, including its nested audit,
+	// schedule, local-day credit, final queue pruning and immutable response.
+	now := s.clock.Now().UTC()
+	if e = pruneQueue(ctx, tx, st, now); e != nil {
+		return nil, e
+	}
 	if st.CompletedAt != nil || st.Revision != a.ExpectedRevision || len(st.Queue) == 0 {
 		return nil, ErrConflict
 	}
@@ -405,7 +512,6 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 	if a.StepID != w.Public.ID {
 		return nil, ErrConflict
 	}
-	now := s.clock.Now().UTC()
 	if a.Action == "continue" {
 		if st.Feedback == nil || a.ChoiceID != "" || a.WasHintUsed {
 			return nil, ErrInvalid
@@ -414,27 +520,16 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 			if e = reschedule(ctx, tx, u, w, st.Feedback, a.NextReview, now); e != nil {
 				return nil, e
 			}
-			// An explicit later date or self-assessment replaces this session's
-			// deferred retry. It never turns an incorrect answer into a credit.
+			// A later date or self-assessment changes future scheduling only.
+			// It never turns an incorrect answer into a credit.
 			if !w.Resolved {
 				w.Resolved = true
 				st.CompletedWords++
 			}
 		}
-		if !w.Resolved && !st.Feedback.Correct && !st.Feedback.Skipped {
-			// A correction is not an answer. Retry as a separate new question at the end.
-			st.Queue = append(st.Queue, st.Queue[0])
-			w.Public.ID = uuid.NewString()
-			for i := range w.Public.Choices {
-				old := w.Public.Choices[i].ID
-				w.Public.Choices[i].ID = uuid.NewString()
-				if old == w.AnswerID {
-					w.AnswerID = w.Public.Choices[i].ID
-				}
-			}
-			h := sha256.Sum256([]byte(w.Public.ID))
-			j := int(h[0]) % len(w.Public.Choices)
-			w.Public.Choices[0], w.Public.Choices[j] = w.Public.Choices[j], w.Public.Choices[0]
+		if !w.Resolved {
+			w.Resolved = true
+			st.CompletedWords++
 		}
 		st.Queue = st.Queue[1:]
 		st.Feedback = nil
@@ -485,17 +580,26 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 		} else if !w.Answered && due.Valid && due.Time.After(now) {
 			reason = "already_reviewed"
 		}
+		if reason == "" {
+			var reviewed bool
+			if e = tx.QueryRowContext(ctx, `SELECT `+revieweligibility.ReviewedToday("$1", "(SELECT word_id FROM word_meanings WHERE id=$2)", "$3"), u, w.MeaningID, now).Scan(&reviewed); e != nil {
+				return nil, e
+			}
+			if reviewed {
+				reason = "already_reviewed"
+			}
+		}
 		skipped := a.Action == "skip" || reason != ""
 		fb := &Feedback{StepID: w.Public.ID, Correct: correct && !skipped, Answer: w.Definition, Explanation: "", MeaningID: w.MeaningID, WordText: w.Public.WordText, Skipped: skipped, Reason: reason, CorrectChoiceID: w.AnswerID}
 		if a.Action == "answer" && reason == "" {
 			fb.SelectedChoiceID = a.ChoiceID
 		}
-		if skipped {
+		if skipped && (a.Action != "skip" || reason != "") {
 			fb.Explanation = "This word was left for later or changed elsewhere."
 			w.Resolved = true
 			st.CompletedWords++
 		} else {
-			if !w.Answered {
+			if !w.Answered && a.Action != "skip" {
 				st.QuestionsAnswered++
 				if correct {
 					st.FirstAnswersCorrect++
@@ -505,8 +609,11 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 			if correct {
 				result, rating = reviews.ResultCorrect, reviews.RatingGood
 			}
-			req := reviews.SubmitReviewRequest{UserID: u, UserWordID: uuid.MustParse(w.UserWordID), MeaningID: uuid.MustParse(w.MeaningID), AttemptType: reviews.AttemptTypeReview, PromptType: reviews.PromptTypeSelfCheck, Result: result, Rating: rating, AnsweredAt: now, SelectedOptionMeaningID: nil, WasHintUsed: a.WasHintUsed, Source: reviews.SourceReviewSession, ClientAttemptID: "daily:" + fingerprint(a.ClientActionID), IdempotencyKey: "daily:" + fingerprint(key), ExpectedReviewCount: &w.ReviewCount, AllowSessionRetry: w.Answered}
-			attempt, e := s.reviews.SubmitDailyReviewTx(ctx, tx, req, st.ID)
+			if a.Action == "skip" {
+				result, rating = reviews.ResultSkipped, ""
+			}
+			req := reviews.SubmitReviewRequest{UserID: u, UserWordID: uuid.MustParse(w.UserWordID), MeaningID: uuid.MustParse(w.MeaningID), AttemptType: reviews.AttemptTypeReview, PromptType: reviews.PromptTypeSelfCheck, Result: result, Rating: rating, AnsweredAt: now, SelectedOptionMeaningID: nil, WasHintUsed: a.WasHintUsed, Source: reviews.SourceReviewSession, ClientAttemptID: "daily:" + fingerprint(a.ClientActionID), IdempotencyKey: "daily:" + fingerprint(key), ExpectedReviewCount: &w.ReviewCount}
+			attempt, e := s.reviews.SubmitDailyReviewAtTx(ctx, tx, req, st.ID, now)
 			if e != nil {
 				return nil, e
 			}
@@ -525,19 +632,24 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 			fb.NextReviewAt = &confirmedDue
 			fb.ReviewStep = &confirmedStep
 
-			if correct {
+			w.Resolved = true
+			st.CompletedWords++
+			if a.Action == "skip" {
+				fb.Explanation = "This word was left for another day."
+			} else if correct {
 				fb.Explanation = "Correct. This word is reviewed for today."
-				w.Resolved = true
-				st.CompletedWords++
 			} else {
-				fb.Explanation = "Review the meaning. You'll try this word again later."
+				fb.Explanation = "Review the meaning. This word will return on another day."
 			}
 		}
 		st.Feedback = fb
 	}
 	st.Revision++
 	st.UpdatedAt = now
-	if e = refreshCredits(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+	if e = pruneQueue(ctx, tx, st, now); e != nil {
+		return nil, e
+	}
+	if e = refreshCredits(ctx, tx, st, now); e != nil {
 		return nil, e
 	}
 	if e = save(ctx, tx, st); e != nil {

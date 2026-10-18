@@ -140,7 +140,10 @@ func TestSavedWordStatesPostgreSQLUsesPersistedStatesAndDatabaseTime(t *testing.
 	defer cancel()
 
 	if _, err := db.ExecContext(ctx, `
-		CREATE TABLE user_word_knowledge (
+		CREATE TABLE canonical_words(id uuid PRIMARY KEY);
+ CREATE TABLE word_meanings(id uuid PRIMARY KEY,word_id uuid REFERENCES canonical_words(id));
+ CREATE TABLE review_attempts(user_id uuid,meaning_id uuid,created_at timestamptz);
+ CREATE TABLE user_word_knowledge (
 			user_id uuid NOT NULL,
 			meaning_id uuid NOT NULL,
 			self_reported_known boolean NOT NULL,
@@ -188,6 +191,13 @@ func TestSavedWordStatesPostgreSQLUsesPersistedStatesAndDatabaseTime(t *testing.
 		{uuid.New(), "learning", 0, "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, otherUser},
 	}
 	for _, word := range words {
+		canonical := uuid.New()
+		if _, err := db.ExecContext(ctx, "INSERT INTO canonical_words VALUES($1)", canonical); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.ExecContext(ctx, "INSERT INTO word_meanings VALUES($1,$2)", word.meaningID, canonical); err != nil {
+			t.Fatal(err)
+		}
 		query := `INSERT INTO user_words (id, user_id, meaning_id, status, total_review_count, next_review_at, deleted_at)
 			VALUES ($1, $2, $3, $4, $5, `
 		if word.nextDue == nil {

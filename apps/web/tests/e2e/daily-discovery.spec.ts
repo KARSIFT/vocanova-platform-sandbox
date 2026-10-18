@@ -3,6 +3,19 @@ import { expect, test, type Page } from "@playwright/test";
 import type { DailyLesson, KnowledgeMap } from "@vocanova/api-client";
 import { scanForAxeViolations } from "./axe-helper";
 
+const reviewSchedule = (page: Page) =>
+  page.getByRole("button", { name: /^Show this word again:/ });
+async function chooseReviewDate(page: Page, choice: "7d" | "known") {
+  await reviewSchedule(page).click();
+  await page
+    .getByRole("menu", { name: "Next review", exact: true })
+    .getByRole("menuitemradio", {
+      name: choice === "7d" ? "In 7 days" : "I know this word",
+      exact: true,
+    })
+    .click();
+}
+
 async function learner(page: Page, count = 2) {
   const baseURL = test.info().project.use.baseURL;
   if (!baseURL) throw new Error("A local test base URL is required");
@@ -717,7 +730,7 @@ test("saved-progress recovery reads beyond an immutable Start receipt after anot
   expect(keys[1]).toBe(keys[0]);
 });
 
-test("a mistake earns no credit, keeps the chosen answer on refresh, and returns after another word", async ({
+test("a mistake earns no credit, keeps the chosen answer on refresh, and is deferred beyond today", async ({
   page,
 }) => {
   await start(page);
@@ -725,9 +738,7 @@ test("a mistake earns no credit, keeps the chosen answer on refresh, and returns
     .getByRole("radio", { name: "A different meaning.", exact: true })
     .check();
   await page.getByRole("button", { name: "Check answer", exact: true }).click();
-  await expect(
-    page.getByText("Let’s try this one again later", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Not quite", { exact: true })).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("radio", { name: "A different meaning.", exact: true }),
@@ -738,11 +749,13 @@ test("a mistake earns no credit, keeps the chosen answer on refresh, and returns
   ).toBeFocused();
   await correct(page, 2);
   await expect(
-    page.getByRole("heading", { name: "Review word 1", exact: true }),
+    page.getByRole("heading", {
+      name: "You’ve finished your review",
+      exact: true,
+    }),
   ).toBeVisible();
-  await correct(page, 1);
   await expect(
-    page.getByText("2 words remembered for today.", { exact: true }),
+    page.getByText("1 word remembered for today.", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText("1 correct on the first try.", { exact: true }),
@@ -1274,17 +1287,18 @@ for (const theme of ["light", "dark"] as const) {
       .getByRole("button", { name: "Check answer", exact: true })
       .click();
     await expect(page.getByText("Level 2 of 8", { exact: true })).toBeVisible();
-    const schedule = page.getByRole("combobox", {
-      name: "Show this word again",
-      exact: true,
-    });
-    await expect(schedule).toHaveValue("automatic");
-    await expect(schedule.locator('option[value="automatic"]')).toHaveText(
-      /^Automatic · [A-Z][a-z]{2} \d{1,2}$/,
+    const schedule = reviewSchedule(page);
+    await expect(schedule).toHaveAccessibleName(
+      /^Show this word again: Automatic · [A-Z][a-z]{2} \d{1,2}$/,
     );
-    await expect(schedule.locator('option[value="known"]')).toHaveText(
-      "I know this word",
+    await expect(schedule.locator(".review-schedule-value")).toHaveText(
+      /^[A-Z][a-z]{2} \d{1,2}$/u,
     );
+    expect(
+      await schedule
+        .locator(".review-schedule-value")
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
     const next = page.getByRole("button", { name: "Continue", exact: true });
     for (const control of [schedule, next]) {
       await control.focus();
@@ -1295,6 +1309,102 @@ for (const theme of ["light", "dark"] as const) {
         page.viewportSize()!.height,
       );
     }
+    const scheduleBounds = (await schedule.boundingBox())!;
+    const continueBounds = (await next.boundingBox())!;
+    expect(Math.abs(scheduleBounds.y - continueBounds.y)).toBeLessThan(1);
+    expect(
+      Math.abs(scheduleBounds.height - continueBounds.height),
+    ).toBeLessThan(1);
+    expect(scheduleBounds.x + scheduleBounds.width).toBeLessThanOrEqual(
+      continueBounds.x,
+    );
+    await page.screenshot({
+      path: testInfo.outputPath(`review-schedule-viewport-${theme}.png`),
+    });
+    const continuations: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        /\/daily-lessons\/[^/]+\/actions$/u.test(
+          new URL(request.url()).pathname,
+        )
+      )
+        continuations.push(request.postData() ?? "");
+    });
+    await schedule.press("ArrowDown");
+    const menu = page.getByRole("menu", { name: "Next review", exact: true });
+    const automatic = menu.getByRole("menuitemradio", { name: /^Automatic ·/ });
+    await expect(automatic).toBeFocused();
+    await expect(automatic).toHaveAttribute("aria-checked", "true");
+    await expect(menu.getByRole("menuitemradio")).toHaveCount(9);
+    const menuBounds = (await menu.boundingBox())!;
+    expect(menuBounds.x).toBeGreaterThanOrEqual(0);
+    expect(menuBounds.y).toBeGreaterThanOrEqual(0);
+    expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(
+      page.viewportSize()!.width,
+    );
+    expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(
+      page.viewportSize()!.height,
+    );
+    for (const option of await menu.getByRole("menuitemradio").all())
+      expect((await option.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.screenshot({
+      path: testInfo.outputPath(`review-schedule-open-${theme}.png`),
+      fullPage: true,
+    });
+    await page.screenshot({
+      path: testInfo.outputPath(`review-schedule-open-viewport-${theme}.png`),
+    });
+    expect((await scanForAxeViolations(page)).criticalOrSerious).toEqual([]);
+    await page.keyboard.press("End");
+    await expect(
+      menu.getByRole("menuitemradio", {
+        name: "I know this word",
+        exact: true,
+      }),
+    ).toBeFocused();
+    await page.keyboard.press("Home");
+    await expect(automatic).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(
+      menu.getByRole("menuitemradio", { name: "In 1 day", exact: true }),
+    ).toBeFocused();
+    await expect(automatic).toHaveAttribute("aria-checked", "true");
+    await page.keyboard.press("Enter");
+    await expect(menu).toHaveCount(0);
+    await expect(schedule).toBeFocused();
+    await expect(schedule).toHaveAccessibleName(
+      "Show this word again: In 1 day",
+    );
+    await expect(
+      page.locator('[aria-live="polite"]').filter({
+        hasText: /^Next review: In 1 day$/,
+      }),
+    ).toHaveText("Next review: In 1 day");
+    await schedule.press("Enter");
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveCount(0);
+    await expect(schedule).toBeFocused();
+    await schedule.press("Enter");
+    await page.keyboard.press("Tab");
+    await expect(menu).toHaveCount(0);
+    await expect(next).toBeFocused();
+    await schedule.click();
+    await page.keyboard.press("Shift+Tab");
+    await expect(menu).toHaveCount(0);
+    await expect(schedule).toBeFocused();
+    await schedule.click();
+    await page
+      .getByRole("region", { name: "Session actions", exact: true })
+      .click({ position: { x: 2, y: 2 } });
+    await expect(menu).toHaveCount(0);
+    await expect(schedule).toHaveAccessibleName(
+      "Show this word again: In 1 day",
+    );
+    await schedule.click();
+    await automatic.click();
+    await expect(schedule).toBeFocused();
+    expect(continuations).toEqual([]);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -1317,12 +1427,11 @@ test("manual review date survives confirmed reload and exact continuation retry"
     .check();
   await page.getByRole("button", { name: "Check answer", exact: true }).click();
   await page.reload();
-  const schedule = page.getByRole("combobox", {
-    name: "Show this word again",
-    exact: true,
-  });
-  await expect(schedule).toHaveValue("automatic");
-  await schedule.selectOption("7d");
+  const schedule = reviewSchedule(page);
+  await expect(schedule).toHaveAccessibleName(
+    /^Show this word again: Automatic/,
+  );
+  await chooseReviewDate(page, "7d");
   const attempts: { key: string | undefined; body: string | null }[] = [];
   await page.route("**/api/v1/daily-lessons/*/actions", async (route) => {
     attempts.push({
@@ -1384,9 +1493,7 @@ for (const nextReview of ["known", "7d"] as const) {
     await page
       .getByRole("button", { name: "Check answer", exact: true })
       .click();
-    await page
-      .getByRole("combobox", { name: "Show this word again", exact: true })
-      .selectOption(nextReview);
+    await chooseReviewDate(page, nextReview);
     const confirmed = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
@@ -1444,9 +1551,7 @@ test("legacy saved review feedback omits unsupported manual scheduling", async (
     .check();
   await page.getByRole("button", { name: "Check answer", exact: true }).click();
   await page.reload();
-  await expect(
-    page.getByRole("combobox", { name: "Show this word again", exact: true }),
-  ).toHaveCount(0);
+  await expect(reviewSchedule(page)).toHaveCount(0);
   await expect(page.getByText(/Level \d of 8/)).toHaveCount(0);
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(
@@ -1609,27 +1714,27 @@ test.describe("review schedule device calendar", () => {
         errors.push(message.text());
     });
     await start(page, 1);
-    await page
-      .context()
-      .addCookies([
-        {
-          name: "e2e_daily_review_at",
-          value: "2026-10-18T22:30:00.000Z",
-          url: test.info().project.use.baseURL!,
-        },
-      ]);
+    await page.context().addCookies([
+      {
+        name: "e2e_daily_review_at",
+        value: "2026-10-18T22:30:00.000Z",
+        url: test.info().project.use.baseURL!,
+      },
+    ]);
     await page
       .getByRole("radio", { name: "definition for review word 1", exact: true })
       .check();
     await page
       .getByRole("button", { name: "Check answer", exact: true })
       .click();
-    const automatic = page
-      .getByRole("combobox", { name: "Show this word again", exact: true })
-      .locator('option[value="automatic"]');
-    await expect(automatic).toHaveText("Automatic · Oct 19");
+    const automatic = reviewSchedule(page);
+    await expect(automatic).toHaveAccessibleName(
+      "Show this word again: Automatic · Oct 19",
+    );
     await page.reload();
-    await expect(automatic).toHaveText("Automatic · Oct 19");
+    await expect(automatic).toHaveAccessibleName(
+      "Show this word again: Automatic · Oct 19",
+    );
     expect(errors).toEqual([]);
   });
 });

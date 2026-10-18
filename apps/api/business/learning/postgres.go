@@ -10,6 +10,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/revieweligibility"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
@@ -368,7 +369,7 @@ func (r *PostgreSQLRepository) ListSavedWords(ctx context.Context, req ListSaved
  SELECT uw.id AS user_word_id,uw.meaning_id,cw.id AS word_id,cw.text AS word_text,cw.normalized_text,
  wm.part_of_speech,wm.short_definition,uw.status,uw.source,uw.added_at,
  CASE WHEN uw.status='new' AND uw.total_review_count>0 THEN 'learning' ELSE uw.status END AS review_state,
- (uw.status IN ('new','learning','reviewing') AND (uw.next_review_at IS NULL OR uw.next_review_at<=CURRENT_TIMESTAMP) AND NOT EXISTS (SELECT 1 FROM user_word_knowledge k WHERE k.user_id=uw.user_id AND k.meaning_id=uw.meaning_id AND k.self_reported_known) AND NOT EXISTS (SELECT 1 FROM daily_review_successes d WHERE d.user_id=uw.user_id AND d.meaning_id=uw.meaning_id AND d.local_date=(CURRENT_TIMESTAMP AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=uw.user_id),'UTC'))::date)) AS due
+ `+revieweligibility.Due("uw", "CURRENT_TIMESTAMP")+` AS due
  FROM user_words uw JOIN word_meanings wm ON wm.id=uw.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id
  WHERE uw.user_id=$1 AND uw.deleted_at IS NULL
  ), matches AS (
@@ -481,7 +482,7 @@ func (r *PostgreSQLRepository) SavedWordStates(ctx context.Context, userID uuid.
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT meaning_id, id,
 			CASE WHEN status = 'new' AND total_review_count > 0 THEN 'learning' ELSE status END,
-			(status IN ('new', 'learning', 'reviewing') AND (next_review_at IS NULL OR next_review_at <= CURRENT_TIMESTAMP) AND NOT EXISTS (SELECT 1 FROM user_word_knowledge k WHERE k.user_id=user_words.user_id AND k.meaning_id=user_words.meaning_id AND k.self_reported_known) AND NOT EXISTS (SELECT 1 FROM daily_review_successes d WHERE d.user_id=user_words.user_id AND d.meaning_id=user_words.meaning_id AND d.local_date=(CURRENT_TIMESTAMP AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=user_words.user_id),'UTC'))::date)) AS due
+			`+revieweligibility.Due("user_words", "CURRENT_TIMESTAMP")+` AS due
 		 FROM user_words
 		 WHERE user_id = $1 AND meaning_id = ANY($2::uuid[]) AND deleted_at IS NULL`,
 		userID, pq.Array(meaningIDs),

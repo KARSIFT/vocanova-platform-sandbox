@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/revieweligibility"
 	"github.com/google/uuid"
 )
 
@@ -20,10 +21,11 @@ func NewPostgreSQLRepository(db *sql.DB) *PostgreSQLRepository { return &Postgre
 const joins = ` FROM knowledge_catalog_entries kc JOIN canonical_words cw ON cw.id=kc.word_id AND cw.status='active' JOIN word_meanings wm ON wm.id=kc.meaning_id AND wm.word_id=cw.id AND wm.status='active'
  LEFT JOIN user_word_knowledge k ON k.meaning_id=wm.id AND k.user_id=$1
  LEFT JOIN LATERAL (SELECT * FROM user_words WHERE user_id=$1 AND meaning_id=wm.id ORDER BY deleted_at ASC NULLS FIRST,updated_at DESC,id LIMIT 1) uw ON true `
-const selected = `SELECT kc.rank,wm.id,cw.id,cw.text,replace(cw.normalized_text,' ','-'),wm.part_of_speech,wm.short_definition,
+
+var selected = `SELECT kc.rank,wm.id,cw.id,cw.text,replace(cw.normalized_text,' ','-'),wm.part_of_speech,wm.short_definition,
  COALESCE((SELECT example_text FROM word_examples WHERE meaning_id=wm.id AND status='active' ORDER BY example_order,id LIMIT 1),''),
  COALESCE(k.self_reported_known,false),COALESCE(uw.deleted_at IS NULL AND uw.id IS NOT NULL AND uw.status NOT IN ('ignored','archived'),false),
- COALESCE(uw.deleted_at IS NULL AND uw.status IN ('new','learning','reviewing') AND (uw.next_review_at IS NULL OR uw.next_review_at<=$2) AND NOT COALESCE(k.self_reported_known,false) AND NOT EXISTS(SELECT 1 FROM daily_review_successes d WHERE d.user_id=$1 AND d.meaning_id=wm.id AND d.local_date=($2 AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=$1),'UTC'))::date),false),
+ COALESCE(` + revieweligibility.Due("uw", "$2", true) + `,false),
  COALESCE(uw.id::text,'')||':'||COALESCE(uw.status,'')||':'||COALESCE(extract(epoch FROM uw.updated_at)::text,'')||':'||COALESCE(extract(epoch FROM uw.deleted_at)::text,'')||':'||COALESCE(extract(epoch FROM uw.next_review_at)::text,'')||':'||COALESCE(uw.review_step::text,'')||':'||COALESCE(uw.total_review_count::text,'')||':'||COALESCE(extract(epoch FROM k.updated_at)::text,'') `
 
 type scanner interface{ Scan(...any) error }

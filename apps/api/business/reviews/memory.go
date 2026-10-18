@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
 )
 
@@ -13,6 +14,8 @@ import (
 // tests. It is not concurrency-safe for racing cross-process requests.
 type MemoryRepository struct {
 	mu        sync.Mutex
+	clock     clock.Clock
+	timezones map[uuid.UUID]string
 	userWords []MemoryUserWord
 	meanings  []MemoryMeaning
 	words     []MemoryWord
@@ -75,6 +78,7 @@ type MemoryReviewAttempt struct {
 	ReviewStepBefore        int
 	ReviewStepAfter         int
 	AnsweredAt              time.Time
+	CreatedAt               time.Time
 	ResponseTimeMs          int
 	SelectedOptionMeaningID *uuid.UUID
 	TypedAnswer             *string
@@ -86,6 +90,8 @@ type MemoryReviewAttempt struct {
 
 // MemoryRepositoryData holds seed data for the memory repository.
 type MemoryRepositoryData struct {
+	Clock     clock.Clock
+	Timezones map[uuid.UUID]string
 	UserWords []MemoryUserWord
 	Meanings  []MemoryMeaning
 	Words     []MemoryWord
@@ -93,7 +99,10 @@ type MemoryRepositoryData struct {
 
 // NewMemoryRepository initializes an in-memory repository from data.
 func NewMemoryRepository(data MemoryRepositoryData) *MemoryRepository {
-	return &MemoryRepository{
+	if data.Clock == nil {
+		data.Clock = clock.Real{}
+	}
+	return &MemoryRepository{clock: data.Clock, timezones: data.Timezones,
 		userWords: data.UserWords,
 		meanings:  data.Meanings,
 		words:     data.Words,
@@ -181,7 +190,7 @@ func (r *MemoryRepository) ListDueWords(ctx context.Context, req ListDueWordsReq
 }
 
 func (r *MemoryRepository) activeDueWords(userID uuid.UUID) []DueWord {
-	now := time.Now().UTC()
+	now := r.clock.Now().UTC()
 	var out []DueWord
 	for _, uw := range r.userWords {
 		if uw.UserID != userID || uw.DeletedAt != nil {
@@ -198,7 +207,7 @@ func (r *MemoryRepository) activeDueWords(userID uuid.UUID) []DueWord {
 			continue
 		}
 		w, ok := r.findWord(m.WordID)
-		if !ok {
+		if !ok || r.reviewedWordToday(userID, w.ID, now) {
 			continue
 		}
 		d := DueWord{
@@ -219,7 +228,51 @@ func (r *MemoryRepository) activeDueWords(userID uuid.UUID) []DueWord {
 		}
 		out = append(out, d)
 	}
+	// Select the earliest due saved meaning once per canonical word.
+	first := map[uuid.UUID]DueWord{}
+	for _, item := range out {
+		old, exists := first[item.WordID]
+		if !exists || dueEarlier(item, old) {
+			first[item.WordID] = item
+		}
+	}
+	out = nil
+	for _, item := range first {
+		out = append(out, item)
+	}
 	return out
+}
+
+func dueEarlier(a, b DueWord) bool {
+	if a.NextReviewAt == nil && b.NextReviewAt != nil {
+		return true
+	}
+	if a.NextReviewAt != nil && b.NextReviewAt == nil {
+		return false
+	}
+	if a.NextReviewAt != nil && !a.NextReviewAt.Equal(*b.NextReviewAt) {
+		return a.NextReviewAt.Before(*b.NextReviewAt)
+	}
+	return a.UserWordID.String() < b.UserWordID.String()
+}
+func (r *MemoryRepository) reviewedWordToday(user, word uuid.UUID, now time.Time) bool {
+	zone, err := time.LoadLocation(r.timezones[user])
+	if err != nil {
+		zone = time.UTC
+	}
+	local := now.In(zone)
+	start := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, zone)
+	end := start.AddDate(0, 0, 1)
+	for _, attempt := range r.attempts {
+		if attempt.UserID != user || attempt.CreatedAt.Before(start) || !attempt.CreatedAt.Before(end) {
+			continue
+		}
+		meaning, ok := r.findMeaning(attempt.MeaningID)
+		if ok && meaning.WordID == word {
+			return true
+		}
+	}
+	return false
 }
 
 func isDueStatus(status string) bool {
@@ -271,7 +324,7 @@ func (r *MemoryRepository) SubmitReview(ctx context.Context, req SubmitReviewReq
 	}
 	now := req.scheduledAt
 	if now.IsZero() {
-		now = time.Now().UTC()
+		now = r.clock.Now().UTC()
 	}
 	key := req.UserID.String() + ":" + req.IdempotencyKey
 	fingerprint := submitReviewFingerprint(req)
@@ -316,9 +369,13 @@ func (r *MemoryRepository) submitReviewLocked(ctx context.Context, req SubmitRev
 	uw := &r.userWords[idx]
 	now := req.scheduledAt
 	if now.IsZero() {
-		now = time.Now().UTC()
+		now = r.clock.Now().UTC()
 	}
-	if !isDueStatus(uw.Status) || (!req.AllowSessionRetry && uw.NextReviewAt != nil && uw.NextReviewAt.After(now)) {
+	if !isDueStatus(uw.Status) || (uw.NextReviewAt != nil && uw.NextReviewAt.After(now)) {
+		return nil, ErrNotDue
+	}
+	meaning, exists := r.findMeaning(uw.MeaningID)
+	if !exists || r.reviewedWordToday(req.UserID, meaning.WordID, now) {
 		return nil, ErrNotDue
 	}
 	if req.ExpectedReviewCount != nil && *req.ExpectedReviewCount != uw.TotalReviewCount {
@@ -335,7 +392,7 @@ func (r *MemoryRepository) submitReviewLocked(ctx context.Context, req SubmitRev
 	}
 	scheduledAt := req.scheduledAt
 	if scheduledAt.IsZero() {
-		scheduledAt = time.Now().UTC()
+		scheduledAt = r.clock.Now().UTC()
 	}
 	sched, err := ApplyReview(prior, ApplyReviewRequest{Result: req.Result, Rating: req.Rating}, scheduledAt)
 	if err != nil {
@@ -354,6 +411,7 @@ func (r *MemoryRepository) submitReviewLocked(ctx context.Context, req SubmitRev
 		ReviewStepBefore:        prior.ReviewStep,
 		ReviewStepAfter:         sched.ReviewStep,
 		AnsweredAt:              req.AnsweredAt,
+		CreatedAt:               scheduledAt,
 		ResponseTimeMs:          req.ResponseTimeMs,
 		SelectedOptionMeaningID: req.SelectedOptionMeaningID,
 		TypedAnswer:             req.TypedAnswer,

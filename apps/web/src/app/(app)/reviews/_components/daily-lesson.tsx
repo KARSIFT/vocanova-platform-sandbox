@@ -15,6 +15,7 @@ import { deviceSpeech } from "@/lib/speech";
 import { ListenButton } from "@/ui/pronunciation";
 import { SessionActions } from "@/ui/session";
 import { VocabularySources } from "@/ui/vocabulary-sources";
+import { ReviewSchedule } from "./review-schedule";
 
 const primary =
   "inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-6 py-3 text-base font-bold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-default disabled:bg-neutral-200 disabled:text-neutral-600";
@@ -78,6 +79,7 @@ export function DailyLessonPlayer({
   const errorRegion = useRef<HTMLDivElement>(null);
   const focusResponse = useRef(false);
   const priorStep = useRef(initialSession?.currentStep?.id);
+  const continueButton = useRef<HTMLButtonElement>(null);
   const step = session?.currentStep;
   const feedback =
     session?.feedback?.stepId === step?.id ? session?.feedback : null;
@@ -610,7 +612,7 @@ export function DailyLessonPlayer({
                         : "Skipped for now"
                   : feedback.correct
                     ? "Correct"
-                    : "Let’s try this one again later"}
+                    : "Not quite"}
               </p>
               <p className="mt-2 text-base">{feedback.answer}</p>
               {feedback.explanation && (
@@ -628,71 +630,52 @@ export function DailyLessonPlayer({
             role="region"
             aria-label="Session actions"
           >
-            {!feedback ? (
-              <button
-                type="button"
-                className="min-h-11 rounded-lg px-3 text-base font-semibold text-neutral-600 hover:text-neutral-900"
-                disabled={locked}
-                onClick={() => void submit("skip")}
-              >
-                Skip for now
-              </button>
-            ) : !feedback.skipped &&
-              feedback.nextReviewAt &&
-              feedback.reviewStep !== undefined ? (
-              <label className="min-w-0 flex-1 text-sm font-semibold text-neutral-700 sm:max-w-[20rem]">
-                Show this word again
-                <select
-                  value={nextReview}
-                  disabled={busy || uncertain || conflict}
-                  onChange={(event) =>
-                    setNextReview(
-                      event.target.value as NonNullable<
-                        DailyLessonAction["nextReview"]
-                      >,
-                    )
-                  }
-                  className="mt-1 block min-h-11 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            <div className="review-action-rail">
+              {!feedback ? (
+                <button
+                  type="button"
+                  className="min-h-11 rounded-lg px-3 text-base font-semibold text-neutral-600 hover:text-neutral-900"
+                  disabled={locked}
+                  onClick={() => void submit("skip")}
                 >
-                  <option value="automatic">
-                    {feedback.correct
-                      ? automaticReviewDateLabel(
-                          feedback.nextReviewAt,
-                          reviewTimeZone,
-                        )
-                      : "Automatic · try again in this review"}
-                  </option>
-                  <option value="1d">In 1 day</option>
-                  <option value="3d">In 3 days</option>
-                  <option value="7d">In 7 days</option>
-                  <option value="14d">In 14 days</option>
-                  <option value="30d">In 30 days</option>
-                  <option value="60d">In 60 days</option>
-                  <option value="120d">In 120 days</option>
-                  <option value="known">I know this word</option>
-                </select>
-              </label>
-            ) : (
-              <span />
-            )}
-            {feedback ? (
-              <button
-                type="button"
-                className={primary}
-                disabled={busy || uncertain || conflict}
-                onClick={() => void submit("continue")}
-              >
-                Continue
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className={primary}
-                disabled={locked || !choice}
-              >
-                {busy ? "Checking…" : "Check answer"}
-              </button>
-            )}
+                  Skip for now
+                </button>
+              ) : !feedback.skipped &&
+                feedback.nextReviewAt &&
+                feedback.reviewStep !== undefined ? (
+                <ReviewSchedule
+                  value={nextReview}
+                  automaticLabel={automaticReviewDateLabel(
+                    feedback.nextReviewAt,
+                    reviewTimeZone,
+                  )}
+                  disabled={busy || uncertain || conflict}
+                  onChange={setNextReview}
+                  nextAction={continueButton}
+                />
+              ) : (
+                <span />
+              )}
+              {feedback ? (
+                <button
+                  ref={continueButton}
+                  type="button"
+                  className={`${primary} review-action-primary`}
+                  disabled={busy || uncertain || conflict}
+                  onClick={() => void submit("continue")}
+                >
+                  Continue
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className={`${primary} review-action-primary`}
+                  disabled={locked || !choice}
+                >
+                  {busy ? "Checking…" : "Check answer"}
+                </button>
+              )}
+            </div>
           </SessionActions>
         </form>
       ) : (

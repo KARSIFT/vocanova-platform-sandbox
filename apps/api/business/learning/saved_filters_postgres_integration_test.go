@@ -21,7 +21,10 @@ func TestSavedCollectionFiltersPostgreSQLFullSetSnapshotAndIsolation(t *testing.
 	require.NoError(t, err)
 	defer db.Close()
 	db.SetMaxOpenConns(1)
-	_, err = db.ExecContext(t.Context(), `CREATE TEMP TABLE canonical_words(id uuid PRIMARY KEY,text text NOT NULL,normalized_text text NOT NULL,status text NOT NULL);
+	_, err = db.ExecContext(t.Context(), `CREATE TEMP TABLE review_attempts(user_id uuid,meaning_id uuid,created_at timestamptz);
+ CREATE TEMP TABLE user_settings(user_id uuid,timezone text);
+ CREATE TEMP TABLE user_word_knowledge(user_id uuid,meaning_id uuid,self_reported_known bool);
+ CREATE TEMP TABLE canonical_words(id uuid PRIMARY KEY,text text NOT NULL,normalized_text text NOT NULL,status text NOT NULL);
  CREATE TEMP TABLE word_meanings(id uuid PRIMARY KEY,word_id uuid NOT NULL REFERENCES canonical_words(id),part_of_speech text NOT NULL,short_definition text NOT NULL,status text NOT NULL);
  CREATE TEMP TABLE user_words(id uuid PRIMARY KEY,user_id uuid NOT NULL,meaning_id uuid NOT NULL REFERENCES word_meanings(id),status text NOT NULL,source text NOT NULL,added_at timestamptz NOT NULL,total_review_count integer NOT NULL DEFAULT 0,next_review_at timestamptz,deleted_at timestamptz);
  CREATE UNIQUE INDEX ON user_words(user_id,meaning_id) WHERE deleted_at IS NULL;`)
@@ -117,16 +120,18 @@ func TestSavedCollectionFiltersPostgreSQLMigratedCanonicalSeed(t *testing.T) {
 	_, err = db.ExecContext(t.Context(), "INSERT INTO users(id,status,onboarding_status,created_at,updated_at) VALUES($1,'active','completed',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),($2,'active','completed',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", owner, other)
 	require.NoError(t, err)
 	type target struct {
-		id               uuid.UUID
+		id, wordID       uuid.UUID
 		text, definition string
 	}
-	rows, err := db.QueryContext(t.Context(), "SELECT m.id,cw.text,m.short_definition FROM word_meanings m JOIN canonical_words cw ON cw.id=m.word_id WHERE m.status='active' AND cw.status='active' ORDER BY m.id")
+	rows, err := db.QueryContext(t.Context(), "SELECT m.id,cw.id,cw.text,m.short_definition FROM word_meanings m JOIN canonical_words cw ON cw.id=m.word_id WHERE m.status='active' AND cw.status='active' ORDER BY m.id")
 	require.NoError(t, err)
 	var targets []target
+	distinctWords := make(map[uuid.UUID]bool)
 	for rows.Next() {
 		var item target
-		require.NoError(t, rows.Scan(&item.id, &item.text, &item.definition))
+		require.NoError(t, rows.Scan(&item.id, &item.wordID, &item.text, &item.definition))
 		targets = append(targets, item)
+		distinctWords[item.wordID] = true
 	}
 	require.NoError(t, rows.Err())
 	require.NoError(t, rows.Close())
@@ -142,12 +147,12 @@ func TestSavedCollectionFiltersPostgreSQLMigratedCanonicalSeed(t *testing.T) {
 	first, err := repo.ListSavedWords(t.Context(), request)
 	require.NoError(t, err)
 	require.Len(t, first.Items, 50)
-	require.Equal(t, len(targets), first.TotalCount)
+	require.Equal(t, len(distinctWords), first.TotalCount)
 	request.AfterCursor = first.NextCursor
 	second, err := repo.ListSavedWords(t.Context(), request)
 	require.NoError(t, err)
-	require.Len(t, second.Items, len(targets)-50)
-	require.Equal(t, len(targets), second.TotalCount)
+	require.Len(t, second.Items, len(distinctWords)-50)
+	require.Equal(t, len(distinctWords), second.TotalCount)
 	query := strings.ToLower(targets[0].text)
 	expected := 0
 	for _, item := range targets {
@@ -161,8 +166,13 @@ func TestSavedCollectionFiltersPostgreSQLMigratedCanonicalSeed(t *testing.T) {
 	foreign, err := repo.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: other})
 	require.NoError(t, err)
 	require.Equal(t, 1, foreign.TotalCount)
+	seen := make(map[string]bool)
 	for _, item := range append(first.Items, second.Items...) {
+		require.True(t, distinctWords[item.WordID], "every due representative belongs to the seeded canonical catalog")
+		require.False(t, seen[item.WordID.String()], "a canonical word occurs once across due pages")
+		seen[item.WordID.String()] = true
 		require.Equal(t, "new", item.ReviewState)
 		require.True(t, item.Due)
 	}
+	require.Len(t, seen, len(distinctWords))
 }

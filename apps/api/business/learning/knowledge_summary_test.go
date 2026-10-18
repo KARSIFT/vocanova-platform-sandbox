@@ -37,7 +37,7 @@ func TestKnowledgeSummaryCountsFullSetAndDueEligibility(t *testing.T) {
 	svc := NewService(repo, nil, nil)
 	summary, err := svc.GetKnowledgeSummary(t.Context(), owner)
 	require.NoError(t, err)
-	assert.Equal(t, &KnowledgeSummary{Saved: 62, New: 55, Learning: 2, Reviewing: 2, Mastered: 1, Ignored: 1, Archived: 1, Due: 57}, summary)
+	assert.Equal(t, &KnowledgeSummary{Saved: 62, New: 55, Learning: 2, Reviewing: 2, Mastered: 1, Ignored: 1, Archived: 1, Due: 1}, summary)
 	assert.Equal(t, summary.Saved, summary.New+summary.Learning+summary.Reviewing+summary.Mastered+summary.Ignored+summary.Archived)
 	empty, err := svc.GetKnowledgeSummary(t.Context(), uuid.New())
 	require.NoError(t, err)

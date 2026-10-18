@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/revieweligibility"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-// KnowledgeSummary counts saved meanings, not distinct words or proficiency.
-// Saved includes every undeleted status; Due overlaps new/learning/reviewing
-// and uses the same eligibility condition as the review queue, without a daily cap.
+// KnowledgeSummary keeps saved/status totals as meaning counts, not proficiency.
+// Due counts eligible canonical words once, using the review queue's local-day
+// rule. Saved includes every undeleted status; Due has no daily quantity cap.
 type KnowledgeSummary struct {
 	SelfReportedKnown int
 	Saved             int
@@ -50,7 +51,7 @@ func (r *PostgreSQLRepository) GetKnowledgeSummary(ctx context.Context, userID u
 	 count(*) FILTER (WHERE uw.status='mastered'),
 	 count(*) FILTER (WHERE uw.status='ignored'),
 	 count(*) FILTER (WHERE uw.status='archived'),
-	 count(*) FILTER (WHERE uw.status IN ('new','learning','reviewing') AND (uw.next_review_at IS NULL OR uw.next_review_at <= CURRENT_TIMESTAMP) AND NOT EXISTS (SELECT 1 FROM user_word_knowledge k WHERE k.user_id=uw.user_id AND k.meaning_id=uw.meaning_id AND k.self_reported_known) AND NOT EXISTS (SELECT 1 FROM daily_review_successes d WHERE d.user_id=uw.user_id AND d.meaning_id=uw.meaning_id AND d.local_date=(CURRENT_TIMESTAMP AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=uw.user_id),'UTC'))::date))
+	 count(*) FILTER (WHERE `+revieweligibility.Due("uw", "CURRENT_TIMESTAMP")+`)
 	 FROM user_words uw JOIN word_meanings wm ON wm.id=uw.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id
 	 WHERE uw.user_id=$1 AND uw.deleted_at IS NULL`, userID).Scan(&summary.Saved, &summary.New, &summary.Learning, &summary.Reviewing, &summary.Mastered, &summary.Ignored, &summary.Archived, &summary.Due)
 	if err != nil {
@@ -64,6 +65,7 @@ func (r *MemoryRepository) GetKnowledgeSummary(ctx context.Context, userID uuid.
 	defer r.mu.Unlock()
 	now := time.Now()
 	var summary KnowledgeSummary
+	dueWords := map[uuid.UUID]bool{}
 	for _, word := range r.userWords {
 		if word.UserID != userID || word.DeletedAt != nil {
 			continue
@@ -71,11 +73,13 @@ func (r *MemoryRepository) GetKnowledgeSummary(ctx context.Context, userID uuid.
 		// Match the canonical inner joins in the saved list and due queue, without
 		// hiding an existing saved state when canonical content is later archived.
 		found := false
+		var wordID uuid.UUID
 		for _, meaning := range r.meanings {
 			if meaning.ID == word.MeaningID {
 				for _, canonical := range r.words {
 					if canonical.ID == meaning.WordID {
 						found = true
+						wordID = canonical.ID
 					}
 				}
 			}
@@ -98,10 +102,11 @@ func (r *MemoryRepository) GetKnowledgeSummary(ctx context.Context, userID uuid.
 		case "archived":
 			summary.Archived++
 		}
-		if (word.Status == "new" || word.Status == "learning" || word.Status == "reviewing") && (word.NextReviewAt == nil || !word.NextReviewAt.After(now)) {
-			summary.Due++
+		if r.memoryDue(word, now) {
+			dueWords[wordID] = true
 		}
 	}
+	summary.Due = len(dueWords)
 	return &summary, nil
 }
 

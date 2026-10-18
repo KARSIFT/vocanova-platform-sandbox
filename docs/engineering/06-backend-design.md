@@ -22,6 +22,7 @@ source_files:
   - path: 06-backend-design.md
     sha256: f2f5dd0159cbefc96df37d9a1fd78adb34e22680fa18fe356973ec76a69d2578
 ---
+
 # 06 — VocaNova Backend Design
 
 ## 1. Overview
@@ -101,8 +102,11 @@ progress) returns `409`.
 **Review ratings (canonical — see reconciliation note above): Again / Hard / Good / Easy.** Result
 and rating are distinct. Objective incorrect answers record `Again`; objective correct answers
 allow Hard/Good/Easy; self-check result is derived from the rating. MVP movement: Again → step back
-with a floor of 0; two consecutive incorrect/Again attempts → reset to step 0; Hard → same step;
-Good/Easy → step forward with a cap of 7 (matches [05](05-database-design.md) §9). Word addition:
+with a floor of 0, without a consecutive-error reset; Hard → same step;
+Good/Easy → step forward with a cap of 7 (matches [05](05-database-design.md) §9).
+All outcomes wait at least 24 hours and finish that canonical word's review for
+the learner-local day, using server-created audit timestamps. Other meanings
+of the same word remain separate schedules and can appear on later days. Word addition:
 creates `user_words`, starts at review step 1 in the UI-visible sense (backend detail: initial
 `review_step=0` per the DB check constraint, first review moves it forward), `next_review_at = now`,
 awards a Confidence Point reward once. Daily mission snapshots always include the review target and
