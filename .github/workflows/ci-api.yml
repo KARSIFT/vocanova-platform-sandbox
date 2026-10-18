@@ -104,6 +104,50 @@ jobs:
             exit 1
           fi
 
+      - name: Verify personal practice and pronunciation budgets against PostgreSQL without skips
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          test_log="$(mktemp)"
+          trap 'rm -f "$test_log"' EXIT
+          go test -race ./business/practice ./business/pronunciation \
+            -count=1 -v | tee "$test_log"
+          for case in TestPracticePostgreSQLPersonalJourneyAuthorityAndLocalDay TestPracticePostgreSQLAuthorityReplayMistakesExportPurge TestPracticePostgreSQLResumesAndActsOnHistoricalContentSnapshot TestPronunciationPostgreSQLSourceAuthorizationAndGlobalBudget TestPronunciationPostgreSQLConcurrentMidnightClaimDoesNotOverwriteLease; do
+            grep -Eq "^--- PASS: $case " "$test_log"
+          done
+          if grep -Eq '^[[:space:]]*--- SKIP:' "$test_log"; then
+            echo "Personal practice and pronunciation PostgreSQL cases must not skip" >&2
+            exit 1
+          fi
+
+      - name: Verify OAuth session preference against PostgreSQL without skips
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          test_log="$(mktemp)"
+          trap 'rm -f "$test_log"' EXIT
+          go test -race -tags=integration ./business/auth -run '^TestOAuthStateSessionPreferencePostgreSQL$' \
+            -count=1 -v | tee "$test_log"
+          grep -Eq '^--- PASS: TestOAuthStateSessionPreferencePostgreSQL ' "$test_log"
+          if grep -Eq '^[[:space:]]*--- SKIP:' "$test_log"; then
+            echo "OAuth session preference PostgreSQL case must not skip" >&2
+            exit 1
+          fi
+
+      - name: Verify actual learning-history download against PostgreSQL without skips
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          test_log="$(mktemp)"
+          trap 'rm -f "$test_log"' EXIT
+          go test -race ./app/api -run '^TestPersonalDataExportHTTPPostgreSQLLearningHistory$' \
+            -count=1 -v | tee "$test_log"
+          grep -Eq '^--- PASS: TestPersonalDataExportHTTPPostgreSQLLearningHistory ' "$test_log"
+          if grep -Eq '^[[:space:]]*--- SKIP:' "$test_log"; then
+            echo "HTTP learning-history export PostgreSQL case must not skip" >&2
+            exit 1
+          fi
+
   ci-api:
     name: ci-api
     needs: postgres-read-reliability

@@ -1,5 +1,6 @@
 "use client";
 
+import { replaceSessionLocation } from "../_components/session-route";
 import Link from "next/link";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { VocabularySources } from "@/ui/vocabulary-sources";
@@ -72,13 +73,11 @@ export function Discovery({
   }, []);
 
   useEffect(() => {
-    if (!started || displayedRank === undefined || done) return;
-    window.history.replaceState(
-      window.history.state,
-      "",
-      `/discovery?band=${band}&word=${displayedRank}`,
-    );
-    titleRef.current?.focus();
+    if (displayedRank === undefined || done) return;
+    // The server may select a later unseen range before Start. Canonicalize
+    // its address now so Back preserves that real range without another read.
+    replaceSessionLocation(`/discovery?band=${band}&word=${displayedRank}`);
+    if (started) titleRef.current?.focus();
   }, [started, displayedRank, band, done]);
 
   useEffect(() => {

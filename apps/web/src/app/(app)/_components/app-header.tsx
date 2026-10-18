@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Form from "next/form";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { createApiClient } from "@/lib/api";
 import { getAuthErrorMessage } from "@/lib/auth-feedback";
@@ -18,13 +18,47 @@ import {
   hasSentenceFeedbackDrafts,
 } from "./sentence-feedback-drafts";
 import { isPrimaryNavItemActive } from "./bottom-nav-state";
-import { getSessionExit } from "./session-route";
+import { getSessionExit, SESSION_LOCATION_CHANGED } from "./session-route";
 
 const DESKTOP_NAV_ITEMS = [
   ["/home", "Home"],
   ["/discover", "Journey"],
   ["/progress", "Progress"],
 ] as const;
+
+const sessionExitClass =
+  "inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700";
+
+function subscribeSessionLocation(onChange: () => void) {
+  window.addEventListener(SESSION_LOCATION_CHANGED, onChange);
+  window.addEventListener("popstate", onChange);
+  return () => {
+    window.removeEventListener(SESSION_LOCATION_CHANGED, onChange);
+    window.removeEventListener("popstate", onChange);
+  };
+}
+
+function browserSearchSnapshot() {
+  return window.location.search;
+}
+
+/** This leaf observes owned history writes even before router effects install. */
+function DiscoveryExitLink() {
+  const search = useSearchParams();
+  const serverSearch = search.size ? `?${search.toString()}` : "";
+  const currentSearch = useSyncExternalStore(
+    subscribeSessionLocation,
+    browserSearchSnapshot,
+    () => serverSearch,
+  );
+  const exit = getSessionExit("/discovery", currentSearch)!;
+  return (
+    <Link href={exit.href} prefetch={false} className={sessionExitClass}>
+      <span aria-hidden="true">×</span>
+      {exit.label}
+    </Link>
+  );
+}
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -93,13 +127,27 @@ export function AppHeader() {
             </span>
             VocaNova
           </span>
-          <Link
-            href={sessionExit.href}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-          >
-            <span aria-hidden="true">×</span>
-            {sessionExit.label}
-          </Link>
+          {pathname === "/discovery" ? (
+            <Suspense
+              fallback={
+                <Link
+                  href={sessionExit.href}
+                  prefetch={false}
+                  className={sessionExitClass}
+                >
+                  <span aria-hidden="true">×</span>
+                  {sessionExit.label}
+                </Link>
+              }
+            >
+              <DiscoveryExitLink />
+            </Suspense>
+          ) : (
+            <Link href={sessionExit.href} className={sessionExitClass}>
+              <span aria-hidden="true">×</span>
+              {sessionExit.label}
+            </Link>
+          )}
         </div>
       </header>
     );

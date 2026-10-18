@@ -143,6 +143,7 @@ export function isRegisteredAPIPath(apiPath) {
     /^\/api\/v1\/learning-preferences$/,
     /^\/api\/v1\/lesson-recommendation$/,
     /^\/api\/v1\/achievements$/,
+    /^\/api\/v1\/pronunciation$/,
     /^\/api\/v1\/word-lists$/,
     new RegExp(`^/api/v1/word-lists/${listId}$`),
     new RegExp(`^/api/v1/word-lists/${listId}/members/${meaningId}$`),
@@ -175,6 +176,7 @@ export function isRegisteredBusinessModule(name) {
     "achievements",
     "wordlists",
     "stories",
+    "pronunciation", // Authenticated public-content audio; bounded shared cache.
   ]);
   return allowedBusinessModules.has(name);
 }
@@ -266,6 +268,9 @@ const allowedMigrationFiles = new Set([
   "20261004140000_original_stories.sql",
   "20261017100000_daily_lessons.sql",
   "20261017100001_knowledge_catalog.sql",
+  "20261018100000_oauth_session_persistence.sql",
+  "20261018120000_practice_journey.sql",
+  "20261018130000_pronunciation_audio.sql",
 ]);
 export function isRegisteredMigrationFile(name) {
   return allowedMigrationFiles.has(name);
@@ -281,6 +286,10 @@ const featureMigrationTables = new Map([
     ["daily_review_successes", "daily_lesson_sessions", "daily_lesson_actions"],
   ],
   ["20261017100001_knowledge_catalog.sql", ["knowledge_catalog_entries"]],
+  [
+    "20261018130000_pronunciation_audio.sql",
+    ["pronunciation_audio_cache", "pronunciation_audio_budget"],
+  ],
 ]);
 export function isRegisteredFeatureMigrationTables(name, tables) {
   const expected = featureMigrationTables.get(name);

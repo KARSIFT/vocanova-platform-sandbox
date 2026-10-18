@@ -22,6 +22,19 @@ export async function handlePracticeSessions({
     jsonResponse(res, status, body);
     return true;
   };
+  if (req.method === "GET" && url.pathname === "/api/v1/practice-sessions") {
+    const delay = Number(cookies.e2e_practice_sessions_delay_ms ?? 0);
+    if (Number.isInteger(delay) && delay > 0 && delay <= 5000)
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    const status = Number(cookies.e2e_practice_sessions_status ?? 0);
+    if (status === 401 || status === 503)
+      return send(status, {
+        detail:
+          status === 401
+            ? "Session expired"
+            : "Practice session read unavailable",
+      });
+  }
   state.practiceSessions ??= new Map();
   state.practiceReceipts ??= new Map();
   state.practiceMistakes ??= new Map();
@@ -39,7 +52,12 @@ export async function handlePracticeSessions({
     ...entry.summary,
     currentStep: entry.steps[entry.summary.completedSteps]?.public ?? null,
     feedback: entry.feedback,
-    canContinue: entry.feedback !== null,
+    canContinue:
+      entry.steps[entry.summary.completedSteps]?.public.kind === "teach" ||
+      (entry.feedback !== null &&
+        (entry.summary.mode !== "journey" ||
+          entry.feedback.correct ||
+          entry.feedback.revealed)),
   });
   const availableMistakes = () =>
     [...state.practiceMistakes.values()].filter((source) => !source.resolved)
@@ -62,6 +80,33 @@ export async function handlePracticeSessions({
           )
           .slice(0, 20),
         availableMistakes: availableMistakes(),
+        journey: {
+          completedLessons: [...state.practiceSessions.values()].filter(
+            (entry) =>
+              entry.summary.mode === "journey" &&
+              entry.summary.status === "completed",
+          ).length,
+          todayCompletedLessons: [...state.practiceSessions.values()].filter(
+            (entry) =>
+              entry.summary.mode === "journey" &&
+              entry.summary.status === "completed",
+          ).length,
+          dailyGoal: 3,
+          currentSession:
+            [...state.practiceSessions.values()].find(
+              (entry) =>
+                entry.summary.mode === "journey" &&
+                entry.summary.status === "in_progress",
+            )?.summary ?? null,
+          nextLesson:
+            [...state.practiceSessions.values()].filter(
+              (entry) =>
+                entry.summary.mode === "journey" &&
+                entry.summary.status === "completed",
+            ).length + 1,
+          supportedKnownWords: 3,
+          totalKnownWords: 3,
+        },
       });
     const entry = state.practiceSessions.get(parts[0]);
     return entry && parts.length === 1
@@ -81,13 +126,31 @@ export async function handlePracticeSessions({
     return send(200, project(state.practiceSessions.get(receipt.sessionId)));
   }
   if (parts.length === 0) {
-    if (!["typed_recall", "listening_choice", "mistakes"].includes(body.mode))
+    if (
+      !["typed_recall", "listening_choice", "mistakes", "journey"].includes(
+        body.mode,
+      )
+    )
       return send(400, { detail: "Invalid mode" });
     if (
       body.lessonKey &&
       !["daily-conversation", "conversation-basics"].includes(body.lessonKey)
     )
       return send(503, { detail: "Fixture lesson unavailable" });
+    if (body.mode === "journey") {
+      const current = [...state.practiceSessions.values()].find(
+        (entry) =>
+          entry.summary.mode === "journey" &&
+          entry.summary.status === "in_progress",
+      );
+      if (current) {
+        state.practiceReceipts.set(key, {
+          fingerprint,
+          sessionId: current.summary.id,
+        });
+        return send(200, project(current));
+      }
+    }
     const selectedList = body.listId ? state.wordLists?.get(body.listId) : null;
     if (
       (body.listId !== undefined) !== (body.listRevision !== undefined) ||
@@ -173,6 +236,57 @@ export async function handlePracticeSessions({
         };
       }),
     };
+    if (body.mode === "journey") {
+      const word = words[0];
+      const choices = words.map((item) => ({
+        id: randomUUID(),
+        text: item.definition,
+      }));
+      const sentence = "We invite our friends.";
+      const tokens = sentence
+        .split(" ")
+        .map((text) => ({ id: randomUUID(), text }));
+      const make = (kind, prompt, extra = {}) => ({
+        word,
+        sourceId: null,
+        correctChoice: choices[0].id,
+        public: { id: randomUUID(), kind, prompt, choices, ...extra },
+      });
+      entry.steps = [
+        make("teach", word.definition, {
+          meaningId: word.meaningId,
+          wordText: word.wordText,
+          context: sentence,
+          speechText: word.wordText,
+          choices: [],
+        }),
+        make("listening_choice", "Listen and choose the meaning", {
+          speechText: word.wordText,
+        }),
+        make("gap_choice", "Complete the sentence", {
+          context: "We _____ our friends.",
+        }),
+        {
+          ...make("sentence_build", "Put the sentence together", {
+            speechText: sentence,
+            choices: [...tokens].reverse(),
+          }),
+          correctTokenIds: tokens.map((token) => token.id),
+          sentence,
+        },
+        make("meaning_choice", "Choose the meaning", {
+          wordText: word.wordText,
+        }),
+      ];
+      entry.summary.totalSteps = entry.steps.length;
+      entry.summary.journeyLesson =
+        [...state.practiceSessions.values()].filter(
+          (item) =>
+            item.summary.mode === "journey" &&
+            item.summary.status === "completed",
+        ).length + 1;
+      entry.summary.newWords = 1;
+    }
     state.practiceSessions.set(id, entry);
     state.practiceReceipts.set(key, { fingerprint, sessionId: id });
     return send(200, project(entry));
@@ -192,7 +306,16 @@ export async function handlePracticeSessions({
   if (!body.clientActionId)
     return send(400, { detail: "Missing action identity" });
   if (body.action === "continue") {
-    if (!entry.feedback || body.typedAnswer || body.choiceId)
+    if (
+      (step.public.kind !== "teach" &&
+        (!entry.feedback ||
+          (entry.summary.mode === "journey" &&
+            !entry.feedback.correct &&
+            !entry.feedback.revealed))) ||
+      body.typedAnswer ||
+      body.choiceId ||
+      body.tokenIds
+    )
       return send(409, { detail: "No confirmed answer" });
     entry.summary.completedSteps += 1;
     entry.feedback = null;
@@ -201,7 +324,12 @@ export async function handlePracticeSessions({
       entry.summary.completedAt = new Date().toISOString();
     }
   } else if (["answer", "reveal"].includes(body.action)) {
-    if (entry.feedback && (entry.feedback.correct || body.action === "reveal"))
+    if (
+      entry.feedback &&
+      (entry.feedback.correct ||
+        (body.action === "reveal" &&
+          (entry.summary.mode !== "journey" || entry.feedback.revealed)))
+    )
       return send(409, { detail: "Answer already recorded" });
     const first = entry.feedback === null;
     const assisted = !first || body.action === "reveal";
@@ -215,6 +343,18 @@ export async function handlePracticeSessions({
         )
           return send(400, { detail: "Invalid typed answer" });
         correct = normalize(body.typedAnswer) === normalize(step.word.wordText);
+      } else if (step.public.kind === "sentence_build") {
+        if (
+          !Array.isArray(body.tokenIds) ||
+          body.tokenIds.some(
+            (id) => !step.public.choices.some((token) => token.id === id),
+          ) ||
+          new Set(body.tokenIds).size !== body.tokenIds.length
+        )
+          return send(400, { detail: "Invalid token order" });
+        correct =
+          JSON.stringify(body.tokenIds) ===
+          JSON.stringify(step.correctTokenIds);
       } else {
         if (
           !step.public.choices.some((choice) => choice.id === body.choiceId) ||
@@ -242,11 +382,23 @@ export async function handlePracticeSessions({
     entry.feedback = {
       stepId: step.public.id,
       correct,
-      ...(correct && step.public.kind === "listening_choice"
+      ...(step.public.kind === "sentence_build"
+        ? {
+            correctTokenIds: step.correctTokenIds,
+            selectedTokenIds: body.tokenIds ?? [],
+          }
+        : {}),
+      ...(correct &&
+      ["listening_choice", "meaning_choice", "gap_choice"].includes(
+        step.public.kind,
+      )
         ? { correctChoiceId: step.correctChoice }
         : {}),
       assisted,
-      answer: step.word.wordText,
+      ...(entry.summary.mode === "journey"
+        ? { revealed: body.action === "reveal" }
+        : {}),
+      answer: step.sentence ?? step.word.wordText,
       explanation: `The word from this lesson is “${step.word.wordText}”. ${step.word.definition}${assisted ? " This answer was practised with help." : ""}`,
       wordText: step.word.wordText,
       wordSlug: step.word.wordSlug,

@@ -7,6 +7,17 @@ references alongside the [product bible](00-product-bible.md) and
 
 ## Evidence and limits
 
+The owner's new VocaNova recording was also sampled on 18 October 2026: 7:21
+overall, 74 frames at six-second intervals, with all 13 contact sheets inspected.
+The samples show Home conflating review and practice, review retries without a
+date/known choice, and discovery losing the selected range when leaving. Some
+quick actions occur between samples, so the images alone do not establish a
+grading defect. Dense general dictionary definitions and missing imagery outside
+the authored starter meanings remain editorial limitations. This is a visual
+review, not continuous playback or an audio-quality assessment. The owner
+separately reported robotic, fast speech. See the [new delivery](../design/review-practice-and-pronunciation.md)
+for the resulting review/practice, navigation and pronunciation changes.
+
 The review covers visual samples throughout both recordings at eight-second
 intervals, plus close views around teaching, corrections and completion. It is
 not continuous audiovisual playback or an audio-quality evaluation. Timestamps

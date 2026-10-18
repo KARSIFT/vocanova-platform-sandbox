@@ -83,7 +83,7 @@ func TestLearningPreferencesPostgreSQLPreservationConcurrencyAndPrivacy(t *testi
 	require.NoError(t, err)
 	require.Equal(t, saved, replayed)
 	after := export(uid)
-	require.Equal(t, "1.4", after["schemaVersion"])
+	require.Equal(t, "1.7", after["schemaVersion"])
 	require.Equal(t, "travel", after["learningPreferences"].(map[string]any)["learningGoal"])
 	delete(before, "learningPreferences")
 	delete(after, "learningPreferences")

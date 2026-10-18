@@ -271,16 +271,17 @@ func (r *MemoryRepository) SetMagicLinkUser(tokenHash []byte, userID uuid.UUID, 
 	r.magicLinksByHash[string(tokenHash)] = m
 }
 
-func (r *MemoryRepository) CreateOAuthState(ctx context.Context, tokenHash []byte, environment, provider, appReturnURL string, createdAt, expiresAt time.Time) (*OAuthState, error) {
+func (r *MemoryRepository) CreateOAuthState(ctx context.Context, tokenHash []byte, environment, provider, appReturnURL string, createdAt, expiresAt time.Time, sessionPersistent bool) (*OAuthState, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	o := &OAuthState{
-		ID:           uuid.New(),
-		Environment:  environment,
-		Provider:     provider,
-		AppReturnURL: appReturnURL,
-		CreatedAt:    createdAt.UTC(),
-		ExpiresAt:    expiresAt.UTC(),
+		SessionPersistent: sessionPersistent,
+		ID:                uuid.New(),
+		Environment:       environment,
+		Provider:          provider,
+		AppReturnURL:      appReturnURL,
+		CreatedAt:         createdAt.UTC(),
+		ExpiresAt:         expiresAt.UTC(),
 	}
 	r.oauthStates[o.ID] = o
 	r.oauthStatesByHash[string(tokenHash)] = o

@@ -32,11 +32,13 @@ func (u User) Active() bool { return u.Status == "active" }
 
 // Session is the service-layer session projection.
 type Session struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	CreatedAt time.Time
-	ExpiresAt time.Time
-	RevokedAt *time.Time
+	// CookiePersistent is set when issuing an OAuth session, not inferred from database reads.
+	CookiePersistent bool
+	ID               uuid.UUID
+	UserID           uuid.UUID
+	CreatedAt        time.Time
+	ExpiresAt        time.Time
+	RevokedAt        *time.Time
 }
 
 // Valid reports whether the session has not expired or been revoked.
@@ -63,13 +65,14 @@ func (m MagicLink) Valid(now time.Time) bool {
 
 // OAuthState is the service-layer OAuth state projection.
 type OAuthState struct {
-	ID           uuid.UUID
-	Environment  string
-	Provider     string
-	AppReturnURL string
-	CreatedAt    time.Time
-	ExpiresAt    time.Time
-	ConsumedAt   *time.Time
+	SessionPersistent bool
+	ID                uuid.UUID
+	Environment       string
+	Provider          string
+	AppReturnURL      string
+	CreatedAt         time.Time
+	ExpiresAt         time.Time
+	ConsumedAt        *time.Time
 }
 
 // Valid reports whether the state has not expired or been consumed.
@@ -108,7 +111,7 @@ type Repository interface {
 	AttachMagicLinkUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 
 	// OAuth states
-	CreateOAuthState(ctx context.Context, tokenHash []byte, environment, provider, appReturnURL string, createdAt, expiresAt time.Time) (*OAuthState, error)
+	CreateOAuthState(ctx context.Context, tokenHash []byte, environment, provider, appReturnURL string, createdAt, expiresAt time.Time, sessionPersistent bool) (*OAuthState, error)
 	GetOAuthStateByTokenHash(ctx context.Context, tokenHash []byte) (*OAuthState, error)
 	// ConsumeOAuthState claims an unconsumed state exactly once. It returns
 	// false when another callback has already claimed it, so callers must not

@@ -94,3 +94,21 @@ func TestClearCSRFCookieMatchesCSRFCookieScope(t *testing.T) {
 	assert.True(t, clearCookie.Secure)
 	assert.Equal(t, http.SameSiteStrictMode, clearCookie.SameSite)
 }
+
+func TestOAuthSessionCookieKeepsSecurityAndScopeForBothChoices(t *testing.T) {
+	svc := NewService(nil, nil, nil, nil, nil, Config{Cookie: CookieConfig{
+		Name: "vocanova_session", Domain: "production.vocanova.site",
+		Secure: true, SameSite: http.SameSiteStrictMode,
+	}})
+	expires := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	for _, persistent := range []bool{false, true} {
+		cookie := svc.OAuthSessionCookie("synthetic-test-value", &Session{ExpiresAt: expires, CookiePersistent: persistent})
+		assert.Equal(t, "vocanova_session", cookie.Name)
+		assert.Equal(t, "production.vocanova.site", cookie.Domain)
+		assert.Equal(t, "/", cookie.Path)
+		assert.True(t, cookie.HttpOnly)
+		assert.True(t, cookie.Secure)
+		assert.Equal(t, http.SameSiteStrictMode, cookie.SameSite)
+		assert.Equal(t, !persistent, cookie.Expires.IsZero())
+	}
+}

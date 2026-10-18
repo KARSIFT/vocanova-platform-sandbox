@@ -8,7 +8,7 @@ import { PracticeEntry } from "./_components/practice-entry";
 
 export const metadata: Metadata = {
   title: "Practice — Vocanova",
-  description: "Review, remember and use your English vocabulary.",
+  description: "A learning path for listening, sentences and your own words.",
 };
 
 const linkStyle =
@@ -70,21 +70,17 @@ export default async function PracticePage({
     query.lesson === undefined
       ? (studiedLesson?.key ?? "")
       : (lessons?.find((lesson) => lesson.key === query.lesson)?.key ?? "");
-  const nextLesson =
-    lessons?.find((lesson) => lesson.status === "in_progress") ??
-    lessons?.find((lesson) => lesson.status === "not_started") ??
-    lessons?.[0];
   const savedWords = savedResponse?.data.items;
   const firstWord = savedWords?.[0];
 
   return (
     <PageContainer className="max-w-[56rem]">
-      <Link href="/discover" className={linkStyle}>
-        Back to Journey
+      <Link href="/home" className={linkStyle}>
+        Back to Today
       </Link>
-      <header className="mb-6 mt-3">
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
-          Practice
+      <header className="mb-4 mt-2">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+          Today’s practice
         </h1>
       </header>
 
@@ -92,9 +88,13 @@ export default async function PracticePage({
         key={`${selectedLessonKey}:${requestedList}`}
         initialSessions={practiceResponse?.data ?? null}
         lessons={lessons ?? []}
+        lessonsUnavailable={!lessonResponse}
         initialLessonKey={selectedLessonKey}
         initialLists={listsResponse?.data.items ?? null}
         initialListId={requestedList}
+        explicitSelection={
+          query.list !== undefined || query.lesson !== undefined
+        }
       />
 
       <nav
@@ -118,7 +118,7 @@ export default async function PracticePage({
             id="practice-review-heading"
             className="text-lg font-bold text-neutral-900"
           >
-            Today’s lesson
+            Review words
           </h2>
           {dueCount === undefined ? (
             <p role="status" className="mt-1 text-sm text-neutral-600">
@@ -134,61 +134,13 @@ export default async function PracticePage({
           )}
         </div>
         <Link href="/review" className={linkStyle}>
-          {canStartReview ? "Start today’s lesson" : "View today’s lesson"}
+          {canStartReview ? "Start review" : "Open reviews"}
         </Link>
       </section>
 
-      <section
-        aria-labelledby="practice-lesson-heading"
-        className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 py-5"
-      >
-        <div className="min-w-0 flex-1 basis-48">
-          <h2
-            id="practice-lesson-heading"
-            className="text-lg font-bold text-neutral-900"
-          >
-            Guided lessons
-          </h2>
-          {nextLesson ? (
-            <>
-              <p className="mt-1 text-sm text-neutral-600">
-                {nextLesson.title}
-              </p>
-              {nextLesson.status === "in_progress" && (
-                <p className="mt-1 text-sm text-neutral-600">
-                  {nextLesson.completedSteps} of {nextLesson.stepCount} steps
-                  saved
-                </p>
-              )}
-            </>
-          ) : (
-            <p
-              role={lessons ? undefined : "status"}
-              className="mt-1 text-sm text-neutral-600"
-            >
-              {lessons
-                ? "No guided lessons are available yet."
-                : "We could not load your lessons. You can still practise with your vocabulary."}
-            </p>
-          )}
-        </div>
-        <Link
-          href={
-            nextLesson
-              ? `/learn/${encodeURIComponent(nextLesson.key)}`
-              : "/courses"
-          }
-          className={linkStyle}
-        >
-          {nextLesson
-            ? nextLesson.status === "in_progress"
-              ? "Continue lesson"
-              : nextLesson.status === "completed"
-                ? "Revisit lesson"
-                : "Start lesson"
-            : "Explore situations"}
-        </Link>
-      </section>
+      <Link href="/courses" className={`${linkStyle} mt-3`}>
+        Explore situation lessons
+      </Link>
 
       <div className="flex flex-wrap gap-x-6 border-t border-neutral-200 pt-3">
         <Link href="/progress/sentences" className={linkStyle}>

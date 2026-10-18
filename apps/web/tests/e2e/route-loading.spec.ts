@@ -58,7 +58,7 @@ test.describe("Route loading states", () => {
       await expect(status).toBeVisible();
       await expect(status.locator("..")).toHaveAttribute("aria-busy", "true");
       await expect(
-        page.getByRole("heading", { name: "Practice", level: 1 }),
+        page.getByRole("heading", { name: "Today’s practice", level: 1 }),
       ).toBeVisible({ timeout: 10_000 });
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
@@ -134,7 +134,7 @@ test.describe("Route loading states", () => {
     await page.goto("/home");
     await expect(
       page.getByRole("region", {
-        name: /Today.s practice|Mission complete/,
+        name: "Review words",
         exact: true,
       }),
     ).toBeVisible();
@@ -171,19 +171,27 @@ test.describe("Route loading states", () => {
     await page.goto("/home");
     await expect(
       page.getByRole("region", {
-        name: /Today.s practice|Mission complete/,
+        name: "Review words",
         exact: true,
       }),
     ).toBeVisible();
 
     await delayNextServerRequest(page);
 
-    const action = page.getByRole("button", { name: "Start today’s lesson", exact: true });
+    const action = page.getByRole("button", {
+      name: "Start review",
+      exact: true,
+    });
     await action.click();
-    await expect(page.getByRole("button", { name: "Starting…", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Starting…", exact: true })).toBeDisabled();
-    await expect(page.getByRole("heading", { name: "Review word 1", exact: true })).toBeVisible({ timeout: 15_000 });
-
+    await expect(
+      page.getByRole("button", { name: "Starting…", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Starting…", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("heading", { name: "Review word 1", exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test("Saved vocabulary shows loading feedback while its data is delayed", async ({
@@ -208,4 +216,119 @@ test.describe("Route loading states", () => {
       page.getByRole("heading", { name: "Saved vocabulary", level: 1 }),
     ).toBeVisible({ timeout: 10_000 });
   });
+});
+
+test("Home keeps Review ready while only the personal practice read is slow", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([
+    { name: "e2e_review_fixture_count", value: "2", url: baseURL! },
+    { name: "e2e_practice_sessions_delay_ms", value: "2500", url: baseURL! },
+  ]);
+  // A streaming response may commit before its secondary section finishes.
+  // Waiting for DOMContentLoaded would conceal that independently useful UI.
+  await page.goto("/home", { waitUntil: "commit" });
+  const main = page.getByRole("main");
+  const review = main.getByRole("region", {
+    name: "Review words",
+    exact: true,
+  });
+  await expect(
+    review.getByRole("button", { name: "Start review", exact: true }),
+  ).toBeVisible();
+  const path = main.getByRole("region", {
+    name: "Your learning path",
+    exact: true,
+  });
+  const pending = path
+    .getByRole("status")
+    .filter({ hasText: /^Loading practice…$/ });
+  await expect(pending).toBeVisible();
+  await expect(path).toHaveAttribute("aria-busy", "true");
+  await expect(path.getByText(/^\d+ lessons? completed$/)).toHaveCount(0);
+  await expect(pending).toHaveCount(0, { timeout: 10000 });
+  await expect(
+    path.getByRole("button", { name: "Start practice lesson", exact: true }),
+  ).toBeVisible();
+  await expect(
+    path.getByRole("progressbar", {
+      name: "Practice lessons today",
+      exact: true,
+    }),
+  ).toHaveAttribute("value", "0");
+  await expect(review.getByText(/^Reviewed today:/)).toHaveText(
+    "Reviewed today: 0",
+  );
+});
+
+test("Home keeps Review usable when its secondary practice read fails and can retry it", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([
+    { name: "e2e_review_fixture_count", value: "2", url: baseURL! },
+    { name: "e2e_practice_sessions_status", value: "503", url: baseURL! },
+  ]);
+  await page.goto("/home");
+  const main = page.getByRole("main");
+  const review = main.getByRole("region", {
+    name: "Review words",
+    exact: true,
+  });
+  const path = main.getByRole("region", {
+    name: "Your learning path",
+    exact: true,
+  });
+  await expect(
+    review.getByRole("button", { name: "Start review", exact: true }),
+  ).toBeEnabled();
+  await expect(path.getByRole("status")).toHaveText(
+    "We could not load your learning path.",
+  );
+  await expect(path.getByText(/^\d+ lessons? completed$/)).toHaveCount(0);
+  await expect(path.getByRole("progressbar")).toHaveCount(0);
+  await context.clearCookies({ name: "e2e_practice_sessions_status" });
+  await path.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(
+    path.getByRole("button", { name: "Start practice lesson", exact: true }),
+  ).toBeVisible();
+  await expect(
+    path.getByRole("progressbar", {
+      name: "Practice lessons today",
+      exact: true,
+    }),
+  ).toHaveAttribute("value", "0");
+  await review
+    .getByRole("button", { name: "Start review", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Review word 1", exact: true }),
+  ).toBeVisible();
+});
+
+test("a streamed practice-only authentication failure still redirects Home to sign in", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([
+    { name: "e2e_review_fixture_count", value: "2", url: baseURL! },
+    { name: "e2e_practice_sessions_delay_ms", value: "2500", url: baseURL! },
+    { name: "e2e_practice_sessions_status", value: "401", url: baseURL! },
+  ]);
+  await page.goto("/home", { waitUntil: "commit" });
+  await expect(
+    page
+      .getByRole("region", { name: "Review words", exact: true })
+      .getByRole("button", { name: "Start review", exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fhome$/, {
+    timeout: 10000,
+  });
+  await expect(
+    page.getByRole("region", { name: "Review words", exact: true }),
+  ).toHaveCount(0);
 });

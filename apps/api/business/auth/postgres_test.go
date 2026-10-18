@@ -201,22 +201,23 @@ func TestPostgreSQLRepositoryCreateOAuthStateAndGetByTokenHash(t *testing.T) {
 	expiresAt := now.Add(10 * time.Minute)
 
 	mock.ExpectExec("INSERT INTO oauth_states").
-		WithArgs(sqlmock.AnyArg(), hash, "test", "google", "https://test.example.com/app", now, expiresAt).
+		WithArgs(sqlmock.AnyArg(), hash, "test", "google", "https://test.example.com/app", now, expiresAt, false).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	state, err := repo.CreateOAuthState(ctx, hash, "test", "google", "https://test.example.com/app", now, expiresAt)
+	state, err := repo.CreateOAuthState(ctx, hash, "test", "google", "https://test.example.com/app", now, expiresAt, false)
 	require.NoError(t, err)
 	assert.Equal(t, "test", state.Environment)
 	assert.Equal(t, "google", state.Provider)
 
-	mock.ExpectQuery("SELECT id, environment, provider, app_return_url, created_at, expires_at, consumed_at FROM oauth_states").
+	mock.ExpectQuery("SELECT id, environment, provider, app_return_url, created_at, expires_at, consumed_at, session_persistent FROM oauth_states").
 		WithArgs(hash).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "environment", "provider", "app_return_url", "created_at", "expires_at", "consumed_at"}).
-			AddRow(uuid.New(), "test", "google", "https://test.example.com/app", now, expiresAt, nil))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "environment", "provider", "app_return_url", "created_at", "expires_at", "consumed_at", "session_persistent"}).
+			AddRow(uuid.New(), "test", "google", "https://test.example.com/app", now, expiresAt, nil, false))
 
 	got, err := repo.GetOAuthStateByTokenHash(ctx, hash)
 	require.NoError(t, err)
 	assert.Equal(t, "test", got.Environment)
+	assert.False(t, got.SessionPersistent)
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }

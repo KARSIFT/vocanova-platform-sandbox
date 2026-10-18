@@ -3,11 +3,16 @@
 // journey logs out, so its already-revoked token cannot be reused here.
 // No mock server, AI feedback request, vocabulary reset or session-history purge.
 import { randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 import { expect, test, type BrowserContext } from "@playwright/test";
 import type {
   CurrentUser,
+  DailyMission,
   DictionaryEntry,
   PracticeSession,
+  PracticeSessionsResponse,
+  Progress,
+  PronunciationAudio,
   StorySession,
   WordDetailResponse,
   WordListDetail,
@@ -49,12 +54,21 @@ export async function safeStagingRequest(
   context: Pick<BrowserContext, "cookies">,
   apiOrigin: string,
   rawUrl: string,
-  method: "GET" | "DELETE" = "GET",
+  method: "GET" | "DELETE" | "POST" = "GET",
+  body?: { text: "invite" },
 ): Promise<{ status: () => number; json: () => Promise<unknown> }> {
   try {
     const url = new URL(rawUrl);
     if (url.origin !== apiOrigin || !url.pathname.startsWith("/api/v1/")) {
       throw new Error("Request outside the allowed API scope");
+    }
+    if (
+      (method === "POST" &&
+        (url.pathname !== "/api/v1/pronunciation" ||
+          body?.text !== "invite")) ||
+      (method !== "POST" && body !== undefined)
+    ) {
+      throw new Error("Request outside the bounded pronunciation acceptance");
     }
     const cookies = (await context.cookies(apiOrigin)).filter(
       (cookie) =>
@@ -68,27 +82,51 @@ export async function safeStagingRequest(
         .map((cookie) => `${cookie.name}=${cookie.value}`)
         .join("; "),
     };
-    if (method === "DELETE") {
+    if (method === "DELETE" || method === "POST") {
       const csrf = cookies.find(
         (cookie) => cookie.name === "vocanova_csrf",
       )?.value;
       if (!csrf) throw new Error("CSRF cookie missing");
       requestHeaders["X-CSRF-Token"] = csrf;
-      requestHeaders["Idempotency-Key"] = randomUUID();
+      if (method === "DELETE") requestHeaders["Idempotency-Key"] = randomUUID();
+      if (method === "POST")
+        requestHeaders["Content-Type"] = "application/json";
     }
     const response = await fetch(url, {
       method,
       headers: requestHeaders,
+      ...(body ? { body: JSON.stringify(body) } : {}),
       redirect: "error",
       signal: AbortSignal.timeout(20_000),
     });
-    const body = await response.text();
+    // Bound the public clip's JSON before parsing; do not retain raw response
+    // data in Playwright request diagnostics or error attachments.
+    const reader = response.body?.getReader();
+    const chunks: Uint8Array[] = [];
+    let bytes = 0;
+    if (reader) {
+      try {
+        while (true) {
+          const next = await reader.read();
+          if (next.done) break;
+          bytes += next.value.byteLength;
+          if (bytes > 1_500_000) throw new Error("Response exceeded the bound");
+          chunks.push(next.value);
+        }
+      } catch {
+        await reader.cancel();
+        throw new Error("Unreadable bounded response");
+      } finally {
+        reader.releaseLock();
+      }
+    }
+    const responseBody = Buffer.concat(chunks).toString("utf8");
     const status = response.status;
     return {
       status: () => status,
       json: async () => {
         try {
-          return JSON.parse(body) as unknown;
+          return JSON.parse(responseBody) as unknown;
         } catch {
           throw new Error("The staging API returned unreadable JSON.");
         }
@@ -424,6 +462,358 @@ test("connected maturity journey against real staging", async ({
         main.getByRole("heading", { name: "Practice complete", exact: true }),
       ).toBeVisible();
       expect(vocabularyState(await readMeaning())).toEqual(before);
+    });
+
+    await test.step("complete and resume real mixed personal practice without review credit", async () => {
+      const readPractice = async () => {
+        const response = await safeStagingRequest(
+          context,
+          apiOrigin,
+          `${apiOrigin}/api/v1/practice-sessions`,
+        );
+        expect(response.status()).toBe(200);
+        const result = (await response.json()) as PracticeSessionsResponse;
+        expect(result.journey).toBeDefined();
+        return result.journey!;
+      };
+      const readCredit = async () => {
+        const missionResponse = await safeStagingRequest(
+          context,
+          apiOrigin,
+          `${apiOrigin}/api/v1/daily-mission`,
+        );
+        const progressResponse = await safeStagingRequest(
+          context,
+          apiOrigin,
+          `${apiOrigin}/api/v1/progress`,
+        );
+        expect(missionResponse.status()).toBe(200);
+        expect(progressResponse.status()).toBe(200);
+        return {
+          mission: (await missionResponse.json()) as DailyMission,
+          progress: (await progressResponse.json()) as Progress,
+        };
+      };
+      const baseline = await readPractice();
+      const creditBefore = await readCredit();
+      const seenKinds = new Set<string>();
+      let finishedLessons = 0;
+      // An existing lesson may have only one remaining step. At most one new
+      // lesson then establishes mixed formats without assuming its vocabulary,
+      // a fixed lesson length, a zero history or an empty active session.
+      for (let lesson = 0; lesson < 2 && seenKinds.size < 2; lesson++) {
+        const currentPath = await readPractice();
+        await page.goto(`${webOrigin}/practice`);
+        const path = main.getByRole("region", {
+          name: "Your learning path",
+          exact: true,
+        });
+        await expect(path).toBeVisible();
+        let current: PracticeSession;
+        if (currentPath.currentSession) {
+          const resume = path.getByRole("link", {
+            name: "Continue practice",
+            exact: true,
+          });
+          await expect(resume).toHaveAttribute(
+            "href",
+            `/practice/session/${currentPath.currentSession.id}`,
+          );
+          await resume.click();
+          const response = await safeStagingRequest(
+            context,
+            apiOrigin,
+            `${apiOrigin}/api/v1/practice-sessions/${currentPath.currentSession.id}`,
+          );
+          expect(response.status()).toBe(200);
+          current = (await response.json()) as PracticeSession;
+        } else {
+          const startedResponse = page.waitForResponse(
+            (response) =>
+              response.request().method() === "POST" &&
+              new URL(response.url()).origin === apiOrigin &&
+              new URL(response.url()).pathname === "/api/v1/practice-sessions",
+          );
+          await path
+            .getByRole("button", { name: "Start practice lesson", exact: true })
+            .click();
+          const response = await startedResponse;
+          expect(response.status()).toBe(200);
+          current = (await response.json()) as PracticeSession;
+        }
+        expect(current.mode).toBe("journey");
+        expect(current.status).toBe("in_progress");
+        const sessionId = current.id;
+        await expect(page).toHaveURL(
+          `${webOrigin}/practice/session/${sessionId}`,
+        );
+        const maximumActions =
+          (current.totalSteps - current.completedSteps) * 3 + 4;
+        let reloadedProgress = false;
+        const act = async (button: ReturnType<typeof main.getByRole>) => {
+          const previous = current;
+          const actionResponse = page.waitForResponse(
+            (response) =>
+              response.request().method() === "POST" &&
+              new URL(response.url()).origin === apiOrigin &&
+              new URL(response.url()).pathname ===
+                `/api/v1/practice-sessions/${sessionId}/actions`,
+          );
+          await button.click();
+          const response = await actionResponse;
+          expect(response.status()).toBe(200);
+          current = (await response.json()) as PracticeSession;
+          expect(current.id).toBe(sessionId);
+          expect(current.revision).toBe(previous.revision + 1);
+          expect(current.totalSteps).toBe(previous.totalSteps);
+          expect(current.completedSteps).toBeGreaterThanOrEqual(
+            previous.completedSteps,
+          );
+          if (!reloadedProgress) {
+            await page.reload();
+            const saved = await safeStagingRequest(
+              context,
+              apiOrigin,
+              `${apiOrigin}/api/v1/practice-sessions/${sessionId}`,
+            );
+            expect(saved.status()).toBe(200);
+            expect(await saved.json()).toMatchObject({
+              id: sessionId,
+              revision: current.revision,
+              completedSteps: current.completedSteps,
+              status: current.status,
+              feedback: current.feedback,
+            });
+            await expect(
+              main.getByRole("progressbar", {
+                name: "Practice progress",
+                exact: true,
+              }),
+            ).toHaveAttribute("value", String(current.completedSteps));
+            reloadedProgress = true;
+          }
+          return current;
+        };
+        let actions = 0;
+        while (current.status !== "completed" && actions < maximumActions) {
+          const step = current.currentStep;
+          expect(step).not.toBeNull();
+          if (!step) throw new Error("A saved practice step is missing.");
+          await expect(
+            main.getByRole("progressbar", {
+              name: "Practice progress",
+              exact: true,
+            }),
+          ).toHaveAttribute("value", String(current.completedSteps));
+          const taskHeading =
+            step.kind === "teach" ? step.wordText : step.prompt;
+          if (!taskHeading)
+            throw new Error("The saved practice task has no heading.");
+          await expect(
+            main.getByRole("heading", {
+              level: 1,
+              name: taskHeading,
+              exact: true,
+            }),
+          ).toBeVisible();
+          seenKinds.add(step.kind);
+          actions++;
+          if (current.canContinue) {
+            await act(
+              main.getByRole("button", {
+                name:
+                  current.completedSteps + 1 === current.totalSteps
+                    ? "Finish practice"
+                    : "Continue",
+                exact: true,
+              }),
+            );
+          } else if (current.feedback) {
+            await act(
+              main.getByRole("button", {
+                name: "Continue with help",
+                exact: true,
+              }),
+            );
+            expect(current.feedback?.assisted).toBe(true);
+            expect(current.feedback?.correct).toBe(false);
+            expect(current.canContinue).toBe(true);
+          } else if (step.kind === "listening_choice") {
+            // This acceptance does not pretend that a guessed listening answer
+            // is hearing comprehension or request extra provider clips.
+            const checked = await act(
+              main.getByRole("button", {
+                name: "Can’t listen now",
+                exact: true,
+              }),
+            );
+            expect(checked.feedback?.assisted).toBe(true);
+            expect(checked.canContinue).toBe(true);
+          } else if (
+            step.kind === "meaning_choice" ||
+            step.kind === "gap_choice"
+          ) {
+            const choice = step.choices[0];
+            if (!choice)
+              throw new Error("This practice has no answer choices.");
+            await main
+              .getByRole("radio", { name: choice.text, exact: true })
+              .check();
+            const checked = await act(
+              main.getByRole("button", { name: "Check answer", exact: true }),
+            );
+            expect(checked.feedback?.stepId).toBe(step.id);
+          } else if (step.kind === "sentence_build") {
+            const available = main.getByRole("group", {
+              name: "Available words",
+              exact: true,
+            });
+            // Choose the public displayed token order, then accept the real
+            // server result; correction uses an explicit assisted action.
+            for (const [index, token] of step.choices.entries()) {
+              await available
+                .getByRole("button", { name: token.text, exact: true })
+                .and(available.locator("button:enabled"))
+                .first()
+                .click();
+              await expect(
+                main
+                  .getByRole("group", { name: "Your sentence", exact: true })
+                  .getByRole("button"),
+              ).toHaveCount(index + 1);
+            }
+            const checked = await act(
+              main.getByRole("button", { name: "Check answer", exact: true }),
+            );
+            expect(checked.feedback?.stepId).toBe(step.id);
+          } else {
+            throw new Error(
+              "The active journey has an unsupported task format.",
+            );
+          }
+        }
+        expect(current.status).toBe("completed");
+        expect(current.completedSteps).toBe(current.totalSteps);
+        await expect(
+          main.getByRole("heading", { name: "Practice complete", exact: true }),
+        ).toBeVisible();
+        finishedLessons++;
+        const confirmed = await readPractice();
+        expect(confirmed.completedLessons).toBe(
+          baseline.completedLessons + finishedLessons,
+        );
+        expect(confirmed.currentSession).toBeNull();
+        await main
+          .getByRole("link", { name: "Back to your path", exact: true })
+          .click();
+        await expect(page).toHaveURL(`${webOrigin}/practice`);
+      }
+      expect(seenKinds.size).toBeGreaterThanOrEqual(2);
+      const persisted = await readPractice();
+      expect(persisted.completedLessons).toBe(
+        baseline.completedLessons + finishedLessons,
+      );
+      const creditAfter = await readCredit();
+      expect(creditAfter.progress.confidencePointsBalance).toBe(
+        creditBefore.progress.confidencePointsBalance,
+      );
+      expect(creditAfter.mission.reviewsCompleted).toBe(
+        creditAfter.mission.localDate === creditBefore.mission.localDate
+          ? creditBefore.mission.reviewsCompleted
+          : 0,
+      );
+      expect(vocabularyState(await readMeaning())).toEqual(before);
+    });
+
+    await test.step("decode actual bounded natural pronunciation and confirm its shared cache", async () => {
+      const getClip = async () => {
+        const response = await safeStagingRequest(
+          context,
+          apiOrigin,
+          `${apiOrigin}/api/v1/pronunciation`,
+          "POST",
+          { text: "invite" },
+        );
+        expect(
+          response.status(),
+          "Actual staging natural pronunciation must be available.",
+        ).toBe(200);
+        const clip = (await response.json()) as PronunciationAudio;
+        expect(
+          clip.voice === "luna",
+          "The configured natural voice must match.",
+        ).toBe(true);
+        expect(
+          clip.mimeType === "audio/mpeg",
+          "The clip must be MPEG audio.",
+        ).toBe(true);
+        expect(typeof clip.cacheHit === "boolean").toBe(true);
+        expect(typeof clip.audioBase64 === "string").toBe(true);
+        expect(
+          clip.audioBase64.length > 0 && clip.audioBase64.length <= 1_398_104,
+          "The encoded clip must stay within the one MiB audio bound.",
+        ).toBe(true);
+        const bytes = Buffer.from(clip.audioBase64, "base64");
+        expect(
+          bytes.toString("base64") === clip.audioBase64,
+          "The clip must contain canonical valid base64.",
+        ).toBe(true);
+        expect(bytes.byteLength >= 3 && bytes.byteLength <= 1_048_576).toBe(
+          true,
+        );
+        expect(
+          bytes.subarray(0, 3).toString("ascii") === "ID3" ||
+            (bytes[0] === 0xff && (bytes[1]! & 0xe0) === 0xe0),
+          "The returned clip must have an MP3 header.",
+        ).toBe(true);
+        return clip;
+      };
+      const first = await getClip();
+      const second = await getClip();
+      expect(
+        second.cacheHit,
+        "A successful replay must use the durable cache.",
+      ).toBe(true);
+      expect(
+        second.audioBase64 === first.audioBase64,
+        "The cached public clip must be byte-identical.",
+      ).toBe(true);
+      let decoded: { duration: number; sampleRate: number; channels: number };
+      try {
+        decoded = await page.evaluate(async (encoded) => {
+          const bytes = Uint8Array.from(atob(encoded), (value) =>
+            value.charCodeAt(0),
+          );
+          const audio = new AudioContext();
+          try {
+            const buffer = await audio.decodeAudioData(bytes.buffer);
+            return {
+              duration: buffer.duration,
+              sampleRate: buffer.sampleRate,
+              channels: buffer.numberOfChannels,
+            };
+          } finally {
+            await audio.close();
+          }
+        }, first.audioBase64);
+      } catch {
+        throw new Error(
+          "The actual public MP3 could not be decoded by the real browser.",
+        );
+      }
+      expect(
+        Number.isFinite(decoded.duration) && decoded.duration > 0,
+        "The real browser must decode a finite nonempty audio duration.",
+      ).toBe(true);
+      expect(decoded.sampleRate > 0 && decoded.channels > 0).toBe(true);
+      // Only the validated public word clip is retained for owner listening.
+      // Never attach API envelopes, cookies, headers or authenticated traces.
+      const samplePath = test.info().outputPath("natural-pronunciation-invite.mp3");
+      await writeFile(samplePath, Buffer.from(first.audioBase64, "base64"));
+      await test.info().attach("natural-pronunciation-invite.mp3", {
+        path: samplePath,
+        contentType: "audio/mpeg",
+      });
     });
 
     await test.step("read, start, grade and resume a new original story without replacing history", async () => {

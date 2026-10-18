@@ -22,10 +22,7 @@
 
 import { expect, test } from "@playwright/test";
 
-import {
-  formatViolations,
-  scanForAxeViolations,
-} from "./axe-helper.js";
+import { formatViolations, scanForAxeViolations } from "./axe-helper.js";
 
 test.describe("Home accessibility (VOC-031-T07a)", () => {
   test("Home renders with zero critical or serious axe-core violations at 1280x720", async ({
@@ -56,7 +53,7 @@ test.describe("Home accessibility (VOC-031-T07a)", () => {
     // reporting false-positive violations for half-rendered
     // markup.
     await expect(
-      page.getByRole("region", { name: /Today.s practice|Mission complete/ }),
+      page.getByRole("region", { name: "Review words" }),
     ).toBeVisible();
 
     const { criticalOrSerious } = await scanForAxeViolations(page);

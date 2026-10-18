@@ -49,7 +49,7 @@ async function setup(page: Page, theme = "light") {
     },
   ]);
   await page.goto("/reviews");
-  await target(page.getByRole("button", { name: "Start lesson", exact: true }));
+  await target(page.getByRole("button", { name: "Start review", exact: true }));
   await startReviewLesson(page);
 }
 async function noOverflow(page: Page) {

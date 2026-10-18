@@ -46,7 +46,10 @@ test("keeps lesson completion simple and optional writing available afterward", 
   await startReviewLesson(page);
   await answerReviewWord(page, "to make liquid flow into a container");
   await expect(
-    page.getByRole("heading", { name: "Lesson complete", exact: true }),
+    page.getByRole("heading", {
+      name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     page.getByText("1 word remembered for today.", { exact: true }),

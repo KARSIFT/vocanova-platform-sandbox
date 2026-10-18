@@ -140,6 +140,21 @@ func TestSavedWordStatesPostgreSQLUsesPersistedStatesAndDatabaseTime(t *testing.
 	defer cancel()
 
 	if _, err := db.ExecContext(ctx, `
+		CREATE TABLE user_word_knowledge (
+			user_id uuid NOT NULL,
+			meaning_id uuid NOT NULL,
+			self_reported_known boolean NOT NULL,
+			PRIMARY KEY (user_id, meaning_id)
+		);
+		CREATE TABLE daily_review_successes (
+			user_id uuid NOT NULL,
+			meaning_id uuid NOT NULL,
+			local_date date NOT NULL
+		);
+		CREATE TABLE user_settings (
+			user_id uuid PRIMARY KEY,
+			timezone text NOT NULL
+		);
 		CREATE TABLE user_words (
 			id uuid PRIMARY KEY,
 			user_id uuid NOT NULL,

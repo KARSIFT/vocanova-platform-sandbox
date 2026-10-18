@@ -18,7 +18,10 @@ test("optional writing after a lesson restores its unfinished draft on a same-us
   await startReviewLesson(page);
   await answerReviewWord(page, "to make liquid flow into a container");
   await expect(
-    page.getByRole("heading", { name: "Lesson complete", exact: true }),
+    page.getByRole("heading", {
+      name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.getByRole("textbox")).toHaveCount(0);
   await page

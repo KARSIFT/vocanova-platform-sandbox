@@ -37,6 +37,10 @@ async function openLessonQuestion(page: Page) {
 
 async function openListeningPractice(page: Page) {
   await page.goto("/practice");
+  await page
+    .getByRole("main")
+    .getByText("More practice", { exact: true })
+    .click();
   const opened = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&

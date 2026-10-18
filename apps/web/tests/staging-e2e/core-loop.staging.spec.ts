@@ -424,12 +424,23 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
 async function readReviewedTodayProgress(
   page: Page,
 ): Promise<ReviewedTodayProgress> {
-  const counter = page.getByRole("progressbar", {
-    name: "Reviews today",
-  });
-  await expect(counter).toBeVisible();
-  const reviewed = Number(await counter.getAttribute("aria-valuenow"));
-  const target = Number(await counter.getAttribute("aria-valuemax"));
+  const apiOrigin = stagingOrigin(
+    process.env.STAGING_API_BASE_URL ?? "https://api-staging.vocanova.site",
+    "api-staging.vocanova.site",
+  );
+  const mission = await readStagingState<DailyMission>(
+    page,
+    apiOrigin,
+    "/api/v1/daily-mission",
+  );
+  const counter = page
+    .getByRole("region", { name: "Review words", exact: true })
+    .getByText(/^Reviewed today:/);
+  await expect(counter).toHaveText(
+    `Reviewed today: ${mission.reviewsCompleted}`,
+  );
+  const reviewed = mission.reviewsCompleted;
+  const target = mission.reviewTarget;
   expect(Number.isFinite(reviewed)).toBe(true);
   expect(target).toBeGreaterThan(0);
   return { reviewed, target };
@@ -519,7 +530,7 @@ async function reviewOneCard(
       resume
         .or(getEnabledReviewPromptControl(page))
         .or(getTerminalReviewHeading(page))
-        .or(page.getByRole("button", { name: "Start lesson", exact: true }))
+        .or(page.getByRole("button", { name: "Start review", exact: true }))
         .first(),
     ).toBeVisible({ timeout: 120_000 });
     if (await resume.isVisible()) {
@@ -531,7 +542,7 @@ async function reviewOneCard(
     const readiness = await waitForReviewReadiness(page, 120_000);
     if (readiness === "terminal") {
       const next = page.getByRole("button", {
-        name: "Next lesson",
+        name: "Keep reviewing",
         exact: true,
         disabled: false,
       });
@@ -634,7 +645,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       await expect(page).toHaveURL(/\/home(\?|$)/);
       await expect(
         page.getByRole("region", {
-          name: /Today.s practice|Mission complete/,
+          name: "Review words",
           exact: true,
         }),
       ).toBeVisible();

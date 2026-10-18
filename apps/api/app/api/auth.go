@@ -87,6 +87,7 @@ type ConsumeMagicLinkOutput struct {
 type OAuthStartInput struct {
 	Body struct {
 		RedirectURI string `json:"redirectUri" format:"uri" doc:"The allowed OAuth redirect URI to return to"`
+		RememberMe  *bool  `json:"rememberMe,omitempty" doc:"Keep this device signed in for up to 30 days. False uses a browser-session cookie with a maximum 24-hour server expiry. Omitted preserves persistent sign-in."`
 	}
 }
 
@@ -181,7 +182,8 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		},
 	}, func(ctx context.Context, input *OAuthStartInput) (*OAuthStartOutput, error) {
 		c := authHumaContext(ctx)
-		url, stateToken, err := svc.OAuthStart(ctx, clientIPFromHuma(c), input.Body.RedirectURI)
+		persistent := input.Body.RememberMe == nil || *input.Body.RememberMe
+		url, stateToken, err := svc.OAuthStartWithPersistence(ctx, clientIPFromHuma(c), input.Body.RedirectURI, persistent)
 		if err != nil {
 			return nil, mapAuthError(err)
 		}
@@ -237,7 +239,7 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 			}
 			return nil, mapAuthError(err)
 		}
-		c.AppendHeader("Set-Cookie", svc.SessionCookie(token, session.ExpiresAt).String())
+		c.AppendHeader("Set-Cookie", svc.OAuthSessionCookie(token, session).String())
 		if _, csrfCookie := svc.IssueCSRFCookie(); csrfCookie != nil {
 			c.AppendHeader("Set-Cookie", csrfCookie.String())
 		}

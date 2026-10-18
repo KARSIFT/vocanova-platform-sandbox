@@ -66,3 +66,47 @@ func TestEnsureEmailIdentityConcurrentFirstUsePostgreSQL(t *testing.T) {
 	require.NoError(t, db.QueryRowContext(ctx, `SELECT user_id FROM external_identities WHERE provider = 'email' AND provider_subject = $1 AND deleted_at IS NULL`, emailAddr).Scan(&owner))
 	require.Equal(t, userID, owner)
 }
+
+func TestOAuthStateSessionPreferencePostgreSQL(t *testing.T) {
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN is not set")
+	}
+	db, err := sql.Open("postgres", dsn)
+	require.NoError(t, err)
+	defer db.Close()
+	ctx := context.Background()
+	require.NoError(t, db.PingContext(ctx))
+	repo := NewPostgreSQLRepository(db)
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	for _, persistent := range []bool{false, true} {
+		_, hash, err := NewTokenAndHash()
+		require.NoError(t, err)
+		created, err := repo.CreateOAuthState(ctx, hash, "test", "google", "https://example.test/home", now, now.Add(10*time.Minute), persistent)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, _ = db.ExecContext(context.Background(), `DELETE FROM oauth_states WHERE id = $1`, created.ID)
+		})
+		stored, err := repo.GetOAuthStateByTokenHash(ctx, hash)
+		require.NoError(t, err)
+		require.Equal(t, persistent, stored.SessionPersistent)
+		require.Equal(t, created.ID, stored.ID)
+		claimed, err := repo.ConsumeOAuthState(ctx, stored.ID, now)
+		require.NoError(t, err)
+		require.True(t, claimed)
+		claimed, err = repo.ConsumeOAuthState(ctx, stored.ID, now)
+		require.NoError(t, err)
+		require.False(t, claimed)
+	}
+	// Older deployed binaries omit the new column while a rollout is in flight.
+	// Their pending states must retain the previous persistent-session behavior.
+	_, hash, err := NewTokenAndHash()
+	require.NoError(t, err)
+	id := uuid.New()
+	_, err = db.ExecContext(ctx, `INSERT INTO oauth_states (id, token_hash, environment, provider, app_return_url, created_at, expires_at) VALUES ($1, $2, 'test', 'google', 'https://example.test/home', $3, $4)`, id, hash, now, now.Add(10*time.Minute))
+	require.NoError(t, err)
+	t.Cleanup(func() { _, _ = db.ExecContext(context.Background(), `DELETE FROM oauth_states WHERE id = $1`, id) })
+	stored, err := repo.GetOAuthStateByTokenHash(ctx, hash)
+	require.NoError(t, err)
+	require.True(t, stored.SessionPersistent)
+}

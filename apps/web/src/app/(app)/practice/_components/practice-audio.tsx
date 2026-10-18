@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { deviceSpeech, type PronunciationState } from "@/lib/speech";
+import {
+  deviceSpeech,
+  pronunciationCaption,
+  type PronunciationState,
+} from "@/lib/speech";
+import { SpeechSettings, useSpeechPreferences } from "@/ui/pronunciation";
 
 import { secondaryAction, textLink } from "./practice-styles";
 
@@ -11,7 +16,8 @@ import { secondaryAction, textLink } from "./practice-styles";
 export function PracticeAudio({ text }: { text: string }) {
   const owner = useRef(Symbol("practice-audio"));
   const [state, setState] = useState<PronunciationState>({ status: "idle" });
-  const [slow, setSlow] = useState(false);
+  const { preferences, update } = useSpeechPreferences();
+  const slow = preferences.rate === 0.7;
   const descriptionId = useId();
   const active = state.status === "starting" || state.status === "playing";
 
@@ -31,7 +37,7 @@ export function PracticeAudio({ text }: { text: string }) {
           aria-describedby={descriptionId}
           onClick={() => {
             if (active) deviceSpeech.stop(owner.current);
-            else deviceSpeech.play(owner.current, text, slow, setState);
+            else deviceSpeech.play(owner.current, text, false, setState);
           }}
         >
           {active ? "Stop audio" : "Play audio"}
@@ -41,7 +47,7 @@ export function PracticeAudio({ text }: { text: string }) {
           className={`${secondaryAction} aria-pressed:border-primary-600 aria-pressed:bg-primary-50 aria-pressed:text-primary-800`}
           aria-pressed={slow}
           disabled={active}
-          onClick={() => setSlow((previous) => !previous)}
+          onClick={() => update({ rate: slow ? 0.85 : 0.7 })}
         >
           Slower audio
         </button>
@@ -52,8 +58,9 @@ export function PracticeAudio({ text }: { text: string }) {
         className="mt-2 text-sm text-neutral-600"
       >
         {state.message ??
-          "Device pronunciation. Play it again whenever you need."}
+          `${pronunciationCaption(state)}. Play it again whenever you need.`}
       </p>
+      <SpeechSettings disabled={active} />
       {(state.status === "unavailable" || state.status === "error") && (
         <div className="mt-3 rounded-xl bg-secondary-50 p-4 text-neutral-800">
           <p>

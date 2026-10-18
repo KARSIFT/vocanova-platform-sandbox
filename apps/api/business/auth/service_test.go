@@ -556,6 +556,60 @@ func TestCleanupRemovesExpired(t *testing.T) {
 	assert.Len(t, repo.magicLinks, 0)
 }
 
+// Independent sign-in flows retain their own preference through either order
+// of callback completion. Restoring a short cookie cannot extend server expiry.
+func TestOAuthSessionPersistenceIsBoundToEachState(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "persistence-sub", Email: "choice@example.com", EmailVerified: true}
+	svc, _, _, c := testServiceWithOAuth(t, NewFakeOAuthProvider(identity))
+	ctx := context.Background()
+	_, longState, err := svc.OAuthStartWithPersistence(ctx, "1.2.3.4", "https://test.example.com/app", true)
+	require.NoError(t, err)
+	_, shortState, err := svc.OAuthStartWithPersistence(ctx, "1.2.3.4", "https://test.example.com/app", false)
+	require.NoError(t, err)
+	_, short, shortToken, _, err := svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", shortState, shortState)
+	require.NoError(t, err)
+	require.False(t, short.CookiePersistent)
+	require.Equal(t, c.Now().Add(24*time.Hour), short.ExpiresAt)
+	require.True(t, svc.OAuthSessionCookie(shortToken, short).Expires.IsZero())
+	_, long, longToken, _, err := svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", longState, longState)
+	require.NoError(t, err)
+	require.True(t, long.CookiePersistent)
+	require.Equal(t, c.Now().Add(30*24*time.Hour), long.ExpiresAt)
+	require.Equal(t, long.ExpiresAt, svc.OAuthSessionCookie(longToken, long).Expires)
+	c.Advance(24 * time.Hour)
+	_, err = svc.ValidateSession(ctx, shortToken)
+	require.ErrorIs(t, err, ErrAuthenticationRequired)
+	_, err = svc.ValidateSession(ctx, longToken)
+	require.NoError(t, err)
+	require.NoError(t, svc.Logout(ctx, longToken))
+	_, err = svc.ValidateSession(ctx, longToken)
+	require.ErrorIs(t, err, ErrAuthenticationRequired)
+}
+
+func TestOAuthSessionPersistenceRespectsConfiguredLifetime(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		configured time.Duration
+		persistent bool
+		expected   time.Duration
+	}{
+		{"shorter policy persistent", 6 * time.Hour, true, 6 * time.Hour},
+		{"shorter policy session", 6 * time.Hour, false, 6 * time.Hour},
+		{"persistent cap", 90 * 24 * time.Hour, true, 30 * 24 * time.Hour},
+		{"session cap", 90 * 24 * time.Hour, false, 24 * time.Hour},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			svc, _, _, c := testServiceWithOAuth(t, NewFakeOAuthProvider(&OAuthIdentity{Subject: "sub", Email: "policy@example.com", EmailVerified: true}))
+			svc.cfg.SessionLifetime = tc.configured
+			_, state, err := svc.OAuthStartWithPersistence(context.Background(), "1.2.3.4", "https://test.example.com/app", tc.persistent)
+			require.NoError(t, err)
+			_, session, _, _, err := svc.OAuthCallback(context.Background(), "1.2.3.4", "auth-code", state, state)
+			require.NoError(t, err)
+			require.Equal(t, c.Now().Add(tc.expected), session.ExpiresAt)
+		})
+	}
+}
+
 func TestOAuthStartCreatesStateAndReturnsURL(t *testing.T) {
 	oauth := NewFakeOAuthProvider(&OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true, DisplayName: "User", AvatarURL: "https://example.com/avatar.png"})
 	svc, repo, _, _ := testServiceWithOAuth(t, oauth)

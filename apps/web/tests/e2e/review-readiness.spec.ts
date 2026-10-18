@@ -80,7 +80,9 @@ test.describe("Review readiness", () => {
     }
 
     expect(await waitForReviewReadiness(page)).toBe("terminal");
-    await expect(getTerminalReviewHeading(page)).toHaveText("Lesson complete");
+    await expect(getTerminalReviewHeading(page)).toHaveText(
+      "You’ve finished your review",
+    );
     await page.goto("/reviews");
     expect(await waitForReviewReadiness(page)).toBe("terminal");
     await expect(getTerminalReviewHeading(page)).toHaveText(
@@ -88,7 +90,9 @@ test.describe("Review readiness", () => {
     );
     await page.goto("/home");
     await expect(
-      page.getByRole("progressbar", { name: "Reviews today" }),
-    ).toHaveAttribute("aria-valuenow", "5");
+      page
+        .getByRole("region", { name: "Review words", exact: true })
+        .getByText(/^Reviewed today:/),
+    ).toHaveText("Reviewed today: 5");
   });
 });

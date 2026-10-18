@@ -120,22 +120,52 @@ const dictionaryAttribution = {
   provider: "WordNet 3.0",
   providerUrl: "https://wordnet.princeton.edu/",
   sourceUrls: ["https://wordnet.princeton.edu/"],
-  licenses: [{
-    name: "WordNet 3.0",
-    url: "https://wordnet.princeton.edu/license-and-commercial-use",
-    text: dictionaryLicense,
-  }],
+  licenses: [
+    {
+      name: "WordNet 3.0",
+      url: "https://wordnet.princeton.edu/license-and-commercial-use",
+      text: dictionaryLicense,
+    },
+  ],
 };
 const dictionaryFixtures = {
   serendipity: {
     word: "serendipity",
-    meanings: [{ partOfSpeech: "noun", definitions: [{ definition: "Finding something useful or pleasant when you are not looking for it.", example: "By serendipity, she found the book she needed." }] }],
+    meanings: [
+      {
+        partOfSpeech: "noun",
+        definitions: [
+          {
+            definition:
+              "Finding something useful or pleasant when you are not looking for it.",
+            example: "By serendipity, she found the book she needed.",
+          },
+        ],
+      },
+    ],
   },
   books: {
     word: "book",
     meanings: [
-      { partOfSpeech: "noun", definitions: [{ definition: "A written work with pages bound together.", example: "She opened a book." }, { definition: "A written record of business accounts." }] },
-      { partOfSpeech: "verb", definitions: [{ definition: "Arrange to use a room, seat, or service at a future time." }] },
+      {
+        partOfSpeech: "noun",
+        definitions: [
+          {
+            definition: "A written work with pages bound together.",
+            example: "She opened a book.",
+          },
+          { definition: "A written record of business accounts." },
+        ],
+      },
+      {
+        partOfSpeech: "verb",
+        definitions: [
+          {
+            definition:
+              "Arrange to use a room, seat, or service at a future time.",
+          },
+        ],
+      },
     ],
   },
 };
@@ -535,7 +565,10 @@ function buildDueWords(state, { fixtureDueWordCount, limit }) {
   if (fixtureDueWordCount > 0) {
     for (let index = 1; index <= fixtureDueWordCount; index += 1) {
       const meaningId = `fixture-meaning-${index}`;
-      if (state.reviewedMeaningIds.has(meaningId)) {
+      if (
+        state.reviewedMeaningIds.has(meaningId) ||
+        state.dailyDeferredMeaningIds?.has(meaningId)
+      ) {
         continue;
       }
       items.push({
@@ -558,7 +591,10 @@ function buildDueWords(state, { fixtureDueWordCount, limit }) {
   }
 
   for (const meaningId of state.savedMeaningIds) {
-    if (state.reviewedMeaningIds.has(meaningId)) {
+    if (
+      state.reviewedMeaningIds.has(meaningId) ||
+      state.dailyDeferredMeaningIds?.has(meaningId)
+    ) {
       continue;
     }
     const { word, meaning } = findCanonicalMeaning(meaningId);
@@ -856,6 +892,16 @@ const server = createServer(async (req, res) => {
     `http://${req.headers.host ?? `${HOST}:${PORT}`}`,
   );
   const cookies = parseCookies(req.headers.cookie);
+  if (req.method === "POST" && url.pathname === "/api/v1/pronunciation") {
+    // Browser tests never contact the paid provider. Natural-audio cases
+    // explicitly intercept a synthetic clip; all other cases use device speech.
+    await readJsonBody(req);
+    logLine(req, 503);
+    jsonResponse(res, 503, {
+      detail: "Natural pronunciation is unavailable in this synthetic fixture.",
+    });
+    return;
+  }
   const requestedDelayMs = Number(cookies.e2e_response_delay_ms ?? 0);
   if (Number.isFinite(requestedDelayMs) && requestedDelayMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, requestedDelayMs));
@@ -1035,16 +1081,40 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (await handleDailyDiscovery({ req, res, url, cookies, state: getSessionState(cookies), jsonResponse, readJsonBody, checkCsrf, logLine, dueWords: () => buildDueWords(getSessionState(cookies), { fixtureDueWordCount: Number(cookies.e2e_review_fixture_count ?? 0), limit: Number.POSITIVE_INFINITY }) })) return;
+  if (
+    await handleDailyDiscovery({
+      req,
+      res,
+      url,
+      cookies,
+      state: getSessionState(cookies),
+      jsonResponse,
+      readJsonBody,
+      checkCsrf,
+      logLine,
+      dueWords: () =>
+        buildDueWords(getSessionState(cookies), {
+          fixtureDueWordCount: Number(cookies.e2e_review_fixture_count ?? 0),
+          limit: Number.POSITIVE_INFINITY,
+        }),
+    })
+  )
+    return;
 
   if (req.method === "GET" && url.pathname === "/api/v1/dictionary") {
     const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
     if (!q || q.length > 48 || !/^[a-z]+(?:['-][a-z]+)*$/.test(q)) {
       logLine(req, 400);
-      jsonResponse(res, 400, { error: "Enter one English word of up to 48 letters." });
+      jsonResponse(res, 400, {
+        error: "Enter one English word of up to 48 letters.",
+      });
       return;
     }
-    const fixtureStatus = { unavailable: 503, rate_limited: 429, unauthorized: 401 }[cookies.e2e_dictionary];
+    const fixtureStatus = {
+      unavailable: 503,
+      rate_limited: 429,
+      unauthorized: 401,
+    }[cookies.e2e_dictionary];
     if (fixtureStatus) {
       logLine(req, fixtureStatus);
       jsonResponse(res, fixtureStatus, { error: cookies.e2e_dictionary });
@@ -1052,7 +1122,13 @@ const server = createServer(async (req, res) => {
     }
     const entry = dictionaryFixtures[q];
     logLine(req, entry ? 200 : 404);
-    jsonResponse(res, entry ? 200 : 404, entry ? { ...entry, attribution: dictionaryAttribution } : { error: "Word not found" });
+    jsonResponse(
+      res,
+      entry ? 200 : 404,
+      entry
+        ? { ...entry, attribution: dictionaryAttribution }
+        : { error: "Word not found" },
+    );
     return;
   }
 

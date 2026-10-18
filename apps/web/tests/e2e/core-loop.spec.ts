@@ -75,7 +75,9 @@ const SENTENCE_PRIVACY_REMINDER =
   "Avoid personal details such as contact information or passwords.";
 
 async function expectSentencePracticePrivacyReminder(page: Page) {
-  await expect(page.getByText(SENTENCE_PRIVACY_REMINDER)).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText(SENTENCE_PRIVACY_REMINDER),
+  ).toBeVisible();
 }
 
 async function expectMinimumTouchTarget(locator: Locator) {
@@ -213,7 +215,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await page.goto("/home");
     await expect(page).toHaveURL(/\/home(\?|$)/);
     const mission = page.getByRole("region", {
-      name: /Today.s practice|Mission complete/,
+      name: "Review words",
       exact: true,
     });
     await expect(mission).toBeVisible();
@@ -222,8 +224,10 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
       mission.getByRole("link", { name: "Discover words", exact: true }),
     ).toHaveAttribute("href", "/discovery");
     await expect(
-      mission.getByRole("progressbar", { name: "Reviews today" }),
-    ).toHaveAttribute("aria-valuenow", "0");
+      page
+        .getByRole("region", { name: "Review words", exact: true })
+        .getByText(/^Reviewed today:/),
+    ).toHaveText("Reviewed today: 0");
 
     // ----- 3. Discover.
     await page.goto("/courses");
@@ -298,9 +302,13 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // A successful save exposes Optional writing inside Personal tools without
     // a manual reload. Opening it is deliberate and retains the mounted draft.
     await openPersonalTools(page);
-    const wordPractice = page.locator("summary").filter({ hasText: "Optional writing" });
+    const wordPractice = page
+      .locator("summary")
+      .filter({ hasText: "Optional writing" });
     await expect(wordPractice).toBeVisible();
-    await expect(page.getByRole("heading", { name: /Practice with pour/ })).toBeHidden();
+    await expect(
+      page.getByRole("heading", { name: /Practice with pour/ }),
+    ).toBeHidden();
     await wordPractice.focus();
     await page.keyboard.press("Enter");
     await expect(
@@ -311,14 +319,26 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // ----- 5. A server-graded meaning answer counts once for today.
     await page.goto("/reviews");
     await startReviewLesson(page);
-    await expect(page.getByRole("heading", { name: "pour", exact: true, level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "pour", exact: true, level: 1 }),
+    ).toBeVisible();
     await answerReviewWord(page, "to make liquid flow into a container");
-    await expect(page.getByRole("heading", { name: "Lesson complete", exact: true, level: 1 })).toBeFocused();
-    await expect(page.getByText("1 word remembered for today.", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        exact: true,
+        level: 1,
+      }),
+    ).toBeFocused();
+    await expect(
+      page.getByText("1 word remembered for today.", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole("textbox")).toHaveCount(0);
     // Writing is a deliberate personal tool, separate from today's recall.
     await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
-    await expect(page.getByRole("heading", { name: /Practice with pour/ })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /Practice with pour/ }),
+    ).toBeVisible();
     await expectSentencePracticePrivacyReminder(page);
 
     // ----- 6. Sentence feedback + deterministic AI.
@@ -405,14 +425,23 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // The confirmed daily-lesson answer updates the server mission counter.
     await page.goto("/home");
     await expect(
-      page.getByRole("progressbar", { name: "Reviews today" }),
-    ).toHaveAttribute("aria-valuenow", "1");
+      page
+        .getByRole("region", { name: "Review words", exact: true })
+        .getByText(/^Reviewed today:/),
+    ).toHaveText("Reviewed today: 1");
 
     // Home leads with discovery and the saved word; writing stays optional.
-    await expect(page.getByRole("textbox", { name: /Write a sentence using/ })).toHaveCount(0);
+    await expect(
+      page.getByRole("textbox", { name: /Write a sentence using/ }),
+    ).toHaveCount(0);
     await page.getByRole("link", { name: "pour", exact: true }).click();
     await openOptionalWriting(page);
-    await expect(page.getByRole("textbox", { name: "Write a sentence using pour", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("textbox", {
+        name: "Write a sentence using pour",
+        exact: true,
+      }),
+    ).toBeVisible();
     await expectSentencePracticePrivacyReminder(page);
 
     // ----- 8. Settings change.

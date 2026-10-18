@@ -1,5 +1,16 @@
 # Vocanova current product state
 
+## Separate review and personal practice — integrated delivery, 18 October 2026
+
+The consolidated delivery separates due-word review from a durable mixed
+practice path, adds next-review choices and OAuth sign-in persistence, and
+introduces bounded cached natural pronunciation with slower playback. It also
+preserves the selected discovery range on exit and completes the public
+learning-history export projection. See [behavior and design](../design/review-practice-and-pronunciation.md)
+for contracts and limitations. The [release evidence](release-readiness.md)
+separates local verification from hosted acceptance and the subsequent staging
+release. A successful local branch does not establish deployment.
+
 ## Discovery and daily review — integrated delivery, 17 October 2026
 
 The current delivery makes the complete 10,000-word knowledge map the main

@@ -87,12 +87,20 @@ func TestPracticeAPIAuthCSRFContractAndErrors(t *testing.T) {
 	w := send("POST", base, body, repo.owner, true)
 	require.Equal(t, 200, w.Code, w.Body.String())
 	require.Equal(t, "airport", repo.request.LessonKey)
+	w = send("POST", base, `{"mode":"journey"}`, repo.owner, true)
+	require.Equal(t, 200, w.Code, w.Body.String())
+	require.Equal(t, "journey", repo.request.Mode)
+	require.Equal(t, 422, send("POST", base, `{"mode":"journey","reviewCredit":100}`, repo.owner, true).Code)
+	require.Equal(t, 400, send("POST", base, `{"mode":"journey","lessonKey":"airport"}`, repo.owner, true).Code)
 	require.Equal(t, 404, send("GET", single, "", uuid.New(), false).Code)
 	action := `{"stepId":"opaque-step","expectedRevision":2,"clientActionId":"answer-one","action":"answer","typedAnswer":"boarding pass"}`
 	w = send("POST", single+"/actions", action, repo.owner, true)
 	require.Equal(t, 200, w.Code, w.Body.String())
 	require.Equal(t, "boarding pass", repo.action.TypedAnswer)
 	require.Equal(t, 2, repo.action.ExpectedRevision)
+	w = send("POST", single+"/actions", `{"stepId":"sentence-step","expectedRevision":3,"clientActionId":"tap-answer","action":"answer","tokenIds":["opaque-b","opaque-a"]}`, repo.owner, true)
+	require.Equal(t, 200, w.Code, w.Body.String())
+	require.Equal(t, []string{"opaque-b", "opaque-a"}, repo.action.TokenIDs)
 	for _, tc := range []struct {
 		err    error
 		status int

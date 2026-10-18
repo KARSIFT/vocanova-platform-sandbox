@@ -5,6 +5,8 @@ import { formatViolations, scanForAxeViolations } from "./axe-helper";
 const workMeaning = "b571a540-89bb-533b-be81-9cedf443a64a";
 const studyMeaning = "f582a137-c77d-58df-942e-884fe336cd64";
 
+type TeachingSpeechCall = { text: string; lang: string; rate: number };
+
 test.beforeEach(async ({ context, baseURL }) => {
   if (!baseURL) throw new Error("Missing app URL");
   await context.addCookies([
@@ -81,18 +83,25 @@ for (const theme of ["light", "dark"] as const) {
     await page.addInitScript(() => {
       type Utterance = {
         text: string;
+        lang: string;
+        rate: number;
         onstart?: () => void;
         onend?: () => void;
       };
-      const capture: string[] = [];
-      (window as unknown as { __teachingSpeech: string[] }).__teachingSpeech =
-        capture;
+      const capture: TeachingSpeechCall[] = [];
+      (
+        window as unknown as { __teachingSpeech: TeachingSpeechCall[] }
+      ).__teachingSpeech = capture;
       const synth = {
         speaking: false,
         pending: false,
         getVoices: () => [{ lang: "en-GB", localService: true, default: true }],
         speak: (utterance: Utterance) => {
-          capture.push(utterance.text);
+          capture.push({
+            text: utterance.text,
+            lang: utterance.lang,
+            rate: utterance.rate,
+          });
           utterance.onstart?.();
           utterance.onend?.();
         },
@@ -142,9 +151,23 @@ for (const theme of ["light", "dark"] as const) {
         name: "Slow pronunciation of combination: That sounds good; sounds good to me",
         exact: true,
       });
-      await slow.focus();
-      await page.keyboard.press("Space");
+      if (route === "/vocabulary/sounds-good") {
+        await expect(slow).toHaveAttribute("aria-pressed", "false");
+        await slow.focus();
+        await page.keyboard.press("Space");
+      }
+      // The chosen speed is shared with the saved detail after navigation.
       await expect(slow).toHaveAttribute("aria-pressed", "true");
+      expect(
+        await page.evaluate(
+          () =>
+            (
+              window as unknown as {
+                __teachingSpeech: TeachingSpeechCall[];
+              }
+            ).__teachingSpeech,
+        ),
+      ).toEqual([]);
       await phrase
         .getByRole("button", {
           name: "Listen to combination: That sounds good; sounds good to me",
@@ -152,13 +175,25 @@ for (const theme of ["light", "dark"] as const) {
         })
         .focus();
       await page.keyboard.press("Enter");
-      expect(
-        await page.evaluate(
-          () =>
-            (window as unknown as { __teachingSpeech: string[] })
-              .__teachingSpeech,
-        ),
-      ).toEqual(["That sounds good; sounds good to me"]);
+      // Natural audio can fall back asynchronously; assert actual playback.
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              (
+                window as unknown as {
+                  __teachingSpeech: TeachingSpeechCall[];
+                }
+              ).__teachingSpeech,
+          ),
+        )
+        .toEqual([
+          {
+            text: "That sounds good; sounds good to me",
+            lang: "en-GB",
+            rate: 0.7,
+          },
+        ]);
       await expect(
         main.getByText(
           "Use sounds good for a singular idea: That sounds good. With plural plans, use sound: Those plans sound good.",

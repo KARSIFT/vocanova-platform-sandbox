@@ -291,6 +291,12 @@ func (s *Service) ensureEmailIdentity(ctx context.Context, userID uuid.UUID, ema
 // URL and the raw state token to set as a cookie. The appReturnURL is the
 // application destination the user should be sent to after successful callback.
 func (s *Service) OAuthStart(ctx context.Context, clientIP, appReturnURL string) (string, string, error) {
+	return s.OAuthStartWithPersistence(ctx, clientIP, appReturnURL, true)
+}
+
+// OAuthStartWithPersistence binds the learner's session choice to the single-use
+// server-side OAuth state. Callback query parameters cannot change this choice.
+func (s *Service) OAuthStartWithPersistence(ctx context.Context, clientIP, appReturnURL string, persistent bool) (string, string, error) {
 	if s.killSwitches != nil && !s.killSwitches.OAuthEnabled {
 		return "", "", ErrOAuthDisabled
 	}
@@ -315,7 +321,7 @@ func (s *Service) OAuthStart(ctx context.Context, clientIP, appReturnURL string)
 	if err != nil {
 		return "", "", err
 	}
-	if _, err := s.repo.CreateOAuthState(ctx, hash, s.cfg.Environment, "google", appReturnURL, now, expiresAt); err != nil {
+	if _, err := s.repo.CreateOAuthState(ctx, hash, s.cfg.Environment, "google", appReturnURL, now, expiresAt, persistent); err != nil {
 		return "", "", fmt.Errorf("create oauth state: %w", err)
 	}
 
@@ -392,10 +398,19 @@ func (s *Service) OAuthCallback(ctx context.Context, clientIP, code, state, cook
 		return nil, nil, "", "", ErrUserDisabled
 	}
 
-	_, session, token, err := s.issueSession(ctx, user)
+	lifetime := s.cfg.SessionLifetime
+	maximum := 30 * 24 * time.Hour
+	if !ostate.SessionPersistent {
+		maximum = 24 * time.Hour
+	}
+	if lifetime > maximum {
+		lifetime = maximum
+	}
+	_, session, token, err := s.issueSessionWithLifetime(ctx, user, lifetime)
 	if err != nil {
 		return nil, nil, "", "", err
 	}
+	session.CookiePersistent = ostate.SessionPersistent
 	return user, session, token, ostate.AppReturnURL, nil
 }
 
@@ -451,8 +466,12 @@ func (s *Service) allowedAppReturnURL(uri string) bool {
 }
 
 func (s *Service) issueSession(ctx context.Context, user *User) (*User, *Session, string, error) {
+	return s.issueSessionWithLifetime(ctx, user, s.cfg.SessionLifetime)
+}
+
+func (s *Service) issueSessionWithLifetime(ctx context.Context, user *User, lifetime time.Duration) (*User, *Session, string, error) {
 	now := s.clock.Now()
-	expiresAt := now.Add(s.cfg.SessionLifetime)
+	expiresAt := now.Add(lifetime)
 	token, hash, err := generateToken()
 	if err != nil {
 		return nil, nil, "", err
@@ -549,6 +568,17 @@ func (s *Service) Cleanup(ctx context.Context) error {
 // SessionCookie writes a session cookie for the given token.
 func (s *Service) SessionCookie(token string, expiresAt time.Time) *http.Cookie {
 	return SessionCookie(s.cfg.Cookie, token, expiresAt)
+}
+
+// OAuthSessionCookie respects the choice bound to the completed OAuth state.
+// A browser-session cookie has no persistent expiry; server expiry still applies
+// even if a browser restores that cookie after restarting.
+func (s *Service) OAuthSessionCookie(token string, session *Session) *http.Cookie {
+	cookie := s.SessionCookie(token, session.ExpiresAt)
+	if !session.CookiePersistent {
+		cookie.Expires = time.Time{}
+	}
+	return cookie
 }
 
 // ClearSessionCookie writes a cookie that deletes the session.

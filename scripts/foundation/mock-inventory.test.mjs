@@ -34,9 +34,16 @@ test("current delivery registers only the reviewed learning feature boundaries",
     "/api/v1/daily-lessons/current",
     "/api/v1/daily-lessons/{sessionId}",
     "/api/v1/daily-lessons/{sessionId}/actions",
+    "/api/v1/pronunciation",
   ])
     assert.equal(isRegisteredAPIPath(route), true, route);
-  for (const module of ["lessons", "practice", "wordknowledge", "achievements"])
+  for (const module of [
+    "lessons",
+    "practice",
+    "wordknowledge",
+    "achievements",
+    "pronunciation",
+  ])
     assert.equal(isRegisteredBusinessModule(module), true, module);
   for (const schema of [
     "lessonaction.go",
@@ -66,6 +73,8 @@ test("registered feature families do not admit invented routes, modules, or sche
     "/api/v1/daily-lessons/invalid/actions",
     "/api/v1/daily-lessons/{sessionId}/rewards",
     "/api/v1/lesson-sessions/",
+    "/api/v1/pronunciation/admin",
+    "/api/v1/pronunciation/learner-text",
     "/api/v1/meaning-knowledge/",
   ])
     assert.equal(isRegisteredAPIPath(route), false, route);
@@ -256,6 +265,7 @@ test("learning route sources and exact migration table inventories remain bounde
     "stories.go",
     "daily_lessons.go",
     "knowledge_map.go",
+    "pronunciation.go",
   ]) {
     const source = readFileSync(
       path.join(root, "apps/api/app/api", file),
@@ -273,6 +283,7 @@ test("learning route sources and exact migration table inventories remain bounde
     "20261004140000_original_stories.sql",
     "20261017100000_daily_lessons.sql",
     "20261017100001_knowledge_catalog.sql",
+    "20261018130000_pronunciation_audio.sql",
   ]) {
     assert.equal(isRegisteredMigrationFile(migration), true, migration);
     const source = readFileSync(

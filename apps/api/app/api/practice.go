@@ -27,7 +27,7 @@ type ListPracticeOutput struct{ Body practice.List }
 func RegisterPractice(api huma.API, svc *practice.Service, authSvc *auth.Service) {
 	read := []func(huma.Context, func(huma.Context)){RequireAuth()}
 	write := []func(huma.Context, func(huma.Context)){RequireAuth(), CSRFMiddleware(authSvc)}
-	huma.Register(api, huma.Operation{OperationID: "ListPracticeSessions", Method: http.MethodGet, Path: "/api/v1/practice-sessions", Summary: "Recent practice sessions and total supported unresolved mistakes", Tags: []string{"Practice"}, Middlewares: read}, func(ctx context.Context, _ *struct{}) (*ListPracticeOutput, error) {
+	huma.Register(api, huma.Operation{OperationID: "ListPracticeSessions", Method: http.MethodGet, Path: "/api/v1/practice-sessions", Summary: "Confirmed personal practice journey, recent sessions and supported unresolved mistakes", Tags: []string{"Practice"}, Middlewares: read}, func(ctx context.Context, _ *struct{}) (*ListPracticeOutput, error) {
 		out, err := svc.List(ctx, RequesterUserID(ctx))
 		if err != nil {
 			return nil, mapPracticeError(err)
