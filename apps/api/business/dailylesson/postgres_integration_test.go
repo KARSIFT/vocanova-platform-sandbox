@@ -1096,3 +1096,79 @@ func TestPostgreSQLLegacyActiveSiblingPruningPreservesEarnedAnswers(t *testing.T
 	require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM review_attempts WHERE user_id=$1`, f.u).Scan(&attempts))
 	require.Equal(t, 2, attempts, "passive sibling pruning grants neither an attempt nor credit")
 }
+
+// advancingOperationClock crosses learner midnight on the second observation.
+// It is deliberately shared with the review repository in one subcase, so the
+// entire transaction must use the daily action's single server-owned snapshot.
+type advancingOperationClock struct {
+	first, later time.Time
+	calls        int
+}
+
+func (c *advancingOperationClock) Now() time.Time {
+	c.calls++
+	if c.calls == 1 {
+		return c.first
+	}
+	return c.later
+}
+
+func TestPostgreSQLDailyActionUsesOneTimestampAcrossLearnerMidnight(t *testing.T) {
+	for _, sharedReviewClock := range []bool{false, true} {
+		name := "final_projection_clock"
+		if sharedReviewClock {
+			name = "shared_review_clock"
+		}
+		t.Run(name, func(t *testing.T) {
+			f := setup(t, 2)
+			// UTC date stays fixed while the learner-local date changes.
+			before := time.Date(2026, 10, 17, 20, 29, 59, 0, time.UTC)
+			after := before.Add(2 * time.Second)
+			gam := gamification.NewService(gamification.NewRepository(f.db))
+			mis := missions.NewService(missions.NewRepository(f.db), gam)
+			reviewClock := clock.Clock(clock.Fixed{T: before})
+			f.review = reviews.NewPostgreSQLRepository(f.db, reviewClock, reviews.WithGamificationService(gam), reviews.WithMissionsService(mis))
+			f.svc = NewService(f.db, f.review, clock.Fixed{T: before})
+			session, err := f.svc.Start(t.Context(), f.u, "midnight-start")
+			require.NoError(t, err)
+			frozen := f.state(t, session)
+			w := frozen.Words[frozen.Queue[0]]
+			operationClock := &advancingOperationClock{first: before, later: after}
+			f.svc.clock = operationClock
+			if sharedReviewClock {
+				f.review = reviews.NewPostgreSQLRepository(f.db, operationClock, reviews.WithGamificationService(gam), reviews.WithMissionsService(mis))
+				f.svc.reviews = f.review
+			}
+			action := Action{StepID: session.CurrentStep.ID, ExpectedRevision: session.Revision, ClientActionID: "midnight-answer", Action: "answer", ChoiceID: w.AnswerID}
+			answered, err := f.svc.Act(t.Context(), f.u, frozen.ID, action, "midnight-answer")
+			require.NoError(t, err)
+			require.True(t, answered.Feedback.Credited)
+			require.Equal(t, 1, answered.CreditedToday, "the action response and receipt use the captured learner day")
+			require.Equal(t, before, answered.UpdatedAt)
+			var auditAt, answeredAt, lastReviewAt, nextReviewAt, receiptAt time.Time
+			var localDate string
+			require.NoError(t, f.db.QueryRow(`SELECT a.created_at,a.answered_at,uw.last_reviewed_at,uw.next_review_at,d.local_date::text,d.created_at FROM review_attempts a JOIN user_words uw ON uw.id=a.user_word_id JOIN daily_review_successes d ON d.review_attempt_id=a.id WHERE a.user_id=$1`, f.u).Scan(&auditAt, &answeredAt, &lastReviewAt, &nextReviewAt, &localDate, &receiptAt))
+			require.Equal(t, before, auditAt, "audit eligibility uses the operation's server time")
+			require.Equal(t, before, answeredAt)
+			require.Equal(t, before, lastReviewAt)
+			require.Equal(t, before, receiptAt)
+			require.Equal(t, before.Add(24*time.Hour), nextReviewAt)
+			require.Equal(t, "2026-10-17", localDate)
+			require.Equal(t, 1, operationClock.calls, "nested review and projection cannot resample the operation clock")
+			// A retry after midnight returns exactly the committed response and
+			// never samples a new time or grants another answer/credit.
+			replayed, err := f.svc.Act(t.Context(), f.u, frozen.ID, action, "midnight-answer")
+			require.NoError(t, err)
+			require.Equal(t, answered, replayed)
+			require.Equal(t, 1, operationClock.calls)
+			reloaded, err := f.svc.Get(t.Context(), f.u, frozen.ID)
+			require.NoError(t, err)
+			require.Zero(t, reloaded.CreditedToday, "a separate read uses the new learner day")
+			var attempts, credits int
+			require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM review_attempts WHERE user_id=$1`, f.u).Scan(&attempts))
+			require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM daily_review_successes WHERE user_id=$1`, f.u).Scan(&credits))
+			require.Equal(t, 1, attempts)
+			require.Equal(t, 1, credits)
+		})
+	}
+}

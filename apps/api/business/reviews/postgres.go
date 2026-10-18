@@ -221,9 +221,23 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 	return attempt, nil
 }
 
-// SubmitDailyReviewTx is the only path that can grant verified daily credit.
-// It binds trusted server grading to the owned session's frozen exact saved meaning.
+// SubmitDailyReviewTx binds trusted server grading to the owned session's frozen
+// exact saved meaning through the shared membership-checked daily review path.
 func (r *PostgreSQLRepository) SubmitDailyReviewTx(ctx context.Context, tx *sql.Tx, req SubmitReviewRequest, sessionID uuid.UUID) (*ReviewAttempt, error) {
+	return r.submitDailyReviewTx(ctx, tx, req, sessionID, time.Time{})
+}
+
+// SubmitDailyReviewAtTx keeps an owned daily action on its single server-captured
+// timestamp. operationNow comes from the locked daily service, never from HTTP
+// request fields. Membership and review eligibility are still checked here.
+func (r *PostgreSQLRepository) SubmitDailyReviewAtTx(ctx context.Context, tx *sql.Tx, req SubmitReviewRequest, sessionID uuid.UUID, operationNow time.Time) (*ReviewAttempt, error) {
+	if operationNow.IsZero() {
+		return nil, errors.New("server operation timestamp required")
+	}
+	return r.submitDailyReviewTx(ctx, tx, req, sessionID, operationNow.UTC())
+}
+
+func (r *PostgreSQLRepository) submitDailyReviewTx(ctx context.Context, tx *sql.Tx, req SubmitReviewRequest, sessionID uuid.UUID, operationNow time.Time) (*ReviewAttempt, error) {
 	if tx == nil || sessionID == uuid.Nil {
 		return nil, ErrUserWordNotFound
 	}
@@ -237,13 +251,17 @@ func (r *PostgreSQLRepository) SubmitDailyReviewTx(ctx context.Context, tx *sql.
 		return nil, ErrUserWordNotFound
 	}
 	req.verifiedSessionID = sessionID
-	return r.SubmitReviewTx(ctx, tx, req)
+	return r.submitReviewTx(ctx, tx, req, operationNow)
 }
 
 // SubmitReviewTx applies the exact same scheduling, receipt and reward transaction
 // to a server-graded daily lesson. The caller must hold the active user lock and
 // commit this transaction together with its own durable session/action state.
 func (r *PostgreSQLRepository) SubmitReviewTx(ctx context.Context, tx *sql.Tx, req SubmitReviewRequest) (*ReviewAttempt, error) {
+	return r.submitReviewTx(ctx, tx, req, time.Time{})
+}
+
+func (r *PostgreSQLRepository) submitReviewTx(ctx context.Context, tx *sql.Tx, req SubmitReviewRequest, operationNow time.Time) (*ReviewAttempt, error) {
 	var err error
 	if tx == nil {
 		return nil, errors.New("transaction required")
@@ -273,7 +291,10 @@ func (r *PostgreSQLRepository) SubmitReviewTx(ctx context.Context, tx *sql.Tx, r
 	// Claim inside the existing transaction, after ownership validation and
 	// before any effects. The unique index waits for concurrent claimants; an
 	// active conflicting fingerprint must not reach scheduling or rewards.
-	now := r.clock.Now().UTC()
+	now := operationNow
+	if now.IsZero() {
+		now = r.clock.Now().UTC()
+	}
 	fingerprint := submitReviewFingerprint(req)
 	var storedFingerprint string
 	err = tx.QueryRowContext(ctx, `INSERT INTO idempotency_keys (id, user_id, operation, key, fingerprint, created_at)
@@ -337,7 +358,9 @@ func (r *PostgreSQLRepository) SubmitReviewTx(ctx context.Context, tx *sql.Tx, r
 		},
 	}
 	scheduledAt := req.scheduledAt
-	if scheduledAt.IsZero() {
+	if !operationNow.IsZero() {
+		scheduledAt = operationNow
+	} else if scheduledAt.IsZero() {
 		scheduledAt = r.clock.Now().UTC()
 	}
 	sched, err := ApplyReview(prior, ApplyReviewRequest{Result: req.Result, Rating: req.Rating}, scheduledAt)

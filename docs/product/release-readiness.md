@@ -26,7 +26,7 @@ A final projection audit reproduced the knowledge map retaining its old
 success-only eligibility after wrong/skip plus remove/restore. It now uses the
 same canonical daily rule; actual PostgreSQL checks cover the map, queue,
 counts, saved list/detail and Current together. The final full Go suite against
-PostgreSQL passes **2,534 test/subtest checks**, with zero failures or test skips;
+PostgreSQL passes **2,537 test/subtest checks**, with zero failures or test skips;
 vet and build pass, and map consistency also passes a focused race run. Hosted
 CI initially failed because its mandatory PASS-name check still referenced the
 renamed same-day-retry test. The assertion now requires its once-daily successor
@@ -38,6 +38,14 @@ filters are addressed. Six additional menu checks pass after the announcement,
 and the affected review/map PostgreSQL race suites pass after the SQL cleanup.
 The authenticated-user parameter contract is documented; only a regression
 test sets the retired retry flag, proving that it cannot bypass daily eligibility.
+
+A stepping-clock PostgreSQL regression also reproduced a daily action crossing
+learner-local midnight with mismatched audit/schedule times or a credited answer
+showing zero daily credit. The locked action now supplies one trusted server
+timestamp throughout its nested review and final projection. Both boundary
+cases pass, including immutable receipt replay after midnight and a separate
+read resetting today’s credit. The affected review/daily-lesson race run passes
+149 test/subtest checks with zero failures. Independent review found no blocker.
 
 A bounded PostgreSQL TEMP-table probe covers 12 combinations of 100/10,000 saved
 meanings, one/five meanings per canonical word and 0/50/500 daily attempts. The

@@ -499,6 +499,8 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 	if e != nil {
 		return nil, e
 	}
+	// One locked action owns one server time, including its nested audit,
+	// schedule, local-day credit, final queue pruning and immutable response.
 	now := s.clock.Now().UTC()
 	if e = pruneQueue(ctx, tx, st, now); e != nil {
 		return nil, e
@@ -611,7 +613,7 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 				result, rating = reviews.ResultSkipped, ""
 			}
 			req := reviews.SubmitReviewRequest{UserID: u, UserWordID: uuid.MustParse(w.UserWordID), MeaningID: uuid.MustParse(w.MeaningID), AttemptType: reviews.AttemptTypeReview, PromptType: reviews.PromptTypeSelfCheck, Result: result, Rating: rating, AnsweredAt: now, SelectedOptionMeaningID: nil, WasHintUsed: a.WasHintUsed, Source: reviews.SourceReviewSession, ClientAttemptID: "daily:" + fingerprint(a.ClientActionID), IdempotencyKey: "daily:" + fingerprint(key), ExpectedReviewCount: &w.ReviewCount}
-			attempt, e := s.reviews.SubmitDailyReviewTx(ctx, tx, req, st.ID)
+			attempt, e := s.reviews.SubmitDailyReviewAtTx(ctx, tx, req, st.ID, now)
 			if e != nil {
 				return nil, e
 			}
@@ -644,10 +646,10 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 	}
 	st.Revision++
 	st.UpdatedAt = now
-	if e = pruneQueue(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+	if e = pruneQueue(ctx, tx, st, now); e != nil {
 		return nil, e
 	}
-	if e = refreshCredits(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+	if e = refreshCredits(ctx, tx, st, now); e != nil {
 		return nil, e
 	}
 	if e = save(ctx, tx, st); e != nil {
