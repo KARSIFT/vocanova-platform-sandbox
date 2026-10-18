@@ -1,0 +1,48 @@
+name: Public pronunciation audition
+
+# Explicit same-repository label event only. Later pushes do not regenerate clips.
+on:
+  pull_request:
+    branches: [main]
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pronunciation-audition-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  pronunciation-audition:
+    name: Bounded public pronunciation audition
+    if: >-
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'audio-audition' &&
+      contains(github.event.pull_request.labels.*.name, 'hold') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.sum
+      - name: Generate the six fixed public samples once
+        working-directory: apps/api
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: go run ./cmd/pronunciation-audition --output-dir /tmp/vocanova-pronunciation-audition
+      - name: Preserve first samples and safe generation status
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-pronunciation-audition
+          path: |
+            /tmp/vocanova-pronunciation-audition/*.mp3
+            /tmp/vocanova-pronunciation-audition/manifest.json
+          retention-days: 7
+          if-no-files-found: warn

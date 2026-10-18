@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
 	"github.com/google/uuid"
 )
 
@@ -39,14 +40,17 @@ type Choice struct {
 	Text string `json:"text"`
 }
 type Step struct {
-	ID             string   `json:"id"`
-	Kind           string   `json:"kind" enum:"teach,recall,context,typed_recall,listening_choice"`
-	SpeechText     string   `json:"speechText,omitempty"`
-	SpeechLanguage string   `json:"speechLanguage,omitempty"`
-	Word           Word     `json:"word"`
-	Prompt         string   `json:"prompt"`
-	Context        string   `json:"context,omitempty"`
-	Choices        []Choice `json:"choices"`
+	PronunciationMeaningID string   `json:"pronunciationMeaningId,omitempty"`
+	PronunciationRevision  string   `json:"pronunciationRevision,omitempty"`
+	PartOfSpeech           string   `json:"partOfSpeech,omitempty"`
+	ID                     string   `json:"id"`
+	Kind                   string   `json:"kind" enum:"teach,recall,context,typed_recall,listening_choice"`
+	SpeechText             string   `json:"speechText,omitempty"`
+	SpeechLanguage         string   `json:"speechLanguage,omitempty"`
+	Word                   Word     `json:"word"`
+	Prompt                 string   `json:"prompt"`
+	Context                string   `json:"context,omitempty"`
+	Choices                []Choice `json:"choices"`
 }
 type Feedback struct {
 	Answer          string `json:"answer,omitempty"`
@@ -236,6 +240,13 @@ func project(st State) Session {
 	}
 	if st.Index < len(st.Snapshot.Steps) {
 		step := st.Snapshot.Steps[st.Index].Step
+		// Resolve speech against the frozen lesson vocabulary, including older
+		// snapshots whose listening steps predate pronunciation identities.
+		if step.SpeechText != "" && step.PronunciationMeaningID == "" {
+			step.PronunciationMeaningID = step.Word.MeaningID
+			step.PartOfSpeech = step.Word.PartOfSpeech
+		}
+		step.PronunciationRevision = meaningidentity.Revision(step.Word.MeaningID, step.Word.WordText, step.Word.PartOfSpeech, step.Word.Definition)
 		p.CurrentStep = &step
 		p.CanContinue = step.Kind == "teach" || (st.Feedback != nil && st.Feedback.StepID == step.ID && st.Feedback.Correct)
 	}

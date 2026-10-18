@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaninguses"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -541,4 +543,201 @@ func TestPracticePostgreSQLHistoricalMistakeSources(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 2, session.TotalSteps)
 	require.Equal(t, "typed_recall", session.CurrentStep.Kind)
+}
+
+func TestPracticePostgreSQLMeaningUsesRotateAndFreezeWithoutMastery(t *testing.T) {
+	db := practiceDB(t)
+	ctx := t.Context()
+	u, wordID := uuid.New(), uuid.New()
+	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
+	exec := func(q string, args ...any) {
+		t.Helper()
+		_, err := db.ExecContext(ctx, q, args...)
+		require.NoError(t, err)
+	}
+	exec(`INSERT INTO users(id,email,status,created_at,updated_at)VALUES($1,$2,'active',$3,$3)`, u, u.String()+"@meaning-use.invalid", now)
+	exec(`INSERT INTO canonical_words(id,text,normalized_text,language_code,status,created_at,updated_at)VALUES($1,'light','light','en','active',$2,$2)`, wordID, now)
+	uses := []Word{
+		{MeaningID: uuid.NewString(), WordText: "light", PartOfSpeech: "noun", Definition: "Brightness that allows people to see."},
+		{MeaningID: uuid.NewString(), WordText: "light", PartOfSpeech: "verb", Definition: "To make a place bright."},
+		{MeaningID: uuid.NewString(), WordText: "light", PartOfSpeech: "adjective", Definition: "Having little weight."},
+		{MeaningID: uuid.NewString(), WordText: "light", PartOfSpeech: "adverb", Definition: "With very little luggage."},
+		{MeaningID: uuid.NewString(), WordText: "light", PartOfSpeech: "noun", Definition: "A signal controlling traffic."},
+	}
+	byID := map[string]Word{}
+	for i, w := range uses {
+		exec(`INSERT INTO word_meanings(id,word_id,part_of_speech,short_definition,meaning_order,status,created_at,updated_at)VALUES($1,$2,$3,$4,$5,'active',$6,$6)`, w.MeaningID, wordID, w.PartOfSpeech, w.Definition, i+1, now)
+		byID[w.MeaningID] = w
+		if i < 4 {
+			exec(`INSERT INTO user_word_knowledge(user_id,meaning_id,self_reported_known,note,updated_at)VALUES($1,$2,true,'Keep my note',$3)`, u, w.MeaningID, now)
+		}
+	}
+	inactive := uuid.NewString()
+	exec(`INSERT INTO word_meanings(id,word_id,part_of_speech,short_definition,meaning_order,status,created_at,updated_at)VALUES($1,$2,'other','Do not teach an archived use.',6,'archived',$3,$3)`, inactive, wordID, now)
+	repo := NewPostgreSQLRepository(db)
+	svc := NewService(repo, clock.Fixed{T: now})
+	seen := map[string]bool{}
+	for lesson := 1; lesson <= 3; lesson++ {
+		current, err := svc.Start(ctx, u, StartRequest{Mode: "journey"}, uuid.NewString())
+		require.NoError(t, err)
+		sid := uuid.MustParse(current.ID)
+		state, err := repo.Get(ctx, u, sid)
+		require.NoError(t, err)
+		targets := map[string]bool{}
+		for _, step := range state.Snapshot.Steps {
+			require.NotEqual(t, inactive, step.Word.MeaningID)
+			require.Equal(t, byID[step.Word.MeaningID].PartOfSpeech, step.Word.PartOfSpeech)
+			targets[step.Word.MeaningID] = true
+			if lesson <= 2 {
+				require.NotEqual(t, uses[4].MeaningID, step.Word.MeaningID)
+			}
+		}
+		if lesson <= 2 {
+			require.Len(t, targets, 2)
+			for id := range targets {
+				require.False(t, seen[id], "unpractised uses precede previously practised uses")
+				seen[id] = true
+			}
+			require.Zero(t, current.NewWords)
+		} else {
+			require.Equal(t, 1, current.NewWords)
+			require.True(t, targets[uses[4].MeaningID], "a real unfamiliar sibling use is explicitly taught")
+			var introduced bool
+			for _, step := range state.Snapshot.Steps {
+				if step.Word.MeaningID == uses[4].MeaningID {
+					if step.Public.Kind == "teach" {
+						introduced = true
+					} else {
+						require.True(t, introduced)
+					}
+				}
+			}
+		}
+		// Concurrent/lost starts resume the exact saved sense and opaque choices.
+		resumed, err := svc.Start(ctx, u, StartRequest{Mode: "journey"}, uuid.NewString())
+		require.NoError(t, err)
+		get, err := svc.Get(ctx, u, sid)
+		require.NoError(t, err)
+		require.Equal(t, current, resumed)
+		require.Equal(t, current, get)
+		// Editing live content must not change the use or grading of a saved step.
+		first := state.Snapshot.Steps[0].Word
+		exec(`UPDATE word_meanings SET short_definition='Changed after session creation.',part_of_speech='other' WHERE id=$1`, first.MeaningID)
+		get, err = svc.Get(ctx, u, sid)
+		require.NoError(t, err)
+		require.Equal(t, current.CurrentStep, get.CurrentStep)
+		exec(`UPDATE word_meanings SET short_definition=$2,part_of_speech=$3 WHERE id=$1`, first.MeaningID, first.Definition, first.PartOfSpeech)
+		for current.Status != "completed" {
+			saved, e := repo.Get(ctx, u, sid)
+			require.NoError(t, e)
+			step := saved.Snapshot.Steps[saved.Index]
+			a := Action{StepID: step.Public.ID, ExpectedRevision: current.Revision, ClientActionID: uuid.NewString(), Action: "answer", ChoiceID: step.CorrectChoice}
+			if step.Public.Kind == "teach" {
+				a.Action, a.ChoiceID = "continue", ""
+			}
+			current, e = svc.Act(ctx, u, sid, a, a.ClientActionID)
+			require.NoError(t, e)
+			ack, e := svc.Act(ctx, u, sid, a, a.ClientActionID)
+			require.NoError(t, e)
+			require.Equal(t, current, ack, "replay cannot add another correct answer")
+			if a.Action == "continue" {
+				continue
+			}
+			require.True(t, current.Feedback.Correct)
+			require.Equal(t, step.Word.MeaningID, current.Feedback.MeaningID)
+			require.Equal(t, step.Word.PartOfSpeech, current.Feedback.PartOfSpeech)
+			a = Action{StepID: step.Public.ID, ExpectedRevision: current.Revision, ClientActionID: uuid.NewString(), Action: "continue"}
+			current, e = svc.Act(ctx, u, sid, a, a.ClientActionID)
+			require.NoError(t, e)
+		}
+		require.Equal(t, 4, current.FirstAnswersCorrect)
+		require.Equal(t, 4, current.QuestionsAnswered)
+	}
+	require.Len(t, seen, 4, "all four real uses rotate before repeating")
+	for _, table := range []string{"user_words", "review_attempts", "daily_review_successes", "confidence_point_ledger"} {
+		var count int
+		require.NoError(t, db.QueryRowContext(ctx, "SELECT count(*) FROM "+table+" WHERE user_id=$1", u).Scan(&count))
+		require.Zero(t, count, table)
+	}
+	var count int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM user_word_knowledge WHERE user_id=$1 AND self_reported_known AND note='Keep my note'`, u).Scan(&count))
+	require.Equal(t, 4, count, "new teaching does not claim another use was already known")
+}
+
+func TestPracticePostgreSQLSupplementSeedIdentityIdempotencyAndContext(t *testing.T) {
+	db := practiceDB(t)
+	ctx := t.Context()
+	tx, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	require.ErrorContains(t, meaninguses.Seed(ctx, tx), "missing canonical word")
+	require.NoError(t, tx.Rollback())
+	tx, err = db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	require.NoError(t, knowledgecatalog.Seed(ctx, tx))
+	require.NoError(t, tx.Commit())
+	snapshot := func(query string, args ...any) string {
+		t.Helper()
+		var raw string
+		require.NoError(t, db.QueryRowContext(ctx, query, args...).Scan(&raw))
+		return raw
+	}
+	primaryQuery := `SELECT jsonb_agg(to_jsonb(wm) ORDER BY wm.id)::text FROM word_meanings wm JOIN knowledge_catalog_entries kc ON kc.meaning_id=wm.id`
+	beforePrimary := snapshot(primaryQuery)
+	tx, err = db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	require.NoError(t, meaninguses.Seed(ctx, tx))
+	require.NoError(t, tx.Commit())
+	require.Equal(t, beforePrimary, snapshot(primaryQuery))
+	var total int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM knowledge_catalog_entries`).Scan(&total))
+	require.Equal(t, 10000, total)
+	entries := meaninguses.Entries()
+	ids := []string{}
+	for _, entry := range entries {
+		ids = append(ids, entry.MeaningID.String())
+	}
+	useQuery := `SELECT jsonb_agg(to_jsonb(wm) ORDER BY wm.id)::text FROM word_meanings wm WHERE id=ANY($1::uuid[])`
+	exampleQuery := `SELECT jsonb_agg(to_jsonb(we) ORDER BY we.id)::text FROM word_examples we WHERE meaning_id=ANY($1::uuid[])`
+	beforeUses := snapshot(useQuery, pq.Array(ids))
+	beforeExamples := snapshot(exampleQuery, pq.Array(ids))
+	u := uuid.New()
+	_, err = db.ExecContext(ctx, `INSERT INTO users(id,email,status,created_at,updated_at)VALUES($1,$2,'active',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, u, u.String()+"@supplement-seed.invalid")
+	require.NoError(t, err)
+	entry := entries[1]
+	_, err = db.ExecContext(ctx, `INSERT INTO user_word_knowledge(user_id,meaning_id,self_reported_known,note,updated_at)VALUES($1,$2,true,'Preserve this learner note.',CURRENT_TIMESTAMP)`, u, entry.MeaningID)
+	require.NoError(t, err)
+	beforeKnowledge := snapshot(`SELECT to_jsonb(k)::text FROM user_word_knowledge k WHERE user_id=$1`, u)
+	tx, err = db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	require.NoError(t, meaninguses.Seed(ctx, tx))
+	require.NoError(t, tx.Commit())
+	require.Equal(t, beforePrimary, snapshot(primaryQuery))
+	require.Equal(t, beforeUses, snapshot(useQuery, pq.Array(ids)))
+	require.Equal(t, beforeExamples, snapshot(exampleQuery, pq.Array(ids)))
+	require.Equal(t, beforeKnowledge, snapshot(`SELECT to_jsonb(k)::text FROM user_word_knowledge k WHERE user_id=$1`, u))
+	svc := NewService(NewPostgreSQLRepository(db), clock.Fixed{T: time.Now()})
+	current, err := svc.Start(ctx, u, StartRequest{Mode: "journey"}, uuid.NewString())
+	require.NoError(t, err)
+	require.Equal(t, entry.MeaningID.String(), current.CurrentStep.PronunciationMeaningID)
+	require.Equal(t, entry.PartOfSpeech, current.CurrentStep.PartOfSpeech)
+	saved, err := svc.repo.Get(ctx, u, uuid.MustParse(current.ID))
+	require.NoError(t, err)
+	require.Len(t, saved.Snapshot.Steps, 3)
+	require.Equal(t, entry.Example, saved.Snapshot.Steps[2].Public.SpeechText)
+	// A wrong-language or malformed canonical source fails; it cannot create a
+	// second identity or overwrite a primary definition to make the seed fit.
+	tx, err = db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	_, err = tx.ExecContext(ctx, `UPDATE canonical_words SET language_code='fr' WHERE id=$1`, entry.WordID)
+	require.NoError(t, err)
+	require.ErrorContains(t, meaninguses.Seed(ctx, tx), "canonical identity mismatch")
+	require.NoError(t, tx.Rollback())
+	tx, err = db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	_, err = tx.ExecContext(ctx, `UPDATE word_meanings SET short_definition='Conflicting imported definition.' WHERE id=$1`, entry.MeaningID)
+	require.NoError(t, err)
+	require.ErrorContains(t, meaninguses.Seed(ctx, tx), "conflicting meaning identity")
+	require.NoError(t, tx.Rollback())
+	require.Equal(t, beforePrimary, snapshot(primaryQuery))
+	require.Equal(t, beforeUses, snapshot(useQuery, pq.Array(ids)))
 }

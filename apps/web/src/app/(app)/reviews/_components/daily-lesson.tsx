@@ -507,6 +507,8 @@ export function DailyLessonPlayer({
               <ListenButton
                 key={step.id}
                 text={step.wordText}
+                meaningId={step.pronunciationMeaningId}
+                meaningRevision={step.pronunciationRevision}
                 showCaption={false}
                 autoPlay={audioEnabled}
               />

@@ -255,16 +255,21 @@ jobs:
         env:
           PRODUCTION_CLOUDFLARE_API_TOKEN: ${{ secrets.PRODUCTION_CLOUDFLARE_API_TOKEN }}
           PRODUCTION_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
+          PRONUNCIATION_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           host: ${{ secrets.PRODUCTION_SSH_HOST }}
           username: ${{ secrets.PRODUCTION_SSH_USER }}
           key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
           command_timeout: 2m
-          envs: PRODUCTION_CLOUDFLARE_API_TOKEN,PRODUCTION_CLOUDFLARE_ACCOUNT_ID
+          envs: PRODUCTION_CLOUDFLARE_API_TOKEN,PRODUCTION_CLOUDFLARE_ACCOUNT_ID,PRONUNCIATION_API_KEY
           script: |
             set -euo pipefail
             if [ -z "${PRODUCTION_CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${PRODUCTION_CLOUDFLARE_ACCOUNT_ID:-}" ]; then
               echo "PRODUCTION_CLOUDFLARE_API_TOKEN / PRODUCTION_CLOUDFLARE_ACCOUNT_ID missing or empty" >&2
+              exit 1
+            fi
+            if [ -z "${PRONUNCIATION_API_KEY:-}" ]; then
+              echo "OPENAI_API_KEY missing or empty - refusing to change production pronunciation configuration" >&2
               exit 1
             fi
             sudo mkdir -p /opt/vocanova/production/secrets
@@ -282,6 +287,8 @@ jobs:
               -e '/^AI_PROVIDER_ACCOUNT_ID=/d' \
               -e '/^AI_PROVIDER_MODEL=/d' \
               -e '/^AI_FEATURES_ENABLED=/d' \
+              -e '/^PRONUNCIATION_PROVIDER=/d' \
+              -e '/^PRONUNCIATION_API_KEY=/d' \
               /opt/vocanova/production/secrets/api.env
             {
               echo "AI_PROVIDER=cloudflare"
@@ -289,6 +296,8 @@ jobs:
               echo "AI_PROVIDER_ACCOUNT_ID=${PRODUCTION_CLOUDFLARE_ACCOUNT_ID}"
               echo "AI_PROVIDER_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast"
               echo "AI_FEATURES_ENABLED=true"
+              echo "PRONUNCIATION_PROVIDER=openai"
+              echo "PRONUNCIATION_API_KEY=${PRONUNCIATION_API_KEY}"
             } >> /opt/vocanova/production/secrets/api.env
             chmod 600 /opt/vocanova/production/secrets/api.env
 

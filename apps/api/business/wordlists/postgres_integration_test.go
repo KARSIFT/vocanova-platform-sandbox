@@ -5,12 +5,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaninguses"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/practice"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -349,4 +354,228 @@ func TestPostgreSQLMixedActiveAndArchivedListPractice(t *testing.T) {
 	require.NoError(t, e)
 	_, e = psvc.Start(ctx, u, practice.StartRequest{Mode: "typed_recall", ListID: id.String(), ListRevision: &revision}, "all-archived")
 	require.ErrorIs(t, e, practice.ErrListEmpty)
+}
+
+func TestPostgreSQLSupplementalListAvailabilityMatchesFrozenPractice(t *testing.T) {
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN unset")
+	}
+	admin, err := sql.Open("postgres", dsn)
+	require.NoError(t, err)
+	schema := "list_supplement_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	_, err = admin.ExecContext(t.Context(), "CREATE SCHEMA "+pq.QuoteIdentifier(schema))
+	require.NoError(t, err)
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+		dsn, err = pq.ParseURL(dsn)
+		require.NoError(t, err)
+	}
+	db, err := sql.Open("postgres", dsn+" search_path="+schema)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		db.Close()
+		_, e := admin.ExecContext(context.Background(), "DROP SCHEMA "+pq.QuoteIdentifier(schema)+" CASCADE")
+		require.NoError(t, e)
+		admin.Close()
+	})
+	ctx := t.Context()
+	migrations, err := filepath.Glob("../../migrations/*.sql")
+	require.NoError(t, err)
+	for _, path := range migrations {
+		raw, e := os.ReadFile(path)
+		require.NoError(t, e)
+		_, e = db.ExecContext(ctx, string(raw))
+		require.NoError(t, e, path)
+	}
+	raw, err := os.ReadFile("../../cmd/seed/voc026-p1.json")
+	require.NoError(t, err)
+	var seed map[string][]map[string]any
+	require.NoError(t, json.Unmarshal(raw, &seed))
+	for _, table := range []string{"canonical_words", "word_meanings", "word_examples"} {
+		for _, row := range seed[table] {
+			row["created_at"] = "2026-10-18T12:00:00Z"
+			row["updated_at"] = "2026-10-18T12:00:00Z"
+			value, e := json.Marshal(row)
+			require.NoError(t, e)
+			_, e = db.ExecContext(ctx, "INSERT INTO "+table+" SELECT * FROM jsonb_populate_record(NULL::"+table+",$1::jsonb)", string(value))
+			require.NoError(t, e)
+		}
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	require.NoError(t, knowledgecatalog.Seed(ctx, tx))
+	require.NoError(t, meaninguses.Seed(ctx, tx))
+	require.NoError(t, tx.Commit())
+	u, other := uuid.New(), uuid.New()
+	for _, id := range []uuid.UUID{u, other} {
+		_, err = db.ExecContext(ctx, `INSERT INTO users(id,email,status,created_at,updated_at)VALUES($1,$2,'active',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, id, id.String()+"@supplement-list.invalid")
+		require.NoError(t, err)
+	}
+	lists := NewService(NewPostgreSQLRepository(db), nil)
+	psvc := practice.NewService(practice.NewPostgreSQLRepository(db), clock.Fixed{T: time.Now().UTC().Truncate(time.Microsecond)})
+	entries := meaninguses.Entries()
+	create := func(t *testing.T, ids []string) *WordListDetail {
+		t.Helper()
+		id := uuid.New()
+		_, e := lists.Write(ctx, WriteRequest{UserID: u, ListID: id, Operation: "put", Name: "Selected uses", IdempotencyKey: uuid.NewString()})
+		require.NoError(t, e)
+		revision := 1
+		for _, meaning := range ids {
+			_, e = lists.Write(ctx, WriteRequest{UserID: u, ListID: id, MeaningID: uuid.MustParse(meaning), Operation: "add", ExpectedRevision: revision, IdempotencyKey: uuid.NewString()})
+			require.NoError(t, e)
+			revision++
+		}
+		detail, e := lists.Get(ctx, u, id)
+		require.NoError(t, e)
+		return detail
+	}
+	check := func(t *testing.T, mode string, ids []string) {
+		t.Helper()
+		detail := create(t, ids)
+		require.Equal(t, len(ids), detail.UsableMemberCount)
+		for _, member := range detail.Members {
+			require.True(t, member.PracticeAvailable)
+		}
+		revision := detail.Revision
+		req := practice.StartRequest{Mode: mode, ListID: detail.ID, ListRevision: &revision}
+		key := uuid.NewString()
+		session, e := psvc.Start(ctx, u, req, key)
+		require.NoError(t, e, "every advertised available use must start")
+		require.Equal(t, detail.UsableMemberCount, session.TotalSteps, "list practice cannot silently omit available senses")
+		var snapshot practice.Snapshot
+		var data []byte
+		require.NoError(t, db.QueryRowContext(ctx, `SELECT snapshot FROM practice_sessions WHERE id=$1`, session.ID).Scan(&data))
+		require.NoError(t, json.Unmarshal(data, &snapshot))
+		want := map[string]bool{}
+		for _, id := range ids {
+			want[id] = true
+		}
+		actual := map[string]bool{}
+		for _, saved := range snapshot.Steps {
+			require.True(t, want[saved.Word.MeaningID], "distractors must not become selected targets")
+			require.False(t, actual[saved.Word.MeaningID])
+			actual[saved.Word.MeaningID] = true
+			require.NotEmpty(t, saved.Word.PartOfSpeech)
+			if meaninguses.SupportsMeaning(saved.Word.MeaningID, saved.Word.WordText, saved.Word.Definition) {
+				context, ok := meaninguses.ReviewedContext(saved.Word.MeaningID, saved.Word.WordText, saved.Word.Definition)
+				require.True(t, ok)
+				require.Equal(t, context, saved.Word.Example)
+			}
+			if mode == "listening_choice" {
+				require.GreaterOrEqual(t, len(saved.Public.Choices), 3)
+				require.NotEmpty(t, saved.Public.SpeechText)
+			}
+		}
+		require.Equal(t, want, actual)
+		if mode == "listening_choice" {
+			first := snapshot.Steps[0].Word
+			require.Equal(t, first.MeaningID, session.CurrentStep.PronunciationMeaningID)
+			require.Equal(t, meaningidentity.Revision(first.MeaningID, first.WordText, first.PartOfSpeech, first.Definition), session.CurrentStep.PronunciationRevision)
+		}
+		replay, e := psvc.Start(ctx, u, req, key)
+		require.NoError(t, e)
+		require.Equal(t, session, replay)
+		_, e = psvc.Start(ctx, other, req, uuid.NewString())
+		require.ErrorIs(t, e, practice.ErrNotFound)
+		firstSaved := snapshot.Steps[0]
+		answer := practice.Action{StepID: session.CurrentStep.ID, ExpectedRevision: session.Revision, ClientActionID: uuid.NewString(), Action: "answer"}
+		if mode == "listening_choice" {
+			answer.ChoiceID = firstSaved.CorrectChoice
+		} else {
+			answer.TypedAnswer = firstSaved.Word.WordText
+		}
+		answerKey := uuid.NewString()
+		session, e = psvc.Act(ctx, u, uuid.MustParse(session.ID), answer, answerKey)
+		require.NoError(t, e)
+		require.True(t, session.Feedback.Correct)
+		require.Equal(t, firstSaved.Word.MeaningID, session.Feedback.MeaningID)
+		require.Equal(t, firstSaved.Word.PartOfSpeech, session.Feedback.PartOfSpeech)
+		require.Equal(t, 1, session.FirstAnswersCorrect)
+		ack, e := psvc.Act(ctx, u, uuid.MustParse(session.ID), answer, answerKey)
+		require.NoError(t, e)
+		require.Equal(t, session, ack)
+
+		// Frozen target selection and metadata survive source edits and list deletion.
+		first := snapshot.Steps[0].Word
+		_, e = db.ExecContext(ctx, `UPDATE word_meanings SET short_definition='Edited after the session started.' WHERE id=$1`, first.MeaningID)
+		require.NoError(t, e)
+		reloaded, e := psvc.Get(ctx, u, uuid.MustParse(session.ID))
+		require.NoError(t, e)
+		require.Equal(t, session.CurrentStep, reloaded.CurrentStep)
+		_, e = db.ExecContext(ctx, `UPDATE word_meanings SET short_definition=$2 WHERE id=$1`, first.MeaningID, first.Definition)
+		require.NoError(t, e)
+		_, e = lists.Write(ctx, WriteRequest{UserID: u, ListID: uuid.MustParse(detail.ID), Operation: "delete", ExpectedRevision: detail.Revision, IdempotencyKey: uuid.NewString()})
+		require.NoError(t, e)
+		reloaded, e = psvc.Get(ctx, u, uuid.MustParse(session.ID))
+		require.NoError(t, e)
+		require.Equal(t, session.CurrentStep, reloaded.CurrentStep)
+		_, e = psvc.Start(ctx, u, req, uuid.NewString())
+		require.ErrorIs(t, e, practice.ErrNotFound)
+
+	}
+	for _, entry := range entries {
+		for _, mode := range []string{"typed_recall", "listening_choice"} {
+			t.Run(entry.SourceSenseKey+"/"+mode, func(t *testing.T) { check(t, mode, []string{entry.MeaningID.String()}) })
+		}
+	}
+	for _, mode := range []string{"typed_recall", "listening_choice"} {
+		t.Run("mixed/"+mode, func(t *testing.T) {
+			check(t, mode, []string{"ac93d068-7c3e-55c9-9d85-3fd3518592dc", entries[0].MeaningID.String(), entries[3].MeaningID.String()})
+		})
+	}
+	// Both list availability and newly created practice exclude retired or edited uses.
+	valid, archived, changed := entries[0], entries[1], entries[2]
+	detail := create(t, []string{valid.MeaningID.String(), archived.MeaningID.String(), changed.MeaningID.String()})
+	_, err = db.ExecContext(ctx, `UPDATE word_meanings SET status='archived' WHERE id=$1`, archived.MeaningID)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `UPDATE word_meanings SET short_definition='Not the reviewed definition.' WHERE id=$1`, changed.MeaningID)
+	require.NoError(t, err)
+	detail, err = lists.Get(ctx, u, uuid.MustParse(detail.ID))
+	require.NoError(t, err)
+	require.Equal(t, 1, detail.UsableMemberCount)
+	for _, mode := range []string{"typed_recall", "listening_choice"} {
+		revision := detail.Revision
+		session, e := psvc.Start(ctx, u, practice.StartRequest{Mode: mode, ListID: detail.ID, ListRevision: &revision}, uuid.NewString())
+		require.NoError(t, e)
+		require.Equal(t, 1, session.TotalSteps)
+		var data []byte
+		require.NoError(t, db.QueryRowContext(ctx, `SELECT snapshot FROM practice_sessions WHERE id=$1`, session.ID).Scan(&data))
+		var snapshot practice.Snapshot
+		require.NoError(t, json.Unmarshal(data, &snapshot))
+		require.Equal(t, valid.MeaningID.String(), snapshot.Steps[0].Word.MeaningID)
+	}
+
+	// A reused supplemental ID with a different POS is not advertised or loaded.
+	_, err = db.ExecContext(ctx, `UPDATE word_meanings SET short_definition=$2,part_of_speech='noun' WHERE id=$1`, changed.MeaningID, changed.Definition)
+	require.NoError(t, err)
+	detail, err = lists.Get(ctx, u, uuid.MustParse(detail.ID))
+	require.NoError(t, err)
+	require.Equal(t, 1, detail.UsableMemberCount)
+	for _, member := range detail.Members {
+		if member.MeaningID == changed.MeaningID.String() {
+			require.False(t, member.PracticeAvailable)
+		}
+	}
+	for _, mode := range []string{"typed_recall", "listening_choice"} {
+		revision := detail.Revision
+		session, e := psvc.Start(ctx, u, practice.StartRequest{Mode: mode, ListID: detail.ID, ListRevision: &revision}, uuid.NewString())
+		require.NoError(t, e)
+		require.Equal(t, 1, session.TotalSteps)
+	}
+	// A foreign-language canonical row cannot reuse these English identities.
+	_, err = db.ExecContext(ctx, `UPDATE canonical_words SET language_code='fr' WHERE id=$1`, valid.WordID)
+	require.NoError(t, err)
+	detail, err = lists.Get(ctx, u, uuid.MustParse(detail.ID))
+	require.NoError(t, err)
+	require.Zero(t, detail.UsableMemberCount)
+	for _, mode := range []string{"typed_recall", "listening_choice"} {
+		revision := detail.Revision
+		_, e := psvc.Start(ctx, u, practice.StartRequest{Mode: mode, ListID: detail.ID, ListRevision: &revision}, uuid.NewString())
+		require.ErrorIs(t, e, practice.ErrListEmpty)
+	}
+	for _, table := range []string{"user_word_knowledge", "user_words", "review_attempts", "confidence_point_ledger"} {
+		var count int
+		require.NoError(t, db.QueryRowContext(ctx, "SELECT count(*) FROM "+table+" WHERE user_id=$1", u).Scan(&count))
+		require.Zero(t, count, table)
+	}
 }

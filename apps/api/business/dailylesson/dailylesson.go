@@ -12,6 +12,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
 	"github.com/google/uuid"
 	"strings"
 	"time"
@@ -31,12 +32,14 @@ type DailyLessonChoice struct {
 	Text string `json:"text"`
 }
 type DailyLessonStep struct {
-	ID           string   `json:"id"`
-	Kind         string   `json:"kind" enum:"meaning_choice"`
-	WordText     string   `json:"wordText"`
-	WordSlug     string   `json:"wordSlug"`
-	PartOfSpeech string   `json:"partOfSpeech"`
-	Choices      []Choice `json:"choices"`
+	PronunciationMeaningID string   `json:"pronunciationMeaningId,omitempty" doc:"Selected meaning used only to resolve pronunciation; no answer key."`
+	PronunciationRevision  string   `json:"pronunciationRevision,omitempty"`
+	ID                     string   `json:"id"`
+	Kind                   string   `json:"kind" enum:"meaning_choice"`
+	WordText               string   `json:"wordText"`
+	WordSlug               string   `json:"wordSlug"`
+	PartOfSpeech           string   `json:"partOfSpeech"`
+	Choices                []Choice `json:"choices"`
 }
 type DailyLessonFeedback struct {
 	StepID           string     `json:"stepId"`
@@ -135,6 +138,8 @@ func project(st *state) *Session {
 		out.Status = "completed"
 	} else if len(st.Queue) > 0 {
 		step := st.Words[st.Queue[0]].Public
+		step.PronunciationMeaningID = st.Words[st.Queue[0]].MeaningID
+		step.PronunciationRevision = meaningidentity.Revision(step.PronunciationMeaningID, step.WordText, step.PartOfSpeech, st.Words[st.Queue[0]].Definition)
 		out.CurrentStep = &step
 	}
 	return out

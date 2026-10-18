@@ -1,5 +1,7 @@
 package practice
 
+import "github.com/KARSIFT/vocanova-platform/apps/api/business/meaninguses"
+
 // This original practice catalog pins the 90 reviewed starter-course meanings.
 // Additions/answer changes require a content/grading version bump; active sessions
 // retain their original private snapshot. Lesson progress is never changed.
@@ -118,6 +120,14 @@ func referenceFor(id string) (reference, bool) {
 	return reference{}, false
 }
 
+func acceptedWordAnswers(word Word) []string {
+	// Accent variants denote the CV noun, not the newly supported verb use.
+	if word.WordText == "resume" && word.PartOfSpeech == "verb" {
+		return []string{"resume"}
+	}
+	return acceptedAnswers(word.WordText)
+}
+
 func acceptedAnswers(word string) []string {
 	switch word {
 	case "appetizer":
@@ -141,6 +151,10 @@ func acceptedAnswers(word string) []string {
 	}
 }
 func recallDefinition(w Word) string {
+	// Keep the curated past-form clue useful without spelling its own answer.
+	if w.WordText == "read" && meaninguses.SupportsMeaning(w.MeaningID, w.WordText, w.Definition) {
+		return "Use the past form: looked at and understood written words before now."
+	}
 	switch w.WordText {
 	case "boarding pass":
 		return "At the airport, a staff member scans this document, which shows your flight and seat, before you get on the plane."
@@ -160,5 +174,25 @@ func recallDefinition(w Word) string {
 // SupportsMeaning reports whether a canonical meaning has reviewed practice content.
 func SupportsMeaning(id, text, definition string) bool {
 	ref, ok := referenceFor(id)
-	return ok && ref.WordText == text && definition != ""
+	return (ok && ref.WordText == text && definition != "") || meaninguses.SupportsMeaning(id, text, definition)
+}
+
+// List availability and target loading share the same canonical identity check.
+// Starter content keeps its existing support contract; supplemental meanings
+// must match every reviewed identity field rather than only a reused UUID.
+var supplementalListMeanings = meaninguses.Entries()
+
+func SupportsListMeaning(id, wordID, text, pos, definition, language string) bool {
+	if language != "en" {
+		return false
+	}
+	if ref, ok := referenceFor(id); ok {
+		return ref.WordText == text && definition != ""
+	}
+	for _, entry := range supplementalListMeanings {
+		if entry.MeaningID.String() == id && entry.WordID.String() == wordID && entry.Word == text && entry.PartOfSpeech == pos && entry.Definition == definition {
+			return true
+		}
+	}
+	return false
 }

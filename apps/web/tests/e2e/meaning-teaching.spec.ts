@@ -80,14 +80,19 @@ for (const theme of ["light", "dark"] as const) {
     await context.addCookies([
       { name: "vocanova_theme", value: theme, url: baseURL },
     ]);
+    const requests: { text: string; meaningId?: string }[] = [];
+    await page.route("**/api/v1/pronunciation", async (route) => {
+      const body = route.request().postDataJSON();
+      requests.push(body);
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({
+          title: "Usage notes are not provider-approved pronunciation text",
+        }),
+      });
+    });
     await page.addInitScript(() => {
-      type Utterance = {
-        text: string;
-        lang: string;
-        rate: number;
-        onstart?: () => void;
-        onend?: () => void;
-      };
       const capture: TeachingSpeechCall[] = [];
       (
         window as unknown as { __teachingSpeech: TeachingSpeechCall[] }
@@ -96,7 +101,13 @@ for (const theme of ["light", "dark"] as const) {
         speaking: false,
         pending: false,
         getVoices: () => [{ lang: "en-GB", localService: true, default: true }],
-        speak: (utterance: Utterance) => {
+        speak: (utterance: {
+          text: string;
+          lang: string;
+          rate: number;
+          onstart?: () => void;
+          onend?: () => void;
+        }) => {
           capture.push({
             text: utterance.text,
             lang: utterance.lang,
@@ -175,7 +186,8 @@ for (const theme of ["light", "dark"] as const) {
         })
         .focus();
       await page.keyboard.press("Enter");
-      // Natural audio can fall back asynchronously; assert actual playback.
+      // This general usage phrase falls back to device audio, without claiming
+      // meaning-specific provider support. Verify the exact authored text.
       await expect
         .poll(() =>
           page.evaluate(
@@ -194,6 +206,12 @@ for (const theme of ["light", "dark"] as const) {
             rate: 0.7,
           },
         ]);
+      expect(requests).toHaveLength(
+        route === "/vocabulary/sounds-good" ? 1 : 2,
+      );
+      expect(requests.at(-1)).toEqual({
+        text: "That sounds good; sounds good to me",
+      });
       await expect(
         main.getByText(
           "Use sounds good for a singular idea: That sounds good. With plural plans, use sound: Those plans sound good.",
@@ -222,6 +240,13 @@ for (const theme of ["light", "dark"] as const) {
 test("unavailable phrase audio keeps the authored guidance readable", async ({
   page,
 }) => {
+  await page.route("**/api/v1/pronunciation", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ title: "Unavailable" }),
+    }),
+  );
   await page.addInitScript(() => {
     Object.defineProperty(window, "speechSynthesis", {
       configurable: true,
@@ -241,7 +266,9 @@ test("unavailable phrase audio keeps the authored guidance readable", async ({
       exact: true,
     })
     .click();
-  await expect(meaning.getByRole("status")).toContainText("not available");
+  await expect(meaning.getByRole("status")).toHaveText(
+    "Pronunciation is not available in this browser.",
+  );
   await expect(
     meaning.getByText("meet a deadline", { exact: true }),
   ).toBeVisible();

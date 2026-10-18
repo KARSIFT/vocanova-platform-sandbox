@@ -14,6 +14,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestProductionPronunciationProviderIsSeparateAndFailsClosed(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		config   ProductionConfig
+		provider string
+	}{
+		{"dedicated OpenAI speech without text credentials", ProductionConfig{AIEnabled: true, PronunciationProvider: "openai", PronunciationAPIKey: "synthetic-speech-key"}, "openai"},
+		{"text credentials do not become speech credentials", ProductionConfig{AIEnabled: true, PronunciationProvider: "openai", APIKey: "synthetic-text-key", APIProvider: "cloudflare", APIAccountID: "synthetic-account"}, ""},
+		{"speech kill switch", ProductionConfig{AIEnabled: false, PronunciationProvider: "openai", PronunciationAPIKey: "synthetic-speech-key"}, ""},
+		{"unknown speech provider", ProductionConfig{AIEnabled: true, PronunciationProvider: "unknown", PronunciationAPIKey: "synthetic-speech-key", APIProvider: "cloudflare", APIKey: "synthetic-text-key", APIAccountID: "synthetic-account"}, ""},
+		{"legacy configured Cloudflare", ProductionConfig{AIEnabled: true, APIProvider: "cloudflare", APIKey: "synthetic-text-key", APIAccountID: "synthetic-account"}, "cloudflare"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			provider, enabled := buildPronunciationProvider(tc.config)
+			require.Equal(t, tc.provider != "", enabled)
+			if tc.provider == "" {
+				require.Nil(t, provider)
+			} else {
+				require.Equal(t, tc.provider, provider.Identity().Provider)
+			}
+		})
+	}
+}
+
 func TestProductionOpenAIExplicitConfiguration(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://example/db")
 	t.Setenv("BASE_URL", "https://staging.vocanova.site")

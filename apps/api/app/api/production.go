@@ -60,19 +60,21 @@ type ProductionConfig struct {
 	// even while NewSignupsOn is false (VOC-038-D00/D01). Built from
 	// NEW_USER_SIGNUP_ALLOWLIST, a comma-separated list, the same
 	// way OAuthReturnURLs is built from OAUTH_REDIRECT_ALLOWLIST.
-	SignupAllowlist map[string]struct{}
-	SessionDomain   string
-	SessionSecure   bool
-	SessionLifetime time.Duration
-	APIProvider     string
-	APIBaseURL      string
-	APIKey          string
-	APIAccountID    string
-	APIModel        string
-	OpenAIAPIKey    string
-	APIProviderID   string
-	APIModelID      string
-	APITimeout      time.Duration
+	SignupAllowlist       map[string]struct{}
+	SessionDomain         string
+	SessionSecure         bool
+	SessionLifetime       time.Duration
+	APIProvider           string
+	APIBaseURL            string
+	APIKey                string
+	APIAccountID          string
+	APIModel              string
+	OpenAIAPIKey          string
+	APIProviderID         string
+	APIModelID            string
+	APITimeout            time.Duration
+	PronunciationProvider string
+	PronunciationAPIKey   string
 
 	AIEnabled    bool
 	MagicLinkOn  bool
@@ -208,26 +210,28 @@ func aiProviderModel(provider string) string {
 func LoadProductionConfig() (ProductionConfig, error) {
 	aiProvider := getenv("AI_PROVIDER", string(aifeedback.ProviderOpenCode))
 	cfg := ProductionConfig{
-		Port:            getenv("PORT", "8080"),
-		DatabaseURL:     os.Getenv("DATABASE_URL"),
-		Environment:     getenv("ENVIRONMENT", "staging"),
-		BaseURL:         os.Getenv("BASE_URL"),
-		MagicLinkPath:   getenv("MAGIC_LINK_PATH", "/magic-link"),
-		OAuthRedirect:   os.Getenv("OAUTH_REDIRECT_URI"),
-		SessionDomain:   os.Getenv("SESSION_COOKIE_DOMAIN"),
-		SessionSecure:   getenvBool("SESSION_COOKIE_SECURE", true),
-		SessionLifetime: getenvDuration("SESSION_LIFETIME", 30*24*time.Hour),
-		APIProvider:     aiProvider,
-		APIBaseURL:      aiProviderBaseURL(aiProvider),
-		APIKey:          os.Getenv("AI_PROVIDER_API_KEY"),
-		APIAccountID:    os.Getenv("AI_PROVIDER_ACCOUNT_ID"),
-		APIModel:        aiProviderModel(aiProvider),
-		APITimeout:      getenvDuration("AI_PROVIDER_TIMEOUT", 8*time.Second),
-		AIEnabled:       getenvBool("AI_FEATURES_ENABLED", true),
-		MagicLinkOn:     getenvBool("EMAIL_MAGIC_LINK_ENABLED", true),
-		PasswordOn:      getenvBool("EMAIL_PASSWORD_ENABLED", false),
-		OAuthOn:         getenvBool("GOOGLE_OAUTH_ENABLED", true),
-		NewSignupsOn:    getenvBool("NEW_USER_SIGNUP_ENABLED", true),
+		Port:                  getenv("PORT", "8080"),
+		DatabaseURL:           os.Getenv("DATABASE_URL"),
+		Environment:           getenv("ENVIRONMENT", "staging"),
+		BaseURL:               os.Getenv("BASE_URL"),
+		MagicLinkPath:         getenv("MAGIC_LINK_PATH", "/magic-link"),
+		OAuthRedirect:         os.Getenv("OAUTH_REDIRECT_URI"),
+		SessionDomain:         os.Getenv("SESSION_COOKIE_DOMAIN"),
+		SessionSecure:         getenvBool("SESSION_COOKIE_SECURE", true),
+		SessionLifetime:       getenvDuration("SESSION_LIFETIME", 30*24*time.Hour),
+		APIProvider:           aiProvider,
+		APIBaseURL:            aiProviderBaseURL(aiProvider),
+		APIKey:                os.Getenv("AI_PROVIDER_API_KEY"),
+		APIAccountID:          os.Getenv("AI_PROVIDER_ACCOUNT_ID"),
+		APIModel:              aiProviderModel(aiProvider),
+		APITimeout:            getenvDuration("AI_PROVIDER_TIMEOUT", 8*time.Second),
+		PronunciationProvider: getenv("PRONUNCIATION_PROVIDER", ""),
+		PronunciationAPIKey:   os.Getenv("PRONUNCIATION_API_KEY"),
+		AIEnabled:             getenvBool("AI_FEATURES_ENABLED", true),
+		MagicLinkOn:           getenvBool("EMAIL_MAGIC_LINK_ENABLED", true),
+		PasswordOn:            getenvBool("EMAIL_PASSWORD_ENABLED", false),
+		OAuthOn:               getenvBool("GOOGLE_OAUTH_ENABLED", true),
+		NewSignupsOn:          getenvBool("NEW_USER_SIGNUP_ENABLED", true),
 
 		EmailProviderURL:     os.Getenv("EMAIL_PROVIDER_URL"),
 		EmailProviderAPIKey:  os.Getenv("EMAIL_PROVIDER_API_KEY"),
@@ -471,9 +475,30 @@ func buildOAuthProvider(cfg ProductionConfig) (auth.OAuthProvider, error) {
 	return provider, nil
 }
 
-// productionAIGenerationEnabled keeps incomplete provider configuration from
-// presenting internal mock output as real feedback. OpenAI is explicit opt-in;
-// no branch automatically forwards a failed request to another provider.
+// buildPronunciationProvider selects a dedicated speech provider without changing
+// the text feedback provider or forwarding failed speech to another vendor.
+func buildPronunciationProvider(cfg ProductionConfig) (pronunciation.Provider, bool) {
+	if !cfg.AIEnabled {
+		return nil, false
+	}
+	switch cfg.PronunciationProvider {
+	case providerOpenAI:
+		if strings.TrimSpace(cfg.PronunciationAPIKey) == "" {
+			return nil, false
+		}
+		return pronunciation.NewOpenAIProvider(pronunciation.OpenAIConfig{APIKey: cfg.PronunciationAPIKey}), true
+	case "", providerCloudflare:
+		if !productionAIGenerationEnabled(cfg) || cfg.APIProvider != providerCloudflare || strings.TrimSpace(cfg.APIAccountID) == "" {
+			return nil, false
+		}
+		return pronunciation.NewCloudflareProvider(pronunciation.CloudflareConfig{APIToken: cfg.APIKey, AccountID: cfg.APIAccountID}), true
+	default:
+		return nil, false
+	}
+}
+
+// productionAIGenerationEnabled keeps incomplete feedback configuration from
+// presenting internal mock output as real learner feedback.
 func productionAIGenerationEnabled(cfg ProductionConfig) bool {
 	if !cfg.AIEnabled || strings.TrimSpace(cfg.APIKey) == "" {
 		return false
@@ -775,8 +800,8 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	// Never present deterministic test-provider output as real learner feedback.
 	// Keep non-AI learning available when a provider is missing or disabled.
 	aiGenerationEnabled := productionAIGenerationEnabled(cfg)
-	pronunciationEnabled := aiGenerationEnabled && cfg.APIProvider == providerCloudflare && strings.TrimSpace(cfg.APIAccountID) != ""
-	pronunciationSvc := pronunciation.NewService(db, pronunciation.NewCloudflareProvider(pronunciation.CloudflareConfig{APIToken: cfg.APIKey, AccountID: cfg.APIAccountID}), pronunciationEnabled, clk)
+	pronunciationProvider, pronunciationEnabled := buildPronunciationProvider(cfg)
+	pronunciationSvc := pronunciation.NewService(db, pronunciationProvider, pronunciationEnabled, clk)
 	aiGate := aifeedback.GenerationGate(aifeedback.NewAlwaysEnabledGate())
 	if !aiGenerationEnabled {
 		aiGate = aifeedback.NewDisabledGate()

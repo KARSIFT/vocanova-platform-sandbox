@@ -12,14 +12,16 @@ import (
 
 type PronunciationInput struct {
 	Body struct {
-		Text string `json:"text" minLength:"1" maxLength:"500"`
+		Text            string `json:"text" minLength:"1" maxLength:"500"`
+		MeaningID       string `json:"meaningId,omitempty" format:"uuid"`
+		MeaningRevision string `json:"meaningRevision,omitempty" pattern:"^[0-9a-f]{64}$"`
 	}
 }
 type PronunciationOutput struct{ Body pronunciation.Audio }
 
 func RegisterPronunciation(api huma.API, svc *pronunciation.Service, authSvc *auth.Service) {
 	huma.Register(api, huma.Operation{OperationID: "GetPronunciation", Method: http.MethodPost, Path: "/api/v1/pronunciation", Summary: "Play cached natural pronunciation for canonical public teaching content", Tags: []string{"Learning"}, Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth(), CSRFMiddleware(authSvc)}}, func(ctx context.Context, in *PronunciationInput) (*PronunciationOutput, error) {
-		out, err := svc.Speak(ctx, RequesterUserID(ctx), in.Body.Text)
+		out, err := svc.SpeakMeaningRevision(ctx, RequesterUserID(ctx), in.Body.Text, in.Body.MeaningID, in.Body.MeaningRevision)
 		switch {
 		case errors.Is(err, pronunciation.ErrInvalid):
 			return nil, huma.Error400BadRequest("Choose a word or example from your lesson.")

@@ -30,6 +30,7 @@ export function MeaningTeaching({ meaning }: { meaning: WordMeaning }) {
                 <p>{example.exampleText}</p>
                 <ListenButton
                   text={example.exampleText}
+                  meaningId={meaning.id}
                   label={`example: ${example.exampleText}`}
                   showCaption={false}
                 />
@@ -47,6 +48,7 @@ export function MeaningTeaching({ meaning }: { meaning: WordMeaning }) {
                 <p>{example.exampleText}</p>
                 <ListenButton
                   text={example.exampleText}
+                  meaningId={meaning.id}
                   label={`example: ${example.exampleText}`}
                   showCaption={false}
                 />

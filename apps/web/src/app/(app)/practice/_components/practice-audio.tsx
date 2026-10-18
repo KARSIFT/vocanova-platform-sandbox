@@ -13,7 +13,15 @@ import { SpeechSettings, useSpeechPreferences } from "@/ui/pronunciation";
 import { secondaryAction, textLink } from "./practice-styles";
 
 /** The authored speech text is used only for playback, never in DOM labels. */
-export function PracticeAudio({ text }: { text: string }) {
+export function PracticeAudio({
+  text,
+  meaningId,
+  meaningRevision,
+}: {
+  text: string;
+  meaningId?: string;
+  meaningRevision?: string;
+}) {
   const owner = useRef(Symbol("practice-audio"));
   const [state, setState] = useState<PronunciationState>({ status: "idle" });
   const { preferences, update } = useSpeechPreferences();
@@ -26,10 +34,11 @@ export function PracticeAudio({ text }: { text: string }) {
     deviceSpeech.prepare();
     setState({ status: "idle" });
     return () => deviceSpeech.release(currentOwner);
-  }, [text]);
+  }, [text, meaningId, meaningRevision]);
 
   return (
     <div className="my-5" role="group" aria-label="Practice audio">
+      {meaningId && <span className="sr-only">AI-generated pronunciation</span>}
       <div className="flex flex-wrap gap-3">
         <button
           type="button"
@@ -37,7 +46,15 @@ export function PracticeAudio({ text }: { text: string }) {
           aria-describedby={descriptionId}
           onClick={() => {
             if (active) deviceSpeech.stop(owner.current);
-            else deviceSpeech.play(owner.current, text, false, setState);
+            else
+              deviceSpeech.play(
+                owner.current,
+                text,
+                false,
+                setState,
+                meaningId,
+                meaningRevision,
+              );
           }}
         >
           {active ? "Stop audio" : "Play audio"}

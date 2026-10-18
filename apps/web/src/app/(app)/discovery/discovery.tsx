@@ -44,7 +44,7 @@ export function Discovery({
   const pending = useRef<PendingDecision | null>(null);
   const lock = useRef(false);
   const speechOwner = useRef(Symbol("discovery"));
-  const lastSpoken = useRef(0);
+  const lastSpoken = useRef("");
   const titleRef = useRef<HTMLHeadingElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const item =
@@ -54,6 +54,7 @@ export function Discovery({
   const bandSummary = data.bands.find((value) => value.number === band);
   const displayedRank = item?.rank;
   const displayedWord = item?.wordText;
+  const displayedMeaning = item?.meaningId;
 
   useEffect(() => {
     if (!error) return;
@@ -83,20 +84,33 @@ export function Discovery({
   useEffect(() => {
     if (!started || displayedRank === undefined || !displayedWord || done)
       return;
-    if (lastSpoken.current !== displayedRank) {
-      lastSpoken.current = displayedRank;
+    const identity = `${displayedRank}:${displayedMeaning}`;
+    if (lastSpoken.current !== identity) {
+      lastSpoken.current = identity;
       if (!muted)
-        deviceSpeech.play(speechOwner.current, displayedWord, false, setSpeech);
+        deviceSpeech.play(
+          speechOwner.current,
+          displayedWord,
+          false,
+          setSpeech,
+          displayedMeaning,
+        );
     }
-  }, [started, displayedRank, displayedWord, muted, done]);
+  }, [started, displayedRank, displayedWord, displayedMeaning, muted, done]);
 
   function start() {
     if (!item) return;
     setStarted(true);
     // Keep the first playback inside the learner's gesture for browsers that require it.
-    lastSpoken.current = item.rank;
+    lastSpoken.current = `${item.rank}:${item.meaningId}`;
     if (!muted)
-      deviceSpeech.play(speechOwner.current, item.wordText, false, setSpeech);
+      deviceSpeech.play(
+        speechOwner.current,
+        item.wordText,
+        false,
+        setSpeech,
+        item.meaningId,
+      );
   }
 
   function toggleSound() {
@@ -291,6 +305,7 @@ export function Discovery({
               {item.wordText}
             </h1>
             <div className={styles.audio}>
+              <span className="sr-only">AI-generated pronunciation</span>
               <button
                 type="button"
                 onClick={() =>
@@ -299,6 +314,7 @@ export function Discovery({
                     item.wordText,
                     false,
                     setSpeech,
+                    item.meaningId,
                   )
                 }
                 aria-label={`Listen to ${item.wordText}`}

@@ -21,7 +21,14 @@ function neuralFixture() {
   const requests: {
     text: string;
     signal: AbortSignal;
-    resolve: (value: { audioBase64: string; mimeType: string }) => void;
+    meaningId?: string;
+    meaningRevision?: string;
+    resolve: (value: {
+      audioBase64: string;
+      mimeType: string;
+      meaningId?: string;
+      meaningRevision?: string;
+    }) => void;
     reject: (error: Error) => void;
   }[] = [];
   const clips: {
@@ -32,9 +39,16 @@ function neuralFixture() {
   const deviceCalls: { owner: symbol; text: string; slow: boolean }[] = [];
   const releases: symbol[] = [];
   const environment: NeuralSpeechEnvironment = {
-    request(text, signal) {
+    request(text, signal, meaningId, meaningRevision) {
       return new Promise((resolve, reject) =>
-        requests.push({ text, signal, resolve, reject }),
+        requests.push({
+          text,
+          signal,
+          meaningId,
+          meaningRevision,
+          resolve,
+          reject,
+        }),
       );
     },
     createMedia() {
@@ -94,6 +108,187 @@ const audioResponse = { audioBase64: "aWQz", mimeType: "audio/mpeg" };
 async function settleSpeech() {
   await new Promise<void>((resolve) => setImmediate(resolve));
 }
+
+test("the same spelling keeps separate meaning requests and cannot reuse a blocked clip for another sense", async () => {
+  const f = neuralFixture();
+  const owner = Symbol();
+  const create = f.environment.createMedia;
+  f.environment.createMedia = (response) => {
+    const clip = create(response);
+    clip.media.play = async () => {
+      throw new DOMException("gesture required", "NotAllowedError");
+    };
+    return clip;
+  };
+  f.controller.play(owner, "record", false, () => {}, "record-noun");
+  assert.equal(f.requests[0]!.meaningId, "record-noun");
+  f.requests[0]!.resolve({ ...audioResponse, meaningId: "record-noun" });
+  await settleSpeech();
+  f.controller.play(owner, "record", false, () => {}, "record-verb");
+  assert.equal(f.requests[0]!.signal.aborted, true);
+  assert.equal(f.clips[0]!.disposed, 1);
+  assert.equal(f.requests.length, 2);
+  assert.equal(f.requests[1]!.meaningId, "record-verb");
+  f.controller.release(owner);
+  f.requests[1]!.resolve(audioResponse);
+  await settleSpeech();
+  assert.equal(f.clips.length, 1, "stale meaning response cannot create audio");
+  assert.deepEqual(f.deviceCalls, []);
+});
+
+test("missing or opposite-use confirmation cannot play; a later explicit retry uses only the requested meaning", async () => {
+  for (const confirmed of [undefined, "record-verb"]) {
+    const f = neuralFixture();
+    const owner = Symbol();
+    const states: PronunciationState[] = [];
+    f.controller.play(
+      owner,
+      "record",
+      false,
+      (state) => states.push(state),
+      "record-noun",
+    );
+    f.requests[0]!.resolve({ ...audioResponse, meaningId: confirmed });
+    await settleSpeech();
+    assert.equal(states.at(-1)!.status, "unavailable");
+    assert.deepEqual(f.clips, []);
+    assert.deepEqual(f.deviceCalls, []);
+    f.controller.play(
+      owner,
+      "record",
+      false,
+      (state) => states.push(state),
+      "record-noun",
+    );
+    f.requests[1]!.resolve({ ...audioResponse, meaningId: "record-noun" });
+    await settleSpeech();
+    assert.equal(f.clips.length, 1);
+    assert.equal(states.at(-1)!.status, "playing");
+    f.controller.release(owner);
+  }
+});
+
+test("a changed meaning revision disposes the old blocked clip and rejects stale or missing confirmation", async () => {
+  const oldRevision = "a".repeat(64);
+  const currentRevision = "b".repeat(64);
+  const f = neuralFixture();
+  const owner = Symbol();
+  const states: PronunciationState[] = [];
+  const create = f.environment.createMedia;
+  f.environment.createMedia = (response) => {
+    const clip = create(response);
+    clip.media.play = async () => {
+      throw new DOMException("gesture required", "NotAllowedError");
+    };
+    return clip;
+  };
+  f.controller.play(
+    owner,
+    "record",
+    false,
+    (state) => states.push(state),
+    "record-noun",
+    oldRevision,
+  );
+  assert.equal(f.requests[0]!.meaningRevision, oldRevision);
+  f.requests[0]!.resolve({
+    ...audioResponse,
+    meaningId: "record-noun",
+    meaningRevision: oldRevision,
+  });
+  await settleSpeech();
+  assert.equal(states.at(-1)!.status, "error");
+  for (const revision of [oldRevision, undefined]) {
+    f.controller.play(
+      owner,
+      "record",
+      false,
+      (state) => states.push(state),
+      "record-noun",
+      currentRevision,
+    );
+    const request = f.requests.at(-1)!;
+    assert.equal(request.meaningRevision, currentRevision);
+    request.resolve({
+      ...audioResponse,
+      meaningId: "record-noun",
+      meaningRevision: revision,
+    });
+    await settleSpeech();
+    assert.equal(states.at(-1)!.status, "unavailable");
+    assert.equal(
+      f.clips.length,
+      1,
+      "stale revision must not create another clip",
+    );
+  }
+  assert.equal(f.requests[0]!.signal.aborted, true);
+  assert.equal(f.clips[0]!.disposed, 1);
+  assert.deepEqual(f.deviceCalls, []);
+});
+
+test("meaning-specific failures stay recoverable and never guess pronunciation with device speech", async () => {
+  for (const mode of ["provider", "media", "device-preference"] as const) {
+    const f = neuralFixture();
+    const owner = Symbol();
+    const states: PronunciationState[] = [];
+    if (mode === "device-preference")
+      f.setPreferences({ rate: 0.7, voiceURI: "offline-voice" });
+    if (mode === "media")
+      f.environment.createMedia = () => {
+        throw new Error("invalid clip");
+      };
+    f.controller.play(
+      owner,
+      "close",
+      false,
+      (state) => states.push(state),
+      "close-adjective",
+    );
+    assert.equal(f.requests.length, 1, mode);
+    if (mode === "provider" || mode === "device-preference")
+      f.requests[0]!.reject(new Error("provider unavailable"));
+    else
+      f.requests[0]!.resolve({
+        ...audioResponse,
+        meaningId: "close-adjective",
+      });
+    await settleSpeech();
+    assert.equal(states.at(-1)!.status, "unavailable", mode);
+    assert.deepEqual(f.deviceCalls, [], mode);
+    f.controller.play(
+      owner,
+      "close",
+      false,
+      (state) => states.push(state),
+      "close-adjective",
+    );
+    assert.equal(f.requests.length, 2, "explicit retry remains available");
+    f.controller.release(owner);
+    f.requests[1]!.reject(new Error("cleanup"));
+    await settleSpeech();
+  }
+});
+
+test("meaning-specific timeout aborts the request without a guessed fallback or late audio", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const f = neuralFixture();
+  const states: PronunciationState[] = [];
+  f.controller.play(
+    Symbol(),
+    "read",
+    false,
+    (state) => states.push(state),
+    "read-past",
+  );
+  t.mock.timers.tick(8001);
+  assert.equal(states.at(-1)!.status, "unavailable");
+  assert.equal(f.requests[0]!.signal.aborted, true);
+  f.requests[0]!.resolve(audioResponse);
+  await settleSpeech();
+  assert.deepEqual(f.deviceCalls, []);
+  assert.deepEqual(f.clips, []);
+});
 
 function voice(
   lang: string,

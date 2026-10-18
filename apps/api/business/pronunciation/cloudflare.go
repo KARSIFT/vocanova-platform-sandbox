@@ -30,11 +30,14 @@ func NewCloudflareProvider(config CloudflareConfig) Provider {
 	}
 	return &cloudflareProvider{config: config, client: &http.Client{Timeout: config.Timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 }
-func (p *cloudflareProvider) Generate(ctx context.Context, text string) ([]byte, error) {
+func (p *cloudflareProvider) Identity() ProviderIdentity {
+	return ProviderIdentity{Provider: "cloudflare", Model: Model, Voice: Voice, InstructionVersion: "1"}
+}
+func (p *cloudflareProvider) Generate(ctx context.Context, utterance Utterance) ([]byte, error) {
 	if strings.TrimSpace(p.config.APIToken) == "" || strings.TrimSpace(p.config.AccountID) == "" {
 		return nil, ErrUnavailable
 	}
-	body, err := json.Marshal(map[string]string{"text": text, "speaker": Voice, "encoding": "mp3"})
+	body, err := json.Marshal(map[string]string{"text": utterance.Text, "speaker": Voice, "encoding": "mp3"})
 	if err != nil {
 		return nil, ErrUnavailable
 	}

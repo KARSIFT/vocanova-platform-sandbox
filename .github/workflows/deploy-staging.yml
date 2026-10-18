@@ -705,16 +705,21 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PRONUNCIATION_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
           command_timeout: 2m
-          envs: CLOUDFLARE_API_TOKEN,CLOUDFLARE_ACCOUNT_ID
+          envs: CLOUDFLARE_API_TOKEN,CLOUDFLARE_ACCOUNT_ID,PRONUNCIATION_API_KEY
           script: |
             set -euo pipefail
             if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
               echo "CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID missing or empty - refusing to enable AI features with blank credentials" >&2
+              exit 1
+            fi
+            if [ -z "${PRONUNCIATION_API_KEY:-}" ]; then
+              echo "OPENAI_API_KEY missing or empty - refusing to change staging pronunciation configuration" >&2
               exit 1
             fi
             sudo mkdir -p /opt/vocanova/infra/secrets
@@ -726,6 +731,8 @@ jobs:
               -e '/^AI_PROVIDER_ACCOUNT_ID=/d' \
               -e '/^AI_PROVIDER_MODEL=/d' \
               -e '/^AI_FEATURES_ENABLED=/d' \
+              -e '/^PRONUNCIATION_PROVIDER=/d' \
+              -e '/^PRONUNCIATION_API_KEY=/d' \
               /opt/vocanova/infra/secrets/api.env
             {
               echo "AI_PROVIDER=cloudflare"
@@ -733,6 +740,8 @@ jobs:
               echo "AI_PROVIDER_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}"
               echo "AI_PROVIDER_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast"
               echo "AI_FEATURES_ENABLED=true"
+              echo "PRONUNCIATION_PROVIDER=openai"
+              echo "PRONUNCIATION_API_KEY=${PRONUNCIATION_API_KEY}"
             } >> /opt/vocanova/infra/secrets/api.env
             chmod 600 /opt/vocanova/infra/secrets/api.env
 
@@ -1665,7 +1674,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: staging-public-pronunciation-sample
-          path: apps/web/test-results-staging/**/natural-pronunciation-invite.mp3
+          path: apps/web/test-results-staging/**/natural-pronunciation-*.mp3
           if-no-files-found: ignore
           retention-days: 7
 

@@ -20,6 +20,50 @@ import type {
 
 const MEANING_ID = "329c4ec9-6562-568e-9e71-9134da2f0d8d";
 const STORY_KEY = "a-quiet-lunch";
+// Keep this public-only allowlist aligned with cmd/pronunciation-audition.fixedCases.
+const PRONUNCIATION_CASES = [
+  {
+    name: "record-noun",
+    text: "record",
+    meaningId: "009949f4-3605-530f-84f4-301a6beeb809",
+    partOfSpeech: "noun",
+  },
+  {
+    name: "record-verb",
+    text: "record",
+    meaningId: "45cb435d-695a-5acb-bd3e-f227ab6fe217",
+    partOfSpeech: "verb",
+  },
+  {
+    name: "light-adjective",
+    text: "light",
+    meaningId: "6f4e156d-64fd-5005-9ed5-f0f7d18157d1",
+    partOfSpeech: "adjective",
+  },
+  {
+    name: "fast-adverb",
+    text: "fast",
+    meaningId: "1187a4d8-c4df-5f17-acb2-86b2382b12c1",
+    partOfSpeech: "adverb",
+  },
+  {
+    name: "read-present",
+    text: "read",
+    meaningId: "9e8813c5-81d2-584e-8197-882110c19402",
+    partOfSpeech: "verb",
+  },
+  {
+    name: "read-past",
+    text: "read",
+    meaningId: "732bb481-ef1b-57c7-aa9c-7aff62c2391e",
+    partOfSpeech: "verb",
+  },
+] as const;
+interface PublicPronunciationRequest {
+  text: string;
+  meaningId: string;
+  meaningRevision?: string;
+}
 
 function requiredEnv(name: string): string {
   const value = process.env[name];
@@ -55,7 +99,7 @@ export async function safeStagingRequest(
   apiOrigin: string,
   rawUrl: string,
   method: "GET" | "DELETE" | "POST" = "GET",
-  body?: { text: "invite" },
+  body?: PublicPronunciationRequest,
 ): Promise<{ status: () => number; json: () => Promise<unknown> }> {
   try {
     const url = new URL(rawUrl);
@@ -65,7 +109,19 @@ export async function safeStagingRequest(
     if (
       (method === "POST" &&
         (url.pathname !== "/api/v1/pronunciation" ||
-          body?.text !== "invite")) ||
+          url.search !== "" ||
+          url.hash !== "" ||
+          !body ||
+          !PRONUNCIATION_CASES.some(
+            (sample) =>
+              sample.text === body.text && sample.meaningId === body.meaningId,
+          ) ||
+          Object.keys(body).some(
+            (key) => !["text", "meaningId", "meaningRevision"].includes(key),
+          ) ||
+          (body.meaningRevision !== undefined &&
+            (typeof body.meaningRevision !== "string" ||
+              !/^[0-9a-f]{64}$/u.test(body.meaningRevision))))) ||
       (method !== "POST" && body !== undefined)
     ) {
       throw new Error("Request outside the bounded pronunciation acceptance");
@@ -725,95 +781,127 @@ test("connected maturity journey against real staging", async ({
       expect(vocabularyState(await readMeaning())).toEqual(before);
     });
 
-    await test.step("decode actual bounded natural pronunciation and confirm its shared cache", async () => {
-      const getClip = async () => {
-        const response = await safeStagingRequest(
-          context,
-          apiOrigin,
-          `${apiOrigin}/api/v1/pronunciation`,
-          "POST",
-          { text: "invite" },
-        );
-        expect(
-          response.status(),
-          "Actual staging natural pronunciation must be available.",
-        ).toBe(200);
-        const clip = (await response.json()) as PronunciationAudio;
-        expect(
-          clip.voice === "luna",
-          "The configured natural voice must match.",
-        ).toBe(true);
-        expect(
-          clip.mimeType === "audio/mpeg",
-          "The clip must be MPEG audio.",
-        ).toBe(true);
-        expect(typeof clip.cacheHit === "boolean").toBe(true);
-        expect(typeof clip.audioBase64 === "string").toBe(true);
-        expect(
-          clip.audioBase64.length > 0 && clip.audioBase64.length <= 1_398_104,
-          "The encoded clip must stay within the one MiB audio bound.",
-        ).toBe(true);
-        const bytes = Buffer.from(clip.audioBase64, "base64");
-        expect(
-          bytes.toString("base64") === clip.audioBase64,
-          "The clip must contain canonical valid base64.",
-        ).toBe(true);
-        expect(bytes.byteLength >= 3 && bytes.byteLength <= 1_048_576).toBe(
-          true,
-        );
-        expect(
-          bytes.subarray(0, 3).toString("ascii") === "ID3" ||
-            (bytes[0] === 0xff && (bytes[1]! & 0xe0) === 0xe0),
-          "The returned clip must have an MP3 header.",
-        ).toBe(true);
-        return clip;
-      };
-      const first = await getClip();
-      const second = await getClip();
-      expect(
-        second.cacheHit,
-        "A successful replay must use the durable cache.",
-      ).toBe(true);
-      expect(
-        second.audioBase64 === first.audioBase64,
-        "The cached public clip must be byte-identical.",
-      ).toBe(true);
-      let decoded: { duration: number; sampleRate: number; channels: number };
-      try {
-        decoded = await page.evaluate(async (encoded) => {
-          const bytes = Uint8Array.from(atob(encoded), (value) =>
-            value.charCodeAt(0),
-          );
-          const audio = new AudioContext();
+    await test.step("decode six actual meaning-specific AI pronunciations and confirm their separate durable caches", async () => {
+      for (const sample of PRONUNCIATION_CASES) {
+        await test.step(sample.name, async () => {
+          const getClip = async (meaningRevision?: string) => {
+            const response = await safeStagingRequest(
+              context,
+              apiOrigin,
+              `${apiOrigin}/api/v1/pronunciation`,
+              "POST",
+              {
+                text: sample.text,
+                meaningId: sample.meaningId,
+                ...(meaningRevision ? { meaningRevision } : {}),
+              },
+            );
+            expect(
+              response.status(),
+              "Actual staging natural pronunciation must be available.",
+            ).toBe(200);
+            const clip = (await response.json()) as PronunciationAudio;
+            expect(
+              clip.voice === "marin",
+              "The configured natural voice must match.",
+            ).toBe(true);
+            expect(
+              clip.meaningId === sample.meaningId,
+              "The clip must confirm the requested meaning.",
+            ).toBe(true);
+            expect(
+              clip.partOfSpeech === sample.partOfSpeech,
+              "The clip must confirm the requested part of speech.",
+            ).toBe(true);
+            expect(
+              typeof clip.meaningRevision === "string" &&
+                /^[0-9a-f]{64}$/u.test(clip.meaningRevision),
+              "The clip must confirm a valid meaning revision.",
+            ).toBe(true);
+            if (meaningRevision)
+              expect(
+                clip.meaningRevision === meaningRevision,
+                "A replay must retain the confirmed meaning revision.",
+              ).toBe(true);
+            expect(
+              clip.mimeType === "audio/mpeg",
+              "The clip must be MPEG audio.",
+            ).toBe(true);
+            expect(typeof clip.cacheHit === "boolean").toBe(true);
+            expect(typeof clip.audioBase64 === "string").toBe(true);
+            expect(
+              clip.audioBase64.length > 0 &&
+                clip.audioBase64.length <= 1_398_104,
+              "The encoded clip must stay within the one MiB audio bound.",
+            ).toBe(true);
+            const bytes = Buffer.from(clip.audioBase64, "base64");
+            expect(
+              bytes.toString("base64") === clip.audioBase64,
+              "The clip must contain canonical valid base64.",
+            ).toBe(true);
+            expect(bytes.byteLength >= 3 && bytes.byteLength <= 1_048_576).toBe(
+              true,
+            );
+            expect(
+              bytes.subarray(0, 3).toString("ascii") === "ID3" ||
+                (bytes[0] === 0xff && (bytes[1]! & 0xe0) === 0xe0),
+              "The returned clip must have an MP3 header.",
+            ).toBe(true);
+            return clip;
+          };
+          const first = await getClip();
+          const second = await getClip(first.meaningRevision);
+          expect(
+            second.cacheHit,
+            "A successful replay must use the durable cache.",
+          ).toBe(true);
+          expect(
+            second.audioBase64 === first.audioBase64,
+            "The cached public clip must be byte-identical.",
+          ).toBe(true);
+          let decoded: {
+            duration: number;
+            sampleRate: number;
+            channels: number;
+          };
           try {
-            const buffer = await audio.decodeAudioData(bytes.buffer);
-            return {
-              duration: buffer.duration,
-              sampleRate: buffer.sampleRate,
-              channels: buffer.numberOfChannels,
-            };
-          } finally {
-            await audio.close();
+            decoded = await page.evaluate(async (encoded) => {
+              const bytes = Uint8Array.from(atob(encoded), (value) =>
+                value.charCodeAt(0),
+              );
+              const audio = new AudioContext();
+              try {
+                const buffer = await audio.decodeAudioData(bytes.buffer);
+                return {
+                  duration: buffer.duration,
+                  sampleRate: buffer.sampleRate,
+                  channels: buffer.numberOfChannels,
+                };
+              } finally {
+                await audio.close();
+              }
+            }, first.audioBase64);
+          } catch {
+            throw new Error(
+              "The actual public MP3 could not be decoded by the real browser.",
+            );
           }
-        }, first.audioBase64);
-      } catch {
-        throw new Error(
-          "The actual public MP3 could not be decoded by the real browser.",
-        );
+          expect(
+            Number.isFinite(decoded.duration) && decoded.duration > 0,
+            "The real browser must decode a finite nonempty audio duration.",
+          ).toBe(true);
+          expect(decoded.sampleRate > 0 && decoded.channels > 0).toBe(true);
+          // Only the validated public word clip is retained for owner listening.
+          // Never attach API envelopes, cookies, headers or authenticated traces.
+          const sampleName = `natural-pronunciation-${sample.name}.mp3`;
+          const samplePath = test.info().outputPath(sampleName);
+          await writeFile(samplePath, Buffer.from(first.audioBase64, "base64"));
+          await test.info().attach(sampleName, {
+            path: samplePath,
+            contentType: "audio/mpeg",
+          });
+        });
       }
-      expect(
-        Number.isFinite(decoded.duration) && decoded.duration > 0,
-        "The real browser must decode a finite nonempty audio duration.",
-      ).toBe(true);
-      expect(decoded.sampleRate > 0 && decoded.channels > 0).toBe(true);
-      // Only the validated public word clip is retained for owner listening.
-      // Never attach API envelopes, cookies, headers or authenticated traces.
-      const samplePath = test.info().outputPath("natural-pronunciation-invite.mp3");
-      await writeFile(samplePath, Buffer.from(first.audioBase64, "base64"));
-      await test.info().attach("natural-pronunciation-invite.mp3", {
-        path: samplePath,
-        contentType: "audio/mpeg",
-      });
     });
 
     await test.step("read, start, grade and resume a new original story without replacing history", async () => {

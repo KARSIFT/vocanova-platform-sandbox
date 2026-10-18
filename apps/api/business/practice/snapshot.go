@@ -2,6 +2,7 @@ package practice
 
 import (
 	"crypto/sha256"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaninguses"
 	"github.com/google/uuid"
 	"sort"
 	"strings"
@@ -45,18 +46,23 @@ func build(req StartRequest, words []Word, sources map[string]Source, seed strin
 	}
 	for _, w := range selected {
 		id := uuid.NewString()
-		step := privateStep{Word: w, Accepted: acceptedAnswers(w.WordText), Public: Step{ID: id, Kind: "typed_recall", Prompt: "Type the word or phrase you learned: " + recallDefinition(w), Choices: []Choice{}}}
+		step := privateStep{Word: w, Accepted: acceptedWordAnswers(w), Public: Step{ID: id, Kind: "typed_recall", Prompt: "Type the word or phrase you learned: " + recallDefinition(w), Choices: []Choice{}}}
 		if src, ok := sources[w.MeaningID]; ok && req.Mode == "mistakes" {
 			copy := src
 			step.Source = &copy
 		}
+		if req.Mode == "listening_choice" && req.ListID != "" && meaninguses.SupportsMeaning(w.MeaningID, w.WordText, w.Definition) {
+			listening, err := journeyChoice(w, words, seed, "listening_choice")
+			if err != nil {
+				return snap, err
+			}
+			snap.Steps = append(snap.Steps, listening)
+			continue
+		}
 		if req.Mode == "listening_choice" {
 			step.Public.Kind = "listening_choice"
-			step.Public.Prompt = "Listen with device pronunciation. Which meaning matches?"
-			step.Public.SpeechText = w.WordText
-			if w.WordText == "resume" {
-				step.Public.SpeechText = "résumé"
-			}
+			step.Public.Prompt = "Listen and choose the meaning."
+			step.Public.SpeechText = pronunciationText(w)
 			step.Public.SpeechLanguage = "en-US"
 			options := []Word{}
 			for _, o := range words {

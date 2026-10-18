@@ -181,7 +181,16 @@
           "cacheHit": {
             "type": "boolean"
           },
+          "meaningId": {
+            "type": "string"
+          },
+          "meaningRevision": {
+            "type": "string"
+          },
           "mimeType": {
+            "type": "string"
+          },
+          "partOfSpeech": {
             "type": "string"
           },
           "voice": {
@@ -845,6 +854,13 @@
             "type": "string"
           },
           "partOfSpeech": {
+            "type": "string"
+          },
+          "pronunciationMeaningId": {
+            "description": "Selected meaning used only to resolve pronunciation; no answer key.",
+            "type": "string"
+          },
+          "pronunciationRevision": {
             "type": "string"
           },
           "wordSlug": {
@@ -3426,6 +3442,9 @@
           "meaningId": {
             "type": "string"
           },
+          "partOfSpeech": {
+            "type": "string"
+          },
           "revealed": {
             "type": "boolean"
           },
@@ -4329,6 +4348,9 @@
           "meaningId": {
             "type": "string"
           },
+          "partOfSpeech": {
+            "type": "string"
+          },
           "revealed": {
             "type": "boolean"
           },
@@ -4584,7 +4606,18 @@
             "description": "Teaching-only visual context; absent from graded questions.",
             "type": "string"
           },
+          "partOfSpeech": {
+            "type": "string"
+          },
           "prompt": {
+            "type": "string"
+          },
+          "pronunciationMeaningId": {
+            "description": "Frozen meaning identity for pronunciation; does not identify the correct choice.",
+            "type": "string"
+          },
+          "pronunciationRevision": {
+            "description": "Revision of the frozen pronunciation meaning metadata; absent for historical incomplete snapshots.",
             "type": "string"
           },
           "speechLanguage": {
@@ -4746,6 +4779,14 @@
             ],
             "format": "uri",
             "readOnly": true,
+            "type": "string"
+          },
+          "meaningId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "meaningRevision": {
+            "pattern": "^[0-9a-f]{64}$",
             "type": "string"
           },
           "text": {
@@ -5756,7 +5797,16 @@
             ],
             "type": "string"
           },
+          "partOfSpeech": {
+            "type": "string"
+          },
           "prompt": {
+            "type": "string"
+          },
+          "pronunciationMeaningId": {
+            "type": "string"
+          },
+          "pronunciationRevision": {
             "type": "string"
           },
           "speechLanguage": {

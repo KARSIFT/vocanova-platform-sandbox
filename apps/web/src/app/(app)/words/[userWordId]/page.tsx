@@ -81,7 +81,10 @@ export default async function SavedWordDetailPage({
           <h1 className="text-2xl font-semibold text-neutral-900">
             {savedWord.wordText}
           </h1>
-          <ListenButton text={savedWord.wordText} />
+          <ListenButton
+            text={savedWord.wordText}
+            meaningId={savedWord.meaningId}
+          />
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
             {savedWord.partOfSpeech}
           </p>

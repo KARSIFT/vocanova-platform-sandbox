@@ -1,5 +1,48 @@
 # Vocanova release readiness
 
+## Meaning-specific speech — acceptance in progress, 18 October 2026
+
+The new delivery follows the owner's rejection of the earlier Luna sample. It
+adds a pinned OpenAI speech model, separate persisted meaning/context clips,
+frozen exercise revisions and 19 additional uses across 12 common words. Initial
+real PostgreSQL race checks pass for pronunciation, personal practice and daily
+review. The final full PostgreSQL suite recorded **2,517** passing test/subtest
+events with zero test skips or failures. Changed pronunciation and HTTP packages
+also pass focused race checks after the audio gate. The unbound Go
+suite and vet pass; database-dependent cases in that unbound run may skip and are
+covered separately. The local production web bundle builds. Final hosted checks
+and staging acceptance remain separate gates.
+
+The first real OpenAI set produced six decodable files, including one nearly
+silent adjective clip. All six original files and their generation manifest were
+preserved. A complete decoded-audio gate reproduces and rejects that result;
+five original clips pass its signal checks. Real PostgreSQL tests verify a rejected
+clip consumes its reservation, is never saved as ready, and cannot trigger another
+paid attempt that day. A simpler v2 prompt is a candidate improvement, not a
+proven explanation of the first failure. The held [delivery PR](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1496)
+tracks subsequent hosted and staging results. The complete second fixed set
+passes all six decoded-audio checks and independent MP3 decoding; its identity
+remains `sense-en-US-v2`. Generation took 0.954–1.945 seconds in that audition.
+The owner found the two record samples clear and natural. This supports the voice
+direction; it does not certify every pronunciation in the catalog.
+
+External review also reproduced supplemental-only lists failing to start and
+mixed lists omitting advertised uses. Shared availability/identity checks and
+target loading now agree. All 19 uses work in both list recall and listening;
+distractors do not become targets. The 99-check PostgreSQL race run passes without
+skips or failures, including archive/language/POS/definition changes and learner
+isolation. A verb-resume regression rejects accented CV noun spellings while
+preserving noun and historical aliases.
+
+The affected local browser matrix passed **105/105**, without skips, failures or
+retries, after preserving failed runs of **96/105** and **102/105**. Eighteen local
+synthetic teaching/listening/error captures cover both themes at 360px, 430px and
+desktop, with no horizontal overflow or uncaught page errors; representative
+screens were inspected. These do not establish live authentication or voice quality.
+
+The previous delivery's evidence below applies to its release, not automatically
+to this new branch. Production has not been promoted by this task.
+
 ## Separate review, practice and pronunciation — local acceptance, 18 October 2026
 
 The [integrated delivery](../design/review-practice-and-pronunciation.md) passes
