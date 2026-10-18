@@ -116,6 +116,9 @@ export function ReviewSchedule({
           <path d="m5 8 5 5 5-5" />
         </svg>
       </button>
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
+        {`Next review: ${choices[selected]!.label}`}
+      </span>
       {open && !disabled && (
         <div
           id={menuId}

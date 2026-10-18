@@ -33,6 +33,12 @@ renamed same-day-retry test. The assertion now requires its once-daily successor
 and the new regressions. All 11 required names are present and passed locally;
 the no-skip gate remains enforced. Foundation/workflow-contract checks pass.
 
+The completed advisory review's date-selection announcement and redundant SQL
+filters are addressed. Six additional menu checks pass after the announcement,
+and the affected review/map PostgreSQL race suites pass after the SQL cleanup.
+The authenticated-user parameter contract is documented; only a regression
+test sets the retired retry flag, proving that it cannot bypass daily eligibility.
+
 A bounded PostgreSQL TEMP-table probe covers 12 combinations of 100/10,000 saved
 meanings, one/five meanings per canonical word and 0/50/500 daily attempts. The
 first implementation rescanned daily audit rows and took 906.298 ms in the worst
@@ -42,7 +48,7 @@ These are synthetic query measurements, not a production latency guarantee or
 a fix for the previously observed intermittent TLS connection delay.
 
 The forward migration adds only an audit lookup index (47 forward migrations).
-No existing review history or due dates are rewritten. Hosted CI, external review,
+No existing review history or due dates are rewritten. Final-head hosted CI,
 protected merge and real staging acceptance remain pending for this delivery.
 Production promotion is separate and has not been requested.
 

@@ -103,7 +103,6 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 		   AND uw.deleted_at IS NULL
 		   AND uw.status IN ('new', 'learning', 'reviewing')
  AND `+revieweligibility.Due("uw", "CURRENT_TIMESTAMP")+`
-		   AND (uw.next_review_at IS NULL OR uw.next_review_at <= NOW())
 		 ) AS due
 		 WHERE ($3::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR
 		        (COALESCE(due.next_review_at, '-infinity'::timestamptz), due.user_word_id) >
@@ -149,8 +148,7 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 		 JOIN canonical_words cw ON cw.id = wm.word_id
 		 WHERE uw.user_id = $1 AND uw.deleted_at IS NULL
 		 AND uw.status IN ('new', 'learning', 'reviewing')
- AND `+revieweligibility.Due("uw", "CURRENT_TIMESTAMP")+`
-		 AND (uw.next_review_at IS NULL OR uw.next_review_at <= NOW())`, req.UserID).Scan(&totalCount)
+ AND `+revieweligibility.Due("uw", "CURRENT_TIMESTAMP"), req.UserID).Scan(&totalCount)
 		if err != nil {
 			return nil, fmt.Errorf("count due words: %w", err)
 		}

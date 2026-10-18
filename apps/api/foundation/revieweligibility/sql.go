@@ -17,6 +17,7 @@ func ReviewedToday(user, word, now string) string {
 // Due selects one deterministic due meaning of each canonical word. Other uses
 // remain separate saved meanings and can be selected on later days. Every
 // caller binds its authenticated user as $1; this keeps the audit set uncorrelated.
+// IMPORTANT: $1 MUST be the authenticated requester, never another parameter.
 func Due(alias, now string, activeOnly ...bool) string {
 	currentContent, earlierContent := "", ""
 	if len(activeOnly) > 0 && activeOnly[0] {

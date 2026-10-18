@@ -1376,6 +1376,11 @@ for (const theme of ["light", "dark"] as const) {
     await expect(schedule).toHaveAccessibleName(
       "Show this word again: In 1 day",
     );
+    await expect(
+      page.locator('[aria-live="polite"]').filter({
+        hasText: /^Next review: In 1 day$/,
+      }),
+    ).toHaveText("Next review: In 1 day");
     await schedule.press("Enter");
     await page.keyboard.press("Escape");
     await expect(menu).toHaveCount(0);
