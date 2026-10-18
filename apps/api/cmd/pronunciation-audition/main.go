@@ -107,7 +107,11 @@ func run(args []string) int {
 		return 2
 	}
 	// Never overwrite a previous run or silently pay again into its output set.
-	for _, name := range append([]string{"manifest.json"}, "record-noun.mp3", "record-verb.mp3", "light-adjective.mp3", "fast-adverb.mp3", "read-present.mp3", "read-past.mp3") {
+	outputNames := []string{"manifest.json"}
+	for _, sample := range cases {
+		outputNames = append(outputNames, sample.Name+".mp3", "rejected-"+sample.Name+".mp3")
+	}
+	for _, name := range outputNames {
 		if _, err := os.Lstat(filepath.Join(*directory, name)); !os.IsNotExist(err) {
 			fmt.Fprintln(os.Stderr, "audition output must be fresh")
 			return 2

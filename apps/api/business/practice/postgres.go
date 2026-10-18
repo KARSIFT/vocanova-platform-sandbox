@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaninguses"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"strings"
@@ -123,10 +124,12 @@ func loadWords(ctx context.Context, tx *sql.Tx) ([]Word, error) {
 }
 func loadReferences(ctx context.Context, tx *sql.Tx, refs []reference) ([]Word, error) {
 	ids := make([]string, len(refs))
+	byID := map[string]reference{}
 	for i, r := range refs {
 		ids[i] = r.MeaningID
+		byID[r.MeaningID] = r
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT wm.id,cw.text,wm.short_definition,wm.part_of_speech FROM word_meanings wm JOIN canonical_words cw ON cw.id=wm.word_id WHERE wm.id=ANY($1::uuid[]) AND wm.status='active' AND cw.status='active'`, pq.Array(ids))
+	rows, err := tx.QueryContext(ctx, `SELECT wm.id,cw.text,wm.short_definition,wm.part_of_speech,cw.id,cw.language_code FROM word_meanings wm JOIN canonical_words cw ON cw.id=wm.word_id WHERE wm.id=ANY($1::uuid[]) AND wm.status='active' AND cw.status='active'`, pq.Array(ids))
 	if err != nil {
 		return nil, err
 	}
@@ -134,12 +137,26 @@ func loadReferences(ctx context.Context, tx *sql.Tx, refs []reference) ([]Word, 
 	out := []Word{}
 	for rows.Next() {
 		var w Word
-		if err = rows.Scan(&w.MeaningID, &w.WordText, &w.Definition, &w.PartOfSpeech); err != nil {
+		var wordID uuid.UUID
+		var language string
+		if err = rows.Scan(&w.MeaningID, &w.WordText, &w.Definition, &w.PartOfSpeech, &wordID, &language); err != nil {
 			return nil, err
 		}
-		ref, ok := referenceFor(w.MeaningID)
+		ref, ok := byID[w.MeaningID]
 		if !ok || w.WordText != ref.WordText || w.Definition == "" {
 			return nil, ErrContentUnavailable
+		}
+		if _, starter := referenceFor(w.MeaningID); !starter {
+			valid := false
+			for _, entry := range supplementalListMeanings {
+				if entry.MeaningID.String() == w.MeaningID && entry.WordID == wordID && entry.Word == w.WordText && entry.PartOfSpeech == w.PartOfSpeech && entry.Definition == w.Definition && language == "en" {
+					w.Example, valid = entry.Example, true
+					break
+				}
+			}
+			if !valid {
+				return nil, ErrContentUnavailable
+			}
 		}
 		w.LessonKey = ref.LessonKey
 		w.WordSlug = strings.ReplaceAll(strings.ToLower(w.WordText), " ", "-")
@@ -153,6 +170,37 @@ func loadReferences(ctx context.Context, tx *sql.Tx, refs []reference) ([]Word, 
 	}
 	return out, nil
 }
+
+// Supplemental list listening may use active reviewed starters as distractors.
+// They remain outside membership and cannot become additional selected targets.
+func loadSupplementalDistractors(ctx context.Context, tx *sql.Tx) ([]Word, error) {
+	ids := make([]string, len(catalog))
+	for i, ref := range catalog {
+		ids[i] = ref.MeaningID
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT wm.id FROM word_meanings wm JOIN canonical_words cw ON cw.id=wm.word_id WHERE wm.id=ANY($1::uuid[]) AND wm.status='active' AND cw.status='active'`, pq.Array(ids))
+	if err != nil {
+		return nil, err
+	}
+	refs := []reference{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if ref, ok := referenceFor(id); ok {
+			refs = append(refs, ref)
+		}
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	return loadReferences(ctx, tx, refs)
+}
+
 func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, req StartRequest, key string, now time.Time) (*State, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -202,17 +250,17 @@ func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, req Start
 		if revision != *req.ListRevision {
 			return nil, ErrConflict
 		}
-		rows, e := tx.QueryContext(ctx, `SELECT m.meaning_id::text,cw.text,wm.short_definition FROM user_word_list_members m JOIN word_meanings wm ON wm.id=m.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id WHERE m.list_id=$1 AND wm.status='active' AND cw.status='active'`, req.ListID)
+		rows, e := tx.QueryContext(ctx, `SELECT m.meaning_id::text,cw.text,wm.short_definition,wm.part_of_speech,cw.id::text,cw.language_code FROM user_word_list_members m JOIN word_meanings wm ON wm.id=m.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id WHERE m.list_id=$1 AND wm.status='active' AND cw.status='active'`, req.ListID)
 		if e != nil {
 			return nil, e
 		}
 		for rows.Next() {
-			var meaning, text, definition string
-			if e = rows.Scan(&meaning, &text, &definition); e != nil {
+			var meaning, text, definition, pos, wordID, language string
+			if e = rows.Scan(&meaning, &text, &definition, &pos, &wordID, &language); e != nil {
 				rows.Close()
 				return nil, e
 			}
-			if SupportsMeaning(meaning, text, definition) {
+			if SupportsListMeaning(meaning, wordID, text, pos, definition, language) {
 				sources[meaning] = Source{}
 			}
 		}
@@ -223,6 +271,7 @@ func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, req Start
 		}
 	}
 	refs := catalog
+	hasSupplement := false
 	if req.ListID != "" {
 		refs = []reference{}
 		lessons := map[string]bool{}
@@ -237,6 +286,12 @@ func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, req Start
 				refs = append(refs, ref)
 			}
 		}
+		for _, entry := range meaninguses.Entries() {
+			if _, member := sources[entry.MeaningID.String()]; member {
+				refs = append(refs, reference{MeaningID: entry.MeaningID.String(), WordText: entry.Word})
+				hasSupplement = true
+			}
+		}
 		if len(refs) == 0 {
 			return nil, ErrListEmpty
 		}
@@ -244,6 +299,22 @@ func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, req Start
 	words, err := loadReferences(ctx, tx, refs)
 	if err != nil {
 		return nil, err
+	}
+	if hasSupplement && req.Mode == "listening_choice" {
+		distractors, err := loadSupplementalDistractors(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
+		seen := map[string]bool{}
+		for _, w := range words {
+			seen[w.MeaningID] = true
+		}
+		for _, w := range distractors {
+			if !seen[w.MeaningID] {
+				words = append(words, w)
+				seen[w.MeaningID] = true
+			}
+		}
 	}
 	id = uuid.New()
 	snap, err := build(req, words, sources, id.String())

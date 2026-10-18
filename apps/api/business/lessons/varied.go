@@ -25,6 +25,7 @@ func buildVariedSnapshot(d Definition, words []Word, seed string) (Snapshot, err
 	listening.Step.Kind = "listening_choice"
 	listening.Step.Prompt = "Listen. Which meaning matches?"
 	listening.Step.SpeechText = words[2].WordText
+	listening.Step.Word = words[2]
 	listening.Step.PronunciationMeaningID = words[2].MeaningID
 	listening.Step.PartOfSpeech = words[2].PartOfSpeech
 	listening.Step.SpeechLanguage = "en-US"

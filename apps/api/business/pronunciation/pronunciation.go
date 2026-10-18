@@ -23,6 +23,9 @@ import (
 const Model = "@cf/deepgram/aura-2-en"
 const Voice = "luna"
 const DailyCharacterLimit = 1000
+
+// DailyGenerationLimit is also enforced by the generation-cap migration.
+// Raising it requires a forward migration of that database constraint.
 const DailyGenerationLimit = 20
 const MaxAudioBytes = 1024 * 1024
 
@@ -91,6 +94,8 @@ func cacheKey(text string) string {
 	return utteranceCacheKey(ProviderIdentity{Provider: "cloudflare", Model: Model, Voice: Voice, InstructionVersion: "1"}, Utterance{Text: text})
 }
 func utteranceCacheKey(identity ProviderIdentity, utterance Utterance) string {
+	// Historical text-only Cloudflare keys cannot confirm a selected meaning.
+	// New provider/context identities intentionally start a separately gated cache.
 	data, _ := json.Marshal(struct {
 		Identity  ProviderIdentity
 		Utterance Utterance
@@ -147,7 +152,7 @@ func (s *Service) SpeakMeaningRevision(ctx context.Context, user uuid.UUID, text
 		return nil, ErrUnavailable
 	}
 	key := utteranceCacheKey(identity, utterance)
-	reserved, err := s.repo.Reserve(ctx, key, utf8.RuneCountInString(text), s.clock.Now().UTC())
+	reserved, err := s.repo.Reserve(ctx, key, utf8.RuneCountInString(utterance.Text), s.clock.Now().UTC())
 	if err != nil {
 		return nil, err
 	}

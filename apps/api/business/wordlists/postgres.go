@@ -40,7 +40,7 @@ func get(ctx context.Context, q queryer, u, id uuid.UUID) (*WordListDetail, erro
 	if err != nil {
 		return nil, err
 	}
-	rows, err := q.QueryContext(ctx, `SELECT m.meaning_id,cw.id,cw.text,cw.normalized_text,wm.short_definition,wm.part_of_speech,m.created_at,(wm.status='active' AND cw.status='active') FROM user_word_list_members m JOIN word_meanings wm ON wm.id=m.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id WHERE m.list_id=$1 ORDER BY lower(cw.text),wm.meaning_order,wm.id`, id)
+	rows, err := q.QueryContext(ctx, `SELECT m.meaning_id,cw.id,cw.text,cw.normalized_text,wm.short_definition,wm.part_of_speech,cw.language_code,m.created_at,(wm.status='active' AND cw.status='active') FROM user_word_list_members m JOIN word_meanings wm ON wm.id=m.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id WHERE m.list_id=$1 ORDER BY lower(cw.text),wm.meaning_order,wm.id`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -48,11 +48,12 @@ func get(ctx context.Context, q queryer, u, id uuid.UUID) (*WordListDetail, erro
 	for rows.Next() {
 		var m WordListMember
 		var enabled bool
-		if err = rows.Scan(&m.MeaningID, &m.WordID, &m.WordText, &m.WordSlug, &m.ShortDefinition, &m.PartOfSpeech, &m.AddedAt, &enabled); err != nil {
+		var language string
+		if err = rows.Scan(&m.MeaningID, &m.WordID, &m.WordText, &m.WordSlug, &m.ShortDefinition, &m.PartOfSpeech, &language, &m.AddedAt, &enabled); err != nil {
 			return nil, err
 		}
 		m.WordSlug = strings.ReplaceAll(m.WordSlug, " ", "-")
-		m.PracticeAvailable = enabled && practice.SupportsMeaning(m.MeaningID, m.WordText, m.ShortDefinition)
+		m.PracticeAvailable = enabled && practice.SupportsListMeaning(m.MeaningID, m.WordID, m.WordText, m.PartOfSpeech, m.ShortDefinition, language)
 		st.Members = append(st.Members, m)
 		if m.PracticeAvailable {
 			st.UsableMemberCount++
