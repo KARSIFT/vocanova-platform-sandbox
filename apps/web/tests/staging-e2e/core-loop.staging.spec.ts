@@ -3,8 +3,10 @@ import type {
   DailyLesson,
   DailyMission,
   KnowledgeMap,
+  KnowledgeMapItem,
   KnowledgeMapDecisionResult,
   Progress,
+  WordDetailResponse,
 } from "@vocanova/api-client";
 // VOC-050-T02 - the core-loop journey run against a real deployed
 // environment (staging), as deploy-staging.yml's post-deploy gate.
@@ -52,7 +54,13 @@ import {
   getTerminalReviewHeading,
   waitForReviewReadiness,
 } from "../e2e/review-readiness";
-import { reviewSeedActions } from "./review-seed";
+import {
+  eligibleReviewSeeds,
+  MAX_REVIEW_SEED_CANDIDATES,
+  REVIEW_SEED_BANDS,
+  reviewedMeaningAnswer,
+  reviewSeedActions,
+} from "./review-seed";
 import {
   chooseSituationWordLink,
   getFirstMeaningSaveControl,
@@ -513,13 +521,97 @@ async function readReviewedTodayCountAfterReviews(
   );
 }
 
-// Only confirmed correct answers newly credited today count toward the gate.
-// Visible correction text is remembered for a later retry, never treated as a
-// first-try success. A bounded loop also handles saved progress from prior runs.
-async function reviewOneCard(
+// Save a fresh public meaning through the real UI. Never remove a saved word,
+// clear an audit, reset clocks or infer eligibility from a successful Save alone.
+async function prepareEligibleReview(
   page: Page,
-  meanings: Map<string, string>,
-): Promise<boolean> {
+  apiOrigin: string,
+): Promise<KnowledgeMapItem> {
+  let attempted = 0;
+  for (const band of REVIEW_SEED_BANDS) {
+    const map = await readStagingState<KnowledgeMap>(
+      page,
+      apiOrigin,
+      `/api/v1/knowledge-map?band=${band}`,
+    );
+    expect(
+      map.currentBand.number === band,
+      "The candidate range must match the requested public catalog band.",
+    ).toBe(true);
+    const candidates = eligibleReviewSeeds(
+      map.currentBand.items,
+      MAX_REVIEW_SEED_CANDIDATES - attempted,
+    );
+    for (const candidate of candidates) {
+      attempted++;
+      const { word } = await readStagingState<WordDetailResponse>(
+        page,
+        apiOrigin,
+        `/api/v1/canonical-words/${encodeURIComponent(candidate.wordSlug)}`,
+      );
+      const meaning = word.meanings.find(
+        (item) => item.id === candidate.meaningId,
+      );
+      if (
+        word.id !== candidate.wordId ||
+        word.text !== candidate.wordText ||
+        word.slug !== candidate.wordSlug ||
+        meaning?.partOfSpeech !== candidate.partOfSpeech ||
+        meaning.shortDefinition !== candidate.shortDefinition ||
+        meaning.saved ||
+        meaning.selfReportedKnown
+      )
+        continue;
+      await page.goto(`/vocabulary/${encodeURIComponent(word.slug)}`);
+      const card = page
+        .getByRole("main")
+        .locator(`li[id="meaning-${candidate.meaningId}"]`);
+      const save = card.getByRole("button", {
+        name: `Save ${word.text}: ${meaning.shortDefinition}`,
+        exact: true,
+      });
+      await expect(save).toBeVisible();
+      const saved = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).origin === apiOrigin &&
+          new URL(response.url()).pathname === "/api/v1/user-words" &&
+          response.request().postDataJSON()?.meaningId === candidate.meaningId,
+      );
+      await save.click();
+      expect(
+        (await saved).ok(),
+        "The real UI must acknowledge saving this exact synthetic review meaning.",
+      ).toBe(true);
+      await expect(
+        card.getByRole("button", {
+          name: `Remove ${word.text} from saved words`,
+          exact: true,
+        }),
+      ).toHaveAttribute("aria-pressed", "true");
+      const confirmed = await readStagingState<KnowledgeMap>(
+        page,
+        apiOrigin,
+        `/api/v1/knowledge-map?band=${band}`,
+      );
+      const current = confirmed.currentBand.items.find(
+        (item) => item.meaningId === candidate.meaningId,
+      );
+      if (current?.saved && current.due && !current.selfReportedKnown)
+        return current;
+      // A previously removed word may still have today's immutable review audit.
+      // Keep it saved and try another candidate; restoration must not bypass it.
+    }
+    if (attempted >= MAX_REVIEW_SEED_CANDIDATES) break;
+  }
+  throw new Error(
+    "No fresh eligible review meaning was confirmed within the bounded synthetic catalog candidates. Preserve today's audit and inspect the synthetic account's remaining unsaved words; do not reset its history.",
+  );
+}
+
+// Only confirmed correct answers newly credited today count toward the gate.
+// Read the exact public meaning before grading; never guess and retry today.
+async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
   for (let attempt = 0; attempt < 40; attempt++) {
     const resume = page.getByRole("button", {
       name: "Continue",
@@ -570,10 +662,38 @@ async function reviewOneCard(
       .getByRole("main")
       .getByRole("heading", { level: 1 })
       .innerText();
-    const known = meanings.get(word);
-    const option = known
-      ? page.getByRole("radio", { name: known, exact: true })
-      : getEnabledReviewPromptControl(page);
+    const current = await readStagingState<{
+      session: DailyLesson | null;
+      dueCount: number;
+    }>(page, apiOrigin, "/api/v1/daily-lessons/current");
+    const step = current.session?.currentStep;
+    if (
+      !step ||
+      step.wordText !== word ||
+      current.session?.id !== new URL(page.url()).searchParams.get("lesson")
+    )
+      throw new Error(
+        "The visible review question does not match the authoritative saved lesson. Refuse to guess an answer.",
+      );
+    const canonical = await readStagingState<WordDetailResponse>(
+      page,
+      apiOrigin,
+      `/api/v1/canonical-words/${encodeURIComponent(step.wordSlug)}`,
+    );
+    const answer = reviewedMeaningAnswer(step, canonical.word);
+    if (!answer) {
+      // A stale frozen definition cannot be guessed from an edited live word.
+      // Skip without grading and continue the bounded search for a safe card.
+      await page
+        .getByRole("button", { name: "Skip for now", exact: true })
+        .click();
+      continue;
+    }
+    const option = page.getByRole("radio", {
+      name: answer.definition,
+      exact: true,
+    });
+    await expect(option).toHaveValue(answer.choiceId);
     await option.check();
     const graded = page.waitForResponse(
       (response) =>
@@ -590,7 +710,20 @@ async function reviewOneCard(
     const lesson = (await response.json()) as DailyLesson;
     expect(lesson.feedback).toBeTruthy();
     const feedback = lesson.feedback!;
-    meanings.set(feedback.wordText, feedback.answer);
+    if (!feedback.skipped) {
+      expect(
+        feedback.meaningId === answer.meaningId,
+        "Grading must confirm the exact pre-read meaning.",
+      ).toBe(true);
+      expect(
+        feedback.correct,
+        "The exact canonical meaning must be answered correctly without a retry.",
+      ).toBe(true);
+      expect(
+        feedback.answer === answer.definition,
+        "The confirmed answer must match the meaning read before grading.",
+      ).toBe(true);
+    }
     await expect(
       page
         .getByRole("main")
@@ -599,10 +732,15 @@ async function reviewOneCard(
     ).toBeVisible();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await waitForReviewReadiness(page, 120_000);
-    if (feedback.credited) return true;
+    if (feedback.skipped)
+      expect(
+        feedback.credited,
+        "Skipped cards must never satisfy the real-review gate.",
+      ).toBe(false);
+    if (feedback.correct && !feedback.skipped && feedback.credited) return true;
   }
   throw new Error(
-    "No new daily credit after 40 confirmed lesson answers; do not count attempts as learned words.",
+    "No new correct daily review credit after 40 bounded lesson transitions. Do not guess answers, retry reviewed words today or count attempts as learned words.",
   );
 }
 
@@ -619,6 +757,11 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         "Expected playwright.staging.config.ts to configure use.baseURL so cookies can be scoped to the deployed origin.",
       );
     }
+    stagingOrigin(baseURL, "staging.vocanova.site");
+    const apiOrigin = stagingOrigin(
+      process.env.STAGING_API_BASE_URL ?? "https://api-staging.vocanova.site",
+      "api-staging.vocanova.site",
+    );
 
     await test.step("1. authenticate with the minted synthetic session", async () => {
       const domain = cookieDomainFor(baseURL);
@@ -660,11 +803,6 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
     });
 
     await test.step("2b. assess a real map word without review credit and retain it after reload", async () => {
-      const apiOrigin = stagingOrigin(
-        process.env.STAGING_API_BASE_URL ?? "https://api-staging.vocanova.site",
-        "api-staging.vocanova.site",
-      );
-      stagingOrigin(baseURL, "staging.vocanova.site");
       const expectedEmail =
         process.env.VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL ??
         "smoke-test-bot@synthetic.vocanova.invalid";
@@ -763,19 +901,16 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       for (const action of reviewSeedActions(initiallySaved)) {
         const response = page.waitForResponse((result) => {
           const path = new URL(result.url()).pathname;
-          return action === "remove"
-            ? result.request().method() === "DELETE" &&
-                path === `/api/v1/user-words/${meaningId}`
-            : result.request().method() === "POST" &&
-                path === "/api/v1/user-words" &&
-                result.request().postDataJSON()?.meaningId === meaningId;
+          return (
+            action === "save" &&
+            result.request().method() === "POST" &&
+            path === "/api/v1/user-words" &&
+            result.request().postDataJSON()?.meaningId === meaningId
+          );
         });
         await saveButton.click();
         expect((await response).ok()).toBe(true);
-        await expect(saveButton).toHaveAttribute(
-          "aria-pressed",
-          action === "remove" ? "false" : "true",
-        );
+        await expect(saveButton).toHaveAttribute("aria-pressed", "true");
       }
 
       await expect(saveButton).toHaveAttribute("aria-pressed", "true");
@@ -805,13 +940,16 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       ).toBeVisible();
     });
 
+    await test.step("4b. confirm a fresh meaning is truly due without resetting review history", async () => {
+      await prepareEligibleReview(page, apiOrigin);
+    });
+
     const reviewedCards =
       await test.step("5. work the review queue", async () => {
         await page.goto("/reviews");
         let reviewed = 0;
-        const meanings = new Map<string, string>();
         while (reviewed < MAX_REVIEW_CARDS) {
-          const didReview = await reviewOneCard(page, meanings);
+          const didReview = await reviewOneCard(page, apiOrigin);
           if (!didReview) {
             // reviewOneCard independently found a terminal review state - trust
             // it over this loop's own now-stale check above.

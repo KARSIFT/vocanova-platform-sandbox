@@ -31,6 +31,7 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 	defer cancel()
 	_, err = db.ExecContext(ctx, `
 		CREATE TEMP TABLE users(id uuid PRIMARY KEY,status text DEFAULT 'active',deleted_at timestamptz);
+ CREATE TEMP TABLE word_meanings(id uuid PRIMARY KEY,word_id uuid NOT NULL);
  CREATE TEMP TABLE user_word_knowledge(user_id uuid,meaning_id uuid,self_reported_known bool);
  CREATE TEMP TABLE daily_review_successes(user_id uuid,meaning_id uuid,local_date date);
  CREATE TEMP TABLE user_settings(user_id uuid,timezone text);
@@ -63,9 +64,6 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 	serverNow := time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
 	repo := NewPostgreSQLRepository(db, clock.Fixed{T: serverNow})
 	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), clock.Fixed{T: serverNow})
-	userID, meaningID := uuid.New(), uuid.New()
-	_, err = db.ExecContext(ctx, "INSERT INTO users(id)VALUES($1)", userID)
-	require.NoError(t, err)
 
 	for _, tc := range []struct {
 		name       string
@@ -75,8 +73,14 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 		{name: "future client history", answeredAt: serverNow.Add(30 * 24 * time.Hour)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			userWordID := uuid.New()
-			_, err := db.ExecContext(ctx, `
+			// Each client-clock history is an independent learner and word. A
+			// prior subcase's server-created daily audit must remain authoritative.
+			userID, meaningID, userWordID := uuid.New(), uuid.New(), uuid.New()
+			_, err := db.ExecContext(ctx, "INSERT INTO word_meanings(id,word_id)VALUES($1,$2)", meaningID, uuid.New())
+			require.NoError(t, err)
+			_, err = db.ExecContext(ctx, "INSERT INTO users(id)VALUES($1)", userID)
+			require.NoError(t, err)
+			_, err = db.ExecContext(ctx, `
 				INSERT INTO user_words (
 					id, user_id, meaning_id, review_step, total_review_count,
 					correct_review_count, consecutive_correct_count, consecutive_incorrect_count,
@@ -134,7 +138,7 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 				_, err := db.ExecContext(ctx, `INSERT INTO users(id,status,deleted_at)VALUES($1,$2,CASE WHEN $3 THEN $4::timestamptz ELSE NULL END)`, owner, boundary.status, boundary.deleted, serverNow)
 				require.NoError(t, err)
 			}
-			req := SubmitReviewRequest{UserID: owner, UserWordID: uuid.New(), MeaningID: meaningID, AttemptType: AttemptTypeReview, PromptType: PromptTypeSelfCheck, Result: ResultCorrect, Rating: RatingGood, AnsweredAt: serverNow, Source: SourceReview, ClientAttemptID: "boundary-" + boundary.name, IdempotencyKey: "boundary-" + boundary.name}
+			req := SubmitReviewRequest{UserID: owner, UserWordID: uuid.New(), MeaningID: uuid.New(), AttemptType: AttemptTypeReview, PromptType: PromptTypeSelfCheck, Result: ResultCorrect, Rating: RatingGood, AnsweredAt: serverNow, Source: SourceReview, ClientAttemptID: "boundary-" + boundary.name, IdempotencyKey: "boundary-" + boundary.name}
 			_, err := repo.SubmitReview(ctx, req)
 			require.ErrorIs(t, err, ErrUserWordNotFound)
 			for _, table := range []string{"review_attempts", "idempotency_keys"} {

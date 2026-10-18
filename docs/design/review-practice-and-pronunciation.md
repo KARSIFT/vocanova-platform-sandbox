@@ -17,6 +17,13 @@ WordUp/Duolingo review; it is not continuous playback or an audio assessment.
 
 ## Review words
 
+The owner's 18 October **Vocanova 3** recording (6:14) was visually sampled
+throughout at ten-second intervals. At 0:10–0:30, the native-language choices
+omit Persian. At 4:50–5:10, an incorrect answer offers another attempt in the
+same review; at 5:50, that word returns. At 5:20–5:40, the plain open dropdown
+and Continue have mismatched alignment. These are visual observations, not an
+assessment of the recording's audio.
+
 The server grades the answer and records the real Leitner result. Feedback shows
 the resulting level and persisted next-review date in the device's local calendar.
 Beside Continue, the learner
@@ -24,6 +31,24 @@ can keep automatic scheduling, choose 1, 3, 7, 14, 30, 60 or 120 days, or select
 **I know this word**. An explicit date changes scheduling only. It does not change
 the answer grade, advance the box again, add an attempt or award extra credit.
 Self-reported knowledge stays distinct from tested recall.
+
+Each canonical word finishes review for the learner's local day after any
+correct, incorrect or explicitly skipped attempt. Other meanings of that word
+can appear on later days; mixed personal practice remains independent. A wrong
+answer moves back exactly one level with a floor of zero: a three-day interval
+becomes one day. There is no consecutive-error reset. All automatic outcomes
+wait at least 24 hours, including the lowest box. Existing audit and due dates
+are preserved; eligibility uses server-created audit time and separate IANA
+local-midnight boundaries, including daylight-saving transitions. Re-saving a
+word, another tab, a restored old session or a client timestamp cannot create a
+second review that day. Exact retry receipts remain immutable.
+
+Continue and Next review share one aligned action row and matching control
+heights. The schedule opens a styled menu with date choices and a checked
+selection. Selection remains a draft until Continue. Arrow keys, Home/End,
+Escape, Tab, outside click and focus return are supported, including narrow
+mobile and dark mode. The closed control shows the automatic date without
+repeating the menu's longer label.
 
 Queue advancement, explicit scheduling and the retry receipt commit together.
 Changes from another tab are rejected rather than overwritten. Legacy feedback
@@ -46,11 +71,21 @@ not establish 10,000 editorially certified lessons or pictures. Feedback, token
 selection and first-answer accuracy survive reloads. Assisted or revealed answers
 do not become unaided first correct answers. Practice never writes SRS grades,
 review credit or mastery. It uses immediate correction/retry; the review queue
-retains its separate delayed mistakes. Discovery's native history update preserves
+defers mistakes to a later day. Discovery's native history update preserves
 opaque browser/router state and notifies the focused exit link, including initial
 mount and Back/Forward. The selected 100-word range survives leaving the session.
 Teaching steps reuse the existing original meaning pictures; graded questions
 exclude those pictures and their target identifiers.
+
+## Registration language
+
+The native-language picker offers 40 named languages, with Persian / فارسی
+among the initial choices. Search matches English names, native names and the
+Farsi alias, storing the established language code. Languages outside the list
+remain valid text entries. Going Back and the final summary show the readable
+name rather than an opaque code. The suggestions are keyboard-operable 44px
+buttons with a labelled group, including the empty search result state. This is
+a self-reported native-language preference, not a promise of translated app UI.
 
 ## Pronunciation
 

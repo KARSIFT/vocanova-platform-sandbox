@@ -147,3 +147,32 @@ func TestSavedCollectionFiltersCursorBindingDeletionAndExhaustion(t *testing.T) 
 		require.ErrorIs(t, err, ErrInvalidCursor)
 	}
 }
+
+func TestMemorySavedViewsSelectOneDueUseOfCanonicalWord(t *testing.T) {
+	user, word, m1, m2 := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	older := time.Now().Add(-time.Hour)
+	first, second := uuid.UUID{15: 1}, uuid.UUID{15: 2}
+	repo := NewMemoryRepository(MemoryRepositoryData{
+		Words:     []MemoryWord{{ID: word, Text: "record", Status: "archived"}},
+		Meanings:  []MemoryMeaning{{ID: m1, WordID: word, Status: "archived"}, {ID: m2, WordID: word, Status: "archived"}},
+		UserWords: []MemoryUserWord{{ID: first, UserID: user, MeaningID: m1, Status: "new"}, {ID: second, UserID: user, MeaningID: m2, Status: "reviewing", NextReviewAt: &older}},
+	})
+	saved, err := repo.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: user, DueOnly: true})
+	require.NoError(t, err)
+	require.Equal(t, 1, saved.TotalCount)
+	require.Equal(t, m1, saved.Items[0].MeaningID)
+	states, err := repo.SavedWordStates(t.Context(), user, []uuid.UUID{m1, m2})
+	require.NoError(t, err)
+	require.True(t, states[m1].Due)
+	require.False(t, states[m2].Due)
+	summary, err := repo.GetKnowledgeSummary(t.Context(), user)
+	require.NoError(t, err)
+	require.Equal(t, 2, summary.Saved)
+	require.Equal(t, 1, summary.Due)
+	future := time.Now().Add(time.Hour)
+	repo.userWords[0].NextReviewAt = &future
+	saved, err = repo.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: user, DueOnly: true})
+	require.NoError(t, err)
+	require.Equal(t, 1, saved.TotalCount)
+	require.Equal(t, m2, saved.Items[0].MeaningID)
+}

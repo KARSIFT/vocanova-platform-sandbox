@@ -50,14 +50,17 @@ Missing pictures remain absent rather than using an unrelated illustration.
 
 Today's lesson selects actual due saved words, in bounded resumable batches,
 and asks for meanings one at a time. The server owns choices, correctness,
-progress and scheduling. Mistakes receive a correction and a later retry. A
+progress and scheduling. Mistakes receive a correction and return on a later day. A
 correct answer counts a meaning once for the learner's local day. Skips,
 reveals, wrong answers, replay and another tab must not inflate daily credit.
 First-answer accuracy remains separate from eventual success.
 
-The intended eight-box schedule is 10 minutes for relearning, then 1, 3, 7, 14,
-30, 60 and 120 days. Correct answers wait at least a day; existing stored due
-timestamps are not rewritten. Daily sessions use the existing scheduler and
+The eight-box schedule is 1 day at levels 0 and 1, then 3, 7, 14,
+30, 60 and 120 days. Every outcome waits at least a day, and a canonical word
+appears at most once per learner-local day, regardless of its selected meaning.
+Incorrect answers move back exactly one level with a floor of 0. The owner's
+18 October revision replaces ten-minute relearning and the two-error reset;
+existing stored due timestamps are not rewritten. Daily sessions use the existing scheduler and
 reward transaction rather than creating a second progress system.
 
 Automatic pronunciation follows the discovery Start action and each displayed

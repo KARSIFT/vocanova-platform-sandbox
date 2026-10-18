@@ -9,10 +9,11 @@ import (
 )
 
 func TestPaginationHonorsDocumentedMaximum(t *testing.T) {
-	userID, wordID := uuid.New(), uuid.New()
-	data := MemoryRepositoryData{Words: []MemoryWord{{ID: wordID, Text: "work", NormalizedText: "work", Status: "active"}}}
+	userID := uuid.New()
+	data := MemoryRepositoryData{}
 	for i := range 61 {
-		meaningID := uuid.New()
+		wordID, meaningID := uuid.New(), uuid.New()
+		data.Words = append(data.Words, MemoryWord{ID: wordID, Text: "work", NormalizedText: "work", Status: "active"})
 		data.Meanings = append(data.Meanings, MemoryMeaning{ID: meaningID, WordID: wordID, Status: "active"})
 		data.UserWords = append(data.UserWords, MemoryUserWord{ID: uuid.New(), UserID: userID, MeaningID: meaningID, Status: "new", AddedAt: time.Unix(int64(i), 0)})
 	}

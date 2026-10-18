@@ -201,6 +201,8 @@ func TestListReviewsDuePagination(t *testing.T) {
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
 	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	secondWordID, thirdWordID := uuid.New(), uuid.New()
+	secondMeaningID, thirdMeaningID := uuid.New(), uuid.New()
 	past1 := time.Now().UTC().Add(-1 * time.Hour)
 	past2 := time.Now().UTC().Add(-2 * time.Hour)
 	past3 := time.Now().UTC().Add(-3 * time.Hour)
@@ -208,14 +210,18 @@ func TestListReviewsDuePagination(t *testing.T) {
 	api, _, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
 		Words: []reviews.MemoryWord{
 			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
+			{ID: secondWordID, Text: "deadline", NormalizedText: "deadline", Status: "active"},
+			{ID: thirdWordID, Text: "menu", NormalizedText: "menu", Status: "active"},
 		},
 		Meanings: []reviews.MemoryMeaning{
 			{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"},
+			{ID: secondMeaningID, WordID: secondWordID, PartOfSpeech: "noun", ShortDefinition: "A time limit.", Status: "active"},
+			{ID: thirdMeaningID, WordID: thirdWordID, PartOfSpeech: "noun", ShortDefinition: "A list of meals.", Status: "active"},
 		},
 		UserWords: []reviews.MemoryUserWord{
 			{ID: uuid.MustParse("00000000-0000-0000-0000-00000000000a"), UserID: userID, MeaningID: meaningID, Status: "reviewing", Source: "journey", ReviewStep: 1, NextReviewAt: &past1},
-			{ID: uuid.MustParse("00000000-0000-0000-0000-00000000000b"), UserID: userID, MeaningID: meaningID, Status: "reviewing", Source: "journey", ReviewStep: 2, NextReviewAt: &past2},
-			{ID: uuid.MustParse("00000000-0000-0000-0000-00000000000c"), UserID: userID, MeaningID: meaningID, Status: "reviewing", Source: "journey", ReviewStep: 3, NextReviewAt: &past3},
+			{ID: uuid.MustParse("00000000-0000-0000-0000-00000000000b"), UserID: userID, MeaningID: secondMeaningID, Status: "reviewing", Source: "journey", ReviewStep: 2, NextReviewAt: &past2},
+			{ID: uuid.MustParse("00000000-0000-0000-0000-00000000000c"), UserID: userID, MeaningID: thirdMeaningID, Status: "reviewing", Source: "journey", ReviewStep: 3, NextReviewAt: &past3},
 		},
 	})
 

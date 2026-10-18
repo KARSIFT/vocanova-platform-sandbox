@@ -12,6 +12,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/revieweligibility"
 	"github.com/google/uuid"
 )
 
@@ -101,7 +102,7 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 		 WHERE uw.user_id = $1
 		   AND uw.deleted_at IS NULL
 		   AND uw.status IN ('new', 'learning', 'reviewing')
- AND NOT EXISTS(SELECT 1 FROM user_word_knowledge k WHERE k.user_id=uw.user_id AND k.meaning_id=uw.meaning_id AND k.self_reported_known) AND NOT EXISTS(SELECT 1 FROM daily_review_successes d WHERE d.user_id=uw.user_id AND d.meaning_id=uw.meaning_id AND d.local_date=(CURRENT_TIMESTAMP AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=uw.user_id),'UTC'))::date)
+ AND `+revieweligibility.Due("uw", "CURRENT_TIMESTAMP")+`
 		   AND (uw.next_review_at IS NULL OR uw.next_review_at <= NOW())
 		 ) AS due
 		 WHERE ($3::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR
@@ -148,7 +149,7 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 		 JOIN canonical_words cw ON cw.id = wm.word_id
 		 WHERE uw.user_id = $1 AND uw.deleted_at IS NULL
 		 AND uw.status IN ('new', 'learning', 'reviewing')
- AND NOT EXISTS(SELECT 1 FROM user_word_knowledge k WHERE k.user_id=uw.user_id AND k.meaning_id=uw.meaning_id AND k.self_reported_known) AND NOT EXISTS(SELECT 1 FROM daily_review_successes d WHERE d.user_id=uw.user_id AND d.meaning_id=uw.meaning_id AND d.local_date=(CURRENT_TIMESTAMP AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=uw.user_id),'UTC'))::date)
+ AND `+revieweligibility.Due("uw", "CURRENT_TIMESTAMP")+`
 		 AND (uw.next_review_at IS NULL OR uw.next_review_at <= NOW())`, req.UserID).Scan(&totalCount)
 		if err != nil {
 			return nil, fmt.Errorf("count due words: %w", err)
@@ -315,14 +316,14 @@ func (r *PostgreSQLRepository) SubmitReviewTx(ctx context.Context, tx *sql.Tx, r
 	if req.ExpectedReviewCount != nil && *req.ExpectedReviewCount != totalCount {
 		return nil, ErrNotDue
 	}
-	if !isDueStatus(status) || (!req.AllowSessionRetry && nextDue.Valid && nextDue.Time.After(now)) {
+	if !isDueStatus(status) || (nextDue.Valid && nextDue.Time.After(now)) {
 		return nil, ErrNotDue
 	}
 	// A verified answer resolves this meaning for the learner's local day even
 	// if a legacy restore reset its schedule. Exact replays returned above;
 	// the private daily path retains its own receipt dedupe.
 	var unavailable bool
-	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM user_word_knowledge WHERE user_id=$1 AND meaning_id=$2 AND self_reported_known) OR ($3::boolean AND EXISTS(SELECT 1 FROM daily_review_successes d WHERE d.user_id=$1 AND d.meaning_id=$2 AND d.local_date=($4 AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=$1),'UTC'))::date))`, req.UserID, req.MeaningID, req.verifiedSessionID == uuid.Nil, now).Scan(&unavailable); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM user_word_knowledge WHERE user_id=$1 AND meaning_id=$2 AND self_reported_known) OR `+revieweligibility.ReviewedToday("$1", "(SELECT word_id FROM word_meanings WHERE id=$2)", "$4")+` OR ($3::boolean AND EXISTS(SELECT 1 FROM daily_review_successes d WHERE d.user_id=$1 AND d.meaning_id=$2 AND d.local_date=($4 AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=$1),'UTC'))::date))`, req.UserID, req.MeaningID, req.verifiedSessionID == uuid.Nil, now).Scan(&unavailable); err != nil {
 		return nil, err
 	}
 	if unavailable {

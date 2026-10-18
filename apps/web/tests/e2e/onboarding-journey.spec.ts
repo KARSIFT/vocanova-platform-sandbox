@@ -4,6 +4,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { completeOnboardingIfRedirected } from "./onboarding-journey";
+import { scanForAxeViolations } from "./axe-helper";
 
 async function startOnboarding(
   page: Page,
@@ -138,3 +139,66 @@ test("staging onboarding helper rejects a failed save and preserves the retry fo
     page.getByRole("button", { name: "Finish setup" }),
   ).toBeEnabled();
 });
+
+for (const language of [
+  { query: "فارسی", code: "fa", label: "Persian", suggestion: true },
+  { query: "日本語", code: "ja", label: "Japanese", suggestion: true },
+  { query: "Tigrinya", code: "Tigrinya", label: "Tigrinya", suggestion: false },
+]) {
+  for (const theme of ["light", "dark"] as const) {
+  test(`native language search saves ${language.label} and survives Back in ${theme}`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("Expected a configured base URL.");
+    await context.addCookies([{ name: "vocanova_theme", value: theme, url: baseURL }]);
+    await startOnboarding(page, context, baseURL);
+    await page.getByRole("radio", { name: /A2 — Elementary/ }).check();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    const field = page.getByRole("textbox", { name: "Native language" });
+    await expect(field).toBeFocused();
+    await expect(page.getByRole("button", { name: /^Persian/ })).toBeVisible();
+    await field.fill(language.query);
+    if (language.suggestion) {
+      const choice = page.getByRole("button", {
+        name: new RegExp(`^${language.label}`),
+      });
+      await field.press("Tab");
+      await expect(choice).toBeFocused();
+      await choice.press("Enter");
+      await expect(choice).toHaveAttribute("aria-pressed", "true");
+      await expect(field).toHaveValue(language.label);
+    }
+    const { criticalOrSerious } = await scanForAxeViolations(page);
+    expect(criticalOrSerious).toEqual([]);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    );
+    expect(overflow).toBe(false);
+    await page.screenshot({ path: test.info().outputPath(`native-language-${theme}.png`) });
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(field).toHaveValue(language.label);
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByRole("radio", { name: "General growth", exact: true }).check();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByRole("radio", { name: "Daily life", exact: true }).check();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    const summary = page.getByRole("complementary", { name: "Onboarding summary" });
+    await expect(summary).toContainText(language.label);
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname === "/api/v1/onboarding",
+    );
+    await page.getByRole("button", { name: "Finish setup", exact: true }).click();
+    const response = await responsePromise;
+    expect(response.status()).toBe(200);
+    expect(response.request().postDataJSON()).toMatchObject({
+      nativeLanguage: language.code,
+    });
+    expect(await response.json()).toMatchObject({ nativeLanguage: language.code });
+  });
+  }
+}

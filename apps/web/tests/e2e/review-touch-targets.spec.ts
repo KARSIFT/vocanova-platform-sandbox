@@ -104,7 +104,7 @@ test("incorrect-answer continuation and unconfirmed-answer recovery meet the 44p
     .getByRole("button", { name: "Retry same answer", exact: true })
     .click();
   await expect(
-    page.getByRole("status").filter({ hasText: /try this one again later/ }),
+    page.getByRole("status").filter({ hasText: /Not quite/ }),
   ).toBeVisible();
   await target(page.getByRole("button", { name: "Continue", exact: true }));
   await noOverflow(page);

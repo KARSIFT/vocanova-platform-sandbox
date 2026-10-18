@@ -19,7 +19,10 @@ func TestKnowledgeSummaryPostgreSQLFullSetIsolationAndReviewStates(t *testing.T)
 	require.NoError(t, err)
 	defer db.Close()
 	db.SetMaxOpenConns(1)
-	_, err = db.ExecContext(t.Context(), `CREATE TEMP TABLE canonical_words(id uuid PRIMARY KEY,status text);
+	_, err = db.ExecContext(t.Context(), `CREATE TEMP TABLE review_attempts(user_id uuid,meaning_id uuid,created_at timestamptz);
+ CREATE TEMP TABLE user_settings(user_id uuid,timezone text);
+ CREATE TEMP TABLE user_word_knowledge(user_id uuid,meaning_id uuid,self_reported_known bool);
+ CREATE TEMP TABLE canonical_words(id uuid PRIMARY KEY,status text);
 	CREATE TEMP TABLE word_meanings(id uuid PRIMARY KEY,word_id uuid REFERENCES canonical_words(id),status text);
 	CREATE TEMP TABLE user_words(id uuid PRIMARY KEY,user_id uuid NOT NULL,meaning_id uuid REFERENCES word_meanings(id),status text NOT NULL,total_review_count integer NOT NULL DEFAULT 0,next_review_at timestamptz,deleted_at timestamptz);
 	CREATE UNIQUE INDEX ON user_words(user_id,meaning_id) WHERE deleted_at IS NULL;`)
@@ -55,7 +58,7 @@ func TestKnowledgeSummaryPostgreSQLFullSetIsolationAndReviewStates(t *testing.T)
 	repo := NewPostgreSQLRepository(db)
 	summary, err := repo.GetKnowledgeSummary(t.Context(), owner)
 	require.NoError(t, err)
-	require.Equal(t, &KnowledgeSummary{Saved: 62, New: 55, Learning: 2, Reviewing: 2, Mastered: 1, Ignored: 1, Archived: 1, Due: 57}, summary)
+	require.Equal(t, &KnowledgeSummary{Saved: 62, New: 55, Learning: 2, Reviewing: 2, Mastered: 1, Ignored: 1, Archived: 1, Due: 1}, summary)
 	foreign, err := repo.GetKnowledgeSummary(t.Context(), other)
 	require.NoError(t, err)
 	require.Equal(t, &KnowledgeSummary{Saved: 1, New: 1, Due: 1}, foreign)

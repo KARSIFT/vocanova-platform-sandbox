@@ -27,7 +27,10 @@ func TestDuePaginationPostgreSQL(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	_, err = db.ExecContext(ctx, `
-	CREATE TEMP TABLE canonical_words (id uuid, text text, normalized_text text);
+	CREATE TEMP TABLE review_attempts(user_id uuid,meaning_id uuid,created_at timestamptz);
+ CREATE TEMP TABLE user_settings(user_id uuid,timezone text);
+ CREATE TEMP TABLE user_word_knowledge(user_id uuid,meaning_id uuid,self_reported_known bool);
+ CREATE TEMP TABLE canonical_words (id uuid, text text, normalized_text text);
 	CREATE TEMP TABLE word_meanings (id uuid, word_id uuid, part_of_speech text, short_definition text);
 	CREATE TEMP TABLE user_words (id uuid, user_id uuid, meaning_id uuid, status text, source text, review_step int, next_review_at timestamptz, deleted_at timestamptz);`)
 	if err != nil {
@@ -47,6 +50,13 @@ func TestDuePaginationPostgreSQL(t *testing.T) {
 			}
 			past := time.Now().Add(-time.Hour)
 			for i := 1; i <= 7; i++ {
+				meaningID, wordID := uuid.New(), uuid.New()
+				if _, err := db.ExecContext(ctx, `INSERT INTO canonical_words VALUES($1,'work','work')`, wordID); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.ExecContext(ctx, `INSERT INTO word_meanings VALUES($1,$2,'verb','do a job')`, meaningID, wordID); err != nil {
+					t.Fatal(err)
+				}
 				owner := userID
 				if i == 7 {
 					owner = otherID

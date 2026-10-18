@@ -1,6 +1,49 @@
 # Vocanova release readiness
 
-## Meaning-specific speech — acceptance in progress, 18 October 2026
+## Daily review and language choices — local acceptance, 18 October 2026
+
+The owner supplied **Vocanova 3** and requested Persian/other languages, one
+review of each canonical word per learner-local day, exactly one step back after
+an incorrect answer, and a schedule menu aligned with Continue. The new delivery
+implements these together. Registration searches 40 languages by English/native
+name and accepts custom entries. Review eligibility is shared across due lists,
+counts and saved-word previews; explicit skips record an audit without success
+credit. Legacy pending repeats are retired while frozen totals and earned
+historical results remain intact. Practice retains its independent correction flow.
+
+Fresh full-workspace `pnpm validate` passes with the isolated PostgreSQL DSN,
+including formatting, lint/vet, types, foundation/client/web/Go tests and builds.
+The affected PostgreSQL race suite passes **210 test/subtest checks**, with zero
+failures or skips. The rebuilt browser matrix passes **165/165** across 360px,
+430px and desktop, including both themes, keyboard menu operation, empty/custom
+language searches and the full core loop. Representative viewport captures of
+registration and the menu were inspected. Earlier failures remain preserved:
+missing Persian; an empty suggestion group with an invalid ARIA label; and old
+fixtures that assumed same-day retries or duplicate saved-meaning identities.
+The corrected fixtures retain pagination, reward and nonvacuous live-review gates.
+
+A bounded PostgreSQL TEMP-table probe covers 12 combinations of 100/10,000 saved
+meanings, one/five meanings per canonical word and 0/50/500 daily attempts. The
+first implementation rescanned daily audit rows and took 906.298 ms in the worst
+case. An uncorrelated audit set reduces that same case to 41.796 ms; all 12 due
+counts match both the original predicate and independently expected counts.
+These are synthetic query measurements, not a production latency guarantee or
+a fix for the previously observed intermittent TLS connection delay.
+
+The forward migration adds only an audit lookup index (47 forward migrations).
+No existing review history or due dates are rewritten. Hosted CI, external review,
+protected merge and real staging acceptance remain pending for this delivery.
+Production promotion is separate and has not been requested.
+
+## Meaning-specific speech — staging 0.4.5, 18 October 2026
+
+[PR #1496](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1496) merged
+as `fa8ed8b7ca0ff48649cac2b2c2fbd9c9564ed919`. [Staging run 39119310016](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/39119310016)
+passed exact web/API release identities, health, OAuth initiation, core learning
+and maturity journeys, including six real meaning-specific clips decoded in the
+browser with byte-identical durable cache replay. Final-head hosted browser CI
+passed 1,160 checks with 31 scope skips and no failures or flaky tests. Production
+was not promoted. The detailed local and audition evidence follows.
 
 The new delivery follows the owner's rejection of the earlier Luna sample. It
 adds a pinned OpenAI speech model, separate persisted meaning/context clips,
@@ -19,8 +62,8 @@ preserved. A complete decoded-audio gate reproduces and rejects that result;
 five original clips pass its signal checks. Real PostgreSQL tests verify a rejected
 clip consumes its reservation, is never saved as ready, and cannot trigger another
 paid attempt that day. A simpler v2 prompt is a candidate improvement, not a
-proven explanation of the first failure. The held [delivery PR](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1496)
-tracks subsequent hosted and staging results. The complete second fixed set
+proven explanation of the first failure. The [merged delivery PR](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1496)
+records hosted and staging results. The complete second fixed set
 passes all six decoded-audio checks and independent MP3 decoding; its identity
 remains `sense-en-US-v2`. Generation took 0.954–1.945 seconds in that audition.
 The owner found the two record samples clear and natural. This supports the voice

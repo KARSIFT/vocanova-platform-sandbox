@@ -25,6 +25,7 @@ source_files:
   - path: 04-technical-architecture.md
     sha256: 50ba0901ee5e877e98e7071c6930f809b0ebc6074858fd20e1ac7deae12403dc
 ---
+
 # 04 — VocaNova Technical Architecture
 
 ## 1. Purpose and goals
@@ -90,8 +91,9 @@ scripts/
 ## 6. Frontend architecture
 
 Next.js (App Router) + React + TypeScript + Tailwind + shadcn/ui + TanStack Query + React Hook Form
-+ Zod + Vitest + React Testing Library + Playwright + pnpm. Next.js never accesses PostgreSQL
-directly; the Go backend remains the business authority; server state via TanStack Query.
+
+- Zod + Vitest + React Testing Library + Playwright + pnpm. Next.js never accesses PostgreSQL
+  directly; the Go backend remains the business authority; server state via TanStack Query.
 
 ## 7. Backend architecture
 
@@ -121,7 +123,7 @@ storage, IANA timezone strings for user-facing daily logic. Full schema in [05](
 ## 11. Spaced repetition
 
 Deterministic stage-based scheduling (not FSRS in MVP). Rating scale, exact step mechanics, and
-reset rule are canonical in [05](05-database-design.md) §9 — see
+once-per-local-day rule are canonical in [05](05-database-design.md) §9 — see
 [the migration notes](../archive/README-migration-notes.md#2-review-rating-and-scheduling-conflict) for how the various
 draft rating scales across documents were reconciled into one. Future algorithms can replace the
 scheduler behind a stable interface.

@@ -273,6 +273,7 @@ const allowedMigrationFiles = new Set([
   "20261018120000_practice_journey.sql",
   "20261018130000_pronunciation_audio.sql",
   "20261018150000_pronunciation_generation_budget.sql",
+  "20261018170000_review_attempt_daily_eligibility_index.sql",
 ]);
 export function isRegisteredMigrationFile(name) {
   return allowedMigrationFiles.has(name);

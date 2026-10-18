@@ -15,6 +15,12 @@ import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
 
 import { getBrowserTimezone } from "./onboarding-timezone";
+import {
+  findNativeLanguage,
+  matchingNativeLanguages,
+  nativeLanguageLabel,
+  nativeLanguageValue,
+} from "./native-languages";
 
 interface OnboardingFormProps {
   defaultNativeLanguage?: string;
@@ -72,21 +78,6 @@ const MAIN_USE_CASES: { value: MainUseCase; label: string }[] = [
 ];
 
 const DAILY_REVIEW_TARGETS = [5, 10, 15, 20, 30, 50, 75, 100];
-
-const NATIVE_LANGUAGE_SUGGESTIONS = [
-  { code: "es", label: "Spanish" },
-  { code: "en", label: "English" },
-  { code: "pt", label: "Portuguese" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "it", label: "Italian" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
-  { code: "ko", label: "Korean" },
-  { code: "ar", label: "Arabic" },
-  { code: "ru", label: "Russian" },
-  { code: "hi", label: "Hindi" },
-] as const;
 
 interface FormState {
   englishLevel: EnglishLevel | null;
@@ -464,6 +455,9 @@ function NativeLanguageStep({
   value: string;
   onChange: (next: string) => void;
 }) {
+  const [query, setQuery] = useState(() => nativeLanguageLabel(value));
+  const suggestions = matchingNativeLanguages(query);
+  const selectedLanguage = findNativeLanguage(value);
   return (
     <div className="space-y-[var(--spacing-md)]">
       <div>
@@ -471,7 +465,7 @@ function NativeLanguageStep({
           What&apos;s your native language?
         </h2>
         <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          We use this to know when a word or example is in your language.
+          Choose the language you speak at home.
         </p>
       </div>
       <label
@@ -486,34 +480,49 @@ function NativeLanguageStep({
         type="text"
         autoComplete="off"
         required
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          onChange(nativeLanguageValue(event.target.value));
+        }}
+        placeholder="Search languages…"
+        spellCheck={false}
         className="block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
-        aria-describedby="native-language-helper native-language-suggestions"
+        aria-describedby="native-language-helper"
       />
       <p id="native-language-helper" className="text-sm text-neutral-700">
-        Choose a common language below, or enter another language.
+        Search by name, like Persian or فارسی. You can also enter another
+        language.
       </p>
       <div
         id="native-language-suggestions"
         className="flex flex-wrap gap-[var(--spacing-xs)]"
-        aria-label="Common suggestions"
+        role="group"
+        aria-label="Language suggestions"
       >
-        {NATIVE_LANGUAGE_SUGGESTIONS.map((suggestion) => {
-          const isSelected = value.trim().toLowerCase() === suggestion.code;
+        {suggestions.map((suggestion) => {
+          const isSelected = selectedLanguage?.code === suggestion.code;
           return (
             <button
               key={suggestion.code}
               type="button"
-              onClick={() => onChange(suggestion.code)}
+              onClick={() => {
+                setQuery(suggestion.label);
+                onChange(suggestion.code);
+              }}
               aria-pressed={isSelected}
-              className={`min-h-[var(--spacing-xl)] rounded-full border px-[var(--spacing-sm)] text-sm font-medium transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 ${
+              className={`min-h-11 rounded-full border px-[var(--spacing-sm)] text-sm font-medium transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 ${
                 isSelected
                   ? "border-primary-600 bg-primary-50 text-primary-800"
                   : "border-neutral-300 bg-white text-neutral-800 hover:border-primary-300"
               }`}
             >
               {suggestion.label}
+              {suggestion.native !== suggestion.label ? (
+                <bdi className="ms-1 text-xs font-normal">
+                  {suggestion.native}
+                </bdi>
+              ) : null}
             </button>
           );
         })}
@@ -645,12 +654,7 @@ function SummaryCard({
         <div className="flex justify-between">
           <dt className="text-neutral-600">Native language</dt>
           <dd className="font-medium text-neutral-900">
-            {NATIVE_LANGUAGE_SUGGESTIONS.find(
-              (language) =>
-                language.code === state.nativeLanguage.trim().toLowerCase(),
-            )?.label ||
-              state.nativeLanguage.trim() ||
-              "Not set"}
+            {nativeLanguageLabel(state.nativeLanguage) || "Not set"}
           </dd>
         </div>
         <div className="flex justify-between">

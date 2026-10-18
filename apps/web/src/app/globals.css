@@ -487,3 +487,137 @@ select {
 :root[data-theme="dark"] .study-shortcuts a:hover {
   color: #93c5fd;
 }
+
+/* The review choice and confirmation form one stable, thumb-sized action rail. */
+.review-action-rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 0.75rem;
+  width: 100%;
+}
+.review-action-rail .review-action-primary {
+  min-width: 7.5rem;
+  height: 3.5rem;
+  min-height: 3.5rem;
+  padding-inline: 1.25rem;
+}
+.review-schedule {
+  min-width: 0;
+}
+.review-schedule-trigger {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 3.5rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.05rem;
+  padding: 0.4rem 2.2rem 0.4rem 0.85rem;
+  border: 1px solid var(--color-neutral-300);
+  border-radius: 0.75rem;
+  background: var(--color-white);
+  color: var(--color-neutral-900);
+  text-align: left;
+  cursor: pointer;
+}
+.review-schedule-trigger:hover:not(:disabled) {
+  background: var(--color-neutral-50);
+  border-color: var(--color-neutral-400);
+}
+.review-schedule-trigger[aria-expanded="true"] {
+  border-color: var(--color-primary-500);
+  background: var(--color-primary-50);
+}
+.review-schedule-trigger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.review-schedule-caption {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-neutral-600);
+}
+.review-schedule-value {
+  overflow: hidden;
+  width: 100%;
+  font-size: 0.95rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.review-schedule-chevron {
+  position: absolute;
+  right: 0.7rem;
+  top: calc(50% - 0.5rem);
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+}
+.review-schedule-trigger[aria-expanded="true"] .review-schedule-chevron {
+  transform: rotate(180deg);
+}
+.review-schedule-menu {
+  position: absolute;
+  bottom: calc(100% + 0.75rem);
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  width: min(100%, 25rem);
+  max-height: min(26rem, calc(100dvh - 8rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.65rem;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 1rem;
+  background: var(--color-white);
+  color: var(--color-neutral-900);
+  box-shadow: 0 12px 32px #00000018;
+}
+.review-schedule-option {
+  display: flex;
+  min-width: 0;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  background: var(--color-neutral-50);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.review-schedule-option:hover {
+  background: var(--color-neutral-100);
+}
+.review-schedule-option[aria-checked="true"] {
+  border-color: var(--color-primary-500);
+  background: var(--color-primary-50);
+}
+.review-schedule-option-wide {
+  grid-column: 1 / -1;
+}
+.review-schedule-check {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  visibility: hidden;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.review-schedule-option[aria-checked="true"] .review-schedule-check {
+  visibility: visible;
+}
+.review-schedule-trigger:focus-visible,
+.review-schedule-option:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}

@@ -73,7 +73,8 @@ type ReviewAttempt struct {
 type SubmitReviewRequest struct {
 	verifiedSessionID uuid.UUID
 	// Server-only session generation guard. Never populated by the HTTP review DTO.
-	ExpectedReviewCount     *int
+	ExpectedReviewCount *int
+	// AllowSessionRetry is retained for old internal callers and never bypasses daily eligibility.
 	AllowSessionRetry       bool
 	UserID                  uuid.UUID
 	UserWordID              uuid.UUID
@@ -163,6 +164,13 @@ type Service struct {
 func NewService(repo Repository, idem learning.IdempotencyStore, c clock.Clock) *Service {
 	if idem == nil {
 		idem = learning.NewMemoryIdempotencyStore()
+	}
+	if memory, ok := repo.(*MemoryRepository); ok {
+		if c == nil {
+			c = memory.clock
+		} else {
+			memory.clock = c
+		}
 	}
 	if c == nil {
 		c = clock.Real{}

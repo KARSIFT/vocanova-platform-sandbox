@@ -21,6 +21,7 @@ source_files:
   - path: 05-database-design.md
     sha256: cc2efd5b6356f41bfc9075bd58297b301e6274a708943c16369600e6f0d5d1c9
 ---
+
 # 05 — VocaNova Database Design
 
 ## 1. Direction
@@ -57,7 +58,7 @@ evolve during early iteration, still strongly validated).
 ## 4. Timezone strategy
 
 Current timezone lives in `user_settings.timezone` (IANA string). Historical daily records
-(`daily_mission_snapshots.timezone`, `daily_activity_summaries.timezone`) copy the *effective*
+(`daily_mission_snapshots.timezone`, `daily_activity_summaries.timezone`) copy the _effective_
 timezone at creation time, so a later timezone change doesn't rewrite what timezone was actually used
 on a past day. All timestamps stay `timestamptz`/UTC; daily logic uses a separate `local_date date` +
 `timezone text` pair.
@@ -78,6 +79,7 @@ idempotency_keys, feature_audit_logs
 ## 6. Identity and account tables
 
 ### `users`
+
 `id uuid pk`, `email text null`, `display_name text null`, `avatar_url text null`,
 `status text not null` (`active`/`disabled`/`deleted`), `onboarding_status text not null`
 (`not_started`/`in_progress`/`completed`), `email_verified_at`, `last_login_at`, `deleted_at`,
@@ -86,6 +88,7 @@ deleted_at is null`. `email` is nullable because the external identity provider 
 identity signal.
 
 ### `external_identities`
+
 Links a user to `google` or `email` provider. `id`, `user_id → users`, `provider text not null check
 in ('google','email')`, `provider_subject text not null`, `provider_email`,
 `provider_email_verified boolean default false`, `deleted_at`, timestamps. Unique on
@@ -93,12 +96,14 @@ in ('google','email')`, `provider_subject text not null`, `provider_email`,
 deletion.
 
 ### `user_onboarding_profiles`
+
 One row per user. `english_level` (`a1`/`a2`/`b1`/`b2`/`unknown`), `native_language`,
 `learning_goal` (`general`/`work`/`travel`/`study`/`conversation`/`exam`), `main_use_case`
 (`daily_life`/`work`/`travel`/`study`/`social`), `daily_review_target integer` (check 5–100),
 `completed_at`.
 
 ### `user_settings`
+
 One row per user. `timezone text default 'UTC'`, `daily_review_target integer default 20` (check
 5–100), `review_interval_preset text default 'vocanova_default'` (`vocanova_default`/`wordup_like`/
 `custom`), `notifications_enabled`, `marketing_emails_enabled`, `app_language default 'en'`. No
@@ -110,11 +115,13 @@ it.
 Platform-owned, not user-specific.
 
 ### `canonical_words`
+
 `text`, `normalized_text`, `word_type` (`word`/`phrase`/`phrasal_verb`/`idiom`/`collocation`),
 `language_code default 'en'`, `status` (`draft`/`active`/`archived`), `difficulty_level`
 (`a1`..`c1`/`unknown`, nullable), `frequency_rank`. Unique on `(language_code, normalized_text)`.
 
 ### `word_meanings`
+
 The core learning unit is a **meaning**, not just a word spelling (e.g. "book" noun vs. "book" verb
 are different meanings). `word_id → canonical_words`, `part_of_speech` (14 values: noun, verb,
 adjective, adverb, preposition, conjunction, interjection, pronoun, determiner, phrase, idiom,
@@ -122,11 +129,13 @@ phrasal_verb, collocation, other), `short_definition`, `learner_definition`, `me
 `status`, `difficulty_level`. Unique on `(word_id, meaning_order)`.
 
 ### `word_examples`
+
 Per-meaning example sentences. `meaning_id → word_meanings`, `example_text`, `example_order`,
 `difficulty_level`, `situation_label`, `status`. Unique on `(meaning_id, example_order)`. No
 translation tables in MVP.
 
 ### `usage_notes`
+
 Per-meaning usage/grammar/collocation/mistake/register/pronunciation notes. `note_type` (6 values
 above), `note_text`, `note_order`, `status`. Unique on `(meaning_id, note_order)`.
 
@@ -136,10 +145,12 @@ Discovery is organized around real-life situations (Airport, Restaurant, Job Int
 containing many word meanings; a meaning can appear in many situations (many-to-many).
 
 ### `journey_situations`
+
 `slug` (unique), `title`, `short_description`, `level_band` (`a1_a2`/`a2_b1`/`b1_b2`/`mixed`,
 nullable), `category` (`daily_life`/`travel`/`work`/`study`/`social`), `status`, `display_order`.
 
 ### `journey_words`
+
 Join table. `journey_situation_id`, `meaning_id`, `relevance_score integer default 50` (1–100),
 `display_order` (nullable), `is_core boolean default false`. Unique on
 `(journey_situation_id, meaning_id)`.
@@ -150,6 +161,7 @@ learner's `user_words`, ordered by `is_core desc, display_order, relevance_score
 ## 9. User learning state
 
 ### `user_words`
+
 One row per user × saved meaning. `status` (`new`/`learning`/`reviewing`/`mastered`/`ignored`/
 `archived`), `source` (`journey`/`search`/`ai_suggestion`/`manual`/`seed`), `review_step integer
 default 0` **(check between 0 and 7)**, `next_review_at`, `last_reviewed_at`, `last_result`
@@ -165,14 +177,21 @@ for why this table was selected over other drafts):
 `result` records objective correctness while `rating` records the scheduling choice. For objective
 prompts, an incorrect answer records `Again`; a correct answer permits Hard/Good/Easy. For
 self-check prompts, the selected rating derives the result (`Again` is incorrect; Hard/Good/Easy
-are correct). `Again` moves back one step with a floor of 0, and two consecutive
-incorrect/`Again` attempts reset to 0; `Hard` stays on the current step; `Good` and `Easy` move
+are correct). `Again` moves back exactly one step with a floor of 0, without a
+consecutive-error reset; `Hard` stays on the current step; `Good` and `Easy` move
 forward one step with a cap of 7. The backend owns the interval-to-step mapping.
 
 A word is "due" when `status in ('new','learning','reviewing') and deleted_at is null and
-(next_review_at is null or next_review_at <= now())`.
+(next_review_at is null or next_review_at <= now())`, excluding self-reported
+known meanings and canonical words with any server-recorded review attempt on
+the learner's current local date. Select one due meaning per canonical word.
+Every outcome, including an explicit skip, waits at least 24 hours. Local-date
+boundaries use the stored IANA timezone and the server's `created_at` audit;
+client `answered_at` cannot reopen today's queue. This 18 October 2026 owner
+revision supersedes the historical ten-minute relearning/two-error reset policy.
 
 ### `review_attempts`
+
 Immutable review history, one row per submitted answer. `user_id`, `user_word_id`, `meaning_id`,
 `attempt_type` (`review`/`practice`/`placement`/`mission`), `prompt_type`
 (`multiple_choice`/`self_check`/`typing`/`sentence_usage` — MVP implements `multiple_choice` and
@@ -196,6 +215,7 @@ Deliberately two tables: `daily_mission_snapshots` (goal + completion state) vs.
 merged.
 
 ### `daily_mission_snapshots`
+
 One row per user per local date. `local_date date`, `timezone text` (copied from settings at
 creation), `review_target integer` (5–100), `reviews_completed integer` (`<=` `review_target`),
 optional `new_word_target`/`new_words_completed`, optional
@@ -206,6 +226,7 @@ Optional goals are bonus goals and do not block core mission or streak completio
 versioned policy explicitly changes that rule.
 
 ### `daily_activity_summaries`
+
 One row per user per local date. Counters: `reviews_attempted/_correct/_skipped`,
 `words_discovered/_added`, `sentences_submitted`, `ai_feedback_received`,
 `confidence_points_earned/_spent`. Unique on `(user_id, local_date)`. Detailed source of truth
@@ -218,6 +239,7 @@ Two tables, deliberately separate: `learner_sentences` (user-written content) vs
 `ai_feedback_attempts` (attempts to generate feedback on that content).
 
 ### `learner_sentences`
+
 `meaning_id` (nullable — future free-writing may not target a specific meaning), `user_word_id`
 (nullable), `sentence_text`, `normalized_sentence_text`, `source`
 (`word_detail`/`review`/`daily_mission`/`free_practice`), `status`
@@ -226,6 +248,7 @@ Two tables, deliberately separate: `learner_sentences` (user-written content) vs
 characters — see [07](07-api-contract-and-dto-design.md) and [09](09-ai-features.md) §6).
 
 ### `ai_feedback_attempts`
+
 `learner_sentence_id`, `status` (`pending`/`succeeded`/`failed`/`cancelled`), `provider`, `model`,
 `prompt_version`, `request_hash`, `feedback_json jsonb`, `feedback_text`, `error_code`,
 `error_message`, `started_at`, `completed_at` (required when `status='succeeded'`; `error_code`
@@ -248,6 +271,7 @@ succeeded.
 ## 12. Confidence Points, streaks, and grace days
 
 ### `confidence_point_ledger`
+
 **Append-only.** Never just a balance field. `amount integer` (nonzero, may be negative),
 `balance_after`, `reason` (`review_correct`/`daily_mission_completed`/`sentence_submitted`/
 `ai_feedback_received`/`streak_bonus`/`admin_adjustment`), `source_type`
@@ -281,11 +305,13 @@ is never read back into any API response — it's dead weight, not a balance the
 screen (or anything else) can drift from.
 
 ### `streak_states`
+
 One row per user (unique). `current_streak_count`, `longest_streak_count` (check `>=` current),
 `last_completed_local_date`, `last_activity_local_date`, `timezone`, `status`
 (`active`/`at_risk`/`broken`). Backend calculates transitions from `daily_mission_snapshots`.
 
 ### `grace_day_ledger`
+
 Append-only. `amount` (nonzero), `balance_after`, `reason`
 (`earned_by_streak`/`manual_grant`/`used_for_missed_day`/`expired`/`admin_adjustment`),
 `source_type` (`daily_mission`/`streak`/`admin`), `applied_to_local_date`, `timezone`,
@@ -294,6 +320,7 @@ Append-only. `amount` (nonzero), `balance_after`, `reason`
 ## 13. Idempotency and audit records
 
 ### `idempotency_keys`
+
 `user_id`, `key text`, `scope text` (`review_submission`/`daily_mission_completion`/`word_addition`/
 `sentence_submission`/`ai_feedback_request`/`point_award`/`grace_day_application`),
 `request_hash`, `response_status`, `response_body jsonb`, `status`
@@ -303,6 +330,7 @@ may safely send the same key without sharing a response or blocking one another.
 are safe to hard-delete.
 
 ### `feature_audit_logs`
+
 Lightweight operational audit trail (not event sourcing). `action`, `entity_type`, `entity_id`,
 `request_id`, `actor_type` (`user`/`system`/`admin`/`ai`), `actor_id`, `metadata jsonb`.
 
@@ -389,7 +417,7 @@ mission timezone handling, point ledger, streak/grace-day rules, AI feedback lif
 deletion/anonymization, seed rerun-safety. Critical cases carried from the source document (duplicate
 active email rejected, duplicate provider identity rejected, duplicate normalized word rejected,
 discovery excludes already-saved meanings, duplicate `client_attempt_id` doesn't duplicate an
-attempt, two consecutive incorrect reviews reset `review_step` to 0, only one mission snapshot per
+attempt, incorrect reviews step back exactly once without a same-day repeat, only one mission snapshot per
 user per local date and it doesn't rewrite historical timezone on settings change, point/grace ledger
 amounts can't be zero, account deletion immediately revokes access and completes a verified
 purge/anonymization without retaining linkable learner content).

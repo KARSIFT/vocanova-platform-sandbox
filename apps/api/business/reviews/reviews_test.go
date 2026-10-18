@@ -293,7 +293,7 @@ func TestSubmitReviewCrossUserIdempotentKey(t *testing.T) {
 	assert.Equal(t, 1, repo.userWords[1].TotalReviewCount)
 }
 
-func TestSubmitReviewTwoConsecutiveIncorrectResetsStep(t *testing.T) {
+func TestSubmitReviewTwoConsecutiveIncorrectDropOneStepEach(t *testing.T) {
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
 	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
@@ -332,6 +332,65 @@ func TestSubmitReviewTwoConsecutiveIncorrectResetsStep(t *testing.T) {
 		Rating: base.Rating, AnsweredAt: base.AnsweredAt, ClientAttemptID: "second", IdempotencyKey: "i2",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 0, repo.userWords[0].ReviewStep)
+	assert.Equal(t, 1, repo.userWords[0].ReviewStep)
 	assert.Equal(t, 2, repo.userWords[0].ConsecutiveIncorrectCount)
+}
+
+func TestMemoryCanonicalWordReviewedOncePerLocalDayForEveryResult(t *testing.T) {
+	for _, result := range []string{ResultCorrect, ResultIncorrect, ResultSkipped} {
+		t.Run(result, func(t *testing.T) {
+			user, word := uuid.New(), uuid.New()
+			now := time.Date(2026, 3, 8, 6, 59, 0, 0, time.UTC)
+			clk := &clock.Fixed{T: now}
+			data := MemoryRepositoryData{Clock: clk, Timezones: map[uuid.UUID]string{user: "America/New_York"}, Words: []MemoryWord{{ID: word, Text: "record", Status: "active"}}}
+			for i := 0; i < 2; i++ {
+				meaning := uuid.New()
+				data.Meanings = append(data.Meanings, MemoryMeaning{ID: meaning, WordID: word, Status: "active"})
+				data.UserWords = append(data.UserWords, MemoryUserWord{ID: uuid.New(), UserID: user, MeaningID: meaning, Status: "new", ReviewStep: 2, ConsecutiveIncorrectCount: 3})
+			}
+			repo := NewMemoryRepository(data)
+			before, err := repo.ListDueWords(t.Context(), ListDueWordsRequest{UserID: user})
+			require.NoError(t, err)
+			require.Len(t, before.Items, 1, "one representative per canonical word")
+			target := before.Items[0]
+			rating := ""
+			if result == ResultCorrect {
+				rating = RatingGood
+			}
+			if result == ResultIncorrect {
+				rating = RatingAgain
+			}
+			req := SubmitReviewRequest{UserID: user, UserWordID: target.UserWordID, MeaningID: target.MeaningID, Result: result, Rating: rating, AnsweredAt: now.Add(-30 * 24 * time.Hour), ClientAttemptID: "first", IdempotencyKey: "first", scheduledAt: now}
+			first, err := repo.SubmitReview(t.Context(), req)
+			require.NoError(t, err)
+			replay, err := repo.SubmitReview(t.Context(), req)
+			require.NoError(t, err)
+			require.Equal(t, first.ID, replay.ID)
+			for i := range repo.userWords {
+				repo.userWords[i].NextReviewAt = nil
+			}
+			after, err := repo.ListDueWords(t.Context(), ListDueWordsRequest{UserID: user})
+			require.NoError(t, err)
+			require.Empty(t, after.Items, "schedule resets cannot repeat any sense today")
+			sibling := repo.userWords[0]
+			if sibling.ID == target.UserWordID {
+				sibling = repo.userWords[1]
+			}
+			req.UserWordID, req.MeaningID = sibling.ID, sibling.MeaningID
+			req.ClientAttemptID = "sibling"
+			req.IdempotencyKey = "sibling"
+			req.AllowSessionRetry = true
+			_, err = repo.SubmitReview(t.Context(), req)
+			require.ErrorIs(t, err, ErrNotDue, "private retry flag cannot bypass once/day")
+			require.Len(t, repo.attempts, 1)
+			clk.T = time.Date(2026, 3, 9, 3, 59, 0, 0, time.UTC)
+			after, err = repo.ListDueWords(t.Context(), ListDueWordsRequest{UserID: user})
+			require.NoError(t, err)
+			require.Empty(t, after.Items, "DST spring day has not ended yet")
+			clk.T = clk.T.Add(2 * time.Minute)
+			after, err = repo.ListDueWords(t.Context(), ListDueWordsRequest{UserID: user})
+			require.NoError(t, err)
+			require.Len(t, after.Items, 1, "new local date permits one sense again")
+		})
+	}
 }

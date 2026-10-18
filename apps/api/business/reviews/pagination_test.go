@@ -14,11 +14,14 @@ func TestDuePaginationAdvancesAndExhausts(t *testing.T) {
 			userID, otherID, meaningID, wordID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 			past := time.Now().Add(-time.Hour)
 			data := MemoryRepositoryData{
-				Meanings: []MemoryMeaning{{ID: meaningID, WordID: wordID}},
-				Words:    []MemoryWord{{ID: wordID, Text: "work", NormalizedText: "work"}},
+				Meanings: []MemoryMeaning{{ID: meaningID, WordID: wordID, Status: "active"}},
+				Words:    []MemoryWord{{ID: wordID, Text: "work", NormalizedText: "work", Status: "active"}},
 			}
 			for i := 1; i <= 6; i++ {
 				id := uuid.UUID{15: byte(i)}
+				meaningID, wordID := uuid.New(), uuid.New()
+				data.Meanings = append(data.Meanings, MemoryMeaning{ID: meaningID, WordID: wordID, Status: "active"})
+				data.Words = append(data.Words, MemoryWord{ID: wordID, Text: "work", NormalizedText: "work", Status: "active"})
 				word := MemoryUserWord{ID: id, UserID: userID, MeaningID: meaningID, Status: "new"}
 				if mixed && i > 2 {
 					word.NextReviewAt = &past

@@ -23,6 +23,7 @@ source_files:
   - path: 01-product-bible-and-prd.md
     sha256: ffafedf6bb6e1ff6c7e04f8ce67c23478592dd099a543a648d970bf5733f8009
 ---
+
 # 00 — VocaNova Product Bible
 
 ## 1. What Vocanova is
@@ -67,12 +68,14 @@ narrowly focused on correct use of the one target word, not general essay gradin
 
 MVP uses deterministic, step-based scheduling (steps 0–7), not a probabilistic algorithm like FSRS —
 that's an explicit future swap point behind a stable scheduling interface, not an MVP requirement.
-Learner-facing rating scale, exact schedule mechanics, and the reset rule are defined precisely in
+Learner-facing rating scale and exact schedule mechanics are defined precisely in
 [05](../engineering/05-database-design.md) §9, and [08](../design/08-web-app-design.md). See
 [the migration notes](../archive/README-migration-notes.md#2-review-rating-and-scheduling-conflict) for how the four
 different rating-scale drafts across the source docs were reconciled — the two-word summary is:
-**"Again / Hard / Good / Easy" ratings, `review_step` 0–7, two consecutive incorrect answers reset to
-step 0.**
+**"Again / Hard / Good / Easy" ratings and `review_step` 0–7.** The owner's
+18 October 2026 revision makes every incorrect answer move back exactly one step,
+with a floor of 0, and finishes that canonical word's review for the local day.
+All outcomes wait at least 24 hours; there is no two-error reset or same-day retry.
 
 ## 5. AI sentence feedback (high level)
 
