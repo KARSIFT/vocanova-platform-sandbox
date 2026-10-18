@@ -59,8 +59,10 @@ var reviewedUses = []struct {
 	{"fine", "verb", "impose-money-penalty", "To require someone to pay money for breaking a rule.", "The court can fine a driver for speeding.", 1019},
 }
 
-// Entries returns value copies, so callers cannot mutate the reviewed content.
-func Entries() []Entry {
+// Built once at package initialization; internal callers only read these values.
+var entries = buildEntries()
+
+func buildEntries() []Entry {
 	out := make([]Entry, 0, len(reviewedUses))
 	for _, row := range reviewedUses {
 		word := wordIdentities[row.word]
@@ -71,8 +73,13 @@ func Entries() []Entry {
 	return out
 }
 
+// Entries returns value copies, so callers cannot mutate the reviewed content.
+func Entries() []Entry {
+	return append([]Entry(nil), entries...)
+}
+
 func SupportsMeaning(id, word, definition string) bool {
-	for _, entry := range Entries() {
+	for _, entry := range entries {
 		if entry.MeaningID.String() == id && entry.Word == word && entry.Definition == definition {
 			return true
 		}
@@ -84,7 +91,7 @@ func SupportsMeaning(id, word, definition string) bool {
 // In particular, the primary read use is present tense; its past use has a
 // separate frozen meaning identity and an explicitly past-tense example.
 func ReviewedContext(id, word, definition string) (string, bool) {
-	for _, entry := range Entries() {
+	for _, entry := range entries {
 		if entry.MeaningID.String() == id && entry.Word == word && entry.Definition == definition {
 			return entry.Example, true
 		}
@@ -126,7 +133,7 @@ func Seed(ctx context.Context, tx *sql.Tx) error {
 			return fmt.Errorf("seed meaning uses: primary meaning mismatch for %q", word)
 		}
 	}
-	for _, entry := range Entries() {
+	for _, entry := range entries {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO word_meanings(id,word_id,part_of_speech,short_definition,learner_definition,meaning_order,status,difficulty_level,created_at,updated_at) VALUES($1,$2,$3,$4,$4,$5,'active','unknown',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT(id) DO NOTHING`, entry.MeaningID, entry.WordID, entry.PartOfSpeech, entry.Definition, entry.MeaningOrder); err != nil {
 			return fmt.Errorf("seed meaning uses %q: %w", entry.SourceSenseKey, err)
 		}

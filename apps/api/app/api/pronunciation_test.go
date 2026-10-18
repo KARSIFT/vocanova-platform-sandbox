@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -65,7 +66,9 @@ func TestPronunciationAPIAuthCSRFSourceBoundaryAndCache(t *testing.T) {
 	revision := meaningidentity.Revision(meaning, "greeting", "noun", "A greeting.")
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(u).WillReturnRows(sqlmock.NewRows([]string{"active"}).AddRow(true))
 	mock.ExpectQuery("SELECT wm.id").WithArgs("greeting", meaning).WillReturnRows(sqlmock.NewRows([]string{"id", "text", "pos", "definition", "example"}).AddRow(meaning, "greeting", "noun", "A greeting.", ""))
-	mock.ExpectQuery("SELECT audio FROM pronunciation_audio_cache").WillReturnRows(sqlmock.NewRows([]string{"audio"}).AddRow([]byte{'I', 'D', '3', 4, 0, 0, 0, 0, 0, 1, 0}))
+	tone, err := os.ReadFile("../../business/pronunciation/testdata/tone.mp3")
+	require.NoError(t, err)
+	mock.ExpectQuery("SELECT audio FROM pronunciation_audio_cache").WillReturnRows(sqlmock.NewRows([]string{"audio"}).AddRow(tone))
 	w := send(`{"text":"greeting","meaningId":"`+meaning+`","meaningRevision":"`+revision+`"}`, u, true)
 	require.Equal(t, 200, w.Code, w.Body.String())
 	require.Contains(t, w.Body.String(), `"cacheHit":true`)

@@ -1,7 +1,9 @@
 package pronunciation
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -16,7 +18,19 @@ import (
 	"strings"
 )
 
-var testMP3 = []byte{'I', 'D', '3', 4, 0, 0, 0, 0, 0, 1, 0}
+// Original deterministic synthetic 440Hz tone, generated only for decoder tests.
+//
+//go:embed testdata/tone.mp3
+var testMP3 []byte
+
+//go:embed testdata/silent.mp3
+var silentMP3 []byte
+
+// Original failed public "light" audition, retained from run 39114867419.
+// This decoded near-silent provider response must not become usable audio.
+//
+//go:embed testdata/near-silent-provider.mp3
+var nearSilentMP3 []byte
 
 type fakeProvider struct {
 	calls    int
@@ -265,8 +279,8 @@ func TestOpenAIProviderSenseInstructionsBoundedSingleRequest(t *testing.T) {
 				require.Equal(t, float64(1), body.Speed)
 				require.Contains(t, body.Instructions, `"PartOfSpeech":"verb"`)
 				require.Contains(t, body.Instructions, "Store sound for later use.")
-				require.Contains(t, body.Instructions, "Speak only the exact input text")
-				require.Contains(t, body.Instructions, "en-US")
+				require.Contains(t, body.Instructions, "Read the input exactly once")
+				require.Contains(t, body.Instructions, "clear American English at normal volume")
 				w.Header().Set("Content-Type", tc.mime)
 				w.WriteHeader(tc.status)
 				_, _ = w.Write(tc.body)
@@ -380,4 +394,45 @@ func TestOpenAIProviderBoundsReferenceWithoutChangingSpokenText(t *testing.T) {
 	provider := NewOpenAIProvider(OpenAIConfig{APIKey: "synthetic", BaseURL: server.URL})
 	_, err := provider.Generate(t.Context(), Utterance{Text: "record", WordText: "record", PartOfSpeech: "verb", Definition: strings.Repeat("é", 600), Context: strings.Repeat("b", 900)})
 	require.NoError(t, err)
+}
+
+func TestDecodedAudioQualityRejectsSilentMalformedAndTruncatedClips(t *testing.T) {
+	quality, err := ValidateAudio(testMP3)
+	require.NoError(t, err)
+	require.Equal(t, 24000, quality.SampleRate)
+	require.Greater(t, quality.DurationSeconds, 0.5)
+	require.Greater(t, quality.RMS, 0.1)
+	require.Greater(t, quality.Peak, 0.1)
+	for _, data := range [][]byte{nil, []byte("ID3fake"), silentMP3, nearSilentMP3, testMP3[:len(testMP3)-1], testMP3[:len(testMP3)/2], append(append([]byte{}, testMP3...), 0xff), append(append([]byte{}, testMP3...), make([]byte, MaxAudioBytes)...)} {
+		_, err := ValidateAudio(data)
+		require.ErrorIs(t, err, ErrUnavailable)
+	}
+	// An oversized duration/input must be rejected before unbounded decode work.
+	_, _, ok := audioFrames(testMP3)
+	require.True(t, ok)
+	long := bytes.Repeat(testMP3, MaxAudioSeconds*4)
+	_, err = ValidateAudio(long)
+	require.ErrorIs(t, err, ErrUnavailable)
+}
+
+func TestAudioQualityFailureIsFinalizedWithoutRetryAndAuditedCacheReplays(t *testing.T) {
+	repo := &fakeRepo{allowed: true}
+	provider := &fakeProvider{fn: func(context.Context, Utterance) ([]byte, error) { return silentMP3, nil }}
+	svc := newService(repo, provider, true, nil)
+	_, err := svc.Speak(t.Context(), uuid.New(), "greeting")
+	require.ErrorIs(t, err, ErrUnavailable)
+	require.Equal(t, 1, provider.calls)
+	require.Equal(t, 1, repo.completed)
+	require.Nil(t, repo.finished, "near silence must never become ready cached audio")
+	repo.reserveErr = ErrUnavailable
+	_, err = svc.Speak(t.Context(), uuid.New(), "greeting")
+	require.ErrorIs(t, err, ErrUnavailable)
+	require.Equal(t, 1, provider.calls, "failed reservation must not trigger another paid call")
+	repo.reserveErr = nil
+	repo.audio = testMP3
+	audio, err := svc.Speak(t.Context(), uuid.New(), "greeting")
+	require.NoError(t, err)
+	require.True(t, audio.CacheHit)
+	require.Equal(t, 1, provider.calls, "validated ready clips replay without another provider call")
+	require.Equal(t, 1, repo.completed, "ready replay must not finalize or regenerate audio")
 }

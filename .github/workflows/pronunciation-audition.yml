@@ -20,8 +20,7 @@ jobs:
       github.event.action == 'labeled' &&
       github.event.label.name == 'audio-audition' &&
       contains(github.event.pull_request.labels.*.name, 'hold') &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(github.event.pull_request.labels.*.name, 'audio-audition')
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:

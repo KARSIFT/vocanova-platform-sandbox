@@ -21,13 +21,14 @@ import (
 )
 
 type auditionCase struct {
-	Name                 string                  `json:"name"`
-	Utterance            pronunciation.Utterance `json:"utterance"`
-	Status               string                  `json:"status"`
-	File                 string                  `json:"file,omitempty"`
-	Bytes                int                     `json:"bytes,omitempty"`
-	SHA256               string                  `json:"sha256,omitempty"`
-	DurationMilliseconds int64                   `json:"durationMilliseconds,omitempty"`
+	Name                 string                      `json:"name"`
+	Utterance            pronunciation.Utterance     `json:"utterance"`
+	Status               string                      `json:"status"`
+	File                 string                      `json:"file,omitempty"`
+	Bytes                int                         `json:"bytes,omitempty"`
+	SHA256               string                      `json:"sha256,omitempty"`
+	Quality              *pronunciation.AudioQuality `json:"quality,omitempty"`
+	DurationMilliseconds int64                       `json:"durationMilliseconds,omitempty"`
 }
 type manifest struct {
 	SchemaVersion int                            `json:"schemaVersion"`
@@ -74,9 +75,6 @@ func writeManifest(directory string, result manifest) error {
 		return err
 	}
 	return os.Rename(name, filepath.Join(directory, "manifest.json"))
-}
-func boundedMP3(data []byte) bool {
-	return len(data) >= 3 && len(data) <= pronunciation.MaxAudioBytes && (string(data[:3]) == "ID3" || (data[0] == 0xff && data[1]&0xe0 == 0xe0))
 }
 func run(args []string) int {
 	fs := flag.NewFlagSet("pronunciation-audition", flag.ContinueOnError)
@@ -129,11 +127,22 @@ func run(args []string) int {
 		data, err := provider.Generate(ctx, sample.Utterance)
 		cancel()
 		sample.DurationMilliseconds = time.Since(started).Milliseconds()
-		if err != nil || !boundedMP3(data) {
+		if err != nil {
 			sample.Status = "provider_unavailable"
 			failed = true
 		} else {
+			quality, qualityErr := pronunciation.ValidateAudio(data)
+			sample.Quality = &quality
+			if qualityErr != nil {
+				sample.Status = "audio_quality_failed"
+				failed = true
+			}
+		}
+		if !failed || (sample.Quality != nil && sample.Quality.SampleRate > 0) {
 			name := sample.Name + ".mp3"
+			if failed {
+				name = "rejected-" + name
+			}
 			file, writeErr := os.OpenFile(filepath.Join(*directory, name), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 			if writeErr == nil {
 				_, writeErr = file.Write(data)
@@ -153,6 +162,9 @@ func run(args []string) int {
 			} else {
 				sum := sha256.Sum256(data)
 				sample.Status = "generated"
+				if failed {
+					sample.Status = "audio_rejected"
+				}
 				sample.File = name
 				sample.Bytes = len(data)
 				sample.SHA256 = hex.EncodeToString(sum[:])

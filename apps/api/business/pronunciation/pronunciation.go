@@ -159,7 +159,10 @@ func (s *Service) SpeakMeaningRevision(ctx context.Context, user uuid.UUID, text
 	providerCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 12*time.Second)
 	data, providerErr := s.provider.Generate(providerCtx, utterance)
 	cancel()
-	if providerErr != nil || !validMP3(data) {
+	if providerErr == nil {
+		_, providerErr = ValidateAudio(data)
+	}
+	if providerErr != nil {
 		data = nil
 	}
 	finishCtx, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)

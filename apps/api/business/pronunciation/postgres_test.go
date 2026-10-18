@@ -1,9 +1,11 @@
 package pronunciation
 
 import (
+	"context"
 	"database/sql"
 	"encoding/binary"
 	"fmt"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"os"
 	"path/filepath"
 	"strings"
@@ -253,7 +255,10 @@ func TestPronunciationPostgreSQLMeaningResolutionSeparatesPOSAndRejectsMismatche
 		keys[key] = true
 		claim, err := repo.Reserve(ctx, key, 5, now)
 		require.NoError(t, err)
-		clip := append(append([]byte{}, testMP3...), byte(i))
+		tag := make([]byte, 128)
+		copy(tag, []byte("TAG"))
+		tag[3] = byte(i)
+		clip := append(append([]byte{}, testMP3...), tag...)
 		require.NoError(t, repo.Complete(ctx, key, claim.generation, clip, now))
 		cached, err := repo.Reserve(ctx, key, 5, now)
 		require.NoError(t, err)
@@ -369,6 +374,19 @@ func TestPronunciationPostgreSQLResumeAliasKeepsCanonicalRevision(t *testing.T) 
 	require.NoError(t, err)
 	require.Equal(t, "resume", alias.WordText)
 	require.Equal(t, "résumé", alias.Text)
+	require.Equal(t, "résumé", canonical.Text)
+	identity := NewOpenAIProvider(OpenAIConfig{}).Identity()
+	canonicalKey := utteranceCacheKey(identity, canonical)
+	require.Equal(t, canonicalKey, utteranceCacheKey(identity, alias), "noun aliases share one paid cache identity")
+	reserved, err := repo.Reserve(ctx, canonicalKey, len(canonical.Text), now)
+	require.NoError(t, err)
+	require.NoError(t, repo.Complete(ctx, canonicalKey, reserved.generation, testMP3, now))
+	replay, err := repo.Reserve(ctx, utteranceCacheKey(identity, alias), len(alias.Text), now)
+	require.NoError(t, err)
+	require.Equal(t, testMP3, replay.audio)
+	var generations int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT reserved_generations FROM pronunciation_audio_budget WHERE utc_day=$1`, now.Format(time.DateOnly)).Scan(&generations))
+	require.Equal(t, 1, generations, "replaying the alias must not reserve another generation")
 	require.Equal(t, meaningidentity.Revision(canonical.MeaningID, canonical.WordText, canonical.PartOfSpeech, canonical.Definition), meaningidentity.Revision(alias.MeaningID, alias.WordText, alias.PartOfSpeech, alias.Definition))
 	_, err = repo.ResolveUtterance(ctx, user, "résumé", verb.String())
 	require.ErrorIs(t, err, ErrNotFound, "accented noun spelling cannot address the verb sense")
@@ -413,4 +431,39 @@ func TestPronunciationPostgreSQLExistingReviewedLessonExamplesStayMeaningBound(t
 		_, err = repo.ResolveUtterance(ctx, user, entry.example, entry.id)
 		require.ErrorIs(t, err, ErrNotFound, "reviewed context is bound to its exact definition")
 	}
+}
+
+func TestPronunciationPostgreSQLSilentPaidGenerationStaysChargedAndDoesNotRetry(t *testing.T) {
+	db := audioDB(t)
+	ctx := t.Context()
+	user, word, meaning := uuid.New(), uuid.New(), uuid.New()
+	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
+	for _, statement := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO users(id,email,status,created_at,updated_at)VALUES($1,'silent-provider@synthetic.invalid','active',$2,$2)`, []any{user, now}},
+		{`INSERT INTO canonical_words(id,text,normalized_text,language_code,status,created_at,updated_at)VALUES($1,'synthetic','synthetic','en','active',$2,$2)`, []any{word, now}},
+		{`INSERT INTO word_meanings(id,word_id,part_of_speech,short_definition,meaning_order,status,created_at,updated_at)VALUES($1,$2,'adjective','An original synthetic meaning.',1,'active',$3,$3)`, []any{meaning, word, now}},
+	} {
+		_, err := db.ExecContext(ctx, statement.sql, statement.args...)
+		require.NoError(t, err)
+	}
+
+	provider := &fakeProvider{fn: func(context.Context, Utterance) ([]byte, error) { return silentMP3, nil }}
+	svc := NewService(db, provider, true, clock.Fixed{T: now})
+	for i := 0; i < 2; i++ {
+		_, err := svc.SpeakMeaning(ctx, user, "synthetic", meaning.String())
+		require.ErrorIs(t, err, ErrUnavailable)
+	}
+	require.Equal(t, 1, provider.calls, "silent successful HTTP output must not be paid for twice")
+	var status string
+	var data []byte
+	var characters, generations int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT status,audio FROM pronunciation_audio_cache`).Scan(&status, &data))
+	require.Equal(t, "failed", status)
+	require.Empty(t, data)
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT reserved_characters,reserved_generations FROM pronunciation_audio_budget`).Scan(&characters, &generations))
+	require.Equal(t, len("synthetic"), characters)
+	require.Equal(t, 1, generations)
 }

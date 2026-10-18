@@ -39,6 +39,11 @@ func (r *postgresRepository) ResolveUtterance(ctx context.Context, user uuid.UUI
 		u.Locale = "en-US"
 		u.WordText = word
 		u.Kind = "word"
+		// Both accepted spellings name the same reviewed CV noun. Normalize only
+		// spoken word text, keeping canonical identity and all example text intact.
+		if word == "resume" && u.PartOfSpeech == "noun" && (text == "resume" || text == "résumé") {
+			u.Text = "résumé"
+		}
 		curatedContext, curated := meaninguses.ReviewedContext(u.MeaningID, word, u.Definition)
 		reviewedPractice := practice.SupportsMeaning(u.MeaningID, word, u.Definition)
 		reviewedMeaning := reviewedPractice || meaninguses.SupportsMeaning(u.MeaningID, word, u.Definition)

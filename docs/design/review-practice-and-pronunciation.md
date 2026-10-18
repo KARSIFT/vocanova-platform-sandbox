@@ -90,6 +90,16 @@ is separately bounded. Failures consume the reservation and are not automaticall
 retried or refunded. A cache-key lock prevents duplicate generation across
 midnight. These are request limits, not a promise of a particular monthly bill.
 
+Fresh output must pass a bounded complete MP3 frame/decode check and a conservative
+signal-presence threshold before it becomes a reusable clip. The check caps
+compressed input at 1 MiB and decoded content at 60 seconds, processing PCM with
+an 8 KiB buffer. It rejects malformed, truncated, silent and near-silent output;
+it does not establish correct words, stress or naturalness. Decoding occurs once
+before persistence, so cached replay does not repeat that work. The v2 instruction
+identity separates these validated clips from earlier outputs. The historical
+Cloudflare hash also changes with the new meaning-aware identity; old rows are
+retained but do not warm the new provider's cache. No cache deletion is needed.
+
 Meaning-specific requests cannot fall back to a guessed device pronunciation or
 the legacy text-only provider. Failures offer retry without changing learning
 progress. Context-free speech retains device fallback and voice selection. The UI

@@ -6,10 +6,28 @@ The new delivery follows the owner's rejection of the earlier Luna sample. It
 adds a pinned OpenAI speech model, separate persisted meaning/context clips,
 frozen exercise revisions and 19 additional uses across 12 common words. Initial
 real PostgreSQL race checks pass for pronunciation, personal practice and daily
-review. The unbound Go suite and vet pass; database-dependent cases in that
-unbound run may skip and are covered separately. The local production web bundle
-builds. Browser, real speech generation, hosted checks and staging acceptance are
-still pending. No subjective voice-quality approval is claimed.
+review. The full PostgreSQL suite recorded 2,470 passing test/subtest events and
+zero test skips or failures before the later audio gate; its changed pronunciation
+and HTTP packages pass focused race checks again after that gate. The unbound Go
+suite and vet pass; database-dependent cases in that unbound run may skip and are
+covered separately. The local production web bundle builds. Final hosted checks,
+the v2 voice set and staging acceptance remain separate gates. No subjective
+voice-quality approval is claimed.
+
+The first real OpenAI set produced six decodable files, including one nearly
+silent adjective clip. All six original files and their generation manifest were
+preserved. A complete decoded-audio gate reproduces and rejects that result;
+five original clips pass its signal checks. Real PostgreSQL tests verify a rejected
+clip consumes its reservation, is never saved as ready, and cannot trigger another
+paid attempt that day. A simpler v2 prompt is a candidate improvement, not a
+proven explanation of the first failure. The held [delivery PR](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1496)
+tracks subsequent hosted and staging results. Owner listening remains necessary.
+
+The affected local browser matrix passed **105/105**, without skips, failures or
+retries, after preserving failed runs of **96/105** and **102/105**. Eighteen local
+synthetic teaching/listening/error captures cover both themes at 360px, 430px and
+desktop, with no horizontal overflow or uncaught page errors; representative
+screens were inspected. These do not establish live authentication or voice quality.
 
 The previous delivery's evidence below applies to its release, not automatically
 to this new branch. Production has not been promoted by this task.

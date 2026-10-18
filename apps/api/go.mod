@@ -18,6 +18,7 @@ require (
 )
 
 require (
+	github.com/hajimehoshi/go-mp3 v0.3.4
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 )
