@@ -38,6 +38,15 @@ private archive. Provider-managed development URLs are disabled for both buckets
 the private archive has no public custom domain. Native generation files and
 rejected attempts never enter the public image bucket.
 
+The public image host has a dedicated Cloudflare cache rule for `/meanings/`
+paths ending in `.webp`. Only successful 200/206 responses receive a one-year
+edge TTL; 300–599 responses use no-store. Browser caching respects the origin
+instead of inheriting that edge TTL. The expression includes GET, HEAD and PURGE
+so single-file cache purges still match. This rule does not change application,
+API or private archive caching. Verify successful CDN checksums and MISS-to-HIT
+behavior after a single-image purge, plus repeated 404 cache bypasses; the rule's
+configured TTL alone does not prove delivery behavior or whole-site performance.
+
 The API returns approved metadata only when the meaning and canonical word are
 active and the current revision matches. Discovery/detail embed image metadata
 in existing reads. Other teaching steps coalesce lookups into authenticated batches
@@ -73,8 +82,9 @@ verifies canonical public delivery before emitting its import-ready manifest.
 The distinct Cloudflare MCP receipt path validates the operator's successful raw
 PUT receipts against actual local source SHA-256, size and single-part ETag/MD5.
 It then fetches the public image from the canonical origin and verifies SHA-256.
-Its separate manifest/evidence records actual public caching, currently four
-hours. It does **not** establish an independent private GET SHA-256 check or the
+Its separate manifest/evidence records the actual public response headers for
+each verification; browser headers and edge cache policy are separate evidence.
+It does **not** establish an independent private GET SHA-256 check or the
 S3 publisher's immutable/no-store metadata. These stronger S3 gates are unchanged.
 
 All 92 legacy native PNG originals were recovered through byte-identical
