@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { log, error as logError } from "node:console";
 import process from "node:process";
+import { setTimeout } from "node:timers/promises";
 import {
   CDN,
   PUBLIC_BUCKET,
@@ -72,14 +73,19 @@ export function validateMCPObjectReceipt(receipt, { key, bytes, contentType }) {
 
 async function canonicalDelivery(key, bytes, fetcher) {
   let response;
-  try {
-    response = await fetcher(`${CDN}/${key}`, {
-      method: "GET",
-      redirect: "error",
-      signal: globalThis.AbortSignal.timeout(60_000),
-    });
-  } catch {
-    throw new Error("Canonical CDN receipt verification request failed");
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      response = await fetcher(`${CDN}/${key}`, {
+        method: "GET",
+        redirect: "error",
+        signal: globalThis.AbortSignal.timeout(60_000),
+      });
+      break;
+    } catch {
+      if (attempt === 2)
+        throw new Error("Canonical CDN receipt verification request failed");
+      await setTimeout(250 * 4 ** attempt);
+    }
   }
   if (
     response.status !== 200 ||

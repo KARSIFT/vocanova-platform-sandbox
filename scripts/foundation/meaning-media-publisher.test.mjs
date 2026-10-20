@@ -619,8 +619,43 @@ test("MCP receipt acceptance verifies only canonical public bytes and reports we
     await assert.rejects(readFile(join(directory, "published-mcp.json")), {
       code: "ENOENT",
     });
+    let failedRequests = 0;
+    await assert.rejects(
+      acceptMCPReceipts({
+        ...args,
+        fetcher: async () => {
+          failedRequests++;
+          throw new TypeError("fetch failed", {
+            cause: Object.assign(new Error("other side closed"), {
+              code: "UND_ERR_SOCKET",
+            }),
+          });
+        },
+      }),
+      /request failed/,
+    );
+    assert.equal(failedRequests, 3, "network retries must remain bounded");
+    await assert.rejects(readFile(join(directory, "published-mcp.json")), {
+      code: "ENOENT",
+    });
     corrupt = false;
-    const result = await acceptMCPReceipts(args);
+    let transientRequests = 0;
+    const attemptSignals = new Set();
+    const result = await acceptMCPReceipts({
+      ...args,
+      fetcher: async (url, options) => {
+        attemptSignals.add(options.signal);
+        if (++transientRequests < 3)
+          throw new TypeError("fetch failed", {
+            cause: Object.assign(new Error("other side closed"), {
+              code: "UND_ERR_SOCKET",
+            }),
+          });
+        return fetcher(url, options);
+      },
+    });
+    assert.equal(transientRequests, 3);
+    assert.equal(attemptSignals.size, 3, "each request needs a fresh deadline");
     assert.equal(result.verified, 1);
     assert.equal(result.manifest, "published-mcp.json");
     assert.equal(calls.length, 2);
@@ -666,6 +701,22 @@ test("MCP receipt acceptance verifies only canonical public bytes and reports we
     await assert.rejects(
       s3.verifyCDN(publicKey(prepared), optimized),
       /delivery verification failed/,
+    );
+    let missingRequests = 0;
+    await assert.rejects(
+      acceptMCPReceipts({
+        ...args,
+        fetcher: async () => {
+          missingRequests++;
+          return new Response(null, { status: 404 });
+        },
+      }),
+      /HTTP 404/,
+    );
+    assert.equal(
+      missingRequests,
+      1,
+      "an HTTP rejection is not a network retry",
     );
     const count = calls.length;
     await atomicJSON(catalogPath, {
