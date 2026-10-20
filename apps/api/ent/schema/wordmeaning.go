@@ -38,6 +38,7 @@ func (WordMeaning) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("word", CanonicalWord.Type).Ref("meanings").Field("word_id").Unique().Required(),
 		edge.To("examples", WordExample.Type),
+		edge.To("images", MeaningImageAsset.Type),
 		edge.To("usage_notes", UsageNote.Type),
 		edge.To("journey_words", JourneyWord.Type),
 		edge.To("user_words", UserWord.Type),

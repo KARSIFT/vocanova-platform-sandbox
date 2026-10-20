@@ -66,6 +66,14 @@ const nextConfig = {
   ...(process.env.VERCEL ? {} : { output: "standalone" }),
   outputFileTracingRoot: path.join(__dirname, "../.."),
   images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.vocanova.site",
+        pathname: "/meanings/**",
+        search: "",
+      },
+    ],
     localPatterns: [
       // Preserve ordinary local images; only vocabulary revisions need queries.
       { pathname: "**", search: "" },

@@ -12,11 +12,11 @@ const destination = new URL(
 );
 /**
  * Keep editorial context out of client bundles; only reviewed media is visible.
- * @param {Record<string, {meaningId: string, src: string, status: string, alt: string}>} manifest
+ * @param {Record<string, {meaningId: string, src: string, status: string, alt: string, meaningRevision: string}>} manifest
  * @param {(asset: URL) => Uint8Array} [readPicture]
  */
 export function createRuntimeCatalogue(manifest, readPicture = readFileSync) {
-  /** @type {Record<string, {alt: string, version: string}>} */
+  /** @type {Record<string, {alt: string, version: string, meaningRevision: string}>} */
   const runtime = {};
   for (const [meaningId, picture] of Object.entries(manifest).sort(([a], [b]) =>
     a.localeCompare(b),
@@ -35,6 +35,9 @@ export function createRuntimeCatalogue(manifest, readPicture = readFileSync) {
       if (typeof picture.alt !== "string" || !picture.alt.trim()) {
         throw new Error(`Missing ready picture alt text: ${meaningId}`);
       }
+      if (!/^[a-f0-9]{64}$/.test(picture.meaningRevision)) {
+        throw new Error(`Missing canonical picture revision: ${meaningId}`);
+      }
       // UUIDs identify meanings, while file bytes identify an artwork revision.
       // Revised artwork must bypass an older Next/image or browser cache entry.
       const version = createHash("sha256")
@@ -43,7 +46,11 @@ export function createRuntimeCatalogue(manifest, readPicture = readFileSync) {
         )
         .digest("hex")
         .slice(0, 16);
-      runtime[meaningId] = { alt: picture.alt, version };
+      runtime[meaningId] = {
+        alt: picture.alt,
+        version,
+        meaningRevision: picture.meaningRevision,
+      };
     }
   }
   return runtime;

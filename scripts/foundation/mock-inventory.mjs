@@ -144,6 +144,7 @@ export function isRegisteredAPIPath(apiPath) {
     /^\/api\/v1\/lesson-recommendation$/,
     /^\/api\/v1\/achievements$/,
     /^\/api\/v1\/pronunciation$/,
+    /^\/api\/v1\/meaning-images$/, // Read-only approved shared media; operator-only import.
     /^\/api\/v1\/word-lists$/,
     new RegExp(`^/api/v1/word-lists/${listId}$`),
     new RegExp(`^/api/v1/word-lists/${listId}/members/${meaningId}$`),
@@ -178,6 +179,7 @@ export function isRegisteredBusinessModule(name) {
     "stories",
     "pronunciation", // Authenticated public-content audio; bounded shared cache.
     "meaninguses", // Original supplemental public senses; no learner schema.
+    "meaningmedia", // Revision-bound approved images; no learner writes.
   ]);
   return allowedBusinessModules.has(name);
 }
@@ -199,6 +201,7 @@ export function isRegisteredSchemaFile(name) {
     "userword.go",
     "wordexample.go",
     "wordmeaning.go",
+    "meaningimageasset.go",
     "dailymissionsnapshot.go",
     "dailyactivitysummary.go",
     "confidencepointledger.go",
@@ -274,6 +277,7 @@ const allowedMigrationFiles = new Set([
   "20261018130000_pronunciation_audio.sql",
   "20261018150000_pronunciation_generation_budget.sql",
   "20261018170000_review_attempt_daily_eligibility_index.sql",
+  "20261020170000_meaning_image_assets.sql",
 ]);
 export function isRegisteredMigrationFile(name) {
   return allowedMigrationFiles.has(name);
@@ -293,6 +297,7 @@ const featureMigrationTables = new Map([
     "20261018130000_pronunciation_audio.sql",
     ["pronunciation_audio_cache", "pronunciation_audio_budget"],
   ],
+  ["20261020170000_meaning_image_assets.sql", ["meaning_image_assets"]],
 ]);
 export function isRegisteredFeatureMigrationTables(name, tables) {
   const expected = featureMigrationTables.get(name);

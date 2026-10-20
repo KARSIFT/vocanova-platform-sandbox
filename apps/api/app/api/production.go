@@ -24,6 +24,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/lessons"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaningmedia"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/practice"
@@ -858,8 +859,9 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	RegisterEmailChangeLinks(api, accountsSvc, authSvc)
 	RegisterAccountDeletionRequests(api, accountsSvc, authSvc)
 	RegisterPersonalDataExports(api, accountsSvc, authSvc)
-	RegisterContent(api, contentSvc, usersSvc, learningPreferencesSvc)
+	RegisterContentWithImages(api, contentSvc, usersSvc, meaningmedia.NewService(db), learningPreferencesSvc)
 	RegisterDictionary(api, dictionary.New())
+	RegisterMeaningImages(api, meaningmedia.NewService(db))
 	RegisterLearning(api, learningSvc, authSvc)
 	RegisterLessons(api, lessonsSvc, authSvc)
 	RegisterLessonRecommendation(api, lessons.NewRecommendationService(lessons.NewPostgreSQLRepository(db)))
@@ -871,7 +873,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	RegisterAchievements(api, achievements.NewService(achievements.NewPostgreSQLRepository(db)))
 	RegisterReviews(api, reviewsSvc, authSvc)
 	RegisterDailyLessons(api, dailylesson.NewService(db, reviewsRepo, clk), authSvc)
-	RegisterKnowledgeMap(api, knowledgecatalog.NewService(knowledgecatalog.NewPostgreSQLRepository(db), clk), authSvc)
+	RegisterKnowledgeMap(api, knowledgecatalog.NewService(knowledgecatalog.NewPostgreSQLRepository(db), clk), authSvc, meaningmedia.NewService(db))
 	RegisterAIFeedback(api, aifeedbackSvc, authSvc)
 	RegisterMissions(api, missionsSvc)
 

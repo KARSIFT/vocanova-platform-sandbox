@@ -16,6 +16,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/lessons"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaningmedia"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/practice"
@@ -126,6 +127,7 @@ func NewContractAPI() huma.API {
 	)
 	RegisterContent(contractAPI, contentSvc, usersSvc, learningPreferencesSvc)
 	RegisterDictionary(contractAPI, dictionary.New())
+	RegisterMeaningImages(contractAPI, meaningmedia.NewService(nil))
 
 	// Register learning routes for OpenAPI generation using an empty in-memory repo.
 	learningSvc := learning.NewService(

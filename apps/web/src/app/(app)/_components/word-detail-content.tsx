@@ -98,7 +98,11 @@ export function WordDetailContent({
                   />
                 </div>
 
-                <MeaningPicture meaningId={meaning.id} />
+                <MeaningPicture
+                  meaningId={meaning.id}
+                  image={meaning.image}
+                  meaningRevision={meaning.meaningRevision}
+                />
                 <MeaningTeaching meaning={meaning} />
 
                 <details className="mt-4 border-t border-neutral-200 pt-2">

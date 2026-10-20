@@ -5,7 +5,24 @@ export interface VocabularyAttribution {
   wordnetLicense: string;
 }
 
+/** Approved asset for the current canonical meaning; omitted when unavailable. */
+export interface MeaningImage {
+  meaningId: string;
+  meaningRevision: string;
+  imageUrl: string;
+  alt: string;
+  width: number;
+  height: number;
+  sha256: string;
+}
+
+export interface MeaningImagesResponse {
+  items: MeaningImage[];
+}
+
 export interface KnowledgeMapItem {
+  meaningRevision?: string;
+  image?: MeaningImage;
   rank: number;
   meaningId: string;
   wordId: string;
@@ -270,6 +287,8 @@ export interface WordUsageNote {
 }
 
 export interface WordMeaning {
+  meaningRevision?: string;
+  image?: MeaningImage;
   id: string;
   partOfSpeech: string;
   shortDefinition: string;
@@ -309,6 +328,7 @@ export interface WordDetailResponse {
 }
 
 export interface SavedMeaning {
+  image?: MeaningImage;
   userWordId: string;
   meaningId: string;
   wordId: string;
@@ -572,6 +592,7 @@ export interface PracticeSessionSummary {
 }
 
 export interface PracticeStep {
+  image?: MeaningImage;
   pronunciationMeaningId?: string;
   pronunciationRevision?: string;
   partOfSpeech?: string;
@@ -670,6 +691,7 @@ export interface LessonRecommendationResponse {
 }
 
 export interface LessonWord {
+  image?: MeaningImage;
   meaningId: string;
   wordText: string;
   wordSlug: string;
@@ -1778,6 +1800,21 @@ export class VocanovaClient {
       { ...init, headers },
     );
     return { response };
+  }
+
+  /** Bounded teaching-image lookup; never load the full catalog into the client. */
+  async getMeaningImages(
+    meaningIds: string[],
+    init?: RequestInit,
+  ): Promise<{ data: MeaningImagesResponse; response: Response }> {
+    const query = new URLSearchParams({ meaningIds: meaningIds.join(",") });
+    const response = await this.request(
+      "GET",
+      `/api/v1/meaning-images?${query.toString()}`,
+      undefined,
+      init,
+    );
+    return { data: await response.json(), response };
   }
 
   async getKnowledgeMap(

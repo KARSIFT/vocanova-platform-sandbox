@@ -1,5 +1,81 @@
 # Vocanova release readiness
 
+## Meaning image library — local and storage checkpoint, 20 October 2026
+
+The active delivery adds exact-meaning images, a portable storage/publication
+pipeline and authenticated bounded metadata reads. The initial source union has
+10,051 meanings and 9,959 missing images beyond the 92 reviewed legacy pictures.
+The 20-image generation pilot is visually reviewed, uploaded and CDN-verified;
+full catalogue coverage remains unfinished;
+no complete-image-library or deployment claim follows from this checkpoint.
+See [the design and evidence boundaries](../design/meaning-image-library.md).
+
+Fresh storage evidence covers **113 public WebPs / 7,095,834 bytes**, uploaded and
+independently fetched from the canonical CDN with matching SHA-256. The private
+bucket's development URL is disabled and it has no custom domain. Its image
+archive contains 92 legacy WebPs plus 113 native PNGs; a separate portable index
+is also stored privately. The public
+image domain's SSL/ownership is active and both managed development URLs are
+disabled. These checks do not constitute a backup restoration test.
+
+All **92 legacy native PNG originals / 177,279,634 bytes** were recovered and
+locally SHA-verified by reproducing their current WebPs byte-for-byte. All 92 native
+PNGs are now uploaded: source SHA-256 was checked before PUT, and a fresh private
+API listing matches all sizes and single-part MD5 ETags. A portable index is
+archived privately under its content hash. This does not establish an independent
+private GET SHA-256 or backup restoration check. Seven rejected
+native attempts and the private scene/style/prompt receipts remain preserved.
+
+The MCP publication manifest records local-source SHA-256 and operator PUT
+size/ETag/MD5 evidence, plus fresh canonical public GET SHA-256. It explicitly
+does not claim independent private GET SHA-256 verification. Actual public cache
+headers currently provide four hours, rather than the separate S3 publisher's
+strict immutable/no-store metadata. The S3 checks remain enforced.
+
+Local checks reported for this delivery remain distinct scopes: **22 backend
+race checks**, **30 CDN browser-matrix checks**, **37 Home browser checks**,
+**9 image units** and **61 API-client units** pass. Browser fixtures are synthetic;
+they do not prove live authentication, database durability or complete artwork
+quality. A synthetic 10,051-row import probe improves from **38.243 seconds /
+30,153 SQL statements** to **2.524 seconds / 63 statements** using atomic
+500-record statement batches. This is not a production latency guarantee.
+
+The fresh full Go suite against the isolated PostgreSQL instance passes. Integrated
+`pnpm run validate` now passes with the isolated PostgreSQL DSN: workspace checks,
+formatting, lint/vet, types, **291 foundation tests**, **61 API-client tests**,
+**215 web/middleware tests**, Go tests and web/API builds. All three Node test
+summaries report zero failures or skips. Go reports 30 passing packages (13
+uncached, 17 cached) and ten packages with no tests; this summary does not count
+individual Go subtests or prove zero skipped PostgreSQL checks by itself. The
+separate fresh full-Go PostgreSQL evidence remains the database execution proof.
+
+The first integrated attempt found formatting only in an ignored browser-result
+JSON; the next found missing explicit media feature entries in the product-boundary
+inventory. Both failure logs remain preserved. The repaired inventory lists only
+the exact media route, business module, schema, migration and table, retaining
+negative guards against invented media routes and extra tables. All 291 foundation
+tests pass independently as well as inside the full workspace run.
+
+A blocked database-pool regression exposed optional image reads exhausting their
+three-second parent request. A one-second read-only media deadline now returns
+while that parent remains active; a 25 ms caller deadline is preserved. The
+import path is unchanged. The integrated workspace validation passes again after
+this correction, as do the complete media race suite and affected API regressions.
+
+A further local operator smoke used the actual CDN-verified 113-image manifest
+and all 10,051 canonical catalogue identities in a disposable PostgreSQL schema.
+The real CLI imported 113 records, an exact retry imported zero, and bounded
+readback matched all 113 URLs/revisions/digests/dimensions/alt descriptions. It
+created no learner accounts and dropped the schema afterward. This joins actual
+storage evidence to local metadata import; it does not establish a deployed API
+or a staging learner journey.
+
+Still required: finish and review all requested image coverage; import matching public metadata; complete hosted CI/review
+and the single consolidated PR; then verify staging
+identity, learner journeys and appearance. No PR, staging deployment or production
+promotion is established by this checkpoint. Earlier release evidence below is
+historical and remains unchanged.
+
 ## Daily review and language choices — local acceptance, 18 October 2026
 
 The owner supplied **Vocanova 3** and requested Persian/other languages, one

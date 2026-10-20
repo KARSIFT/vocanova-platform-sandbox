@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { createHash } from "node:crypto";
 import { Suspense } from "react";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer } from "@/ui/surface";
@@ -8,6 +9,8 @@ import { PracticeJourney } from "../practice/_components/practice-journey";
 import {
   ApiResponseError,
   type PracticeSessionsResponse,
+  type SavedMeaning,
+  type MeaningImagesResponse,
 } from "@vocanova/api-client";
 
 async function HomePractice({
@@ -30,6 +33,49 @@ async function HomePractice({
           : null
       }
       compact
+    />
+  );
+}
+
+// Match the API's meaningidentity.Revision encoding, including Go JSON's HTML
+// and line-separator escapes. This binds artwork to the saved-word text already
+// displayed on Home without adding a blocking canonical-detail request.
+function spotlightMeaningRevision(word: SavedMeaning): string | undefined {
+  const identity = [
+    word.meaningId,
+    word.wordText,
+    word.partOfSpeech,
+    word.shortDefinition,
+  ];
+  if (identity.some((value) => typeof value !== "string" || !value))
+    return undefined;
+  const encoded = JSON.stringify(identity).replace(
+    /[<>&\u2028\u2029]/g,
+    (character) =>
+      `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+  return createHash("sha256").update(encoded).digest("hex");
+}
+
+async function HomeMeaningPicture({
+  read,
+  meaningId,
+  meaningRevision,
+}: {
+  read: Promise<PromiseSettledResult<{ data: MeaningImagesResponse }>>;
+  meaningId: string;
+  meaningRevision: string;
+}) {
+  const result = await read;
+  const image =
+    result.status === "fulfilled"
+      ? result.value.data.items.find((item) => item.meaningId === meaningId)
+      : undefined;
+  return (
+    <MeaningPicture
+      meaningId={meaningId}
+      meaningRevision={meaningRevision}
+      image={image}
     />
   );
 }
@@ -57,6 +103,20 @@ export default async function HomePage() {
     requireAuthRedirect(error, "/home");
   }
   const firstWord = savedWordsResponse.data.items[0];
+  const spotlightRevision = firstWord
+    ? spotlightMeaningRevision(firstWord)
+    : undefined;
+  // Optional media never delays Review or the primary Home controls. The lookup
+  // is bounded to one meaning, catches failure immediately and has a deadline.
+  const spotlightRead =
+    firstWord && spotlightRevision && !firstWord.image
+      ? Promise.allSettled([
+          client.getMeaningImages([firstWord.meaningId], {
+            cache: "no-store",
+            signal: AbortSignal.timeout(3000),
+          }),
+        ]).then(([result]) => result)
+      : undefined;
   const dueReviewWords = dailyLessonResponse.data.dueCount;
   const currentLesson = dailyLessonResponse.data.session;
   const mission = dailyMissionResponse.data;
@@ -205,7 +265,28 @@ export default async function HomePage() {
           </div>
           {firstWord ? (
             <>
-              <MeaningPicture meaningId={firstWord.meaningId} priority />
+              {spotlightRead && spotlightRevision ? (
+                <Suspense
+                  fallback={
+                    <MeaningPicture
+                      meaningId={firstWord.meaningId}
+                      meaningRevision={spotlightRevision}
+                    />
+                  }
+                >
+                  <HomeMeaningPicture
+                    read={spotlightRead}
+                    meaningId={firstWord.meaningId}
+                    meaningRevision={spotlightRevision}
+                  />
+                </Suspense>
+              ) : (
+                <MeaningPicture
+                  meaningId={firstWord.meaningId}
+                  image={firstWord.image}
+                  meaningRevision={spotlightRevision}
+                />
+              )}
               <Link
                 href={`/words/${encodeURIComponent(firstWord.userWordId)}`}
                 className="spotlight-word"

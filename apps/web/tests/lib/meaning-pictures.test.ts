@@ -3,12 +3,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { getReadyMeaningPicture } from "../../src/lib/meaning-pictures";
+import { getExternalMeaningPicture, getReadyMeaningPicture } from "../../src/lib/meaning-pictures";
+import { requestMeaningPicture } from "../../src/lib/meaning-picture-requests";
 import { createRuntimeCatalogue } from "../../scripts/generate-meaning-pictures.mjs";
 import runtimeCatalogue from "../../src/lib/meaning-pictures.runtime.json" with { type: "json" };
 
 interface AuthoredMeaningPicture {
   meaningId: string;
+  meaningRevision: string;
   word: string;
   definition: string;
   scene: string;
@@ -119,6 +121,8 @@ describe("meaning-specific picture content", () => {
       const ready = getReadyMeaningPicture(picture.meaningId);
       assert.ok(ready);
       assert.equal(ready.alt, picture.alt);
+      assert.equal(getReadyMeaningPicture(picture.meaningId, undefined, picture.meaningRevision)?.src, ready.src);
+      assert.equal(getReadyMeaningPicture(picture.meaningId, undefined, "f".repeat(64)), undefined);
       const source = new URL(ready.src, "https://vocanova.invalid");
       assert.equal(source.pathname, picture.src);
       assert.match(source.searchParams.get("v")!, /^[a-f0-9]{16}$/);
@@ -143,7 +147,7 @@ describe("meaning-specific picture content", () => {
         (picture) =>
           typeof picture.alt === "string" &&
           /^[a-f0-9]{16}$/.test(picture.version) &&
-          Object.keys(picture).sort().join(",") === "alt,version",
+          Object.keys(picture).sort().join(",") === "alt,meaningRevision,version",
       ),
     );
     const result = spawnSync(
@@ -207,6 +211,7 @@ describe("meaning-specific picture content", () => {
       { ...picture, src: "/images/another-meaning.webp" },
       { ...picture, status: "unreviewed" },
       { ...picture, alt: " " },
+      { ...picture, meaningRevision: "invalid" },
     ]) {
       assert.throws(() =>
         createRuntimeCatalogue({ [picture.meaningId]: invalid }),
@@ -214,4 +219,66 @@ describe("meaning-specific picture content", () => {
     }
     assert.throws(() => createRuntimeCatalogue({ unknown: picture }));
   });
+});
+
+
+describe("external meaning picture delivery", () => {
+  const meaningId = "00000000-0000-4000-8000-000000000001";
+  const meaningRevision = "b".repeat(64);
+  const sha256 = "c".repeat(64);
+  const image = {
+    meaningId, meaningRevision, sha256,
+    imageUrl: `https://images.vocanova.site/meanings/${meaningId}/${meaningRevision}/${sha256}.webp`,
+    alt: "A cyclist moves across a sunny bridge.", width: 900, height: 600,
+  };
+  it("accepts only exact meaning/revision/content-bound approved CDN URLs", () => {
+    const result = getExternalMeaningPicture(meaningId, image, meaningRevision);
+    assert.equal(result?.src, image.imageUrl);
+    assert.equal(result?.external, true);
+    assert.equal(result?.alt, image.alt);
+    assert.equal(getExternalMeaningPicture(meaningId, image, "d".repeat(64)), undefined);
+    assert.equal(getExternalMeaningPicture("00000000-0000-4000-8000-000000000002", image), undefined);
+    assert.equal(getExternalMeaningPicture(meaningId, image, meaningRevision, [image.imageUrl]), undefined);
+  });
+  it("rejects arbitrary origins, altered object paths and malformed metadata", () => {
+    for (const bad of [
+      { ...image, imageUrl: image.imageUrl.replace("images.vocanova.site", "images.vocanova.site.evil.test") },
+      { ...image, imageUrl: image.imageUrl.replace("https:", "http:") },
+      { ...image, imageUrl: `${image.imageUrl}?token=untrusted` },
+      { ...image, imageUrl: image.imageUrl.replace(sha256, "d".repeat(64)) },
+      { ...image, meaningRevision: "old" },
+      { ...image, sha256: "unknown" },
+      { ...image, alt: " " },
+      { ...image, width: 0 },
+      { ...image, width: 961 },
+      { ...image, height: 641 },
+      { ...image, height: 2.5 },
+    ]) assert.equal(getExternalMeaningPicture(meaningId, bad), undefined);
+    assert.equal(getExternalMeaningPicture(meaningId), undefined);
+  });
+});
+
+
+it("coalesces concurrent teaching lookups into bounded batches and shares repeat reads", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[][] = [];
+  globalThis.fetch = async (input) => {
+    const ids = new URL(String(input)).searchParams.get("meaningIds")!.split(",");
+    calls.push(ids);
+    return Response.json({ items: ids.map((meaningId) => ({ meaningId })) });
+  };
+  try {
+    const ids = Array.from({ length: 205 }, (_, index) => `batch-test-${index}`);
+    const promises = ids.map((id) => requestMeaningPicture(id));
+    assert.equal(requestMeaningPicture(ids[0]!), promises[0]);
+    const results = await Promise.all(promises);
+    assert.equal(calls.length, 3);
+    assert.ok(calls.every((ids) => ids.length <= 100));
+    assert.deepEqual(calls.flat(), ids);
+    assert.deepEqual(results.map((result) => result?.meaningId), ids);
+    await requestMeaningPicture(ids[0]!);
+    assert.equal(calls.length, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

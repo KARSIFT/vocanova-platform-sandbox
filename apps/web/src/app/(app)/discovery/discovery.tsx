@@ -331,7 +331,11 @@ export function Discovery({
               </p>
             )}
             <p className={styles.definition}>{item.shortDefinition}</p>
-            <MeaningPicture meaningId={item.meaningId} />
+            <MeaningPicture
+              meaningId={item.meaningId}
+              image={item.image}
+              meaningRevision={item.meaningRevision}
+            />
             {item.exampleSentence && (
               <p className={styles.example}>{item.exampleSentence}</p>
             )}

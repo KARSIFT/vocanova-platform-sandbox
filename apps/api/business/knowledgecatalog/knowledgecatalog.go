@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaningmedia"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
 )
@@ -46,18 +47,20 @@ type Band struct {
 	UnseenCount   int `json:"unseenCount"`
 }
 type Item struct {
-	Rank              int       `json:"rank"`
-	MeaningID         uuid.UUID `json:"meaningId"`
-	WordID            uuid.UUID `json:"wordId"`
-	WordText          string    `json:"wordText"`
-	WordSlug          string    `json:"wordSlug"`
-	PartOfSpeech      string    `json:"partOfSpeech"`
-	ShortDefinition   string    `json:"shortDefinition"`
-	ExampleSentence   string    `json:"exampleSentence,omitempty"`
-	SelfReportedKnown bool      `json:"selfReportedKnown"`
-	Saved             bool      `json:"saved"`
-	Due               bool      `json:"due"`
-	Revision          string    `json:"revision"`
+	MeaningRevision   string              `json:"meaningRevision,omitempty"`
+	Image             *meaningmedia.Image `json:"image,omitempty"`
+	Rank              int                 `json:"rank"`
+	MeaningID         uuid.UUID           `json:"meaningId"`
+	WordID            uuid.UUID           `json:"wordId"`
+	WordText          string              `json:"wordText"`
+	WordSlug          string              `json:"wordSlug"`
+	PartOfSpeech      string              `json:"partOfSpeech"`
+	ShortDefinition   string              `json:"shortDefinition"`
+	ExampleSentence   string              `json:"exampleSentence,omitempty"`
+	SelfReportedKnown bool                `json:"selfReportedKnown"`
+	Saved             bool                `json:"saved"`
+	Due               bool                `json:"due"`
+	Revision          string              `json:"revision"`
 }
 type CurrentBand struct {
 	Number int    `json:"number"`

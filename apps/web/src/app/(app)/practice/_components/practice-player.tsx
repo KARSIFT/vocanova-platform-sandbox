@@ -245,7 +245,12 @@ export function PracticePlayer({
             <div className="mt-5">
               <p className="text-lg text-neutral-700">{step.prompt}</p>
               {step.meaningId && (
-                <MeaningPicture meaningId={step.meaningId} priority />
+                <MeaningPicture
+                  meaningId={step.meaningId}
+                  image={step.image}
+                  meaningRevision={step.pronunciationRevision}
+                  resolveMissing
+                />
               )}
               {step.context && (
                 <p className="mt-4 text-lg leading-relaxed text-neutral-700">
