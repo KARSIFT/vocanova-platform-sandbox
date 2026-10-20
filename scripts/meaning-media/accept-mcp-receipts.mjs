@@ -1,8 +1,15 @@
 // Separate, truthful evidence path for an operator's completed raw MCP PUTs.
 // No storage writes or model calls; only local reads/writes and canonical CDN GET.
 import { createHash } from "node:crypto";
-import { readFile, mkdir, open, unlink } from "node:fs/promises";
-import { resolve } from "node:path";
+import {
+  readFile,
+  mkdir,
+  open,
+  unlink,
+  lstat,
+  realpath,
+} from "node:fs/promises";
+import { resolve, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import { log, error as logError } from "node:console";
 import process from "node:process";
@@ -19,6 +26,7 @@ import {
   readBounded,
   responseBytes,
   atomicJSON,
+  within,
 } from "./library.mjs";
 import { catalogue, artifactPath, validateAndOptimize } from "./manage.mjs";
 
@@ -30,6 +38,38 @@ async function optionalJSON(path, fallback) {
     if (error.code === "ENOENT") return fallback;
     throw error;
   }
+}
+
+async function readLocalOriginal(root, row) {
+  const key = archiveKey(row);
+  const file = within(root, key);
+  // Canonical identity-derived paths only. Reject symlinks in the root, any
+  // intermediate directory, or the final file, including in-root aliases.
+  if (
+    (await realpath(root)) !== root ||
+    (await realpath(file)) !== file ||
+    !(await lstat(file)).isFile()
+  )
+    throw new Error(
+      "Local original archive must contain regular canonical files without symlinks",
+    );
+  const bytes = await readBounded(file);
+  if (sha256(bytes) !== row.originalSha256)
+    throw new Error("Local original archive checksum mismatch");
+  return {
+    bytes,
+    proof: {
+      method: "local-archive-full-read-sha256-md5",
+      key,
+      byteLength: bytes.length,
+      sourceSha256: sha256(bytes),
+      md5: createHash("md5").update(bytes).digest("hex"),
+      contentType: `image/${row.originalFormat}`,
+      cloudOriginalUploadedByThisCommand: false,
+      cloudOriginalPresenceChecked: false,
+      verifiedAt: new Date().toISOString(),
+    },
+  };
 }
 
 export function validateMCPObjectReceipt(receipt, { key, bytes, contentType }) {
@@ -119,12 +159,35 @@ export async function acceptMCPReceipts({
   expectedAccountId,
   publicBucket = PUBLIC_BUCKET,
   archiveBucket = ARCHIVE_BUCKET,
+  originalArchive = "cloud",
+  localArchiveRoot,
   fetcher = globalThis.fetch,
   sharp,
 }) {
+  if (!["cloud", "local"].includes(originalArchive))
+    throw new Error("Original archive mode must be cloud or local");
+  const local = originalArchive === "local";
+  if (local) {
+    if (typeof localArchiveRoot !== "string" || !isAbsolute(localArchiveRoot))
+      throw new Error(
+        "Local original archive requires an absolute archive root",
+      );
+    localArchiveRoot = resolve(localArchiveRoot);
+    if (
+      !(await lstat(localArchiveRoot)).isDirectory() ||
+      (await realpath(localArchiveRoot)) !== localArchiveRoot
+    )
+      throw new Error(
+        "Local original archive root must be a real directory without symlinks",
+      );
+  } else if (localArchiveRoot !== undefined) {
+    throw new Error(
+      "Local archive root requires explicit local original archive mode",
+    );
+  }
   if (
     !/^[0-9a-f]{32}$/.test(expectedAccountId) ||
-    publicBucket === archiveBucket
+    (!local && publicBucket === archiveBucket)
   )
     throw new Error(
       "Expected Cloudflare account and distinct buckets are required",
@@ -133,10 +196,15 @@ export async function acceptMCPReceipts({
   const receipts = JSON.parse(receiptBytes.toString("utf8"));
   if (
     receipts.schemaVersion !== 1 ||
-    receipts.transport !== "cloudflare-mcp-raw-put-v1" ||
+    receipts.transport !==
+      (local
+        ? "cloudflare-mcp-public-only-local-archive-v1"
+        : "cloudflare-mcp-raw-put-v1") ||
     receipts.accountId !== expectedAccountId ||
     receipts.publicBucket !== publicBucket ||
-    receipts.archiveBucket !== archiveBucket ||
+    (local
+      ? Object.hasOwn(receipts, "archiveBucket")
+      : receipts.archiveBucket !== archiveBucket) ||
     !Array.isArray(receipts.objects) ||
     receipts.objects.length < 1 ||
     receipts.objects.length > 500
@@ -171,7 +239,10 @@ export async function acceptMCPReceipts({
         throw new Error("Duplicate prepared meaning");
       planned.set(row.meaningId, row);
     }
-    const manifestPath = resolve(workdir, "published-mcp.json");
+    const manifestName = local
+      ? "published-mcp-local.json"
+      : "published-mcp.json";
+    const manifestPath = resolve(workdir, manifestName);
     const manifest = await optionalJSON(manifestPath, {
       schemaVersion: 1,
       images: [],
@@ -200,6 +271,7 @@ export async function acceptMCPReceipts({
       const row = planned.get(receipt.meaningId);
       if (
         !row ||
+        (local && Object.hasOwn(receipt, "original")) ||
         seen.has(receipt.meaningId) ||
         row.meaningRevision !== receipt.meaningRevision ||
         row.sha256 !== receipt.sha256
@@ -208,13 +280,18 @@ export async function acceptMCPReceipts({
           "Missing, duplicate or stale MCP receipt meaning identity",
         );
       seen.add(row.meaningId);
-      const original = await readBounded(
-        await artifactPath(
-          workdir,
-          row.originalFile,
-          `private/${archiveKey(row)}`,
-        ),
-      );
+      const localOriginal = local
+        ? await readLocalOriginal(localArchiveRoot, row)
+        : null;
+      const original = local
+        ? localOriginal.bytes
+        : await readBounded(
+            await artifactPath(
+              workdir,
+              row.originalFile,
+              `private/${archiveKey(row)}`,
+            ),
+          );
       const optimized = await readBounded(
         await artifactPath(workdir, row.publicFile, `public/${publicKey(row)}`),
         1024 * 1024,
@@ -235,11 +312,13 @@ export async function acceptMCPReceipts({
         publicCheck.height !== row.height
       )
         throw new Error("Local prepared source metadata mismatch");
-      const originalProof = validateMCPObjectReceipt(receipt.original, {
-        key: archiveKey(row),
-        bytes: original,
-        contentType: `image/${row.originalFormat}`,
-      });
+      const originalProof = local
+        ? localOriginal.proof
+        : validateMCPObjectReceipt(receipt.original, {
+            key: archiveKey(row),
+            bytes: original,
+            contentType: `image/${row.originalFormat}`,
+          });
       const publicProof = validateMCPObjectReceipt(receipt.public, {
         key: publicKey(row),
         bytes: optimized,
@@ -247,13 +326,18 @@ export async function acceptMCPReceipts({
       });
       checked.push({ row, optimized, originalProof, publicProof });
     }
-    const evidencePath = resolve(workdir, "mcp-publication-evidence.json");
+    const evidencePath = resolve(
+      workdir,
+      local
+        ? "mcp-local-publication-evidence.json"
+        : "mcp-publication-evidence.json",
+    );
     const evidence = await optionalJSON(evidencePath, {
       schemaVersion: 1,
-      transport: "cloudflare-mcp-raw-put-v1",
+      transport: receipts.transport,
       accountId: expectedAccountId,
       publicBucket,
-      archiveBucket,
+      ...(local ? { localArchiveRoot } : { archiveBucket }),
       images: {},
     });
     if (
@@ -261,7 +345,10 @@ export async function acceptMCPReceipts({
       evidence.transport !== receipts.transport ||
       evidence.accountId !== expectedAccountId ||
       evidence.publicBucket !== publicBucket ||
-      evidence.archiveBucket !== archiveBucket ||
+      (local
+        ? evidence.localArchiveRoot !== localArchiveRoot ||
+          Object.hasOwn(evidence, "archiveBucket")
+        : evidence.archiveBucket !== archiveBucket) ||
       !evidence.images ||
       typeof evidence.images !== "object"
     )
@@ -276,13 +363,15 @@ export async function acceptMCPReceipts({
         meaningRevision: row.meaningRevision,
         sha256: row.sha256,
         receiptFileSha256: sha256(receiptBytes),
-        original: {
-          ...originalProof,
-          method: "operator-mcp-put-receipt-size-etag-md5",
-          privateGetSha256Verified: false,
-          privateHTTPMetadataVerified: false,
-          bucketExposureVerifiedByThisTool: false,
-        },
+        original: local
+          ? originalProof
+          : {
+              ...originalProof,
+              method: "operator-mcp-put-receipt-size-etag-md5",
+              privateGetSha256Verified: false,
+              privateHTTPMetadataVerified: false,
+              bucketExposureVerifiedByThisTool: false,
+            },
         publicPut: {
           ...publicProof,
           method: "operator-mcp-put-receipt-size-etag-md5",
@@ -302,9 +391,10 @@ export async function acceptMCPReceipts({
       published: published.size,
       prepared: planned.size,
       remaining: planned.size - published.size,
-      privateVerification:
-        "operator PUT receipt size+ETag/MD5; no private GET SHA-256",
-      manifest: "published-mcp.json",
+      privateVerification: local
+        ? "local archive full-read SHA-256+MD5; no private cloud request"
+        : "operator PUT receipt size+ETag/MD5; no private GET SHA-256",
+      manifest: manifestName,
     };
   } finally {
     await lock.close();
@@ -340,6 +430,8 @@ async function main() {
         receiptsPath: options.receipts,
         workdir: options.workdir,
         expectedAccountId: options["account-id"],
+        originalArchive: options["original-archive"] ?? "cloud",
+        localArchiveRoot: options["local-archive-root"],
       }),
     ),
   );

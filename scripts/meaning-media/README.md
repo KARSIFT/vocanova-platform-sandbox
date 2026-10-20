@@ -94,7 +94,109 @@ The `public/` tree can be copied to a static file server or another object store
 without changing content keys. Keep archive storage private and back it up
 separately. The tools do not configure servers, DNS, bucket policies or backups.
 
-## Publish through a portable S3 endpoint
+## Current workflow: local originals and public optimized images
+
+Keep originals on this computer in a durable private archive. Upload only the
+optimized `public/meanings/...` WebP files to the public object store. Preparation
+still keeps a working copy under `private/`; publication independently re-reads
+the durable archive and does not require that working copy to remain present.
+
+Before accepting public receipts, preserve each prepared original under:
+
+```text
+/private/meaning-originals/
+  originals/{meaningId}/{meaningRevision}/{originalSha256}.{format}
+```
+
+The portion beginning `originals/` is exactly `archiveKey(preparedRow)`. Preserve
+the original bytes unchanged, keep the archive root private, and back it up
+separately. Use regular files or hard links; symlinks in the root, intermediate
+directories or final file are rejected. The adapter does not copy, replace,
+delete or upload originals. A prepared original must be a valid fully decodable
+PNG/JPEG/WebP whose full SHA-256 matches the immutable meaning/revision/source key.
+Reviewed legacy WebP originals retain their truthful legacy provenance; preserving
+a separately recovered native PNG does not change an existing prepared contract.
+
+Record normalized receipts only from actual completed **public** MCP PUTs:
+
+```json
+{
+  "schemaVersion": 1,
+  "transport": "cloudflare-mcp-public-only-local-archive-v1",
+  "accountId": "the-actual-32-hex-account-id",
+  "publicBucket": "vocanova-meaning-images",
+  "objects": [
+    {
+      "meaningId": "the-exact-uuid-from-prepared-json",
+      "meaningRevision": "the-exact-revision-from-prepared-json",
+      "sha256": "the-optimized-image-sha256",
+      "public": {
+        "key": "meanings/meaning-id/revision/optimized-sha256.webp",
+        "size": 12345,
+        "etag": "the-actual-single-part-32-hex-put-etag",
+        "sourceSha256": "the-optimized-sha256-checked-before-the-mcp-put",
+        "contentType": "image/webp",
+        "cacheControl": null
+      }
+    }
+  ]
+}
+```
+
+Do not include `archiveBucket` or `original` receipts in this mode. A collection
+contains 1–500 exact current prepared meanings. Receipt values must come from
+successful public uploads, never be fabricated from a plan. The storage upload
+itself remains an operator step; this acceptance command makes no cloud writes.
+
+```sh
+node scripts/meaning-media/accept-mcp-receipts.mjs \
+  --catalog .work/meaning-media/catalog.json \
+  --receipts .work/meaning-media/completed-public-put-receipts.json \
+  --workdir .work/meaning-media/library \
+  --account-id EXPECTED_CLOUDFLARE_ACCOUNT_ID \
+  --original-archive local \
+  --local-archive-root /private/meaning-originals
+```
+
+The complete plan must match the fresh canonical catalogue. Before the first
+HTTP request, every supplied receipt and original is checked against its exact
+identity and source bytes; missing, corrupt or aliased originals fail closed.
+Public PUT key, size, source SHA-256, content type and single-part ETag/MD5 must
+match the prepared WebP. The only network requests are fresh GETs to
+`https://images.vocanova.site`, without redirects, with bounded bytes and full
+SHA-256 verification. No archive bucket or private cloud endpoint is contacted.
+Network retries remain bounded to three fresh 60-second requests.
+
+Only `published-mcp-local.json` is the import-ready manifest for this mode. It
+has the same public image contract as other publication modes and excludes local
+paths, original hashes and reviewer identity. Repeating a receipt collection
+revalidates the local originals and public bytes without duplicating entries.
+
+The separate private `mcp-local-publication-evidence.json` records the archive
+root, each identity-derived relative original key, independently read byte length,
+SHA-256 and MD5, receipt-file hash and fresh canonical public delivery proof.
+Original evidence uses `local-archive-full-read-sha256-md5` and explicitly scopes
+`cloudOriginalUploadedByThisCommand: false` and
+`cloudOriginalPresenceChecked: false`. It does not assert that no historical
+cloud copy exists. The actual public cache header is recorded;
+`immutableCacheVerified: false` remains truthful for this raw MCP path.
+
+```sh
+(cd apps/api && go run ./cmd/meaning-media-import \
+  --manifest ../../.work/meaning-media/library/published-mcp-local.json)
+```
+
+Import still requires the operator's `DATABASE_URL` and independently validates
+live canonical revisions. This workflow does not deploy the application or
+establish backups. Historical `published-mcp.json`,
+`mcp-publication-evidence.json`, and the S3 mode's stronger evidence remain
+separate and unchanged.
+
+## Optional legacy workflow: cloud originals through portable S3
+
+This mode uploads originals to a private cloud bucket. It remains available for
+separately authorized cloud-archive deployments; the current owner workflow above
+keeps originals local and publishes only optimized public pictures.
 
 Use operator-provided environment variables. The tool never reads `.env` files or
 credential profiles and never prints credentials or raw provider diagnostics.
@@ -162,7 +264,11 @@ cannot prove the live database has matching content. Publication does not import
 automatically, deploy the application, mark missing pictures ready or replace the
 existing fallback library.
 
-## Accept completed Cloudflare MCP PUT receipts
+## Optional legacy workflow: cloud-original MCP PUT receipts
+
+This earlier mode requires receipts for both private cloud originals and public
+optimized images. Its checks and historical evidence remain unchanged. Use the
+explicit local-original mode above for the current owner storage policy.
 
 The Cloudflare MCP raw object PUT can upload bytes without local S3 credentials,
 but it does not set the S3 publisher's cache metadata. Its object GET is unsuitable

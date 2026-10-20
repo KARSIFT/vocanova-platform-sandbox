@@ -1,8 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+  mkdir,
+  symlink,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
@@ -725,6 +732,236 @@ test("MCP receipt acceptance verifies only canonical public bytes and reports we
     });
     await assert.rejects(acceptMCPReceipts(args), /stale/);
     assert.equal(calls.length, count);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("public-only MCP mode independently verifies local originals and never requests private storage", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "meaning-media-local-"));
+  try {
+    const catalogPath = join(directory, "catalog.json");
+    const candidatesPath = join(directory, "candidates.json");
+    const receiptsPath = join(directory, "receipts.json");
+    const localArchiveRoot = join(directory, "durable-archive");
+    const meaning = {
+      meaningId: row.meaningId,
+      meaningRevision: row.meaningRevision,
+    };
+    const source = fileURLToPath(
+      new URL(
+        `../../apps/web/public/images/meanings/${row.meaningId}.webp`,
+        import.meta.url,
+      ),
+    );
+    await atomicJSON(catalogPath, { schemaVersion: 1, meanings: [meaning] });
+    await atomicJSON(candidatesPath, {
+      images: [
+        {
+          ...meaning,
+          source,
+          alt: row.alt,
+          approved: true,
+          approvedBy: "synthetic-test-review",
+        },
+      ],
+    });
+    await prepare({ catalogPath, candidatesPath, workdir: directory });
+    const prepared = JSON.parse(
+      await readFile(join(directory, "prepared.json")),
+    ).images[0];
+    const original = await readFile(within(directory, prepared.originalFile));
+    const optimized = await readFile(within(directory, prepared.publicFile));
+    const originalPath = join(localArchiveRoot, archiveKey(prepared));
+    await mkdir(dirname(originalPath), { recursive: true });
+    await writeFile(originalPath, original);
+    // The durable archive is sufficient: the ephemeral prepared original is absent.
+    await rm(within(directory, prepared.originalFile));
+    const receipt = {
+      schemaVersion: 1,
+      transport: "cloudflare-mcp-public-only-local-archive-v1",
+      accountId: "a".repeat(32),
+      publicBucket: PUBLIC_BUCKET,
+      objects: [
+        {
+          ...meaning,
+          sha256: prepared.sha256,
+          public: {
+            key: publicKey(prepared),
+            size: optimized.length,
+            sourceSha256: sha256(optimized),
+            etag: createHash("md5").update(optimized).digest("hex"),
+            contentType: "image/webp",
+            cacheControl: null,
+          },
+        },
+      ],
+    };
+    await atomicJSON(receiptsPath, receipt);
+    const calls = [];
+    let corrupt = false;
+    const args = {
+      catalogPath,
+      receiptsPath,
+      workdir: directory,
+      expectedAccountId: receipt.accountId,
+      originalArchive: "local",
+      localArchiveRoot,
+      fetcher: async (url, options) => {
+        calls.push({ url, options });
+        assert.equal(url, `${CDN}/${publicKey(prepared)}`);
+        assert.equal(options.method, "GET");
+        assert.equal(options.redirect, "error");
+        return new Response(
+          corrupt ? Buffer.alloc(optimized.length) : optimized,
+          {
+            headers: {
+              "content-type": "image/webp",
+              "cache-control": "max-age=14400",
+            },
+          },
+        );
+      },
+    };
+    const noHTTP = async (operation, pattern) => {
+      const count = calls.length;
+      await assert.rejects(operation, pattern);
+      assert.equal(
+        calls.length,
+        count,
+        "invalid local/receipt evidence must fail before HTTP",
+      );
+    };
+    await noHTTP(
+      acceptMCPReceipts({ ...args, originalArchive: "invalid" }),
+      /mode/,
+    );
+    await noHTTP(
+      acceptMCPReceipts({ ...args, localArchiveRoot: undefined }),
+      /absolute/,
+    );
+    await noHTTP(
+      acceptMCPReceipts({ ...args, localArchiveRoot: "relative" }),
+      /absolute/,
+    );
+    await noHTTP(
+      acceptMCPReceipts({ ...args, originalArchive: "cloud" }),
+      /explicit local/,
+    );
+    await noHTTP(
+      acceptMCPReceipts({ ...args, expectedAccountId: "b".repeat(32) }),
+      /wrong-account/,
+    );
+    for (const changes of [
+      { transport: "cloudflare-mcp-raw-put-v1" },
+      { archiveBucket: ARCHIVE_BUCKET },
+      { objects: [{ ...receipt.objects[0], original: null }] },
+      { objects: [{ ...receipt.objects[0], meaningRevision: "e".repeat(64) }] },
+      {
+        objects: [
+          {
+            ...receipt.objects[0],
+            public: {
+              ...receipt.objects[0].public,
+              key: "https://untrusted.invalid/image.webp",
+            },
+          },
+        ],
+      },
+      {
+        objects: [
+          {
+            ...receipt.objects[0],
+            public: {
+              ...receipt.objects[0].public,
+              sourceSha256: "f".repeat(64),
+            },
+          },
+        ],
+      },
+      { objects: Array(501).fill(receipt.objects[0]) },
+    ]) {
+      await atomicJSON(receiptsPath, { ...receipt, ...changes });
+      await noHTTP(acceptMCPReceipts(args), /Invalid|stale|match/);
+    }
+    await atomicJSON(receiptsPath, receipt);
+    await writeFile(originalPath, Buffer.alloc(original.length));
+    await noHTTP(acceptMCPReceipts(args), /Local original archive checksum/);
+    await rm(originalPath);
+    await noHTTP(acceptMCPReceipts(args), /ENOENT/);
+    await mkdir(originalPath);
+    await noHTTP(acceptMCPReceipts(args), /regular canonical/);
+    await rm(originalPath, { recursive: true });
+    const outside = join(directory, "outside.webp");
+    await writeFile(outside, original);
+    await symlink(outside, originalPath);
+    await noHTTP(acceptMCPReceipts(args), /regular canonical/);
+    await rm(originalPath);
+    await writeFile(originalPath, original);
+    const alias = join(directory, "archive-alias");
+    await symlink(localArchiveRoot, alias, "dir");
+    await noHTTP(
+      acceptMCPReceipts({ ...args, localArchiveRoot: alias }),
+      /real directory/,
+    );
+    corrupt = true;
+    await assert.rejects(acceptMCPReceipts(args), /checksum mismatch/);
+    await assert.rejects(
+      readFile(join(directory, "published-mcp-local.json")),
+      { code: "ENOENT" },
+    );
+    corrupt = false;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const result = await acceptMCPReceipts(args);
+      assert.equal(result.verified, 1);
+      assert.equal(
+        result.published,
+        1,
+        "resume must not duplicate public rows",
+      );
+      assert.equal(result.manifest, "published-mcp-local.json");
+    }
+    const output = JSON.parse(
+      await readFile(join(directory, "published-mcp-local.json")),
+    );
+    assert.deepEqual(output.images, [publicRecord(prepared)]);
+    assert.equal(JSON.stringify(output).includes("original"), false);
+    const evidence = JSON.parse(
+      await readFile(join(directory, "mcp-local-publication-evidence.json")),
+    );
+    assert.equal(evidence.localArchiveRoot, localArchiveRoot);
+    assert.equal(Object.hasOwn(evidence, "archiveBucket"), false);
+    const proof = evidence.images[row.meaningId].original;
+    assert.equal(proof.method, "local-archive-full-read-sha256-md5");
+    assert.equal(proof.key, archiveKey(prepared));
+    assert.equal(proof.byteLength, original.length);
+    assert.equal(proof.sourceSha256, sha256(original));
+    assert.equal(proof.md5, createHash("md5").update(original).digest("hex"));
+    assert.equal(proof.cloudOriginalUploadedByThisCommand, false);
+    assert.equal(proof.cloudOriginalPresenceChecked, false);
+    assert.equal(Object.hasOwn(proof, "privateGetSha256Verified"), false);
+    assert.equal(
+      evidence.images[row.meaningId].publicDelivery.sha256,
+      sha256(optimized),
+    );
+    for (const filename of [
+      "published-mcp.json",
+      "mcp-publication-evidence.json",
+    ]) {
+      await assert.rejects(readFile(join(directory, filename)), {
+        code: "ENOENT",
+      });
+    }
+    const before = await readFile(join(directory, "published-mcp-local.json"));
+    await atomicJSON(catalogPath, {
+      schemaVersion: 1,
+      meanings: [{ ...meaning, meaningRevision: "e".repeat(64) }],
+    });
+    await noHTTP(acceptMCPReceipts(args), /stale/);
+    assert.deepEqual(
+      await readFile(join(directory, "published-mcp-local.json")),
+      before,
+    );
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
