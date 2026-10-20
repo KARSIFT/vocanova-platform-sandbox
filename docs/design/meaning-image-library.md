@@ -1,6 +1,6 @@
 # Meaning image library
 
-Implementation checkpoint: 20 October 2026. This document describes the delivery
+Implementation checkpoint: 21 October 2026. This document describes the delivery
 branch and verified storage work; it does not establish full image coverage or a
 staging/production deployment.
 
@@ -19,6 +19,12 @@ clarity at mobile size and useful alt text. A successful generator response is
 not approval. Candidate prompts, scenes, styles and generation/rejection receipts
 are retained in private working storage; rejected attempts are preserved.
 
+Do not print redundant target-word labels or explanatory captions inside pictures.
+Only deliberately reviewed short semantic cues needed to disambiguate the scene
+are allowed, such as `60 s` for a minute or a name when the meaning requires one.
+The previous cat-label artwork was withdrawn from final delivery after its
+text-free replacement passed validation.
+
 ## Content identity and delivery
 
 The source union contains 10,051 meanings: 10,000 primary map entries, 32 additional
@@ -33,17 +39,20 @@ part of speech and short definition. Public asset paths are immutable:
 
 The stable public origin is `https://images.vocanova.site`. Storage remains
 portable: the same keys and metadata work with another S3-compatible store behind
-that hostname. Cloudflare R2 currently stores approved public WebPs and a separate
-private archive. Provider-managed development URLs are disabled for both buckets;
-the private archive has no public custom domain. Native generation files and
-rejected attempts never enter the public image bucket.
+that hostname. Cloudflare R2 currently stores only optimized public WebPs.
+Original native files, reviewed legacy sources, rejected attempts and historical
+receipts are retained in a portable private archive on the owner's computer.
+The former originals and walkthrough R2 buckets were removed after verified local
+preservation. Earlier cloud-original checkpoints below are historical and do not
+describe currently existing buckets. Native generation files and rejected attempts
+never enter the public image bucket.
 
 The public image host has a dedicated Cloudflare cache rule for `/meanings/`
 paths ending in `.webp`. Only successful 200/206 responses receive a one-year
 edge TTL; 300–599 responses use no-store. Browser caching respects the origin
 instead of inheriting that edge TTL. The expression includes GET, HEAD and PURGE
-so single-file cache purges still match. This rule does not change application,
-API or private archive caching. Verify successful CDN checksums and MISS-to-HIT
+so single-file cache purges still match. This rule does not change application
+or API caching. Verify successful CDN checksums and MISS-to-HIT
 behavior after a single-image purge, plus repeated 404 cache bypasses; the rule's
 configured TTL alone does not prove delivery behavior or whole-site performance.
 
@@ -75,12 +84,24 @@ an exported queue alone cannot establish database freshness.
 
 ## Separate verification paths
 
-The S3 publisher checks original/public bytes through authenticated GETs and
+The current local-original workflow uploads only optimized public images. Its
+explicit local archive mode independently reads each canonical original file,
+checks full SHA-256 and MD5, verifies decoding, and rejects symlinks, nonfiles or
+paths inconsistent with the exact meaning/revision/source hash. Public PUT
+receipts must match the prepared WebP; a fresh canonical CDN GET and full SHA-256
+check precede each import-ready record. The separate local manifest and evidence
+contain no private-cloud verification claim or private-cloud request. Historical
+evidence remains unchanged. See the tooling guide for the explicit mode and
+configurable archive root.
+
+The optional legacy S3 publisher checks original/public bytes through
+authenticated GETs and
 requires its explicit private no-store and public immutable cache headers. It
 verifies canonical public delivery before emitting its import-ready manifest.
 
-The distinct Cloudflare MCP receipt path validates the operator's successful raw
-PUT receipts against actual local source SHA-256, size and single-part ETag/MD5.
+The legacy cloud-original Cloudflare MCP receipt path validates the operator's
+successful raw PUT receipts against actual local source SHA-256, size and
+single-part ETag/MD5.
 It then fetches the public image from the canonical origin and verifies SHA-256.
 Its separate manifest/evidence records the actual public response headers for
 each verification; browser headers and edge cache policy are separate evidence.
@@ -91,20 +112,31 @@ All 92 legacy native PNG originals were recovered through byte-identical
 reproduction of their current WebPs, not receipt order or first approval. Their
 177,279,634 bytes are locally SHA-verified, with exact receipt and transform
 provenance. A separate portable native-original archive manifest links each
-public content hash to the native archive key. All 92 native PNGs are uploaded. A fresh private API listing matches each
-size and single-part MD5 ETag, with source SHA-256 checked before PUT. This is
-not an independent private GET SHA-256 or restoration test. The portable index
-is also archived privately under its content hash. The already verified WebP
+public content hash to the native archive key. Historically, all 92 native PNGs
+were uploaded and a private API listing matched each size and single-part MD5
+ETag, with source SHA-256 checked before PUT. That historical check was not an
+independent private GET SHA-256 or restoration test. These cloud copies and their
+portable index have since been preserved locally and retired from R2; this upload
+checkpoint is stale as a description of current storage. The already verified WebP
 publication receipts remain valid. Seven rejected native attempts are
 preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-There are 113 uploaded public WebPs totaling 7,095,834 bytes, each freshly fetched
-from the canonical CDN and SHA-256 verified. The private archive contains
-92 preserved legacy WebPs, 113 native PNGs and the portable legacy-native index.
-The 20-image generation pilot is visually reviewed, uploaded and CDN-verified;
-remaining catalogue coverage is not finished.
+Current verified delivery contains **446 unique active meanings**, with canonical
+CDN bytes verified and every selected local original checked by full SHA-256.
+The active manifest selects the validated text-free replacement and excludes the
+superseded cat-label artwork. R2 contains 447 public objects, including that one
+historical superseded object; object count is not active meaning coverage.
+**9,605 canonical meanings remain missing images.** This does not establish a
+staging or production deployment.
+
+Historical 20 October checkpoint: 113 public WebPs totaling 7,095,834 bytes had
+been uploaded and freshly CDN SHA-256 verified, including the reviewed 20-image
+pilot. At that time a private cloud archive held 92 preserved legacy WebPs, 113
+native PNGs and the portable legacy-native index. Those counts and the presence
+of a private bucket are stale; the current storage policy keeps originals and
+history locally and only optimized public pictures in R2.
 
 See [release readiness](../product/release-readiness.md) for separate local test,
 hosted review/CI, metadata import, full coverage and deployment evidence. A public
