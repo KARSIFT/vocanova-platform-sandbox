@@ -35,10 +35,14 @@ reviews; its artwork has not yet been downloaded locally. The next 300-image
 batch is active in the existing durable subscription-only cloud task. Its
 generation, review and local integration totals remain pending.
 
-A historical local operator-CLI smoke imported the actual 113-image publication
-manifest into an isolated database, read all metadata back exactly, and proved a
-repeat imports zero records, without creating learner accounts. Uploaded assets,
-local implementation, live metadata import and deployment remain separate gates.
+A fresh isolated PostgreSQL 16 rehearsal imports the actual 1,070-image selected
+manifest through the operator CLI, verifies every metadata record and confirms an
+exact retry inserts zero. Four changed/inactive/unapproved-content checks omit
+the image and restore correctly. A separate synthetic 10,051-row metadata fixture
+verifies complete readback, last-batch conflict rollback and retry behavior; it
+does not add artwork coverage. Both temporary schemas are removed and no learner
+accounts are created. Uploaded assets, local implementation, live metadata import
+and deployment remain separate gates.
 One consolidated PR and staging verification follow completed coverage; this
 checkpoint does not establish release or production promotion.
 

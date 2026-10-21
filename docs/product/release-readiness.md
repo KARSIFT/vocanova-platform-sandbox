@@ -45,6 +45,20 @@ retain their previous browser metadata. This does not claim the separate strict
 S3 cache verification gate or whole-product performance. See
 [current image evidence boundaries](../design/meaning-image-library.md).
 
+A fresh PostgreSQL 16 rehearsal uses all 48 forward migrations and the actual
+10,051 canonical meanings in a disposable container without networking or host
+ports. The real operator CLI imports the selected 1,070-image manifest in 102 ms;
+an exact retry inserts zero in 78 ms. All 1,070 metadata records match on bounded
+readback, including after four stale/inactive/unapproved-content filter checks.
+A separate synthetic metadata fixture verifies a conflict at the last of 21 SQL
+batches rolls back all new rows (680 ms), then imports 10,050 matching additions
+(603 ms), retries with zero additions (449 ms), and reads all 10,051 records back
+exactly. Each full-size attempt uses 63 query/exec statements. These timings are
+local observations, not deployed latency guarantees or additional approved
+artwork. Both temporary schemas and the owned test container are removed; no
+learner accounts are created. The final complete artwork manifest still needs
+its own import rehearsal when available.
+
 These are storage and local implementation checkpoints. Full coverage, the final
 consolidated PR, hosted checks, current metadata import and staging acceptance
 remain pending. Production promotion remains separate.

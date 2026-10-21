@@ -86,6 +86,11 @@ The publication scripts and schemas are documented in
 receipts stay outside public commits. Backend import checks live content again;
 an exported queue alone cannot establish database freshness.
 
+Code deployment does not import the private selected manifest automatically. The
+final staging release must explicitly import its verified metadata into the
+migrated target database, then confirm authenticated API readback and learner
+appearance. Local SQL rehearsal and public object uploads are separate evidence.
+
 ## Separate verification paths
 
 The current local-original workflow uploads only optimized public images. Its
