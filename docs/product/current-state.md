@@ -9,14 +9,15 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. There are now **931 prepared and
-selected CDN-verified meanings**, leaving **9,120** without prepared imagery.
-The public bucket contains 934 WebPs / 78,565,638 bytes, including three preserved
+The source union contains 10,051 meanings. There are now **949 prepared and
+selected CDN-verified meanings**, leaving **9,102** without prepared imagery.
+The public bucket contains 952 WebPs / 80,887,012 bytes, including three preserved
 superseded images. Originals, rejected attempts and provenance are archived on
 the owner's computer; the former originals and walkthrough cloud buckets are
-removed. The subscription-only cloud pilot is integrated. The next 100 generated
-candidates have completed visual review but remain outside these counts until
-their local native archive checks pass. A historical local operator-CLI smoke
+removed. The subscription-only cloud pilot is integrated. Of the next 100
+generated candidates, 18 approved images have passed local native archive and
+CDN checks and are included; 77 await originals, and five remain held after
+visual review. A historical local operator-CLI smoke
 imported the actual 113-image
 publication manifest into an isolated database, read all metadata back exactly,
 and proved a repeat imports zero records, without creating learner accounts.

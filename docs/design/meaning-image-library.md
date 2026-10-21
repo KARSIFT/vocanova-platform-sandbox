@@ -55,7 +55,7 @@ so single-file cache purges still match. This rule does not change application
 or API caching. Verify successful CDN checksums and MISS-to-HIT
 behavior after a single-image purge, plus repeated 404 cache bypasses; the rule's
 configured TTL alone does not prove delivery behavior or whole-site performance.
-The later 410 public objects in the 21 October REST publication carry the one-year
+The later 428 public objects in the 21 October REST publication carry the one-year
 `public, max-age=31536000, immutable` browser header, verified on actual CDN
 responses. Historical MCP objects and the first five REST uploads retain
 their original browser metadata; the new header is not a claim about every asset.
@@ -136,19 +136,23 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 21 October local checkpoint contains **931 selected published meanings** and
-**931 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **9,120 meanings still need prepared artwork**.
+The 21 October local checkpoint contains **949 selected published meanings** and
+**949 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **9,102 meanings still need prepared artwork**.
 The ten-image cloud pilot is included after independent visual review, verified
 local original archival and fresh CDN-byte checks. A subsequent 100-image cloud
 batch has been generated and visually reviewed: 95 suitable candidates and five
-held for revision or further review. These 100 remain excluded from prepared and
-selected counts until local original reception and archival are verified.
+held for revision or further review. Eighteen approved candidates are included
+after verified local native archival and fresh CDN checks; 77 approved candidates
+still await originals, and the five held candidates remain excluded. The
+incremental receiver verifies already-prepared batch entries against their exact
+reviewed native and deterministically reproduced WebP instead of accepting
+overlapping identities alone.
 
 The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements exclude
 superseded artwork while preserving history. A fresh read-only R2 inventory
-contains **934 public objects / 78,565,638 bytes**, including three superseded
+contains **952 public objects / 80,887,012 bytes**, including three superseded
 objects. Both retired buckets remain absent. Existing Wrangler authentication
 provided the readback while the MCP connector was unavailable. Object counts do
 not establish active meaning

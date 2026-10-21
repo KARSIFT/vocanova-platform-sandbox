@@ -2,19 +2,22 @@
 
 ## Meaning image library — local and storage checkpoint, 21 October 2026
 
-The current selected manifest contains **931 reviewed meanings** out of 10,051.
+The current selected manifest contains **949 reviewed meanings** out of 10,051.
 Every selected record has verified local original SHA-256 and fresh canonical
-CDN-byte SHA-256 evidence. All 931 prepared meanings are published; 9,120 still
+CDN-byte SHA-256 evidence. All 949 prepared meanings are published; 9,102 still
 need prepared artwork. The 10-image subscription-only cloud pilot is included.
 The following 100-image cloud batch has completed independent visual review
-(95 suitable candidates, five held) but is not counted until original reception
-and local archival checks pass.
+(95 suitable candidates, five held). Eighteen approved candidates have passed
+local native archival and fresh CDN checks and are included; 77 still await
+originals, and the five held candidates remain excluded. The receiver and archive
+checks now reverify the exact approved native and derived public WebP for entries
+already prepared during an earlier part of the batch.
 
-A fresh authenticated read-only inventory finds **934 public WebPs / 78,565,638
+A fresh authenticated read-only inventory finds **952 public WebPs / 80,887,012
 bytes**, including three superseded objects retained as history. Both retired
 originals and walkthrough buckets remain absent; native originals and receipts
 stay on the owner's computer. Separate MCP and REST ledgers preserve actual
-transport provenance. The later 410 REST uploads have verified immutable browser
+transport provenance. The later 428 REST uploads have verified immutable browser
 caching; the first five REST uploads and historical MCP objects retain their
 previous browser metadata. See
 [current image evidence boundaries](../design/meaning-image-library.md).
