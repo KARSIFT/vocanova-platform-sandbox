@@ -192,6 +192,25 @@ establish backups. Historical `published-mcp.json`,
 `mcp-publication-evidence.json`, and the S3 mode's stronger evidence remain
 separate and unchanged.
 
+### Import after a release
+
+Both deployment bundles build `cmd/meaning-media-import` from the release checkout
+as a static Linux/amd64 operator binary. Staging installs it at
+`/opt/vocanova/apps/api/bin/meaning-media-import`; the separate manual production
+release installs it at `/opt/vocanova/production/apps/api/bin/meaning-media-import`.
+The application runtime image remains unchanged. Deployment neither copies the
+private selected manifest nor invokes this tool automatically.
+
+After migrations and canonical seeding, transfer the reviewed import-ready
+manifest separately, verify its full SHA-256 against the selected delivery
+checkpoint, and run the installed tool with `--manifest /absolute/path/to/manifest.json`
+in the target tier's operator database environment. Keep database credentials out
+of command output. Check the tool's checked-record count against the manifest;
+the inserted count depends on existing matching target records. An exact repeat
+must report zero additions. Then verify current-revision metadata through the
+authenticated API and inspect the affected learner screens. A successful code
+deploy, upload or local rehearsal does not replace these target checks.
+
 ### Direct REST receipts with local originals
 
 When an operator uses the Cloudflare REST API instead of MCP, select that source

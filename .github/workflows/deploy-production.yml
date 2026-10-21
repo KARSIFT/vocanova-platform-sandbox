@@ -237,6 +237,13 @@ jobs:
             -o /tmp/production-deploy-bundle/apps/api/bin/p1-content-seed \
             ./cmd/seed
           chmod +x /tmp/production-deploy-bundle/apps/api/bin/p1-content-seed
+          # Keep the operator tool aligned with this release. A production
+          # metadata import remains a separate explicit operator action.
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -C apps/api \
+            -o /tmp/production-deploy-bundle/apps/api/bin/meaning-media-import \
+            ./cmd/meaning-media-import
+          chmod +x /tmp/production-deploy-bundle/apps/api/bin/meaning-media-import
           cp apps/api/migrations/*.sql /tmp/production-deploy-bundle/apps/api/migrations/
           cp apps/api/migrations/atlas.sum /tmp/production-deploy-bundle/apps/api/migrations/
           tar -czf "$GITHUB_WORKSPACE/production-deploy-bundle.tgz" -C /tmp/production-deploy-bundle .
