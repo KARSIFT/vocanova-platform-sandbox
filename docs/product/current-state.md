@@ -9,21 +9,29 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. There are now **949 prepared and
-selected CDN-verified meanings**, leaving **9,102** without prepared imagery.
-The public bucket contains 952 WebPs / 80,887,012 bytes, including three preserved
+The source union contains 10,051 meanings. There are now **961 prepared and
+selected CDN-verified meanings**, leaving **9,090** without prepared imagery.
+The public bucket contains 964 WebPs / 82,554,868 bytes, including three preserved
 superseded images. Originals, rejected attempts and provenance are archived on
 the owner's computer; the former originals and walkthrough cloud buckets are
-removed. The subscription-only cloud pilot is integrated. Of the next 100
-generated candidates, 18 approved images have passed local native archive and
-CDN checks and are included; 77 await originals, and five remain held after
-visual review. A historical local operator-CLI smoke
-imported the actual 113-image
-publication manifest into an isolated database, read all metadata back exactly,
-and proved a repeat imports zero records, without creating learner accounts.
-Uploaded assets, local implementation, live metadata import and deployment remain
-separate gates. One consolidated PR and staging verification follow completed
-coverage; this checkpoint does not establish release or production promotion.
+removed. The subscription-only cloud pilot is integrated. Of the first 100-image
+cloud batch, 30 approved images have passed local native archive and CDN checks
+and are included; 65 approved first-attempt candidates remain unprepared, and
+five remain held after visual review.
+Its original review results remain 95 pass, three flag and two reject.
+
+A separate **admit** correction has passed root and independent full-image review
+and local archival. It still requires explicit correction binding before
+preparation or publication; the original rejection is preserved. The next
+100-meaning subscription-only cloud batch is dispatched, with its generated-image
+count still unverified.
+
+A historical local operator-CLI smoke imported the actual 113-image publication
+manifest into an isolated database, read all metadata back exactly, and proved a
+repeat imports zero records, without creating learner accounts. Uploaded assets,
+local implementation, live metadata import and deployment remain separate gates.
+One consolidated PR and staging verification follow completed coverage; this
+checkpoint does not establish release or production promotion.
 
 ## Daily review and language selection — implementation, 18 October 2026
 

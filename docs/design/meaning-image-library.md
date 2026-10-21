@@ -55,7 +55,7 @@ so single-file cache purges still match. This rule does not change application
 or API caching. Verify successful CDN checksums and MISS-to-HIT
 behavior after a single-image purge, plus repeated 404 cache bypasses; the rule's
 configured TTL alone does not prove delivery behavior or whole-site performance.
-The later 428 public objects in the 21 October REST publication carry the one-year
+The later 440 public objects in the 21 October REST publication carry the one-year
 `public, max-age=31536000, immutable` browser header, verified on actual CDN
 responses. Historical MCP objects and the first five REST uploads retain
 their original browser metadata; the new header is not a claim about every asset.
@@ -136,28 +136,37 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 21 October local checkpoint contains **949 selected published meanings** and
-**949 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **9,102 meanings still need prepared artwork**.
+The 21 October local checkpoint contains **961 selected published meanings** and
+**961 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **9,090 meanings still need prepared artwork**.
 The ten-image cloud pilot is included after independent visual review, verified
-local original archival and fresh CDN-byte checks. A subsequent 100-image cloud
-batch has been generated and visually reviewed: 95 suitable candidates and five
-held for revision or further review. Eighteen approved candidates are included
-after verified local native archival and fresh CDN checks; 77 approved candidates
-still await originals, and the five held candidates remain excluded. The
-incremental receiver verifies already-prepared batch entries against their exact
-reviewed native and deterministically reproduced WebP instead of accepting
-overlapping identities alone.
+local original archival and fresh CDN-byte checks. The first 100-image cloud
+batch retains its original review results: 95 pass, three flag and two reject.
+Thirty approved candidates are included after verified local native archival and
+fresh CDN checks; 65 approved first-attempt candidates remain unprepared, and
+the five held candidates remain excluded. The incremental receiver verifies already-prepared
+batch entries against their exact reviewed native and deterministically reproduced
+WebP instead of accepting overlapping identities alone.
+
+A separate second attempt for **admit** has passed root and independent full-image
+review and is archived locally. It remains a candidate awaiting explicit
+correction binding, without preparation or publication. The first attempt's
+rejection and original review history remain unchanged.
+
+The next 100-meaning batch has been dispatched through the same subscription-only
+cloud chat. Dispatch and canonical source checks are verified; its generated-image
+count remains unverified. The same batch remains pending through read timeouts
+and rate-limit responses, without an observed terminal result.
 
 The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements exclude
-superseded artwork while preserving history. A fresh read-only R2 inventory
-contains **952 public objects / 80,887,012 bytes**, including three superseded
-objects. Both retired buckets remain absent. Existing Wrangler authentication
-provided the readback while the MCP connector was unavailable. Object counts do
-not establish active meaning
-coverage, and these local checkpoints do not establish a staging or production
-deployment.
+superseded artwork while preserving history. Separate selected MCP (516) and
+REST (445) records preserve actual transport provenance. A fresh read-only R2
+inventory contains **964 public objects / 82,554,868 bytes**, including three
+superseded objects. Both retired buckets remain absent. Existing Wrangler
+authentication provided the readback while the MCP connector was unavailable.
+Object counts do not establish active meaning coverage, and these local
+checkpoints do not establish a staging or production deployment.
 
 Historical 20 October checkpoint: 113 public WebPs totaling 7,095,834 bytes had
 been uploaded and freshly CDN SHA-256 verified, including the reviewed 20-image

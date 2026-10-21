@@ -2,24 +2,37 @@
 
 ## Meaning image library — local and storage checkpoint, 21 October 2026
 
-The current selected manifest contains **949 reviewed meanings** out of 10,051.
+The current selected manifest contains **961 reviewed meanings** out of 10,051.
 Every selected record has verified local original SHA-256 and fresh canonical
-CDN-byte SHA-256 evidence. All 949 prepared meanings are published; 9,102 still
+CDN-byte SHA-256 evidence. All 961 prepared meanings are published; 9,090 still
 need prepared artwork. The 10-image subscription-only cloud pilot is included.
-The following 100-image cloud batch has completed independent visual review
-(95 suitable candidates, five held). Eighteen approved candidates have passed
-local native archival and fresh CDN checks and are included; 77 still await
-originals, and the five held candidates remain excluded. The receiver and archive
-checks now reverify the exact approved native and derived public WebP for entries
+The first 100-image cloud batch retains its original visual review results:
+95 pass, three flag and two reject. Thirty approved candidates have passed
+local native archival and fresh CDN checks and are included; 65 approved
+first-attempt candidates remain unprepared, and the five held candidates remain
+excluded. The receiver and archive
+checks reverify the exact approved native and derived public WebP for entries
 already prepared during an earlier part of the batch.
 
-A fresh authenticated read-only inventory finds **952 public WebPs / 80,887,012
+The separate second **admit** attempt passed root and independent full-image
+review and is archived locally. Its candidate still requires explicit correction
+binding before preparation or publication. The first attempt remains rejected;
+its review and original bytes are preserved.
+
+The next 100-meaning subscription-only batch is dispatched in the same cloud
+chat, with its canonical jobs verified. Its generated-image count and completion
+remain unverified through recent read timeouts and rate-limit responses; the
+same dispatched batch is retained.
+
+A fresh authenticated read-only inventory finds **964 public WebPs / 82,554,868
 bytes**, including three superseded objects retained as history. Both retired
 originals and walkthrough buckets remain absent; native originals and receipts
-stay on the owner's computer. Separate MCP and REST ledgers preserve actual
-transport provenance. The later 428 REST uploads have verified immutable browser
-caching; the first five REST uploads and historical MCP objects retain their
-previous browser metadata. See
+stay on the owner's computer. The selected records comprise 516 MCP and 445 REST
+publications, preserving actual transport provenance. All 445 REST records report
+successful uploads. The later 440 REST uploads have observed one-year immutable
+browser response headers; the first five REST uploads and historical MCP objects
+retain their previous browser metadata. This does not claim the separate strict
+S3 cache verification gate or whole-product performance. See
 [current image evidence boundaries](../design/meaning-image-library.md).
 
 These are storage and local implementation checkpoints. Full coverage, the final
