@@ -9,22 +9,24 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. There are now **961 prepared and
-selected CDN-verified meanings**, leaving **9,090** without prepared imagery.
-The public bucket contains 964 WebPs / 82,554,868 bytes, including three preserved
+The source union contains 10,051 meanings. There are now **968 prepared and
+selected CDN-verified meanings**, leaving **9,083** without prepared imagery.
+The public bucket contains 971 WebPs / 83,540,088 bytes, including three preserved
 superseded images. Originals, rejected attempts and provenance are archived on
 the owner's computer; the former originals and walkthrough cloud buckets are
-removed. The subscription-only cloud pilot is integrated. Of the first 100-image
-cloud batch, 30 approved images have passed local native archive and CDN checks
-and are included; 65 approved first-attempt candidates remain unprepared, and
-five remain held after visual review.
-Its original review results remain 95 pass, three flag and two reject.
+removed. The subscription-only cloud pilot is integrated. The first 100-image
+cloud batch has 36 approved first attempts included and 59 approved first-attempt
+candidates still unprepared. Its original review results remain 95 pass, three
+flag and two reject, with all five original held decisions preserved.
 
-A separate **admit** correction has passed root and independent full-image review
-and local archival. It still requires explicit correction binding before
-preparation or publication; the original rejection is preserved. The next
-100-meaning subscription-only cloud batch is dispatched, with its generated-image
-count still unverified.
+The explicitly bound second **admit** attempt is now reviewed, archived locally,
+prepared, published and separately CDN-verified. Its rejected first attempt was
+never public; four originally held meanings remain unresolved. Cloud status
+reports at least 85 completed reviews for the next 100-meaning subscription-only
+batch, with flags including **indeed**, **mention** and **whom**. Final generated/reviewed
+totals require actual export inspection; no local integration is verified. Backend
+status reads have resumed while the cloud conversation still fails to load in
+the browser.
 
 A historical local operator-CLI smoke imported the actual 113-image publication
 manifest into an isolated database, read all metadata back exactly, and proved a
