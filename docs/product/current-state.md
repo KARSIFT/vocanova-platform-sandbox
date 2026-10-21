@@ -1,6 +1,6 @@
 # Vocanova current product state
 
-## Meaning image library — implementation checkpoint, 21 October 2026
+## Meaning image library — implementation checkpoint, 22 October 2026
 
 The delivery branch adds a portable, meaning-specific image library with a stable
 public hostname, immutable content keys, private originals and revision-checked
@@ -9,9 +9,9 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. There are now **976 prepared and
-selected CDN-verified meanings**, leaving **9,075** without prepared imagery.
-The public bucket contains 979 WebPs / 84,585,432 bytes, including three preserved
+The source union contains 10,051 meanings. There are now **1,070 prepared and
+selected CDN-verified meanings**, leaving **8,981** without prepared imagery.
+The public bucket contains 1,073 WebPs / 93,637,044 bytes, including three preserved
 superseded images. Originals, rejected attempts and provenance are archived on
 the owner's computer; the former originals and walkthrough cloud buckets are
 removed. The subscription-only cloud pilot is integrated. The first 100-image
@@ -21,17 +21,19 @@ flag and two reject, with all five original held decisions preserved.
 
 The explicitly bound second **admit** attempt is now reviewed, archived locally,
 prepared, published and separately CDN-verified. Its rejected first attempt was
-never public; four originally held meanings remain unresolved. The latest two
-included first attempts add 285,704 public bytes, with 5,801,474 native bytes
-preserved locally. The second subscription-only batch has 100 generated candidates
-and 24 locally archived originals. Local inspection covers all 100 contact-sheet
-thumbnails and 39 actual full images: 37 pass and two held. Four of 15 supplemental
-ZIPs are received; the original export family separately has one received ZIP out
-of 51. No images from this batch are prepared or published.
+never public; four originally held meanings remain unresolved. The second
+subscription-only batch is fully received and reviewed: 94 images are prepared,
+published and separately CDN-verified, with six held attempts preserved. All 100
+originals are archived locally, totaling 249,984,310 bytes. Its 15 supplemental
+ZIPs are received; the original export family separately retains one received
+ZIP out of 51. The 94 included images add 9,051,612 public bytes and preserve
+236,181,622 native bytes locally. Exact native-to-reviewed-WebP reproduction and
+deterministic application-image checks bind the artwork to its reviews.
 
-The third 100-meaning batch has been dispatched after independent canonical
-preflight. Its frozen 974-prepared snapshot predates the latest two additions;
-both were already excluded through the complete first-batch reservation.
+Cloud batch003 reports 100 completed outputs with 88 pass and 12 flag cloud
+reviews; its artwork has not yet been downloaded locally. The next 300-image
+batch is active in the existing durable subscription-only cloud task. Its
+generation, review and local integration totals remain pending.
 
 A historical local operator-CLI smoke imported the actual 113-image publication
 manifest into an isolated database, read all metadata back exactly, and proved a

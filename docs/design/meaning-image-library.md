@@ -1,6 +1,6 @@
 # Meaning image library
 
-Implementation checkpoint: 21 October 2026. This document describes the delivery
+Implementation checkpoint: 22 October 2026. This document describes the delivery
 branch and verified storage work; it does not establish full image coverage or a
 staging/production deployment.
 
@@ -55,7 +55,7 @@ so single-file cache purges still match. This rule does not change application
 or API caching. Verify successful CDN checksums and MISS-to-HIT
 behavior after a single-image purge, plus repeated 404 cache bypasses; the rule's
 configured TTL alone does not prove delivery behavior or whole-site performance.
-The later 455 public objects in the 21 October REST publication carry the one-year
+The later 549 REST public objects carry the one-year
 `public, max-age=31536000, immutable` browser header, verified on actual CDN
 responses. Historical MCP objects and the first five REST uploads retain
 their original browser metadata; the new header is not a claim about every asset.
@@ -136,9 +136,9 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 21 October local checkpoint contains **976 selected published meanings** and
-**976 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **9,075 meanings still need prepared artwork**.
+The 22 October local checkpoint contains **1,070 selected published meanings** and
+**1,070 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **8,981 meanings still need prepared artwork**.
 The ten-image cloud pilot is included after independent visual review, verified
 local original archival and fresh CDN-byte checks. The first 100-image cloud
 batch retains its original review results: 95 pass, three flag and two reject.
@@ -148,33 +148,35 @@ unprepared. All five original held decisions remain unchanged. The incremental
 receiver verifies already-prepared batch entries against their exact reviewed
 native and deterministically reproduced WebP instead of accepting overlapping
 identities alone.
-The latest two included first attempts preserve 5,801,474 bytes of native
-originals locally and add 285,704 bytes of optimized public artwork. Supplemental
-transfers remain separate from the original source-pack ZIP receipts.
-
 The explicitly bound second attempt for **admit** is also included after root
 and independent full-image review, verified local archival, preparation,
 publication and separate canonical CDN-byte verification. Its rejected first
 attempt remains preserved and was never public. Four of the originally held
 meanings remain unresolved.
 
-The second 100-meaning batch has generated 100 candidates in the same
-subscription-only cloud chat. All 100 contact-sheet thumbnails and 39 actual full
-images have been inspected locally: 37 full-image passes and two holds. This is
-not full-image review of all 100 or final integration approval. Twenty-four native
-originals are archived locally. Four of 15 supplemental transfer ZIPs have arrived;
-the original export family separately retains one received ZIP out of 51. None
-of this batch is prepared or published.
+The second 100-meaning batch is fully received and reviewed locally. All 100
+originals, totaling 249,984,310 bytes, are archived on the owner's computer,
+including the six held attempts. All 15 supplemental transfer ZIPs are received;
+the original export family separately retains one received ZIP out of 51.
+Full-image review and the preserved cloud decisions leave 94 eligible images and
+six held: **indeed**, **mention**, **apparently**, **simply**, **whom** and **consider**.
+All 94 eligible images are prepared, published and separately CDN-byte verified.
+Each reviewed WebP was reproduced byte-for-byte from its exact archived native;
+the application WebP was then independently reproduced during publication checks.
+These 94 images preserve 236,181,622 bytes of native originals locally and add
+9,051,612 bytes of optimized public artwork. Supplemental transfers remain
+separate from the original source-pack ZIP receipts.
 
-The third 100-meaning batch has been dispatched after independent canonical
-preflight. Its frozen 974-prepared snapshot predates the latest two additions;
-both identities were already excluded through the complete first-batch reservation.
+Cloud batch003 reports 100 completed outputs with cloud review results of 88 pass
+and 12 flag. Its artwork has not yet been downloaded locally. The next 300-image
+batch is active in the existing durable subscription-only cloud task; generated,
+reviewed and locally integrated totals for that assignment remain pending.
 
 The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements remain unchanged,
 excluding superseded artwork while preserving history. Separate selected MCP
-(516) and REST (460) records preserve actual transport provenance. A fresh
-read-only R2 inventory contains **979 public objects / 84,585,432 bytes**,
+(516) and REST (554) records preserve actual transport provenance. A fresh
+read-only R2 inventory contains **1,073 public objects / 93,637,044 bytes**,
 including three superseded objects. Both retired buckets remain absent. Existing
 Wrangler authentication provided the readback while the MCP connector was
 unavailable. Object counts do not establish active meaning coverage, and these
