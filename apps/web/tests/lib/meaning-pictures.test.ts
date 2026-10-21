@@ -282,3 +282,39 @@ it("coalesces concurrent teaching lookups into bounded batches and shares repeat
     globalThis.fetch = originalFetch;
   }
 });
+
+it("aborts a stalled teaching-image lookup and settles its waiting learners", {
+  timeout: 6000,
+}, async () => {
+  const originalFetch = globalThis.fetch;
+  let aborted = false;
+  const keepAlive = setTimeout(() => {}, 10_000);
+  globalThis.fetch = async (_input, init) => {
+    const signal = init?.signal;
+    if (!signal) throw new Error("Teaching image request has no deadline");
+    return new Promise<Response>((_resolve, reject) => {
+      signal.addEventListener(
+        "abort",
+        () => {
+          aborted = true;
+          reject(signal.reason);
+        },
+        { once: true },
+      );
+    });
+  };
+  try {
+    const first = requestMeaningPicture("stalled-teaching-lookup");
+    assert.equal(requestMeaningPicture("stalled-teaching-lookup"), first);
+    assert.equal(await first, undefined);
+    assert.equal(
+      aborted,
+      true,
+      "the network request must be aborted, not left running",
+    );
+    assert.equal(await requestMeaningPicture("stalled-teaching-lookup"), undefined);
+  } finally {
+    clearTimeout(keepAlive);
+    globalThis.fetch = originalFetch;
+  }
+});

@@ -42,6 +42,7 @@ async function flush() {
           try {
             const { data } = await client.getMeaningImages(
               group.map(([id]) => id),
+              { signal: AbortSignal.timeout(3000) },
             );
             for (const [id, listeners] of group) {
               const image = data.items.find((item) => item.meaningId === id);

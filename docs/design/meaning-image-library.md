@@ -123,13 +123,20 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-Current verified delivery contains **446 unique active meanings**, with canonical
-CDN bytes verified and every selected local original checked by full SHA-256.
-The active manifest selects the validated text-free replacement and excludes the
-superseded cat-label artwork. R2 contains 447 public objects, including that one
-historical superseded object; object count is not active meaning coverage.
-**9,605 canonical meanings remain missing images.** This does not establish a
-staging or production deployment.
+The 21 October local checkpoint contains **516 selected published meanings** and
+**921 prepared meanings** out of 10,051 canonical meanings. The 405 prepared
+meanings awaiting publication are distinct and exactly equal prepared minus
+selected published IDs. Thus 9,130 meanings still need prepared artwork and
+9,535 are not yet in the selected published manifest. The ten-image cloud pilot
+is separate and remains excluded until local verification and original archival.
+
+The selected delivery checkpoint binds canonical CDN-byte verification and full
+local-original SHA-256 checks. Its three reviewed replacements exclude
+superseded artwork while preserving history. The last successful R2 inventory
+contained 519 public objects, including three superseded objects; connector
+failures prevent a fresh inventory. Object counts do not establish active meaning
+coverage, and these local checkpoints do not establish a staging or production
+deployment.
 
 Historical 20 October checkpoint: 113 public WebPs totaling 7,095,834 bytes had
 been uploaded and freshly CDN SHA-256 verified, including the reviewed 20-image
