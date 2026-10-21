@@ -55,7 +55,7 @@ so single-file cache purges still match. This rule does not change application
 or API caching. Verify successful CDN checksums and MISS-to-HIT
 behavior after a single-image purge, plus repeated 404 cache bypasses; the rule's
 configured TTL alone does not prove delivery behavior or whole-site performance.
-The later 447 public objects in the 21 October REST publication carry the one-year
+The later 453 public objects in the 21 October REST publication carry the one-year
 `public, max-age=31536000, immutable` browser header, verified on actual CDN
 responses. Historical MCP objects and the first five REST uploads retain
 their original browser metadata; the new header is not a claim about every asset.
@@ -136,18 +136,21 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 21 October local checkpoint contains **968 selected published meanings** and
-**968 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **9,083 meanings still need prepared artwork**.
+The 21 October local checkpoint contains **974 selected published meanings** and
+**974 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **9,077 meanings still need prepared artwork**.
 The ten-image cloud pilot is included after independent visual review, verified
 local original archival and fresh CDN-byte checks. The first 100-image cloud
 batch retains its original review results: 95 pass, three flag and two reject.
-Thirty-six approved first-attempt images are included after verified local native
-archival and fresh CDN checks; 59 approved first-attempt candidates remain
+Forty-two approved first-attempt images are included after verified local native
+archival and fresh CDN checks; 53 approved first-attempt candidates remain
 unprepared. All five original held decisions remain unchanged. The incremental
 receiver verifies already-prepared batch entries against their exact reviewed
 native and deterministically reproduced WebP instead of accepting overlapping
 identities alone.
+The latest six included first attempts preserve 17,537,726 bytes of native
+originals locally and add 759,640 bytes of optimized public artwork. Their larger
+transfer is recorded separately from the original source-pack ZIP receipts.
 
 The explicitly bound second attempt for **admit** is also included after root
 and independent full-image review, verified local archival, preparation,
@@ -155,17 +158,18 @@ publication and separate canonical CDN-byte verification. Its rejected first
 attempt remains preserved and was never public. Four of the originally held
 meanings remain unresolved.
 
-The next 100-meaning batch is running in the same subscription-only cloud chat.
-Cloud status reports at least 85 reviewed candidates, with flags including
-**indeed**, **mention** and **whom**. Final generated/reviewed totals require actual
-export inspection; no local integration is verified. Backend status reads have
-resumed, while the cloud conversation still fails to load in the browser.
+The next 100-meaning batch has generated 100 candidates in the same
+subscription-only cloud chat. All 100 contact-sheet thumbnails have been inspected
+locally; this is not full-image review or final approval. Two actual full-image
+checks remain held, and none of this batch is approved for local integration.
+Fifteen larger transfer ZIPs have been exported in the cloud; their local arrival
+has not yet been observed.
 
 The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements remain unchanged,
 excluding superseded artwork while preserving history. Separate selected MCP
-(516) and REST (452) records preserve actual transport provenance. A fresh
-read-only R2 inventory contains **971 public objects / 83,540,088 bytes**,
+(516) and REST (458) records preserve actual transport provenance. A fresh
+read-only R2 inventory contains **977 public objects / 84,299,728 bytes**,
 including three superseded objects. Both retired buckets remain absent. Existing
 Wrangler authentication provided the readback while the MCP connector was
 unavailable. Object counts do not establish active meaning coverage, and these

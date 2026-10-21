@@ -9,24 +9,25 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. There are now **968 prepared and
-selected CDN-verified meanings**, leaving **9,083** without prepared imagery.
-The public bucket contains 971 WebPs / 83,540,088 bytes, including three preserved
+The source union contains 10,051 meanings. There are now **974 prepared and
+selected CDN-verified meanings**, leaving **9,077** without prepared imagery.
+The public bucket contains 977 WebPs / 84,299,728 bytes, including three preserved
 superseded images. Originals, rejected attempts and provenance are archived on
 the owner's computer; the former originals and walkthrough cloud buckets are
 removed. The subscription-only cloud pilot is integrated. The first 100-image
-cloud batch has 36 approved first attempts included and 59 approved first-attempt
+cloud batch has 42 approved first attempts included and 53 approved first-attempt
 candidates still unprepared. Its original review results remain 95 pass, three
 flag and two reject, with all five original held decisions preserved.
 
 The explicitly bound second **admit** attempt is now reviewed, archived locally,
 prepared, published and separately CDN-verified. Its rejected first attempt was
-never public; four originally held meanings remain unresolved. Cloud status
-reports at least 85 completed reviews for the next 100-meaning subscription-only
-batch, with flags including **indeed**, **mention** and **whom**. Final generated/reviewed
-totals require actual export inspection; no local integration is verified. Backend
-status reads have resumed while the cloud conversation still fails to load in
-the browser.
+never public; four originally held meanings remain unresolved. The latest six
+included first attempts add 759,640 public bytes, with 17,537,726 native bytes
+preserved locally. The next subscription-only batch has 100 generated candidates.
+Local inspection covers all 100 contact-sheet thumbnails and two actual full
+images, both held; this does not establish full-image approval of the batch.
+Fifteen larger transfer ZIPs have been exported in the cloud, but their local
+arrival has not yet been observed. No local integration of this batch is approved.
 
 A historical local operator-CLI smoke imported the actual 113-image publication
 manifest into an isolated database, read all metadata back exactly, and proved a
