@@ -1,6 +1,6 @@
 # Vocanova current product state
 
-## Meaning image library — implementation checkpoint, 20 October 2026
+## Meaning image library — implementation checkpoint, 21 October 2026
 
 The delivery branch adds a portable, meaning-specific image library with a stable
 public hostname, immutable content keys, private originals and revision-checked
@@ -9,13 +9,15 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The initial source union contains 10,051 meanings, with 92 reviewed pictures and
-9,959 missing. Storage now has 113 public WebPs totaling 7,095,834 bytes, all freshly
-CDN-fetched and SHA-256 verified. All 92 recovered legacy native PNG originals are
-also archived privately with matching source/size/ETag evidence; the archive now
-holds 113 native PNGs plus preserved legacy WebPs and a portable provenance index.
-The 20-image pilot is reviewed and published; 9,938 catalogue meanings still lack
-prepared imagery. A local operator-CLI smoke imported the actual 113-image
+The source union contains 10,051 meanings. There are now **931 prepared and
+selected CDN-verified meanings**, leaving **9,120** without prepared imagery.
+The public bucket contains 934 WebPs / 78,565,638 bytes, including three preserved
+superseded images. Originals, rejected attempts and provenance are archived on
+the owner's computer; the former originals and walkthrough cloud buckets are
+removed. The subscription-only cloud pilot is integrated. The next 100 generated
+candidates have completed visual review but remain outside these counts until
+their local native archive checks pass. A historical local operator-CLI smoke
+imported the actual 113-image
 publication manifest into an isolated database, read all metadata back exactly,
 and proved a repeat imports zero records, without creating learner accounts.
 Uploaded assets, local implementation, live metadata import and deployment remain

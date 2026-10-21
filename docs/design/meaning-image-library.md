@@ -55,6 +55,10 @@ so single-file cache purges still match. This rule does not change application
 or API caching. Verify successful CDN checksums and MISS-to-HIT
 behavior after a single-image purge, plus repeated 404 cache bypasses; the rule's
 configured TTL alone does not prove delivery behavior or whole-site performance.
+The later 410 public objects in the 21 October REST publication carry the one-year
+`public, max-age=31536000, immutable` browser header, verified on actual CDN
+responses. Historical MCP objects and the first five REST uploads retain
+their original browser metadata; the new header is not a claim about every asset.
 
 The API returns approved metadata only when the meaning and canonical word are
 active and the current revision matches. Discovery/detail embed image metadata
@@ -87,12 +91,21 @@ an exported queue alone cannot establish database freshness.
 The current local-original workflow uploads only optimized public images. Its
 explicit local archive mode independently reads each canonical original file,
 checks full SHA-256 and MD5, verifies decoding, and rejects symlinks, nonfiles or
-paths inconsistent with the exact meaning/revision/source hash. Public PUT
+paths inconsistent with the exact meaning/revision/source hash. Public object
 receipts must match the prepared WebP; a fresh canonical CDN GET and full SHA-256
 check precede each import-ready record. The separate local manifest and evidence
 contain no private-cloud verification claim or private-cloud request. Historical
 evidence remains unchanged. See the tooling guide for the explicit mode and
 configurable archive root.
+
+The explicit REST receipt mode keeps its manifest and evidence separate from
+MCP. It distinguishes a successful new PUT from reconciliation of an existing
+object with matching content and metadata. It does not claim an existing-object
+readback was a new upload. Both modes retain the same canonical identity, decoded
+source, local archive and fresh public-byte verification gates. Publication
+uses frozen content-addressed keys and bytes; conflicting existing metadata stops
+the operation. Application-level same-content replay does not establish atomic
+conditional creation by the REST service.
 
 The optional legacy S3 publisher checks original/public bytes through
 authenticated GETs and
@@ -123,18 +136,22 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 21 October local checkpoint contains **516 selected published meanings** and
-**921 prepared meanings** out of 10,051 canonical meanings. The 405 prepared
-meanings awaiting publication are distinct and exactly equal prepared minus
-selected published IDs. Thus 9,130 meanings still need prepared artwork and
-9,535 are not yet in the selected published manifest. The ten-image cloud pilot
-is separate and remains excluded until local verification and original archival.
+The 21 October local checkpoint contains **931 selected published meanings** and
+**931 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **9,120 meanings still need prepared artwork**.
+The ten-image cloud pilot is included after independent visual review, verified
+local original archival and fresh CDN-byte checks. A subsequent 100-image cloud
+batch has been generated and visually reviewed: 95 suitable candidates and five
+held for revision or further review. These 100 remain excluded from prepared and
+selected counts until local original reception and archival are verified.
 
 The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements exclude
-superseded artwork while preserving history. The last successful R2 inventory
-contained 519 public objects, including three superseded objects; connector
-failures prevent a fresh inventory. Object counts do not establish active meaning
+superseded artwork while preserving history. A fresh read-only R2 inventory
+contains **934 public objects / 78,565,638 bytes**, including three superseded
+objects. Both retired buckets remain absent. Existing Wrangler authentication
+provided the readback while the MCP connector was unavailable. Object counts do
+not establish active meaning
 coverage, and these local checkpoints do not establish a staging or production
 deployment.
 
