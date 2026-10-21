@@ -966,3 +966,229 @@ test("public-only MCP mode independently verifies local originals and never requ
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("explicit REST receipt mode separates actual PUTs from existing-object readback and MCP history", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "meaning-media-rest-"));
+  try {
+    const catalogPath = join(directory, "catalog.json");
+    const candidatesPath = join(directory, "candidates.json");
+    const receiptsPath = join(directory, "receipts.json");
+    const localArchiveRoot = join(directory, "durable-archive");
+    const meaning = {
+      meaningId: row.meaningId,
+      meaningRevision: row.meaningRevision,
+    };
+    const source = fileURLToPath(
+      new URL(
+        `../../apps/web/public/images/meanings/${row.meaningId}.webp`,
+        import.meta.url,
+      ),
+    );
+    await atomicJSON(catalogPath, { schemaVersion: 1, meanings: [meaning] });
+    await atomicJSON(candidatesPath, {
+      images: [
+        {
+          ...meaning,
+          source,
+          alt: row.alt,
+          approved: true,
+          approvedBy: "synthetic-test-review",
+        },
+      ],
+    });
+    await prepare({ catalogPath, candidatesPath, workdir: directory });
+    const prepared = JSON.parse(
+      await readFile(join(directory, "prepared.json")),
+    ).images[0];
+    const original = await readFile(within(directory, prepared.originalFile));
+    const optimized = await readFile(within(directory, prepared.publicFile));
+    const originalPath = join(localArchiveRoot, archiveKey(prepared));
+    await mkdir(dirname(originalPath), { recursive: true });
+    await writeFile(originalPath, original);
+    const receipt = {
+      schemaVersion: 1,
+      transport: "cloudflare-rest-public-only-local-archive-v1",
+      accountId: "a".repeat(32),
+      publicBucket: PUBLIC_BUCKET,
+      objects: [
+        {
+          ...meaning,
+          sha256: prepared.sha256,
+          operation: "uploaded",
+          public: {
+            key: publicKey(prepared),
+            size: optimized.length,
+            sourceSha256: sha256(optimized),
+            etag: createHash("md5").update(optimized).digest("hex"),
+            contentType: "image/webp",
+            cacheControl: null,
+          },
+        },
+      ],
+    };
+    await atomicJSON(receiptsPath, receipt);
+    let calls = 0;
+    let corrupt = false;
+    const args = {
+      catalogPath,
+      receiptsPath,
+      workdir: directory,
+      expectedAccountId: receipt.accountId,
+      originalArchive: "local",
+      localArchiveRoot,
+      receiptSource: "cloudflare-rest",
+      fetcher: async (url, options) => {
+        calls++;
+        assert.equal(url, `${CDN}/${publicKey(prepared)}`);
+        assert.equal(options.method, "GET");
+        assert.equal(options.redirect, "error");
+        return new Response(
+          corrupt ? Buffer.alloc(optimized.length) : optimized,
+          {
+            headers: { "content-type": "image/webp" },
+          },
+        );
+      },
+    };
+    const noHTTP = async (operation, pattern) => {
+      const before = calls;
+      await assert.rejects(operation, pattern);
+      assert.equal(
+        calls,
+        before,
+        "invalid provenance must fail before CDN HTTP",
+      );
+    };
+    // Explicit selection is required: neither mode infers trust from the receipt.
+    await noHTTP(
+      acceptMCPReceipts({ ...args, receiptSource: undefined }),
+      /Invalid.*MCP/,
+    );
+    await noHTTP(
+      acceptMCPReceipts({ ...args, receiptSource: "cloudflare-mcp" }),
+      /Invalid.*MCP/,
+    );
+    await noHTTP(
+      acceptMCPReceipts({ ...args, receiptSource: "automatic" }),
+      /Receipt source/,
+    );
+    await noHTTP(
+      acceptMCPReceipts({
+        ...args,
+        originalArchive: "cloud",
+        localArchiveRoot: undefined,
+      }),
+      /requires local/,
+    );
+    await atomicJSON(receiptsPath, {
+      ...receipt,
+      transport: "cloudflare-mcp-public-only-local-archive-v1",
+    });
+    await noHTTP(acceptMCPReceipts(args), /Invalid.*REST/);
+    await atomicJSON(receiptsPath, {
+      ...receipt,
+      archiveBucket: ARCHIVE_BUCKET,
+    });
+    await noHTTP(acceptMCPReceipts(args), /Invalid/);
+    for (const operation of [undefined, null, "put", "failed"]) {
+      await atomicJSON(receiptsPath, {
+        ...receipt,
+        objects: [{ ...receipt.objects[0], operation }],
+      });
+      await noHTTP(acceptMCPReceipts(args), /REST object operation/);
+    }
+    for (const mutation of [
+      { key: "meanings/wrong.webp" },
+      { size: optimized.length + 1 },
+      { etag: "0".repeat(32) },
+      { sourceSha256: "0".repeat(64) },
+      { contentType: "image/png" },
+      { cacheControl: "invalid\r\nmetadata" },
+    ]) {
+      await atomicJSON(receiptsPath, {
+        ...receipt,
+        objects: [
+          {
+            ...receipt.objects[0],
+            public: { ...receipt.objects[0].public, ...mutation },
+          },
+        ],
+      });
+      await noHTTP(
+        acceptMCPReceipts(args),
+        /REST object metadata receipt does not match/,
+      );
+    }
+    await atomicJSON(receiptsPath, receipt);
+    await writeFile(originalPath, Buffer.alloc(original.length));
+    await noHTTP(acceptMCPReceipts(args), /Local original archive checksum/);
+    await writeFile(originalPath, original);
+    corrupt = true;
+    await assert.rejects(
+      acceptMCPReceipts(args),
+      /Canonical CDN receipt checksum/,
+    );
+    await assert.rejects(
+      readFile(join(directory, "published-rest-local.json")),
+      { code: "ENOENT" },
+    );
+    corrupt = false;
+    for (const operation of ["uploaded", "reconciled-existing"]) {
+      receipt.objects[0].operation = operation;
+      await atomicJSON(receiptsPath, receipt);
+      const result = await acceptMCPReceipts(args);
+      assert.equal(result.manifest, "published-rest-local.json");
+      assert.equal(result.published, 1);
+      assert.equal(result.uploadedReceipts, operation === "uploaded" ? 1 : 0);
+      assert.equal(
+        result.reconciledExistingReceipts,
+        operation === "reconciled-existing" ? 1 : 0,
+      );
+      assert.equal(result.storageWritesByThisCommand, false);
+      const evidence = JSON.parse(
+        await readFile(join(directory, "rest-local-publication-evidence.json")),
+      );
+      assert.equal(evidence.transport, receipt.transport);
+      const proof = evidence.images[row.meaningId];
+      assert.equal(Object.hasOwn(proof, "publicPut"), false);
+      assert.equal(proof.publicObject.operation, operation);
+      assert.equal(proof.publicObject.newPutReported, operation === "uploaded");
+      assert.equal(
+        proof.publicObject.method,
+        operation === "uploaded"
+          ? "operator-rest-put-receipt-size-etag-md5"
+          : "operator-rest-existing-metadata-readback-size-etag-md5",
+      );
+      assert.equal(proof.original.method, "local-archive-full-read-sha256-md5");
+      assert.equal(proof.original.cloudOriginalUploadedByThisCommand, false);
+      assert.equal(proof.publicDelivery.sha256, sha256(optimized));
+      assert.equal(JSON.stringify(evidence).includes("mcp"), false);
+    }
+    assert.deepEqual(
+      JSON.parse(await readFile(join(directory, "published-rest-local.json")))
+        .images,
+      [publicRecord(prepared)],
+    );
+    for (const filename of [
+      "published-mcp-local.json",
+      "mcp-local-publication-evidence.json",
+      "published-mcp.json",
+      "mcp-publication-evidence.json",
+    ]) {
+      await assert.rejects(readFile(join(directory, filename)), {
+        code: "ENOENT",
+      });
+    }
+    // Conflicting current-plan metadata still fails before any network read.
+    await atomicJSON(join(directory, "published-rest-local.json"), {
+      schemaVersion: 1,
+      images: [{ ...publicRecord(prepared), alt: "Conflicting description" }],
+    });
+    await noHTTP(
+      acceptMCPReceipts(args),
+      /Existing REST publication metadata conflicts/,
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

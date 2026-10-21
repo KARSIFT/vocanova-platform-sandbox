@@ -1,4 +1,4 @@
-// Separate, truthful evidence path for an operator's completed raw MCP PUTs.
+// Separate, truthful evidence paths for operator-recorded MCP or REST results.
 // No storage writes or model calls; only local reads/writes and canonical CDN GET.
 import { createHash } from "node:crypto";
 import {
@@ -73,8 +73,14 @@ async function readLocalOriginal(root, row) {
 }
 
 export function validateMCPObjectReceipt(receipt, { key, bytes, contentType }) {
+  return validateObjectReceipt(receipt, { key, bytes, contentType }, "MCP PUT");
+}
+
+function validateObjectReceipt(receipt, { key, bytes, contentType }, source) {
   if (!receipt || typeof receipt !== "object")
-    throw new Error("Missing MCP object PUT receipt");
+    throw new Error(
+      `Missing ${source === "MCP PUT" ? "MCP object PUT" : source} receipt`,
+    );
   const etag =
     typeof receipt.etag === "string" &&
     receipt.etag.startsWith('"') &&
@@ -98,7 +104,7 @@ export function validateMCPObjectReceipt(receipt, { key, bytes, contentType }) {
     )
   )
     throw new Error(
-      "MCP PUT receipt does not match the local image key, size, source SHA-256, single-part ETag/MD5 or metadata",
+      `${source} receipt does not match the local image key, size, source SHA-256, single-part ETag/MD5 or metadata`,
     );
   return {
     key,
@@ -161,12 +167,24 @@ export async function acceptMCPReceipts({
   archiveBucket = ARCHIVE_BUCKET,
   originalArchive = "cloud",
   localArchiveRoot,
+  receiptSource = "cloudflare-mcp",
   fetcher = globalThis.fetch,
   sharp,
 }) {
+  if (!["cloudflare-mcp", "cloudflare-rest"].includes(receiptSource))
+    throw new Error("Receipt source must be cloudflare-mcp or cloudflare-rest");
+  const rest = receiptSource === "cloudflare-rest";
   if (!["cloud", "local"].includes(originalArchive))
     throw new Error("Original archive mode must be cloud or local");
   const local = originalArchive === "local";
+  if (rest && !local)
+    throw new Error("REST receipt source requires local original archive mode");
+  const sourceLabel = rest ? "REST" : "MCP";
+  const expectedTransport = rest
+    ? "cloudflare-rest-public-only-local-archive-v1"
+    : local
+      ? "cloudflare-mcp-public-only-local-archive-v1"
+      : "cloudflare-mcp-raw-put-v1";
   if (local) {
     if (typeof localArchiveRoot !== "string" || !isAbsolute(localArchiveRoot))
       throw new Error(
@@ -196,10 +214,7 @@ export async function acceptMCPReceipts({
   const receipts = JSON.parse(receiptBytes.toString("utf8"));
   if (
     receipts.schemaVersion !== 1 ||
-    receipts.transport !==
-      (local
-        ? "cloudflare-mcp-public-only-local-archive-v1"
-        : "cloudflare-mcp-raw-put-v1") ||
+    receipts.transport !== expectedTransport ||
     receipts.accountId !== expectedAccountId ||
     receipts.publicBucket !== publicBucket ||
     (local
@@ -210,7 +225,7 @@ export async function acceptMCPReceipts({
     receipts.objects.length > 500
   )
     throw new Error(
-      "Invalid or wrong-account/bucket MCP receipt collection (1..500 objects required)",
+      `Invalid or wrong-account/bucket ${sourceLabel} receipt collection (1..500 objects required)`,
     );
   workdir = resolve(workdir);
   await mkdir(workdir, { recursive: true, mode: 0o700 });
@@ -233,22 +248,24 @@ export async function acceptMCPReceipts({
       validateImage(row);
       if (map.get(row.meaningId)?.meaningRevision !== row.meaningRevision)
         throw new Error(
-          "Prepared meaning is stale; do not accept MCP receipts",
+          `Prepared meaning is stale; do not accept ${sourceLabel} receipts`,
         );
       if (planned.has(row.meaningId))
         throw new Error("Duplicate prepared meaning");
       planned.set(row.meaningId, row);
     }
-    const manifestName = local
-      ? "published-mcp-local.json"
-      : "published-mcp.json";
+    const manifestName = rest
+      ? "published-rest-local.json"
+      : local
+        ? "published-mcp-local.json"
+        : "published-mcp.json";
     const manifestPath = resolve(workdir, manifestName);
     const manifest = await optionalJSON(manifestPath, {
       schemaVersion: 1,
       images: [],
     });
     if (manifest.schemaVersion !== 1 || !Array.isArray(manifest.images))
-      throw new Error("Invalid MCP publication manifest");
+      throw new Error(`Invalid ${sourceLabel} publication manifest`);
     const published = new Map();
     for (const row of manifest.images) {
       validateImage(row);
@@ -260,7 +277,7 @@ export async function acceptMCPReceipts({
         )
       )
         throw new Error(
-          "Existing MCP publication metadata conflicts with the approved current plan",
+          `Existing ${sourceLabel} publication metadata conflicts with the approved current plan`,
         );
       published.set(row.meaningId, row);
     }
@@ -277,7 +294,14 @@ export async function acceptMCPReceipts({
         row.sha256 !== receipt.sha256
       )
         throw new Error(
-          "Missing, duplicate or stale MCP receipt meaning identity",
+          `Missing, duplicate or stale ${sourceLabel} receipt meaning identity`,
+        );
+      if (
+        rest &&
+        !["uploaded", "reconciled-existing"].includes(receipt.operation)
+      )
+        throw new Error(
+          "REST object operation must explicitly be uploaded or reconciled-existing",
         );
       seen.add(row.meaningId);
       const localOriginal = local
@@ -319,18 +343,30 @@ export async function acceptMCPReceipts({
             bytes: original,
             contentType: `image/${row.originalFormat}`,
           });
-      const publicProof = validateMCPObjectReceipt(receipt.public, {
-        key: publicKey(row),
-        bytes: optimized,
-        contentType: "image/webp",
+      const publicProof = validateObjectReceipt(
+        receipt.public,
+        {
+          key: publicKey(row),
+          bytes: optimized,
+          contentType: "image/webp",
+        },
+        rest ? "REST object metadata" : "MCP PUT",
+      );
+      checked.push({
+        row,
+        optimized,
+        originalProof,
+        publicProof,
+        operation: receipt.operation,
       });
-      checked.push({ row, optimized, originalProof, publicProof });
     }
     const evidencePath = resolve(
       workdir,
-      local
-        ? "mcp-local-publication-evidence.json"
-        : "mcp-publication-evidence.json",
+      rest
+        ? "rest-local-publication-evidence.json"
+        : local
+          ? "mcp-local-publication-evidence.json"
+          : "mcp-publication-evidence.json",
     );
     const evidence = await optionalJSON(evidencePath, {
       schemaVersion: 1,
@@ -352,8 +388,14 @@ export async function acceptMCPReceipts({
       !evidence.images ||
       typeof evidence.images !== "object"
     )
-      throw new Error("Conflicting MCP publication evidence");
-    for (const { row, optimized, originalProof, publicProof } of checked) {
+      throw new Error(`Conflicting ${sourceLabel} publication evidence`);
+    for (const {
+      row,
+      optimized,
+      originalProof,
+      publicProof,
+      operation,
+    } of checked) {
       const delivery = await canonicalDelivery(
         publicKey(row),
         optimized,
@@ -372,10 +414,24 @@ export async function acceptMCPReceipts({
               privateHTTPMetadataVerified: false,
               bucketExposureVerifiedByThisTool: false,
             },
-        publicPut: {
-          ...publicProof,
-          method: "operator-mcp-put-receipt-size-etag-md5",
-        },
+        ...(rest
+          ? {
+              publicObject: {
+                ...publicProof,
+                operation,
+                newPutReported: operation === "uploaded",
+                method:
+                  operation === "uploaded"
+                    ? "operator-rest-put-receipt-size-etag-md5"
+                    : "operator-rest-existing-metadata-readback-size-etag-md5",
+              },
+            }
+          : {
+              publicPut: {
+                ...publicProof,
+                method: "operator-mcp-put-receipt-size-etag-md5",
+              },
+            }),
         publicDelivery: delivery,
       };
       // Evidence precedes import-ready metadata; a failed GET never adds a record.
@@ -395,6 +451,18 @@ export async function acceptMCPReceipts({
         ? "local archive full-read SHA-256+MD5; no private cloud request"
         : "operator PUT receipt size+ETag/MD5; no private GET SHA-256",
       manifest: manifestName,
+      ...(rest
+        ? {
+            receiptSource,
+            uploadedReceipts: checked.filter(
+              ({ operation }) => operation === "uploaded",
+            ).length,
+            reconciledExistingReceipts: checked.filter(
+              ({ operation }) => operation === "reconciled-existing",
+            ).length,
+            storageWritesByThisCommand: false,
+          }
+        : {}),
     };
   } finally {
     await lock.close();
@@ -432,6 +500,7 @@ async function main() {
         expectedAccountId: options["account-id"],
         originalArchive: options["original-archive"] ?? "cloud",
         localArchiveRoot: options["local-archive-root"],
+        receiptSource: options["receipt-source"] ?? "cloudflare-mcp",
       }),
     ),
   );
@@ -441,7 +510,7 @@ if (
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   main().catch((error) => {
-    logError(`meaning-media MCP receipts: ${error.message}`);
+    logError(`meaning-media receipts: ${error.message}`);
     process.exitCode = 1;
   });
 }

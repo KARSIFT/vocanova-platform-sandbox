@@ -192,6 +192,57 @@ establish backups. Historical `published-mcp.json`,
 `mcp-publication-evidence.json`, and the S3 mode's stronger evidence remain
 separate and unchanged.
 
+### Direct REST receipts with local originals
+
+When an operator uses the Cloudflare REST API instead of MCP, select that source
+explicitly. Do not relabel REST responses as MCP PUT receipts. The acceptance
+adapter does not obtain credentials or make Cloudflare API calls, and REST mode
+requires local originals; it cannot enable cloud-original uploads.
+
+Normalize the actual API results into the same collection and public metadata
+shape shown above, with these differences:
+
+- Collection `transport` is `cloudflare-rest-public-only-local-archive-v1`.
+- Every `objects[]` entry requires `operation: "uploaded"` for a completed PUT or
+  `operation: "reconciled-existing"` for a matching existing object's metadata
+  readback. The latter reports no new PUT. Preserve actual API result metadata,
+  response digests and readback evidence privately; an upload plan alone is not
+  a receipt.
+- `public.key`, `size`, `etag`, `contentType` and `cacheControl` come from the actual
+  object result/readback. `sourceSha256` binds the exact locally checked public
+  bytes. Existing conflicts must be investigated rather than relabeled as success.
+
+```sh
+node scripts/meaning-media/accept-mcp-receipts.mjs \
+  --catalog .work/meaning-media/catalog.json \
+  --receipts .work/meaning-media/completed-rest-public-receipts.json \
+  --workdir .work/meaning-media/library \
+  --account-id EXPECTED_CLOUDFLARE_ACCOUNT_ID \
+  --original-archive local \
+  --local-archive-root /private/meaning-originals \
+  --receipt-source cloudflare-rest
+```
+
+The API equivalent is `acceptMCPReceipts({ ...options, receiptSource:
+"cloudflare-rest", originalArchive: "local" })`. The default remains
+`cloudflare-mcp`; a receipt transport cannot switch modes implicitly. Missing or
+unknown REST operations and mismatched transports fail before any HTTP request.
+All canonical revision, source SHA-256, size, ETag/MD5, image decoding, local
+archive, symlink, manifest-conflict and fresh CDN full-byte checks remain required.
+
+REST mode writes only `published-rest-local.json` and the private
+`rest-local-publication-evidence.json`. Public import records keep the same schema;
+historical MCP manifests/evidence remain untouched. REST evidence stores
+`publicObject`, not `publicPut`: `operation` and `newPutReported` distinguish
+`operator-rest-put-receipt-size-etag-md5` from
+`operator-rest-existing-metadata-readback-size-etag-md5`. These are operator
+receipt claims checked against local bytes; the separate fresh CDN GET proves
+current public delivery. The command makes no storage writes in either case.
+It reports uploaded versus reconciled receipt counts without treating a metadata
+readback as a new upload. The observed CDN cache header remains recorded without
+asserting immutable caching. Use the REST manifest explicitly when importing or
+composing the selected delivery manifest, and retain the separate receipt history.
+
 ## Optional legacy workflow: cloud originals through portable S3
 
 This mode uploads originals to a private cloud bucket. It remains available for
