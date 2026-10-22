@@ -1,6 +1,6 @@
 # Vocanova current product state
 
-## Meaning image library — 1,845-image checkpoint, 22 October 2026
+## Meaning image library — 1,875-image checkpoint, 22 October 2026
 
 The delivery branch adds a portable, meaning-specific image library with a stable
 public hostname, immutable content keys, local originals and revision-checked
@@ -9,9 +9,9 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. There are **1,845 prepared and selected
-CDN-verified meanings**, leaving **8,206** without prepared imagery. A fresh
-read-only inventory finds **1,848 public WebPs / 166,066,520 bytes**, including
+The source union contains 10,051 meanings. All **1,875 prepared meanings** are
+selected and CDN-verified; **8,176** still need prepared imagery. A fresh
+read-only inventory finds **1,878 public WebPs / 169,091,594 bytes**, including
 three preserved superseded images. Originals, held attempts and provenance stay
 on the owner's computer. The retired originals and walkthrough buckets remain
 absent from the default-jurisdiction VocaNova bucket listing.
@@ -25,9 +25,11 @@ the three explicitly reviewed word/race/fine replacements.
 The 1,000-attempt cloud batch now has 997 saved images, two refused outcomes and
 one uncertain submission boundary. All 997 saved originals and complete accessible
 return receipts are retained locally. Producer and author-disjoint full-image
-reviews yield 805 pass/pass candidates and 192 held images. Of these, 775 are
-published; the final 30 remain unapproved candidates pending the remaining local
-selection/publication checks. A root contact-sheet audit covers the last 35;
+reviews yield 805 pass/pass candidates and 192 held images. All 805 are published;
+the final 30 add 3,025,074 public bytes with 78,441,152 native bytes kept local.
+Their public-only uploads, separate fresh CDN full-SHA checks and exact selected
+metadata checks pass; all previous 1,845 records are unchanged.
+A root contact-sheet audit covers the last 35;
 its five source-held images remain held. It does not claim 35 local full-native
 views. Two separate subscription-only cloud batches, each with 1,000 disjoint
 canonical jobs, are running; generation is separate from local approval.
@@ -40,7 +42,8 @@ pass records still missing native transfers, and five original holds. The pendin
 300-image workspace have no intake-proven local artwork coverage; historical
 completion reports do not establish current workspace availability.
 
-Eighteen local website checks pass for council, source and quarter across
+At the retained 1,845-image checkpoint, eighteen local website checks pass for
+council, source and quarter across
 360/430/1280 widths, light/dark themes, keyboard focus, overflow, image geometry
 and exact CDN response SHA-256. Four representative screenshots were actually
 inspected, including a scrolled mobile viewport with its full image above the
