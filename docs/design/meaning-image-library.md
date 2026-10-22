@@ -1,6 +1,6 @@
 # Meaning image library
 
-Implementation checkpoint: 22 October 2026. This document describes the delivery
+Implementation checkpoint: 23 October 2026. This document describes the delivery
 branch and verified storage work; it does not establish full image coverage or a
 staging/production deployment.
 
@@ -57,7 +57,7 @@ behavior after a single-image purge, plus repeated 404 cache bypasses; the rule'
 configured TTL alone does not prove delivery behavior or whole-site performance.
 The later REST public objects carry the one-year
 `public, max-age=31536000, immutable` browser header, verified on actual CDN
-responses, including every image in the latest 839-image addition.
+responses, including every image in the latest 864-image addition.
 Historical MCP objects and the first five REST uploads retain
 their original browser metadata; the new header is not a claim about every asset.
 
@@ -68,6 +68,17 @@ of at most 100 meaning IDs. There is no HTTP image-write route and no learner
 progress mutation. Optional metadata reads have a one-second database deadline,
 including pool waits; shorter caller deadlines still win. Frozen teaching steps require their exact meaning revision;
 old pictures cannot silently explain a changed use.
+
+A pending picture keeps its frame and a short loading status. After eight seconds
+pending while visible, an explicit Retry picture control becomes available.
+Normal image URLs stay unchanged; manual retry adds a fresh nonsecret
+`vocanova_retry` query on the same trusted origin and path. Stored canonical
+metadata is unchanged and no automatic retry request is issued. The frame stays
+stable. Its named focus destination persists through late success, manual retry,
+external-to-local fallback and terminal unavailability. If all known valid sources
+fail, a terminal placeholder offers another explicit retry with a fresh query.
+Initially missing or revision-ineligible images still render no frame. Cached
+loads and late/stale events cannot restore obsolete loading state.
 
 ## Preparation and metadata import
 
@@ -142,9 +153,9 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 22 October local checkpoint contains **1,909 selected published meanings** and
-**1,909 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **8,142 meanings still need prepared artwork**.
+The 23 October local checkpoint contains **1,934 selected published meanings** and
+**1,934 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **8,117 meanings still need prepared artwork**.
 The latest 1,000-attempt cloud batch retains 997 saved originals and complete
 accessible returned receipts locally, two refused outcomes and one uncertain
 submission boundary. Producer and author-disjoint full-image reviews originally yielded 805
@@ -174,10 +185,39 @@ is a necessary semantic cue under the existing exception, not a target-word capt
 The nineteen add 1,797,792 public bytes while 47,957,438 native bytes stay local.
 Actual upload/readback receipts, fresh canonical CDN full-byte verification and
 independent selected-metadata verification pass; all previous 1,890 fields and
-order plus the three replacements remain unchanged. This batch now contributes
+order plus the three replacements remain unchanged. That checkpoint contributed
 839 published images totaling 78,996,554 public bytes, with 2,105,156,541 native
-bytes local across thirteen receipt collections; 158 saved images remain held.
+bytes local across thirteen receipt collections; 158 saved images remained held.
+
+A subsequent feedback-informed review individually inspected thirty full-native
+originals. Independent findings retain twenty-six candidates and four holds;
+root approved twenty-five after its own thirty full-native views. **Cast**,
+**cure**, **sin**, **charm** and **net** remain held. The additional root **sin**
+hold preserves the independent disagreement over an ambiguous offering-plate
+scene. All original flags, prompt misses and differing judgments remain recorded.
+The **percent** diagram correctly shows 22 of 110 cells (20%), despite missing
+the requested 100-cell grid. The **profit** diagram correctly shows 10 minus 8
+equals 2; accounting roles come from the accompanying short definition, with no
+detailed accounting-period claim.
+These are reviewed teaching contexts, not image-only graded questions.
+The twenty-five add 2,107,932 public bytes while 60,407,933 native bytes stay local.
+Actual PUT/fresh object GET receipts, separate canonical CDN full-byte checks,
+independent selected-metadata verification and root activation/readback pass.
+Every previous 1,909 field, row order and top-level metadata is unchanged,
+including all three replacements. This batch now contributes 864 published
+images totaling 81,104,486 public bytes, with 2,165,564,474 native bytes local
+across fourteen receipt collections; 133 saved images remain held.
 Unresolved held, refused and uncertain outcomes add no approved coverage.
+
+The next subscription-only cloud run reports 991 saved images, seven refusals
+and two uncertain submissions, with 991 producer and 991 independent reviews
+and 154 disagreements preserved. Its 58 native packs and two final metadata ZIPs
+total 2,341,067,929 bytes. None matched the two local download folders in the latest
+full-hash scan; transfer, local intake and approval remain pending. These cloud
+results add no prepared or selected coverage. Two other disjoint batches remain
+in progress; the latest poll finds 848 saved in one, finishing reviews at its
+storage floor, and 489 saved with two reserved but unsubmitted in the other.
+Capacity guards remain unchanged; a further reservation stays idle.
 
 The ten-image cloud pilot is included after independent visual review, verified
 local original archival and fresh CDN-byte checks. The first 100-image cloud
@@ -216,8 +256,8 @@ The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements for **word**,
 **win** (the race scene) and **fine** remain unchanged, excluding superseded
 artwork while preserving history. Separate selected MCP
-(516) and REST (1,393) records preserve actual transport provenance. The verified
-22 October read-only R2 inventory contains **1,912 public objects / 172,633,598 bytes**,
+(516) and REST (1,418) records preserve actual transport provenance. The latest
+read-only R2 inventory contains **1,937 public objects / 174,741,530 bytes**,
 including three superseded objects. Both retired buckets remain absent. Existing
 managed Wrangler authentication provided public-only uploads; the latest
 authenticated two-page storage inventory used the Cloudflare MCP connector.
@@ -232,7 +272,7 @@ representative screenshots were actually inspected. These checks use real Next
 pages and public CDN images with synthetic API/auth fixtures; they do not prove
 live authentication, durable learner state or every artwork's visual quality.
 
-The current 1,909-image snapshot has separate civil/species/term checks. Initial
+The retained 1,909-image snapshot has separate civil/species/term checks. Initial
 runs completed seventeen distinct original assertion sequences, three targeted
 instrumented loads and two scrolled mobile viewport checks; root actually
 inspected five screenshots. Explicit later failures record five-second and
@@ -245,6 +285,36 @@ this is not a failure-free matrix, performance acceptance or a demonstrated fix.
 No application or CDN change was made. Capture request/image state if loading
 stalls during the next required product check. Synthetic API/auth fixtures do not
 establish live authentication, database durability or staging acceptance.
+A separate single run against the 1,934-image snapshot completed twelve original
+mobile assertion sequences for percent, profit and nerve at 360/430 widths in
+both themes and two scrolled viewport assertions. Root inspected five actual
+screenshots; the 20% two-of-ten-row cue and 10 minus 8 equals 2 are legible.
+The final geometry aggregate was not written, so no numeric viewport proof is
+claimed. The first desktop case, percent at 1280/light, failed the original
+five-second image deadline with its frame in the viewport and no response,
+request-finished or request-failed event before timeout. The remaining five
+desktop cases were not run; there was no repeat. Default Chromium networking
+used neither routing interception nor protocol overrides, so the earlier
+allowlist alone cannot explain the recurrence. The failing network stage and
+cause remain unknown; no network fix or full presentation/performance pass is
+established. Historical failures remain retained, and synthetic API/auth
+fixtures do not prove live authentication, durability or deployment.
+
+The initial loading/manual-retry UI's 54-case pass is historical. Independent
+review subsequently reproduced keyboard-focus loss on local fallback and terminal
+unavailability; those failures are retained. The corrected stable frame passes a
+new production build and **66 fixture-backed visual-learning cases in 47.8 seconds**,
+twenty-two per 360/430/1280 layout with both themes covered and no retries, skips
+or flaky results. Complete raw logs and the JSON reporter are retained; lint,
+web and E2E typechecking, formatting and diff checks pass. Root actually inspected
+all six pending screenshots; their appearance is retained across the correction.
+Final independent code/evidence review found no blocking issues, including the
+fallback and terminal focus paths; it did not rerun tests or claim full acceptance.
+A separate real CDN GET
+with the retry query returned 200 and the exact 19,926-byte percent WebP with
+matching full SHA-256. This establishes query compatibility, not browser
+performance or a new complete eighteen-case real-CDN matrix pass. The original
+network cause remains unresolved.
 The earlier PostgreSQL rehearsal imported the then-current 1,070-image manifest
 and separately exercised a synthetic 10,051-row fixture. Full artwork coverage,
 the final manifest import rehearsal, one consolidated PR, required hosted checks

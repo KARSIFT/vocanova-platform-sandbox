@@ -1,20 +1,20 @@
 # Vocanova release readiness
 
-## Meaning image library — 1,909-image storage checkpoint, 22 October 2026
+## Meaning image library — 1,934-image storage checkpoint, 23 October 2026
 
-The selected manifest contains all **1,909 prepared and reviewed meanings** out of 10,051;
-**8,142** still need prepared imagery. Every selected record has local-original
-SHA-256 and canonical CDN-byte verification evidence. All 839 latest images have
-completed public-only REST uploads, thirteen exact receipt collections and separate
-fresh CDN full-byte verification. Their public size totals 78,996,554 bytes,
-compared with 2,105,156,541 native bytes retained locally. Every new response
+The selected manifest contains all **1,934 prepared and reviewed meanings** out of 10,051;
+**8,117** still need prepared imagery. Every selected record has local-original
+SHA-256 and canonical CDN-byte verification evidence. All 864 latest images have
+completed public-only REST uploads, fourteen exact receipt collections and separate
+fresh CDN full-byte verification. Their public size totals 81,104,486 bytes,
+compared with 2,165,564,474 native bytes retained locally. Every new response
 observed `public, max-age=31536000, immutable`; this does not assert the separate
 strict S3 verification gate or whole-product performance.
 
-A fresh authenticated, read-only two-page inventory finds **1,912 WebPs /
-172,633,598 bytes**, including three superseded objects retained as history.
-The selected records comprise 516 MCP and 1,393 REST publications. Old MCP/REST
-provenance remains separate. Every previously selected 1,890 record is unchanged,
+A fresh authenticated, read-only two-page inventory finds **1,937 WebPs /
+174,741,530 bytes**, including three superseded objects retained as history.
+The selected records comprise 516 MCP and 1,418 REST publications. Old MCP/REST
+provenance remains separate. Every previously selected 1,909 record is unchanged,
 including the approved word, win (race scene) and fine replacements; no historical image is
 silently reactivated. Retired originals/walkthrough buckets remain absent from
 the default-jurisdiction VocaNova listing, and originals stay local.
@@ -57,9 +57,33 @@ semantic cue, not a redundant target-word caption. All nineteen have actual
 upload/readback receipts, fresh canonical CDN full-byte verification and independent
 selected-manifest verification. They add 1,797,792 public bytes and keep 47,957,438
 native bytes local; all previous 1,890 selected fields and order, including the three
-replacements, remain unchanged. The batch now has 839 published and 158 held images.
-Three further disjoint 1,000-job cloud batches are active, subscription-only;
-another reserved batch remains idle until its workspace-capacity guard passes.
+replacements, remain unchanged. That checkpoint had 839 published and 158 held images.
+
+A subsequent feedback-informed review individually inspected thirty full-native
+originals. Independent findings retain twenty-six candidate recommendations and
+four holds; root approved twenty-five after its own thirty full-native views.
+**Cast**, **cure**, **sin**, **charm** and **net** remain held; root's additional
+**sin** hold retains the offering-plate ambiguity and independent disagreement.
+The **percent** diagram shows a correct 22/110 (20%), with its missed 100-cell
+prompt retained. The **profit** diagram shows 10 minus 8 equals 2; accounting
+roles and period remain contextual rather than independently proven by the scene.
+All historical flags and new adjudications remain recorded.
+All twenty-five have actual PUT and fresh object GET receipts, separate canonical
+CDN full-byte verification and independent selected-manifest verification. Root
+activated and read back the exact 1,934-image selection. The new images add
+2,107,932 public bytes and keep 60,407,933 native bytes local. Every previous
+1,909 field, row order and top-level metadata remains unchanged, including all
+three replacements. The batch now has 864 published and 133 held images.
+The next subscription-only cloud run reports completion: 991 saved, seven
+refused and two uncertain, with 991 producer and 991 independent reviews and
+154 preserved disagreements. Its 58 native packs plus two final metadata ZIPs
+total 2,341,067,929 bytes. A full-hash scan of both local download folders found
+none of the sixty required files; local transfer, intake and approval remain
+pending and add no delivered coverage. Two other disjoint 1,000-job batches
+remain in progress. The latest poll finds one with 848 saved, five refused, three
+uncertain and 144 untouched, finishing reviews after reaching its storage floor;
+the other has 489 saved and two reserved but unsubmitted jobs. Capacity guards
+are unchanged, and another reservation remains idle.
 
 Earlier unreceived artwork remains a real gap: 51 local-pass first-batch records
 lack exact native transfers (including one cloud-flag disagreement), and prior
@@ -79,7 +103,7 @@ not verify live authentication, durable learner state, staging integration or al
 the exact evidence as the library grows, including the previous 1,845-image
 presentation checkpoint. Owned preview servers are stopped.
 
-Separate checks bind the current 1,909-image snapshot and sample civil, species
+Separate checks bind the retained 1,909-image snapshot and sample civil, species
 and term. Initial runs completed seventeen distinct original assertion sequences,
 three targeted instrumented loads and two scrolled mobile viewport checks. Root
 actually inspected five representative screenshots. Later explicit failures record
@@ -94,8 +118,52 @@ samples also passed; all 27 follow-up CDN bodies matched their expected SHA-256.
 This is not a failure-free matrix, broad performance acceptance or a demonstrated
 fix. No application, proxy or CDN configuration changed. Capture request/image
 state on a recurrence during the next required check before choosing a fix.
-These current checks still use synthetic API/auth fixtures and do not establish
+These historical checks use synthetic API/auth fixtures and do not establish
 live authentication, database durability or staging acceptance.
+
+One presentation run bound to the 1,934-image snapshot completed twelve original
+mobile assertion sequences for percent, profit and nerve at 360/430 widths in
+both themes, plus two scrolled mathematical-image viewport assertions. Root
+actually inspected five representative screenshots, including the failed case;
+the 20% two-of-ten-row cue and 10 minus 8 equals 2 are legible. The aborted run
+did not write the final geometry aggregate, so no numeric viewport proof is claimed.
+The first desktop case, percent at 1280/light, failed the original five-second
+image-complete deadline. Its frame was inside the viewport; a request event was
+recorded, but no response, request-finished or request-failed event arrived before
+the timeout. The remaining five desktop cases are unrun and no repeat was made.
+Default Chromium networking used no routing interception or protocol overrides;
+the earlier allowlist alone cannot explain this recurrence. The failing network
+stage and root cause remain unknown. This is a partial run, not full presentation
+or performance acceptance, and establishes no network fix. The retained
+1,909-image failures remain unresolved. These real-page/CDN checks use synthetic
+API/auth fixtures and do not establish live authentication, durability or deployment.
+
+A later MeaningPicture change adds a reserved loading frame and an explicit
+retry after eight visible pending seconds. It keeps normal URLs unchanged and
+adds a fresh nonsecret `vocanova_retry` query only after manual activation, on
+the same trusted origin and path. Canonical storage metadata stays unchanged;
+there are no automatic retry requests. The earlier 54-case pass is historical:
+independent review subsequently reproduced keyboard-focus loss on error into
+local fallback and terminal unavailability. Those failures remain retained.
+A stable named frame now preserves keyboard focus through late success, manual
+retry, external-to-local fallback and terminal unavailability, including another
+explicit retry with a fresh query. The loading leaf resets per request source;
+cached and stale results are handled without obsolete loading state. Initially
+missing or revision-ineligible images still render no frame.
+The corrected production build passes. The final fixture-backed browser run
+records **66 passes in 47.8 seconds**: twenty-two cases per 360/430/1280 layout,
+with both themes covered, no retries, skips or flaky results. Complete raw logs
+and the JSON reporter are retained. Lint, web and E2E typechecking, formatting
+and diff checks pass. Root actually viewed all six pending-state screenshots;
+their appearance remains retained across the focus correction. Final independent
+code and evidence review found no blocking issues, freshly verified thirty
+source/evidence pins and inspected two final error-path screenshots; it did not
+rerun the suite or claim full visual acceptance.
+A separate real CDN GET using the manual retry query returned 200 and the exact
+19,926-byte percent WebP with matching full SHA-256. That is query/byte
+compatibility evidence, not browser latency or performance acceptance.
+No new eighteen-case real-CDN matrix pass is established; original failures,
+unknown network cause and staging/production gates remain unchanged.
 
 The earlier PostgreSQL 16 rehearsal used all 48 migrations and 10,051 canonical
 meanings. It imported the then-current actual 1,070-image manifest and verified
