@@ -57,7 +57,7 @@ behavior after a single-image purge, plus repeated 404 cache bypasses; the rule'
 configured TTL alone does not prove delivery behavior or whole-site performance.
 The later REST public objects carry the one-year
 `public, max-age=31536000, immutable` browser header, verified on actual CDN
-responses, including every image in the latest 812-image addition.
+responses, including every image in the latest 839-image addition.
 Historical MCP objects and the first five REST uploads retain
 their original browser metadata; the new header is not a claim about every asset.
 
@@ -142,9 +142,9 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 22 October local checkpoint contains **1,890 selected published meanings** and
-**1,890 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **8,161 meanings still need prepared artwork**.
+The 22 October local checkpoint contains **1,909 selected published meanings** and
+**1,909 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **8,142 meanings still need prepared artwork**.
 The latest 1,000-attempt cloud batch retains 997 saved originals and complete
 accessible returned receipts locally, two refused outcomes and one uncertain
 submission boundary. Producer and author-disjoint full-image reviews originally yielded 805
@@ -160,10 +160,23 @@ full-byte checks and independent selected-metadata checks pass. All previous
 A subsequent root and independent full-native review of ten further held images
 approved eight unchanged originals to accompany their exact short definitions.
 The source flags and differing image-only judgments remain recorded. Division
-and normally stay held; 177 held images remain unresolved overall. The eight
-add 947,138 public bytes with 22,516,317 native bytes kept local. Actual
+and normally stayed held; 177 held images remained unresolved at that checkpoint.
+The eight add 947,138 public bytes with 22,516,317 native bytes kept local. Actual
 uploads, fresh canonical CDN full-byte checks and independent selection checks
 pass; all previous 1,882 fields and row order plus three replacements survive.
+
+A further feedback-informed root and independent review individually inspected
+twenty full-native originals. The independent findings preserve eighteen candidate
+recommendations and two holds; root approved nineteen, retaining the **someplace**
+backpack-marking disagreement and uncertainty. **Personality** stays held for
+word-like background menu marks. The **term** image's intrinsic **diameter** label
+is a necessary semantic cue under the existing exception, not a target-word caption.
+The nineteen add 1,797,792 public bytes while 47,957,438 native bytes stay local.
+Actual upload/readback receipts, fresh canonical CDN full-byte verification and
+independent selected-metadata verification pass; all previous 1,890 fields and
+order plus the three replacements remain unchanged. This batch now contributes
+839 published images totaling 78,996,554 public bytes, with 2,105,156,541 native
+bytes local across thirteen receipt collections; 158 saved images remain held.
 Unresolved held, refused and uncertain outcomes add no approved coverage.
 
 The ten-image cloud pilot is included after independent visual review, verified
@@ -203,8 +216,8 @@ The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements for **word**,
 **win** (the race scene) and **fine** remain unchanged, excluding superseded
 artwork while preserving history. Separate selected MCP
-(516) and REST (1,374) records preserve actual transport provenance. The verified
-22 October read-only R2 inventory contains **1,893 public objects / 170,835,806 bytes**,
+(516) and REST (1,393) records preserve actual transport provenance. The verified
+22 October read-only R2 inventory contains **1,912 public objects / 172,633,598 bytes**,
 including three superseded objects. Both retired buckets remain absent. Existing
 managed Wrangler authentication provided public-only uploads; the latest
 authenticated two-page storage inventory used the Cloudflare MCP connector.
@@ -218,7 +231,20 @@ viewport checks confirm the full images remain visible after scrolling. Five
 representative screenshots were actually inspected. These checks use real Next
 pages and public CDN images with synthetic API/auth fixtures; they do not prove
 live authentication, durable learner state or every artwork's visual quality.
-They do not cover the latest 15 additions.
+
+The current 1,909-image snapshot has separate civil/species/term checks. Initial
+runs completed seventeen distinct original assertion sequences, three targeted
+instrumented loads and two scrolled mobile viewport checks; root actually
+inspected five screenshots. Explicit later failures record five-second and
+thirty-second image-complete timeouts; the earliest failure masked its cause with
+a closed-target error. A bounded follow-up completed all twelve original mobile
+sequences, giving all eighteen requested combinations a completed sequence across
+runs. Twelve loading-only and three default-network samples also passed, with
+27 matching full CDN body hashes. Earlier intermittent failures remain unexplained;
+this is not a failure-free matrix, performance acceptance or a demonstrated fix.
+No application or CDN change was made. Capture request/image state if loading
+stalls during the next required product check. Synthetic API/auth fixtures do not
+establish live authentication, database durability or staging acceptance.
 The earlier PostgreSQL rehearsal imported the then-current 1,070-image manifest
 and separately exercised a synthetic 10,051-row fixture. Full artwork coverage,
 the final manifest import rehearsal, one consolidated PR, required hosted checks

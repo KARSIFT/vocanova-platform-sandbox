@@ -1,20 +1,20 @@
 # Vocanova release readiness
 
-## Meaning image library — 1,890-image storage checkpoint, 22 October 2026
+## Meaning image library — 1,909-image storage checkpoint, 22 October 2026
 
-The selected manifest contains all **1,890 prepared and reviewed meanings** out of 10,051;
-**8,161** still need prepared imagery. Every selected record has local-original
-SHA-256 and canonical CDN-byte verification evidence. All 820 latest images have
-completed public-only REST uploads, twelve exact receipt collections and separate
-fresh CDN full-byte verification. Their public size totals 77,198,762 bytes,
-compared with 2,057,199,103 native bytes retained locally. Every new response
+The selected manifest contains all **1,909 prepared and reviewed meanings** out of 10,051;
+**8,142** still need prepared imagery. Every selected record has local-original
+SHA-256 and canonical CDN-byte verification evidence. All 839 latest images have
+completed public-only REST uploads, thirteen exact receipt collections and separate
+fresh CDN full-byte verification. Their public size totals 78,996,554 bytes,
+compared with 2,105,156,541 native bytes retained locally. Every new response
 observed `public, max-age=31536000, immutable`; this does not assert the separate
 strict S3 verification gate or whole-product performance.
 
-A fresh authenticated, read-only two-page inventory finds **1,893 WebPs /
-170,835,806 bytes**, including three superseded objects retained as history.
-The selected records comprise 516 MCP and 1,374 REST publications. Old MCP/REST
-provenance remains separate. Every previously selected 1,882 record is unchanged,
+A fresh authenticated, read-only two-page inventory finds **1,912 WebPs /
+172,633,598 bytes**, including three superseded objects retained as history.
+The selected records comprise 516 MCP and 1,393 REST publications. Old MCP/REST
+provenance remains separate. Every previously selected 1,890 record is unchanged,
 including the approved word, win (race scene) and fine replacements; no historical image is
 silently reactivated. Retired originals/walkthrough buckets remain absent from
 the default-jurisdiction VocaNova listing, and originals stay local.
@@ -41,11 +41,23 @@ full-byte verification and independent selected-manifest checks pass. All previo
 A subsequent root and independent full-native review of ten further held images
 approved eight unchanged originals for use alongside their exact definitions.
 Their original flags and differing image-only judgments remain recorded.
-Division and normally remain held; 177 held images remain unresolved overall.
+Division and normally remained held; 177 held images were unresolved at that
+checkpoint.
 Actual uploads, fresh repository CDN full-byte checks and independently verified
 selected metadata pass for all eight. They add 947,138 public bytes and keep
 22,516,317 native bytes local. Every previous 1,882 field and row order is
 preserved, including the three corrected replacements.
+
+A further root and independent review individually viewed twenty full-native
+originals. Independent findings retain eighteen candidates and two holds; root
+approved nineteen with the **someplace** backpack-marking disagreement and visual
+uncertainty explicitly retained. **Personality** remains held for word-like
+background menu marks. The intrinsic **diameter** label in **term** is a necessary
+semantic cue, not a redundant target-word caption. All nineteen have actual
+upload/readback receipts, fresh canonical CDN full-byte verification and independent
+selected-manifest verification. They add 1,797,792 public bytes and keep 47,957,438
+native bytes local; all previous 1,890 selected fields and order, including the three
+replacements, remain unchanged. The batch now has 839 published and 158 held images.
 Three further disjoint 1,000-job cloud batches are active, subscription-only;
 another reserved batch remains idle until its workspace-capacity guard passes.
 
@@ -66,7 +78,24 @@ not verify live authentication, durable learner state, staging integration or al
 1,875 artworks' visual quality. Immutable prepared/config/result snapshots retain
 the exact evidence as the library grows, including the previous 1,845-image
 presentation checkpoint. Owned preview servers are stopped.
-These presentation checks do not cover the latest 15 additions.
+
+Separate checks bind the current 1,909-image snapshot and sample civil, species
+and term. Initial runs completed seventeen distinct original assertion sequences,
+three targeted instrumented loads and two scrolled mobile viewport checks. Root
+actually inspected five representative screenshots. Later explicit failures record
+a five-second image-complete timeout and a thirty-second diagnostic timeout; the
+earliest failed run masked its cause with a closed-target error. Original failures
+are retained and their cause remains unknown.
+
+A bounded follow-up completed twelve original mobile sequences; together with the
+six earlier desktop sequences, all eighteen requested combinations now have a
+completed original sequence across runs. Twelve loading-only and three default-network
+samples also passed; all 27 follow-up CDN bodies matched their expected SHA-256.
+This is not a failure-free matrix, broad performance acceptance or a demonstrated
+fix. No application, proxy or CDN configuration changed. Capture request/image
+state on a recurrence during the next required check before choosing a fix.
+These current checks still use synthetic API/auth fixtures and do not establish
+live authentication, database durability or staging acceptance.
 
 The earlier PostgreSQL 16 rehearsal used all 48 migrations and 10,051 canonical
 meanings. It imported the then-current actual 1,070-image manifest and verified

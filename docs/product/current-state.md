@@ -1,6 +1,6 @@
 # Vocanova current product state
 
-## Meaning image library — 1,890-image checkpoint, 22 October 2026
+## Meaning image library — 1,909-image checkpoint, 22 October 2026
 
 The delivery branch adds a portable, meaning-specific image library with a stable
 public hostname, immutable content keys, local originals and revision-checked
@@ -9,16 +9,16 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. All **1,890 prepared meanings** are
-selected and CDN-verified; **8,161** still need prepared imagery. A fresh
-read-only inventory finds **1,893 public WebPs / 170,835,806 bytes**, including
+The source union contains 10,051 meanings. All **1,909 prepared meanings** are
+selected and CDN-verified; **8,142** still need prepared imagery. A fresh
+read-only inventory finds **1,912 public WebPs / 172,633,598 bytes**, including
 three preserved superseded images. Originals, held attempts and provenance stay
 on the owner's computer. The retired originals and walkthrough buckets remain
 absent from the default-jurisdiction VocaNova bucket listing.
 
-The latest 820 additions have exact preparation, source-review and local-archive
+The latest 839 additions have exact preparation, source-review and local-archive
 bindings, completed public-only REST uploads and separate fresh public CDN full
-SHA-256 checks. They add 77,198,762 public bytes; their 2,057,199,103 native bytes
+SHA-256 checks. They add 78,996,554 public bytes; their 2,105,156,541 native bytes
 remain local. All previously active 1,070 records are preserved exactly, including
 the three explicitly reviewed word, win (race scene) and fine replacements.
 
@@ -42,8 +42,21 @@ Eight unchanged originals are now published and separately CDN-byte verified,
 adding 947,138 public bytes while 22,516,317 native bytes remain local. Their
 pictures support the exact short definitions; the original flags and image-only
 review disagreements remain recorded. Division and normally stay held; 177
-held images remain unresolved. All previous 1,882 selected fields and order,
+held images remained unresolved at that checkpoint. All previous 1,882 selected
+fields and order,
 including the three corrected replacements, are preserved.
+
+A further feedback-informed review individually inspected twenty full-native
+originals. The independent reviewer proposed eighteen candidates and two holds;
+root approved nineteen after its own full-native views. The **someplace** decision
+retains the disagreement about tiny backpack markings and bounded visual
+uncertainty. **Personality** remains held for word-like background menu marks.
+The **term** image uses the necessary intrinsic label **diameter**, rather than
+a caption naming the target word. The nineteen add 1,797,792 public bytes, with
+47,957,438 native bytes kept local. Actual upload/readback receipts, fresh canonical
+CDN full-byte checks and independent selection verification pass. Every previous
+1,890 selected field and row order, including all three replacements, is unchanged.
+The batch now contributes 839 published images; 158 saved images remain held.
 Three subscription-only cloud batches with disjoint 1,000-job reservations are
 running. Another reserved batch is idle pending sufficient workspace capacity;
 generation and reservation remain separate from local approval and publication.
@@ -66,7 +79,19 @@ full images above the bottom navigation. This uses real Next pages and published
 synthetic API/auth fixtures; it does not prove live authentication, database
 durability or every image's visual quality. Prepared metadata and all presentation
 evidence are retained as immutable snapshots before further library growth.
-These presentation results do not include the latest 15 additions.
+
+The current 1,909-image snapshot has separate checks for civil, species and term.
+Initial runs completed seventeen distinct assertion sequences, three targeted
+instrumented loads and two scrolled mobile viewport checks; root inspected five
+representative screenshots. Intermittent failures remain unresolved: one later
+failure records a five-second image-complete timeout and another a thirty-second
+diagnostic timeout; the earliest failure masked its cause with a closed-target
+error. A bounded follow-up completed all twelve original mobile sequences, so
+all eighteen requested combinations have completed across runs, alongside twelve
+loading-only and three default-network samples with 27 matching CDN body hashes.
+This does not establish a failure-free matrix or performance acceptance. No
+application or CDN fix was made; the next required product check should capture
+request and image state if the stall recurs.
 The previous 1,845-image checkpoint's council/source/quarter checks remain retained.
 
 The earlier isolated PostgreSQL rehearsal verified the actual 1,070-image import
