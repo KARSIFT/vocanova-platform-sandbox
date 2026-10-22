@@ -1,67 +1,59 @@
 # Vocanova release readiness
 
-## Meaning image library — local and storage checkpoint, 22 October 2026
+## Meaning image library — 1,845-image storage checkpoint, 22 October 2026
 
-The current selected manifest contains **1,070 reviewed meanings** out of 10,051.
-Every selected record has verified local original SHA-256 and fresh canonical
-CDN-byte SHA-256 evidence. All 1,070 prepared meanings are published; 8,981 still
-need prepared artwork. The 10-image subscription-only cloud pilot is included.
-The first 100-image cloud batch retains its original visual review results:
-95 pass, three flag and two reject. Forty-four approved first attempts are
-included after local native archival and fresh CDN checks; 51 approved
-first-attempt candidates remain unprepared. All five original held decisions
-remain unchanged. The receiver and archive checks reverify exact approved natives
-and derived public WebPs for entries prepared during an earlier part of the batch.
+The selected manifest contains **1,845 reviewed meanings** out of 10,051;
+**8,206** still need prepared imagery. Every selected record has local-original
+SHA-256 and canonical CDN-byte verification evidence. All 775 new images have
+completed public-only REST uploads, nine exact receipt collections and separate
+fresh CDN full-byte verification. Their public size totals 72,429,476 bytes,
+compared with 1,936,871,802 native bytes retained locally. Every new response
+observed `public, max-age=31536000, immutable`; this does not assert the separate
+strict S3 verification gate or whole-product performance.
 
-The separately approved second **admit** attempt is now explicitly bound,
-prepared, published and separately CDN-byte verified after root and independent
-full-image review and local archival. Its rejected first attempt was never
-public; its review and original bytes are preserved. Four of the originally held
-meanings remain unresolved.
+A fresh authenticated, read-only two-page inventory finds **1,848 WebPs /
+166,066,520 bytes**, including three superseded objects retained as history.
+The selected records comprise 516 MCP and 1,329 REST publications. Old MCP/REST
+provenance remains separate. Every previously selected 1,070 record is unchanged,
+including the approved word/race/fine replacements; no historical image is
+silently reactivated. Retired originals/walkthrough buckets remain absent from
+the default-jurisdiction VocaNova listing, and originals stay local.
 
-The second 100-meaning batch is fully received and reviewed locally. All 100
-native originals, including held attempts, are archived locally: 249,984,310 bytes.
-All 15 supplemental transfers are received; original ZIP receipts remain a
-separate one-of-51 inventory. Full-image review and preserved cloud decisions
-select 94 images and hold six: **indeed**, **mention**, **apparently**, **simply**,
-**whom** and **consider**. All 94 are prepared, published and separately CDN-byte
-verified. Their publication adds 9,051,612 public bytes, with 236,181,622 native
-bytes preserved locally. Each reviewed WebP exactly reproduces from its archived
-native; separate deterministic optimization verifies the prepared application WebP.
+The latest 1,000-attempt run retains 997 saved originals and complete accessible
+returned receipts, two refusals and one uncertain submission boundary. Both full
+image reviews are bound for every saved image. There are 805 pass/pass candidates
+and 192 held images: 775 published and 30 final candidates still unapproved.
+The last 35 pass exact native/delivery decoding, deterministic reviewed-WebP
+reproduction, receipt reconstruction and immutable local archive readback.
+Their five source-held outcomes remain held after a root contact-sheet audit.
+That audit is contact-scale evidence; it does not claim local full-native views.
+Two further disjoint 1,000-job cloud batches are active, subscription-only.
 
-Cloud batch003 reports 100 completed outputs and 88 pass/12 flag cloud reviews;
-its artwork has not yet been downloaded locally. The next 300-image batch is
-active in the existing durable subscription-only cloud task. Its generation,
-review and local integration totals remain pending.
+Earlier unreceived artwork remains a real gap: 51 local-pass first-batch records
+lack exact native transfers (including one cloud-flag disagreement), and prior
+100/300-image cloud workspaces add no locally proven coverage. Original held,
+refused, uncertain and superseded attempts are preserved. A job reservation or
+cloud completion report never counts as delivered image coverage.
 
-A fresh authenticated read-only inventory finds **1,073 public WebPs / 93,637,044
-bytes**, including three superseded objects retained as history. Both retired
-originals and walkthrough buckets remain absent; native originals and receipts
-stay on the owner's computer. The selected records comprise 516 MCP and 554 REST
-publications, preserving actual transport provenance. All 554 REST records report
-successful uploads. The later 549 REST uploads have observed one-year immutable
-browser response headers; the first five REST uploads and historical MCP objects
-retain their previous browser metadata. This does not claim the separate strict
-S3 cache verification gate or whole-product performance. See
-[current image evidence boundaries](../design/meaning-image-library.md).
+Local presentation checks pass **18 cases** for three exact new senses at
+360/430/1280 widths and both themes, including keyboard, overflow, dimensions,
+image loading and exact public response SHA-256. Four representative screenshots
+were actually inspected, including full mobile-image visibility after scrolling.
+This tests real pages and CDN bytes against synthetic API/auth fixtures. It does
+not verify live authentication, durable learner state, staging integration or all
+1,845 artworks' visual quality. Immutable prepared/config/result snapshots retain
+the exact evidence as the library grows. Owned preview servers are stopped.
 
-A fresh PostgreSQL 16 rehearsal uses all 48 forward migrations and the actual
-10,051 canonical meanings in a disposable container without networking or host
-ports. The real operator CLI imports the selected 1,070-image manifest in 102 ms;
-an exact retry inserts zero in 78 ms. All 1,070 metadata records match on bounded
-readback, including after four stale/inactive/unapproved-content filter checks.
-A separate synthetic metadata fixture verifies a conflict at the last of 21 SQL
-batches rolls back all new rows (680 ms), then imports 10,050 matching additions
-(603 ms), retries with zero additions (449 ms), and reads all 10,051 records back
-exactly. Each full-size attempt uses 63 query/exec statements. These timings are
-local observations, not deployed latency guarantees or additional approved
-artwork. Both temporary schemas and the owned test container are removed; no
-learner accounts are created. The final complete artwork manifest still needs
-its own import rehearsal when available.
+The earlier PostgreSQL 16 rehearsal used all 48 migrations and 10,051 canonical
+meanings. It imported the then-current actual 1,070-image manifest and verified
+exact metadata readback, no-op retry and stale/inactive/unapproved filtering.
+A separate synthetic 10,051-row fixture verified late-conflict rollback, complete
+readback and retry. These local timings and metadata fixtures do not add artwork
+coverage or prove deployed behavior. The final complete artwork manifest still
+needs its own import rehearsal.
 
-These are storage and local implementation checkpoints. Full coverage, the final
-consolidated PR, hosted checks, current metadata import and staging acceptance
-remain pending. Production promotion remains separate.
+Full coverage, the final consolidated PR, required hosted checks, live metadata
+import and staging acceptance remain pending. Production promotion is separate.
 
 ### Historical local validation and storage evidence, 20 October 2026
 

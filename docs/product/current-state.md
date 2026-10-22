@@ -1,50 +1,59 @@
 # Vocanova current product state
 
-## Meaning image library — implementation checkpoint, 22 October 2026
+## Meaning image library — 1,845-image checkpoint, 22 October 2026
 
 The delivery branch adds a portable, meaning-specific image library with a stable
-public hostname, immutable content keys, private originals and revision-checked
+public hostname, immutable content keys, local originals and revision-checked
 teaching images. Discovery/detail embed approved metadata; other teaching steps
 batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. There are now **1,070 prepared and
-selected CDN-verified meanings**, leaving **8,981** without prepared imagery.
-The public bucket contains 1,073 WebPs / 93,637,044 bytes, including three preserved
-superseded images. Originals, rejected attempts and provenance are archived on
-the owner's computer; the former originals and walkthrough cloud buckets are
-removed. The subscription-only cloud pilot is integrated. The first 100-image
-cloud batch has 44 approved first attempts included and 51 approved first-attempt
-candidates still unprepared. Its original review results remain 95 pass, three
-flag and two reject, with all five original held decisions preserved.
+The source union contains 10,051 meanings. There are **1,845 prepared and selected
+CDN-verified meanings**, leaving **8,206** without prepared imagery. A fresh
+read-only inventory finds **1,848 public WebPs / 166,066,520 bytes**, including
+three preserved superseded images. Originals, held attempts and provenance stay
+on the owner's computer. The retired originals and walkthrough buckets remain
+absent from the default-jurisdiction VocaNova bucket listing.
 
-The explicitly bound second **admit** attempt is now reviewed, archived locally,
-prepared, published and separately CDN-verified. Its rejected first attempt was
-never public; four originally held meanings remain unresolved. The second
-subscription-only batch is fully received and reviewed: 94 images are prepared,
-published and separately CDN-verified, with six held attempts preserved. All 100
-originals are archived locally, totaling 249,984,310 bytes. Its 15 supplemental
-ZIPs are received; the original export family separately retains one received
-ZIP out of 51. The 94 included images add 9,051,612 public bytes and preserve
-236,181,622 native bytes locally. Exact native-to-reviewed-WebP reproduction and
-deterministic application-image checks bind the artwork to its reviews.
+The latest 775 additions have exact preparation, source-review and local-archive
+bindings, completed public-only REST uploads and separate fresh public CDN full
+SHA-256 checks. They add 72,429,476 public bytes; their 1,936,871,802 native bytes
+remain local. All previously active 1,070 records are preserved exactly, including
+the three explicitly reviewed word/race/fine replacements.
 
-Cloud batch003 reports 100 completed outputs with 88 pass and 12 flag cloud
-reviews; its artwork has not yet been downloaded locally. The next 300-image
-batch is active in the existing durable subscription-only cloud task. Its
-generation, review and local integration totals remain pending.
+The 1,000-attempt cloud batch now has 997 saved images, two refused outcomes and
+one uncertain submission boundary. All 997 saved originals and complete accessible
+return receipts are retained locally. Producer and author-disjoint full-image
+reviews yield 805 pass/pass candidates and 192 held images. Of these, 775 are
+published; the final 30 remain unapproved candidates pending the remaining local
+selection/publication checks. A root contact-sheet audit covers the last 35;
+its five source-held images remain held. It does not claim 35 local full-native
+views. Two separate subscription-only cloud batches, each with 1,000 disjoint
+canonical jobs, are running; generation is separate from local approval.
 
-A fresh isolated PostgreSQL 16 rehearsal imports the actual 1,070-image selected
-manifest through the operator CLI, verifies every metadata record and confirms an
-exact retry inserts zero. Four changed/inactive/unapproved-content checks omit
-the image and restore correctly. A separate synthetic 10,051-row metadata fixture
-verifies complete readback, last-batch conflict rollback and retry behavior; it
-does not add artwork coverage. Both temporary schemas are removed and no learner
-accounts are created. Uploaded assets, local implementation, live metadata import
-and deployment remain separate gates.
-One consolidated PR and staging verification follow completed coverage; this
-checkpoint does not establish release or production promotion.
+Earlier batches retain their original outcomes. The first 100-image run has 44
+included first attempts, a separately approved second **admit** attempt, 51 local
+pass records still missing native transfers, and five original holds. The pending
+**duty** image retains a cloud-flag/local-pass disagreement. The second run has
+94 included images and six held attempts. The earlier third 100-image run and
+300-image workspace have no intake-proven local artwork coverage; historical
+completion reports do not establish current workspace availability.
+
+Eighteen local website checks pass for council, source and quarter across
+360/430/1280 widths, light/dark themes, keyboard focus, overflow, image geometry
+and exact CDN response SHA-256. Four representative screenshots were actually
+inspected, including a scrolled mobile viewport with its full image above the
+bottom navigation. This uses real Next pages and published CDN images with
+synthetic API/auth fixtures; it does not prove live authentication, database
+durability or every image's visual quality. Prepared metadata and all presentation
+evidence are retained as immutable snapshots before further library growth.
+
+The earlier isolated PostgreSQL rehearsal verified the actual 1,070-image import
+and an exact no-op retry, plus a separate synthetic 10,051-row metadata fixture.
+It does not establish the new artwork's deployed metadata. Full coverage, a final
+manifest import rehearsal, one consolidated PR and staging verification remain
+pending. Production promotion remains separate.
 
 ## Daily review and language selection — implementation, 18 October 2026
 
