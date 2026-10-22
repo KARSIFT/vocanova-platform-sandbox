@@ -1,6 +1,6 @@
 # Vocanova current product state
 
-## Meaning image library — 1,875-image checkpoint, 22 October 2026
+## Meaning image library — 1,882-image checkpoint, 22 October 2026
 
 The delivery branch adds a portable, meaning-specific image library with a stable
 public hostname, immutable content keys, local originals and revision-checked
@@ -9,30 +9,37 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. All **1,875 prepared meanings** are
-selected and CDN-verified; **8,176** still need prepared imagery. A fresh
-read-only inventory finds **1,878 public WebPs / 169,091,594 bytes**, including
+The source union contains 10,051 meanings. All **1,882 prepared meanings** are
+selected and CDN-verified; **8,169** still need prepared imagery. A fresh
+read-only inventory finds **1,885 public WebPs / 169,888,668 bytes**, including
 three preserved superseded images. Originals, held attempts and provenance stay
 on the owner's computer. The retired originals and walkthrough buckets remain
 absent from the default-jurisdiction VocaNova bucket listing.
 
-The latest 775 additions have exact preparation, source-review and local-archive
+The latest 812 additions have exact preparation, source-review and local-archive
 bindings, completed public-only REST uploads and separate fresh public CDN full
-SHA-256 checks. They add 72,429,476 public bytes; their 1,936,871,802 native bytes
+SHA-256 checks. They add 76,251,624 public bytes; their 2,034,682,786 native bytes
 remain local. All previously active 1,070 records are preserved exactly, including
 the three explicitly reviewed word, win (race scene) and fine replacements.
 
 The 1,000-attempt cloud batch now has 997 saved images, two refused outcomes and
 one uncertain submission boundary. All 997 saved originals and complete accessible
 return receipts are retained locally. Producer and author-disjoint full-image
-reviews yield 805 pass/pass candidates and 192 held images. All 805 are published;
+reviews originally yielded 805 pass/pass candidates and 192 held images. All 805 are published;
 the final 30 add 3,025,074 public bytes with 78,441,152 native bytes kept local.
 Their public-only uploads, separate fresh CDN full-SHA checks and exact selected
 metadata checks pass; all previous 1,845 records are unchanged.
 A root contact-sheet audit covers the last 35;
 its five source-held images remain held. It does not claim 35 local full-native
-views. Two separate subscription-only cloud batches, each with 1,000 disjoint
-canonical jobs, are running; generation is separate from local approval.
+views. A later feedback-informed full-native review of ten held images approved
+seven unchanged originals after distinguishing incidental scene counts from the
+canonical meaning. Both the original flags and new adjudications are retained;
+185 remain unresolved. Those seven add 797,074 public bytes, with 19,369,832
+native bytes kept local. Their actual uploads, fresh CDN full-byte checks and
+independent selected-metadata checks pass; every previous 1,875 row is preserved.
+Three subscription-only cloud batches with disjoint 1,000-job reservations are
+running. Another reserved batch is idle pending sufficient workspace capacity;
+generation and reservation remain separate from local approval and publication.
 
 Earlier batches retain their original outcomes. The first 100-image run has 44
 included first attempts, a separately approved second **admit** attempt, 51 local
@@ -42,7 +49,7 @@ pass records still missing native transfers, and five original holds. The pendin
 300-image workspace have no intake-proven local artwork coverage; historical
 completion reports do not establish current workspace availability.
 
-At the current 1,875-image checkpoint, eighteen local website checks pass for
+At the retained 1,875-image checkpoint, eighteen local website checks pass for
 barn, vast and cookie across
 360/430/1280 widths, light/dark themes, keyboard focus, overflow, image geometry
 and exact CDN response SHA-256. Two additional mobile viewport checks confirm
@@ -52,6 +59,7 @@ full images above the bottom navigation. This uses real Next pages and published
 synthetic API/auth fixtures; it does not prove live authentication, database
 durability or every image's visual quality. Prepared metadata and all presentation
 evidence are retained as immutable snapshots before further library growth.
+These presentation results do not include the latest seven-image addition.
 The previous 1,845-image checkpoint's council/source/quarter checks remain retained.
 
 The earlier isolated PostgreSQL rehearsal verified the actual 1,070-image import

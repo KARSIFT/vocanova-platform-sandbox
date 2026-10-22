@@ -1,28 +1,28 @@
 # Vocanova release readiness
 
-## Meaning image library — 1,875-image storage checkpoint, 22 October 2026
+## Meaning image library — 1,882-image storage checkpoint, 22 October 2026
 
-The selected manifest contains all **1,875 prepared and reviewed meanings** out of 10,051;
-**8,176** still need prepared imagery. Every selected record has local-original
-SHA-256 and canonical CDN-byte verification evidence. All 805 latest images have
-completed public-only REST uploads, ten exact receipt collections and separate
-fresh CDN full-byte verification. Their public size totals 75,454,550 bytes,
-compared with 2,015,312,954 native bytes retained locally. Every new response
+The selected manifest contains all **1,882 prepared and reviewed meanings** out of 10,051;
+**8,169** still need prepared imagery. Every selected record has local-original
+SHA-256 and canonical CDN-byte verification evidence. All 812 latest images have
+completed public-only REST uploads, eleven exact receipt collections and separate
+fresh CDN full-byte verification. Their public size totals 76,251,624 bytes,
+compared with 2,034,682,786 native bytes retained locally. Every new response
 observed `public, max-age=31536000, immutable`; this does not assert the separate
 strict S3 verification gate or whole-product performance.
 
-A fresh authenticated, read-only two-page inventory finds **1,878 WebPs /
-169,091,594 bytes**, including three superseded objects retained as history.
-The selected records comprise 516 MCP and 1,359 REST publications. Old MCP/REST
-provenance remains separate. Every previously selected 1,845 record is unchanged,
+A fresh authenticated, read-only two-page inventory finds **1,885 WebPs /
+169,888,668 bytes**, including three superseded objects retained as history.
+The selected records comprise 516 MCP and 1,366 REST publications. Old MCP/REST
+provenance remains separate. Every previously selected 1,875 record is unchanged,
 including the approved word, win (race scene) and fine replacements; no historical image is
 silently reactivated. Retired originals/walkthrough buckets remain absent from
 the default-jurisdiction VocaNova listing, and originals stay local.
 
 The latest 1,000-attempt run retains 997 saved originals and complete accessible
 returned receipts, two refusals and one uncertain submission boundary. Both full
-image reviews are bound for every saved image. There are 805 pass/pass candidates
-and 192 held images: all 805 pass/pass candidates are published after local approval.
+image reviews are bound for every saved image. The original outcome is 805 pass/pass
+candidates and 192 held images: all 805 pass/pass candidates are published after local approval.
 Those final 30 add 3,025,074 public bytes and retain 78,441,152 native bytes
 locally. Their uploads, fresh CDN full-SHA verification and exact selected
 metadata checks pass; all five source-held images are absent from the selection.
@@ -30,7 +30,16 @@ The last 35 pass exact native/delivery decoding, deterministic reviewed-WebP
 reproduction, receipt reconstruction and immutable local archive readback.
 Their five source-held outcomes remain held after a root contact-sheet audit.
 That audit is contact-scale evidence; it does not claim local full-native views.
-Two further disjoint 1,000-job cloud batches are active, subscription-only.
+A separate feedback-informed full-native review of ten held images approved seven
+unchanged originals. Exact meanings remain clear despite incidental scene-count
+differences; all original flags and review disagreements remain recorded. Three of
+the ten stay held, including an image with word-like background marks. Overall,
+185 held images remain unresolved. The seven add 797,074 public bytes and keep
+19,369,832 native bytes local. Actual upload/readback receipts, repository CDN
+full-byte verification and independent selected-manifest checks pass. All previous
+1,875 record fields and the three corrected replacements are preserved.
+Three further disjoint 1,000-job cloud batches are active, subscription-only;
+another reserved batch remains idle until its workspace-capacity guard passes.
 
 Earlier unreceived artwork remains a real gap: 51 local-pass first-batch records
 lack exact native transfers (including one cloud-flag disagreement), and prior
@@ -38,7 +47,7 @@ lack exact native transfers (including one cloud-flag disagreement), and prior
 refused, uncertain and superseded attempts are preserved. A job reservation or
 cloud completion report never counts as delivered image coverage.
 
-At the current 1,875-image checkpoint, local presentation checks pass **18 cases**
+At the retained 1,875-image checkpoint, local presentation checks pass **18 cases**
 for barn, vast and cookie at
 360/430/1280 widths and both themes, including keyboard, overflow, dimensions,
 image loading and exact public response SHA-256. Two further mobile viewport
@@ -49,6 +58,7 @@ not verify live authentication, durable learner state, staging integration or al
 1,875 artworks' visual quality. Immutable prepared/config/result snapshots retain
 the exact evidence as the library grows, including the previous 1,845-image
 presentation checkpoint. Owned preview servers are stopped.
+These presentation checks do not cover the latest seven-image addition.
 
 The earlier PostgreSQL 16 rehearsal used all 48 migrations and 10,051 canonical
 meanings. It imported the then-current actual 1,070-image manifest and verified
