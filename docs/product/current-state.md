@@ -1,6 +1,6 @@
 # Vocanova current product state
 
-## Meaning image library — 1,882-image checkpoint, 22 October 2026
+## Meaning image library — 1,890-image checkpoint, 22 October 2026
 
 The delivery branch adds a portable, meaning-specific image library with a stable
 public hostname, immutable content keys, local originals and revision-checked
@@ -9,16 +9,16 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. All **1,882 prepared meanings** are
-selected and CDN-verified; **8,169** still need prepared imagery. A fresh
-read-only inventory finds **1,885 public WebPs / 169,888,668 bytes**, including
+The source union contains 10,051 meanings. All **1,890 prepared meanings** are
+selected and CDN-verified; **8,161** still need prepared imagery. A fresh
+read-only inventory finds **1,893 public WebPs / 170,835,806 bytes**, including
 three preserved superseded images. Originals, held attempts and provenance stay
 on the owner's computer. The retired originals and walkthrough buckets remain
 absent from the default-jurisdiction VocaNova bucket listing.
 
-The latest 812 additions have exact preparation, source-review and local-archive
+The latest 820 additions have exact preparation, source-review and local-archive
 bindings, completed public-only REST uploads and separate fresh public CDN full
-SHA-256 checks. They add 76,251,624 public bytes; their 2,034,682,786 native bytes
+SHA-256 checks. They add 77,198,762 public bytes; their 2,057,199,103 native bytes
 remain local. All previously active 1,070 records are preserved exactly, including
 the three explicitly reviewed word, win (race scene) and fine replacements.
 
@@ -34,9 +34,16 @@ its five source-held images remain held. It does not claim 35 local full-native
 views. A later feedback-informed full-native review of ten held images approved
 seven unchanged originals after distinguishing incidental scene counts from the
 canonical meaning. Both the original flags and new adjudications are retained;
-185 remain unresolved. Those seven add 797,074 public bytes, with 19,369,832
-native bytes kept local. Their actual uploads, fresh CDN full-byte checks and
+185 remained unresolved at that checkpoint. Those seven add 797,074 public bytes,
+with 19,369,832 native bytes kept local. Their actual uploads, fresh CDN full-byte checks and
 independent selected-metadata checks pass; every previous 1,875 row is preserved.
+A second root and independent full-native review examined ten further held images.
+Eight unchanged originals are now published and separately CDN-byte verified,
+adding 947,138 public bytes while 22,516,317 native bytes remain local. Their
+pictures support the exact short definitions; the original flags and image-only
+review disagreements remain recorded. Division and normally stay held; 177
+held images remain unresolved. All previous 1,882 selected fields and order,
+including the three corrected replacements, are preserved.
 Three subscription-only cloud batches with disjoint 1,000-job reservations are
 running. Another reserved batch is idle pending sufficient workspace capacity;
 generation and reservation remain separate from local approval and publication.
@@ -59,7 +66,7 @@ full images above the bottom navigation. This uses real Next pages and published
 synthetic API/auth fixtures; it does not prove live authentication, database
 durability or every image's visual quality. Prepared metadata and all presentation
 evidence are retained as immutable snapshots before further library growth.
-These presentation results do not include the latest seven-image addition.
+These presentation results do not include the latest 15 additions.
 The previous 1,845-image checkpoint's council/source/quarter checks remain retained.
 
 The earlier isolated PostgreSQL rehearsal verified the actual 1,070-image import

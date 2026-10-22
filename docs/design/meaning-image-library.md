@@ -142,9 +142,9 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 22 October local checkpoint contains **1,882 selected published meanings** and
-**1,882 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **8,169 meanings still need prepared artwork**.
+The 22 October local checkpoint contains **1,890 selected published meanings** and
+**1,890 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **8,161 meanings still need prepared artwork**.
 The latest 1,000-attempt cloud batch retains 997 saved originals and complete
 accessible returned receipts locally, two refused outcomes and one uncertain
 submission boundary. Producer and author-disjoint full-image reviews originally yielded 805
@@ -153,10 +153,17 @@ published after local approval and fresh CDN full-byte checks. They add
 75,454,550 public bytes; their 2,015,312,954 native bytes remain local. A later
 feedback-informed full-native review of ten held images approved seven unchanged
 originals. Their original flags remain recorded alongside the new adjudications;
-185 held images remain unresolved. Those seven add 797,074 public bytes, with
-19,369,832 native bytes kept local. Actual upload/readback receipts, fresh CDN
+185 held images remained unresolved at that checkpoint. Those seven add 797,074
+public bytes, with 19,369,832 native bytes kept local. Actual upload/readback receipts, fresh CDN
 full-byte checks and independent selected-metadata checks pass. All previous
 1,875 record fields and the three corrected replacements are preserved.
+A subsequent root and independent full-native review of ten further held images
+approved eight unchanged originals to accompany their exact short definitions.
+The source flags and differing image-only judgments remain recorded. Division
+and normally stay held; 177 held images remain unresolved overall. The eight
+add 947,138 public bytes with 22,516,317 native bytes kept local. Actual
+uploads, fresh canonical CDN full-byte checks and independent selection checks
+pass; all previous 1,882 fields and row order plus three replacements survive.
 Unresolved held, refused and uncertain outcomes add no approved coverage.
 
 The ten-image cloud pilot is included after independent visual review, verified
@@ -196,8 +203,8 @@ The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements for **word**,
 **win** (the race scene) and **fine** remain unchanged, excluding superseded
 artwork while preserving history. Separate selected MCP
-(516) and REST (1,366) records preserve actual transport provenance. The verified
-22 October read-only R2 inventory contains **1,885 public objects / 169,888,668 bytes**,
+(516) and REST (1,374) records preserve actual transport provenance. The verified
+22 October read-only R2 inventory contains **1,893 public objects / 170,835,806 bytes**,
 including three superseded objects. Both retired buckets remain absent. Existing
 managed Wrangler authentication provided public-only uploads; the latest
 authenticated two-page storage inventory used the Cloudflare MCP connector.
@@ -211,7 +218,7 @@ viewport checks confirm the full images remain visible after scrolling. Five
 representative screenshots were actually inspected. These checks use real Next
 pages and public CDN images with synthetic API/auth fixtures; they do not prove
 live authentication, durable learner state or every artwork's visual quality.
-They do not cover the latest seven-image addition.
+They do not cover the latest 15 additions.
 The earlier PostgreSQL rehearsal imported the then-current 1,070-image manifest
 and separately exercised a synthetic 10,051-row fixture. Full artwork coverage,
 the final manifest import rehearsal, one consolidated PR, required hosted checks
