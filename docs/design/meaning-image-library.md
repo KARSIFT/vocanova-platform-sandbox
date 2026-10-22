@@ -57,7 +57,7 @@ behavior after a single-image purge, plus repeated 404 cache bypasses; the rule'
 configured TTL alone does not prove delivery behavior or whole-site performance.
 The later REST public objects carry the one-year
 `public, max-age=31536000, immutable` browser header, verified on actual CDN
-responses, including every image in the latest 864-image addition.
+responses, including every image in the latest 869-image addition.
 Historical MCP objects and the first five REST uploads retain
 their original browser metadata; the new header is not a claim about every asset.
 
@@ -153,9 +153,9 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 23 October local checkpoint contains **1,934 selected published meanings** and
-**1,934 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **8,117 meanings still need prepared artwork**.
+The 23 October local checkpoint contains **1,939 selected published meanings** and
+**1,939 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **8,112 meanings still need prepared artwork**.
 The latest 1,000-attempt cloud batch retains 997 saved originals and complete
 accessible returned receipts locally, two refused outcomes and one uncertain
 submission boundary. Producer and author-disjoint full-image reviews originally yielded 805
@@ -204,20 +204,44 @@ The twenty-five add 2,107,932 public bytes while 60,407,933 native bytes stay lo
 Actual PUT/fresh object GET receipts, separate canonical CDN full-byte checks,
 independent selected-metadata verification and root activation/readback pass.
 Every previous 1,909 field, row order and top-level metadata is unchanged,
-including all three replacements. This batch now contributes 864 published
+including all three replacements. That checkpoint contributed 864 published
 images totaling 81,104,486 public bytes, with 2,165,564,474 native bytes local
-across fourteen receipt collections; 133 saved images remain held.
+across fourteen receipt collections; 133 saved images remained held.
+
+The next thirty-original review ultimately approved **curious**, **boom**,
+**cab**, **magazine** and **newspaper**. Root's preliminary fourteen approvals
+became six after the historical flags and independent findings were considered,
+then five after actual app-size review. All earlier judgments remain retained.
+**Literally** stays held despite its independent native-size recommendation:
+the necessary intrinsic sentence is too small for comfortable reading in the
+actual 276×184 CSS-pixel frame at 360px in both themes. Root's thirty original
+views, same-original reinspection and four subsequent app views are distinct.
+The failed mobile gate superseded the six-candidate approval before canonical
+preparation or upload; no redraw, zoom or custom enlargement was used.
+The five add 619,628 public bytes while 13,666,930 native bytes stay local.
+An initial partial upload and explicit operator reconciliation are preserved;
+final receipts distinguish three existing-object reconciliations from two new
+uploads. Separate canonical CDN full-byte checks, independent selected-metadata
+verification and root activation/readback pass. All previous 1,934 fields, row
+order and top-level metadata plus the three corrected replacements are unchanged.
+This batch now contributes 869 published images totaling 81,724,114 public bytes,
+with 2,179,231,404 native bytes local across fifteen receipt collections;
+128 saved images remain held.
 Unresolved held, refused and uncertain outcomes add no approved coverage.
 
 The next subscription-only cloud run reports 991 saved images, seven refusals
 and two uncertain submissions, with 991 producer and 991 independent reviews
 and 154 disagreements preserved. Its 58 native packs and two final metadata ZIPs
 total 2,341,067,929 bytes. None matched the two local download folders in the latest
-full-hash scan; transfer, local intake and approval remain pending. These cloud
-results add no prepared or selected coverage. Two other disjoint batches remain
-in progress; the latest poll finds 848 saved in one, finishing reviews at its
-storage floor, and 489 saved with two reserved but unsubmitted in the other.
-Capacity guards remain unchanged; a further reservation stays idle.
+local download scan; transfer, local intake and approval remain pending. These cloud
+results add no prepared or selected coverage. Another batch stopped at its disk
+floor with the executor unavailable: 848 saved, five refused, three uncertain and
+144 untouched. Its last verified independent-review count is 344; 796 originals
+are exported and 52 saved originals plus new reviews are unexported. Its final
+reply has complete descriptors for two metadata ZIPs and links to 48 native packs
+without their individual sizes/hashes. Those links do not establish transfer.
+A further batch stopped at its disk floor; another reservation remains idle.
+Capacity guards are unchanged.
 
 The ten-image cloud pilot is included after independent visual review, verified
 local original archival and fresh CDN-byte checks. The first 100-image cloud
@@ -256,8 +280,8 @@ The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements for **word**,
 **win** (the race scene) and **fine** remain unchanged, excluding superseded
 artwork while preserving history. Separate selected MCP
-(516) and REST (1,418) records preserve actual transport provenance. The latest
-read-only R2 inventory contains **1,937 public objects / 174,741,530 bytes**,
+(516) and REST (1,423) records preserve actual transport provenance. The latest
+read-only R2 inventory contains **1,942 public objects / 175,361,158 bytes**,
 including three superseded objects. Both retired buckets remain absent. Existing
 managed Wrangler authentication provided public-only uploads; the latest
 authenticated two-page storage inventory used the Cloudflare MCP connector.
@@ -315,6 +339,14 @@ with the retry query returned 200 and the exact 19,926-byte percent WebP with
 matching full SHA-256. This establishes query compatibility, not browser
 performance or a new complete eighteen-case real-CDN matrix pass. The original
 network cause remains unresolved.
+
+Before this five-image publication, four actual app-size checks used temporary
+QA WebPs from the unchanged optimizer and mocked image responses on the frozen
+recovery build: **literally** at 360px/light and dark, **curious** at 430px/dark
+and **cab** at 1280px/light. Root inspected all four viewport screenshots.
+Technical rendering assertions passed; the separate sentence-legibility gate
+held **literally**. These checks use synthetic API/auth and do not establish
+real CDN performance, all five pictures' full viewport matrix or staging acceptance.
 The earlier PostgreSQL rehearsal imported the then-current 1,070-image manifest
 and separately exercised a synthetic 10,051-row fixture. Full artwork coverage,
 the final manifest import rehearsal, one consolidated PR, required hosted checks

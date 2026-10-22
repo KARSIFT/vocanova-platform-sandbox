@@ -1,6 +1,6 @@
 # Vocanova current product state
 
-## Meaning image library — 1,934-image checkpoint, 23 October 2026
+## Meaning image library — 1,939-image checkpoint, 23 October 2026
 
 The delivery branch adds a portable, meaning-specific image library with a stable
 public hostname, immutable content keys, local originals and revision-checked
@@ -9,16 +9,16 @@ batch at most 100 IDs. Missing media preserves the learning text. Images remain
 outside graded questions, and learner progress stays server-authoritative.
 See [the image library design](../design/meaning-image-library.md).
 
-The source union contains 10,051 meanings. All **1,934 prepared meanings** are
-selected and CDN-verified; **8,117** still need prepared imagery. A fresh
-read-only inventory finds **1,937 public WebPs / 174,741,530 bytes**, including
+The source union contains 10,051 meanings. All **1,939 prepared meanings** are
+selected and CDN-verified; **8,112** still need prepared imagery. A fresh
+read-only inventory finds **1,942 public WebPs / 175,361,158 bytes**, including
 three preserved superseded images. Originals, held attempts and provenance stay
 on the owner's computer. The retired originals and walkthrough buckets remain
 absent from the default-jurisdiction VocaNova bucket listing.
 
-The latest 864 additions have exact preparation, source-review and local-archive
+The latest 869 additions have exact preparation, source-review and local-archive
 bindings, completed public-only REST uploads and separate fresh public CDN full
-SHA-256 checks. They add 81,104,486 public bytes; their 2,165,564,474 native bytes
+SHA-256 checks. They add 81,724,114 public bytes; their 2,179,231,404 native bytes
 remain local. All previously active 1,070 records are preserved exactly, including
 the three explicitly reviewed word, win (race scene) and fine replacements.
 
@@ -72,19 +72,36 @@ The twenty-five add 2,107,932 public bytes while 60,407,933 native bytes stay lo
 Actual uploads and fresh object readbacks, separate canonical CDN full-byte
 verification, independent selection checks and root activation/readback pass.
 Every previous 1,909 field, row order and top-level metadata is preserved,
-including the three corrected replacements. The batch now contributes 864
-published images across fourteen receipt collections; 133 saved images remain held.
+including the three corrected replacements. At that checkpoint the batch
+contributed 864 published images across fourteen receipt collections, with 133 held.
+
+A further thirty-original review ultimately approved five: **curious**, **boom**,
+**cab**, **magazine** and **newspaper**. Root's preliminary fourteen approvals
+became six after reviewing historical flags and independent findings, then five
+after an actual app-size appearance gate. **Literally** remains held: its necessary
+sentence is too small for comfortable reading in the 276×184 CSS-pixel picture
+at 360px in both themes. The original judgments, six independent native-size
+candidate recommendations and later mobile hold are all retained.
+The five add 619,628 public bytes while 13,666,930 native bytes stay local.
+An initial partial upload and explicit reconciliation remain recorded; final
+receipts distinguish three existing-object reconciliations from two new uploads.
+Separate canonical CDN full-byte verification, independent selected-metadata
+checks and root activation/readback pass. Every previous 1,934 field, row order
+and top-level metadata remains unchanged, including the three replacements.
+The batch now contributes 869 published images across fifteen receipt collections;
+128 saved images remain held.
+
 The next subscription-only cloud run completed with 991 saved images, seven
 refusals and two uncertain submissions. It reports 991 producer and 991
 independent reviews, retaining 154 disagreements. Its 58 native packs and two
 final metadata ZIPs total 2,341,067,929 bytes; none matched the two local download
-folders in the latest full-hash scan, so transfer and local approval remain pending.
-Two other disjoint 1,000-job batches remain in progress. The latest poll finds
-one with 848 saved, five refused, three uncertain and 144 untouched, finishing
-reviews after reaching its storage floor. The other has 489 saved and two
-reserved but unsubmitted jobs. Capacity guards remain unchanged; another
-reservation stays idle. Generation and reservation remain separate from local
-approval and publication.
+folders in the latest local download scan, so transfer and local approval remain pending.
+Another run stopped at its storage floor with an unavailable executor: 848 saved,
+five refused, three uncertain and 144 untouched; 344 independent reviews were
+last verified. Its exports cover 796 originals, leaving 52 saved originals and
+new reviews unexported. A further run also stopped at its storage floor; another
+reservation remains idle. Capacity guards are unchanged. Generation and
+reservation remain separate from local approval and publication.
 
 Earlier batches retain their original outcomes. The first 100-image run has 44
 included first attempts, a separately approved second **admit** attempt, 51 local
@@ -151,6 +168,14 @@ A separate real CDN request with the retry query returned the exact
 19,926-byte percent image and matching full SHA-256. This verifies byte
 compatibility, not browser performance; no new complete real-CDN matrix pass or
 fix for the original network cause is established.
+
+Before the five-image publication, four bounded views used temporary optimized
+WebPs, mocked image responses and synthetic API/auth on the actual frozen Next
+build. Root inspected both 360px **literally** views, **curious** at 430px/dark
+and **cab** at 1280px/light. Rendering checks passed, but the sentence-legibility
+gate held **literally** before canonical preparation or upload. These checks and
+the retained 66 recovery-UI checks do not establish a complete 1,939-image
+real-CDN presentation matrix or resolve the earlier network stall.
 
 The earlier isolated PostgreSQL rehearsal verified the actual 1,070-image import
 and an exact no-op retry, plus a separate synthetic 10,051-row metadata fixture.
