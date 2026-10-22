@@ -57,7 +57,7 @@ behavior after a single-image purge, plus repeated 404 cache bypasses; the rule'
 configured TTL alone does not prove delivery behavior or whole-site performance.
 The later REST public objects carry the one-year
 `public, max-age=31536000, immutable` browser header, verified on actual CDN
-responses, including every image in the latest 805-image addition.
+responses, including every image in the latest 812-image addition.
 Historical MCP objects and the first five REST uploads retain
 their original browser metadata; the new header is not a claim about every asset.
 
@@ -142,16 +142,22 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 22 October local checkpoint contains **1,875 selected published meanings** and
-**1,875 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **8,176 meanings still need prepared artwork**.
+The 22 October local checkpoint contains **1,882 selected published meanings** and
+**1,882 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **8,169 meanings still need prepared artwork**.
 The latest 1,000-attempt cloud batch retains 997 saved originals and complete
 accessible returned receipts locally, two refused outcomes and one uncertain
-submission boundary. Producer and author-disjoint full-image reviews yield 805
+submission boundary. Producer and author-disjoint full-image reviews originally yielded 805
 pass/pass candidates and 192 held images. All 805 pass/pass candidates are
 published after local approval and fresh CDN full-byte checks. They add
-75,454,550 public bytes; their 2,015,312,954 native bytes remain local. Held,
-refused and uncertain outcomes add no approved coverage.
+75,454,550 public bytes; their 2,015,312,954 native bytes remain local. A later
+feedback-informed full-native review of ten held images approved seven unchanged
+originals. Their original flags remain recorded alongside the new adjudications;
+185 held images remain unresolved. Those seven add 797,074 public bytes, with
+19,369,832 native bytes kept local. Actual upload/readback receipts, fresh CDN
+full-byte checks and independent selected-metadata checks pass. All previous
+1,875 record fields and the three corrected replacements are preserved.
+Unresolved held, refused and uncertain outcomes add no approved coverage.
 
 The ten-image cloud pilot is included after independent visual review, verified
 local original archival and fresh CDN-byte checks. The first 100-image cloud
@@ -190,20 +196,22 @@ The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements for **word**,
 **win** (the race scene) and **fine** remain unchanged, excluding superseded
 artwork while preserving history. Separate selected MCP
-(516) and REST (1,359) records preserve actual transport provenance. The verified
-22 October read-only R2 inventory contains **1,878 public objects / 169,091,594 bytes**,
+(516) and REST (1,366) records preserve actual transport provenance. The verified
+22 October read-only R2 inventory contains **1,885 public objects / 169,888,668 bytes**,
 including three superseded objects. Both retired buckets remain absent. Existing
-Wrangler authentication provided the readback while the MCP connector was
-unavailable. Object counts do not establish active meaning coverage, and these
+managed Wrangler authentication provided public-only uploads; the latest
+authenticated two-page storage inventory used the Cloudflare MCP connector.
+Object counts do not establish active meaning coverage, and these
 local checkpoints do not establish a staging or production deployment.
 
-The current presentation checkpoint passes 18 local website cases for barn,
+The retained 1,875-image presentation checkpoint passes 18 local website cases for barn,
 vast and cookie at 360/430/1280 widths in both themes, including keyboard access,
 overflow, image geometry and exact CDN response SHA-256. Two additional mobile
 viewport checks confirm the full images remain visible after scrolling. Five
 representative screenshots were actually inspected. These checks use real Next
 pages and public CDN images with synthetic API/auth fixtures; they do not prove
 live authentication, durable learner state or every artwork's visual quality.
+They do not cover the latest seven-image addition.
 The earlier PostgreSQL rehearsal imported the then-current 1,070-image manifest
 and separately exercised a synthetic 10,051-row fixture. Full artwork coverage,
 the final manifest import rehearsal, one consolidated PR, required hosted checks
