@@ -42,15 +42,17 @@ pass records still missing native transfers, and five original holds. The pendin
 300-image workspace have no intake-proven local artwork coverage; historical
 completion reports do not establish current workspace availability.
 
-At the retained 1,845-image checkpoint, eighteen local website checks pass for
-council, source and quarter across
+At the current 1,875-image checkpoint, eighteen local website checks pass for
+barn, vast and cookie across
 360/430/1280 widths, light/dark themes, keyboard focus, overflow, image geometry
-and exact CDN response SHA-256. Four representative screenshots were actually
-inspected, including a scrolled mobile viewport with its full image above the
-bottom navigation. This uses real Next pages and published CDN images with
+and exact CDN response SHA-256. Two additional mobile viewport checks confirm
+the full image remains visible after scrolling. Five representative screenshots
+were actually inspected, including both scrolled mobile viewports with their
+full images above the bottom navigation. This uses real Next pages and published CDN images with
 synthetic API/auth fixtures; it does not prove live authentication, database
 durability or every image's visual quality. Prepared metadata and all presentation
 evidence are retained as immutable snapshots before further library growth.
+The previous 1,845-image checkpoint's council/source/quarter checks remain retained.
 
 The earlier isolated PostgreSQL rehearsal verified the actual 1,070-image import
 and an exact no-op retry, plus a separate synthetic 10,051-row metadata fixture.

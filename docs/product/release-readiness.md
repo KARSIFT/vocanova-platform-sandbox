@@ -38,15 +38,17 @@ lack exact native transfers (including one cloud-flag disagreement), and prior
 refused, uncertain and superseded attempts are preserved. A job reservation or
 cloud completion report never counts as delivered image coverage.
 
-At the retained 1,845-image checkpoint, local presentation checks pass **18 cases**
-for three exact new senses at
+At the current 1,875-image checkpoint, local presentation checks pass **18 cases**
+for barn, vast and cookie at
 360/430/1280 widths and both themes, including keyboard, overflow, dimensions,
-image loading and exact public response SHA-256. Four representative screenshots
-were actually inspected, including full mobile-image visibility after scrolling.
+image loading and exact public response SHA-256. Two further mobile viewport
+checks confirm full-image visibility after scrolling. Five representative
+screenshots were actually inspected, including both scrolled mobile viewports.
 This tests real pages and CDN bytes against synthetic API/auth fixtures. It does
 not verify live authentication, durable learner state, staging integration or all
-1,845 artworks' visual quality. Immutable prepared/config/result snapshots retain
-the exact evidence as the library grows. Owned preview servers are stopped.
+1,875 artworks' visual quality. Immutable prepared/config/result snapshots retain
+the exact evidence as the library grows, including the previous 1,845-image
+presentation checkpoint. Owned preview servers are stopped.
 
 The earlier PostgreSQL 16 rehearsal used all 48 migrations and 10,051 canonical
 meanings. It imported the then-current actual 1,070-image manifest and verified
