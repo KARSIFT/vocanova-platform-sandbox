@@ -55,9 +55,10 @@ so single-file cache purges still match. This rule does not change application
 or API caching. Verify successful CDN checksums and MISS-to-HIT
 behavior after a single-image purge, plus repeated 404 cache bypasses; the rule's
 configured TTL alone does not prove delivery behavior or whole-site performance.
-The later 549 REST public objects carry the one-year
+The later REST public objects carry the one-year
 `public, max-age=31536000, immutable` browser header, verified on actual CDN
-responses. Historical MCP objects and the first five REST uploads retain
+responses, including every image in the latest 805-image addition.
+Historical MCP objects and the first five REST uploads retain
 their original browser metadata; the new header is not a claim about every asset.
 
 The API returns approved metadata only when the meaning and canonical word are
@@ -141,9 +142,17 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 22 October local checkpoint contains **1,070 selected published meanings** and
-**1,070 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **8,981 meanings still need prepared artwork**.
+The 22 October local checkpoint contains **1,875 selected published meanings** and
+**1,875 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **8,176 meanings still need prepared artwork**.
+The latest 1,000-attempt cloud batch retains 997 saved originals and complete
+accessible returned receipts locally, two refused outcomes and one uncertain
+submission boundary. Producer and author-disjoint full-image reviews yield 805
+pass/pass candidates and 192 held images. All 805 pass/pass candidates are
+published after local approval and fresh CDN full-byte checks. They add
+75,454,550 public bytes; their 2,015,312,954 native bytes remain local. Held,
+refused and uncertain outcomes add no approved coverage.
+
 The ten-image cloud pilot is included after independent visual review, verified
 local original archival and fresh CDN-byte checks. The first 100-image cloud
 batch retains its original review results: 95 pass, three flag and two reject.
@@ -172,20 +181,33 @@ These 94 images preserve 236,181,622 bytes of native originals locally and add
 9,051,612 bytes of optimized public artwork. Supplemental transfers remain
 separate from the original source-pack ZIP receipts.
 
-Cloud batch003 reports 100 completed outputs with cloud review results of 88 pass
-and 12 flag. Its artwork has not yet been downloaded locally. The next 300-image
-batch is active in the existing durable subscription-only cloud task; generated,
-reviewed and locally integrated totals for that assignment remain pending.
+The earlier 100-image cloud batch003 reported 88 pass and 12 flag outputs. That
+report and the subsequent 300-image assignment add no intake-proven local
+artwork coverage. Historical cloud completion reports do not establish current
+workspace availability or successful local preservation.
 
 The selected delivery checkpoint binds canonical CDN-byte verification and full
-local-original SHA-256 checks. Its three reviewed replacements remain unchanged,
-excluding superseded artwork while preserving history. Separate selected MCP
-(516) and REST (554) records preserve actual transport provenance. A fresh
-read-only R2 inventory contains **1,073 public objects / 93,637,044 bytes**,
+local-original SHA-256 checks. Its three reviewed replacements for **word**,
+**win** (the race scene) and **fine** remain unchanged, excluding superseded
+artwork while preserving history. Separate selected MCP
+(516) and REST (1,359) records preserve actual transport provenance. The verified
+22 October read-only R2 inventory contains **1,878 public objects / 169,091,594 bytes**,
 including three superseded objects. Both retired buckets remain absent. Existing
 Wrangler authentication provided the readback while the MCP connector was
 unavailable. Object counts do not establish active meaning coverage, and these
 local checkpoints do not establish a staging or production deployment.
+
+The current presentation checkpoint passes 18 local website cases for barn,
+vast and cookie at 360/430/1280 widths in both themes, including keyboard access,
+overflow, image geometry and exact CDN response SHA-256. Two additional mobile
+viewport checks confirm the full images remain visible after scrolling. Five
+representative screenshots were actually inspected. These checks use real Next
+pages and public CDN images with synthetic API/auth fixtures; they do not prove
+live authentication, durable learner state or every artwork's visual quality.
+The earlier PostgreSQL rehearsal imported the then-current 1,070-image manifest
+and separately exercised a synthetic 10,051-row fixture. Full artwork coverage,
+the final manifest import rehearsal, one consolidated PR, required hosted checks
+and live staging acceptance remain pending. Production promotion is separate.
 
 Historical 20 October checkpoint: 113 public WebPs totaling 7,095,834 bytes had
 been uploaded and freshly CDN SHA-256 verified, including the reviewed 20-image

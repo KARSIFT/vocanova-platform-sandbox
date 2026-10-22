@@ -15,7 +15,7 @@ A fresh authenticated, read-only two-page inventory finds **1,878 WebPs /
 169,091,594 bytes**, including three superseded objects retained as history.
 The selected records comprise 516 MCP and 1,359 REST publications. Old MCP/REST
 provenance remains separate. Every previously selected 1,845 record is unchanged,
-including the approved word/race/fine replacements; no historical image is
+including the approved word, win (race scene) and fine replacements; no historical image is
 silently reactivated. Retired originals/walkthrough buckets remain absent from
 the default-jurisdiction VocaNova listing, and originals stay local.
 

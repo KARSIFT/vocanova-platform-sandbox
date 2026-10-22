@@ -20,7 +20,7 @@ The latest 775 additions have exact preparation, source-review and local-archive
 bindings, completed public-only REST uploads and separate fresh public CDN full
 SHA-256 checks. They add 72,429,476 public bytes; their 1,936,871,802 native bytes
 remain local. All previously active 1,070 records are preserved exactly, including
-the three explicitly reviewed word/race/fine replacements.
+the three explicitly reviewed word, win (race scene) and fine replacements.
 
 The 1,000-attempt cloud batch now has 997 saved images, two refused outcomes and
 one uncertain submission boundary. All 997 saved originals and complete accessible
