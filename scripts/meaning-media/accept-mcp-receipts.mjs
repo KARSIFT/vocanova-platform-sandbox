@@ -141,6 +141,9 @@ async function canonicalDelivery(key, bytes, fetcher, onAttempts) {
       response = await fetcher(`${CDN}/${key}`, {
         method: "GET",
         redirect: "error",
+        // Reused connections can stall before headers on the delivery path.
+        // Each bounded verification gets its own connection, including retries.
+        headers: { Connection: "close" },
         signal: globalThis.AbortSignal.timeout(60_000),
       });
       detail.status = response.status;

@@ -13,6 +13,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
+import { createServer } from "node:http";
 import { prepare, publish } from "../meaning-media/manage.mjs";
 import {
   acceptMCPReceipts,
@@ -767,7 +768,7 @@ test("MCP receipt acceptance verifies only canonical public bytes and reports we
       assert.equal(call.url, `${CDN}/${publicKey(prepared)}`);
       assert.equal(call.options.method, "GET");
       assert.equal(call.options.redirect, "error");
-      assert.equal(call.options.headers, undefined);
+      assert.deepEqual(call.options.headers, { Connection: "close" });
     }
     const output = JSON.parse(
       await readFile(join(directory, "published-mcp.json")),
@@ -1214,6 +1215,49 @@ test("receipt acceptance bounds body retries, drains in-flight successes and res
     assert.equal(interruptedCalls, 1);
     assert.equal(retried.reusedAccepted, 2);
   } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("receipt acceptance avoids reused CDN connections across a batch", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "receipt-connections-"));
+  const socketUses = new Map();
+  let server;
+  try {
+    const f = await receiptFixture(directory, 8);
+    server = createServer((request, response) => {
+      const uses = (socketUses.get(request.socket) ?? 0) + 1;
+      socketUses.set(request.socket, uses);
+      // Model the observed transport boundary: a later request on an otherwise
+      // healthy connection fails, while a new connection serves correct bytes.
+      if (uses >= 5) {
+        response.writeHead(503);
+        response.end();
+        return;
+      }
+      const body = f.images.get(`${CDN}${request.url}`);
+      response.writeHead(200, { "content-type": "image/webp" });
+      response.end(body);
+    });
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    const result = await acceptMCPReceipts({
+      ...f.args,
+      concurrency: 1,
+      fetcher: (url, options) =>
+        globalThis.fetch(`${origin}${new URL(url).pathname}`, options),
+    });
+    assert.equal(result.freshCDNVerified, 8);
+    assert.equal(socketUses.size, 8);
+    assert.ok([...socketUses.values()].every((uses) => uses === 1));
+  } finally {
+    if (server) {
+      server.closeAllConnections();
+      await new Promise((resolve) => server.close(resolve));
+    }
     await rm(directory, { recursive: true, force: true });
   }
 });

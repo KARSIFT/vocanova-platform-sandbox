@@ -428,7 +428,9 @@ single-part ETag/MD5 must match the actual prepared files. Missing, stale,
 multipart or conflicting receipts fail. Public bytes are then fetched only from
 `https://images.vocanova.site`, bounded and SHA-256 checked without redirects.
 Network request failures get at most three attempts, each with a fresh 60-second
-deadline and short backoff. HTTP rejections and invalid image bytes still fail
+deadline and short backoff. Verification GETs request `Connection: close` to avoid
+stalls observed when reusing delivery connections. This affects only the operator
+verification command, not browser image loading. HTTP rejections and invalid image bytes still fail
 immediately; retries never substitute receipt metadata for actual public bytes.
 
 The distinct `published-mcp.json` is the backend-ready manifest for this path.
