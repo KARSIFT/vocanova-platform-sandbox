@@ -165,7 +165,8 @@ Public PUT key, size, source SHA-256, content type and single-part ETag/MD5 must
 match the prepared WebP. The only network requests are fresh GETs to
 `https://images.vocanova.site`, without redirects, with bounded bytes and full
 SHA-256 verification. No archive bucket or private cloud endpoint is contacted.
-Network retries remain bounded to three fresh 60-second requests.
+Network retries remain bounded to three attempts, each with a fresh 60-second
+deadline covering both response headers and the complete response body.
 
 Only `published-mcp-local.json` is the import-ready manifest for this mode. It
 has the same public image contract as other publication modes and excludes local
@@ -239,7 +240,8 @@ node scripts/meaning-media/accept-mcp-receipts.mjs \
   --account-id EXPECTED_CLOUDFLARE_ACCOUNT_ID \
   --original-archive local \
   --local-archive-root /private/meaning-originals \
-  --receipt-source cloudflare-rest
+  --receipt-source cloudflare-rest \
+  --concurrency 4
 ```
 
 The API equivalent is `acceptMCPReceipts({ ...options, receiptSource:
@@ -247,7 +249,8 @@ The API equivalent is `acceptMCPReceipts({ ...options, receiptSource:
 `cloudflare-mcp`; a receipt transport cannot switch modes implicitly. Missing or
 unknown REST operations and mismatched transports fail before any HTTP request.
 All canonical revision, source SHA-256, size, ETag/MD5, image decoding, local
-archive, symlink, manifest-conflict and fresh CDN full-byte checks remain required.
+archive, symlink and manifest-conflict checks remain required before any HTTP
+request. Every newly accepted record requires a successful full-byte CDN check.
 
 REST mode writes only `published-rest-local.json` and the private
 `rest-local-publication-evidence.json`. Public import records keep the same schema;
@@ -256,11 +259,33 @@ historical MCP manifests/evidence remain untouched. REST evidence stores
 `operator-rest-put-receipt-size-etag-md5` from
 `operator-rest-existing-metadata-readback-size-etag-md5`. These are operator
 receipt claims checked against local bytes; the separate fresh CDN GET proves
-current public delivery. The command makes no storage writes in either case.
+public delivery at its recorded verification time. The command makes no storage
+writes in either case.
 It reports uploaded versus reconciled receipt counts without treating a metadata
 readback as a new upload. The observed CDN cache header remains recorded without
 asserting immutable caching. Use the REST manifest explicitly when importing or
 composing the selected delivery manifest, and retain the separate receipt history.
+
+CDN checks use four concurrent workers by default; `--concurrency 1` through
+`--concurrency 4` (API option `concurrency`) bounds active checks. Fetch or streamed
+body failures receive at most three attempts with fresh 60-second deadlines and
+short backoff. HTTP/MIME rejection, excessive size and checksum mismatch fail
+without retry. Private `cdnAttempts` evidence records each pending or completed
+attempt, status, bytes read, elapsed time and failure stage. After a terminal
+failure, no queued check starts; already running checks finish and successful
+records are saved before the publication lock is released. Accepted records may
+therefore be noncontiguous within the receipt collection.
+
+REST resume is automatic: rerun the exact receipt collection after inspecting the
+failure. Every named local original, public file and individual receipt is
+validated again. A manifest record is reused only with matching prior full-body
+CDN success and matching original/public receipt evidence; a later failed or
+interrupted attempt prevents reuse. Legacy success evidence without attempt
+history is supported. An exact subset may have a different collection digest;
+reused evidence retains its original receipt attribution and verification time.
+MCP mode continues to perform fresh CDN checks on replay. The result distinguishes
+`freshCDNVerified` from `reusedAccepted`; `verified` includes both. Reused records
+are prior verified delivery evidence, not a fresh probe of current CDN state.
 
 ## Optional legacy workflow: cloud originals through portable S3
 

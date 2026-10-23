@@ -1,6 +1,8 @@
 // Separate, truthful evidence paths for operator-recorded MCP or REST results.
 // No storage writes or model calls; only local reads/writes and canonical CDN GET.
 import { createHash } from "node:crypto";
+import { Buffer } from "node:buffer";
+import { performance } from "node:perf_hooks";
 import {
   readFile,
   mkdir,
@@ -24,7 +26,6 @@ import {
   publicRecord,
   validateImage,
   readBounded,
-  responseBytes,
   atomicJSON,
   within,
 } from "./library.mjs";
@@ -117,45 +118,99 @@ function validateObjectReceipt(receipt, { key, bytes, contentType }, source) {
   };
 }
 
-async function canonicalDelivery(key, bytes, fetcher) {
-  let response;
+async function canonicalDelivery(key, bytes, fetcher, onAttempts) {
+  const attempts = [];
+  const expectedSHA256 = sha256(bytes);
   for (let attempt = 0; attempt < 3; attempt++) {
+    const detail = {
+      attempt: attempt + 1,
+      startedAt: new Date().toISOString(),
+      phase: "fetch",
+      outcome: "pending",
+      status: null,
+      bodyBytesRead: 0,
+      expectedBodyBytes: bytes.length,
+      expectedBodySHA256: expectedSHA256,
+      url: `${CDN}/${key}`,
+    };
+    attempts.push(detail);
+    await onAttempts(attempts);
+    const started = performance.now();
+    let response, delivery, failure;
     try {
       response = await fetcher(`${CDN}/${key}`, {
         method: "GET",
         redirect: "error",
         signal: globalThis.AbortSignal.timeout(60_000),
       });
-      break;
-    } catch {
-      if (attempt === 2)
-        throw new Error("Canonical CDN receipt verification request failed");
-      await setTimeout(250 * 4 ** attempt);
+      detail.status = response.status;
+      detail.contentType = response.headers.get("content-type");
+      detail.phase = "headers";
+      if (response.status !== 200 || detail.contentType !== "image/webp")
+        throw new Error(
+          `Canonical CDN receipt verification failed (HTTP ${response.status})`,
+        );
+      detail.phase = "body-size";
+      if (Number(response.headers.get("content-length")) > bytes.length)
+        throw new Error("Remote image exceeds byte limit");
+      detail.phase = "body";
+      const chunks = [];
+      for await (const chunk of response.body ?? []) {
+        detail.bodyBytesRead += chunk.length;
+        if (detail.bodyBytesRead > bytes.length) {
+          detail.phase = "body-size";
+          throw new Error("Remote image exceeds byte limit");
+        }
+        chunks.push(chunk);
+      }
+      detail.phase = "checksum";
+      const received = Buffer.concat(chunks);
+      detail.bodySHA256 = sha256(received);
+      if (
+        received.length !== bytes.length ||
+        detail.bodySHA256 !== expectedSHA256
+      )
+        throw new Error("Canonical CDN receipt checksum mismatch");
+      detail.outcome = "verified";
+      delivery = {
+        method: "fresh-canonical-cdn-get-sha256",
+        url: `${CDN}/${key}`,
+        byteLength: received.length,
+        sha256: detail.bodySHA256,
+        contentType: detail.contentType,
+        cacheControl: response.headers.get("cache-control"),
+        etag: response.headers.get("etag"),
+        immutableCacheVerified: false,
+        verifiedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      failure = error;
+      detail.outcome = "failed";
+      detail.errorName = error.name;
+      detail.errorMessage = String(error.message).slice(0, 512);
+      if (error.code ?? error.cause?.code)
+        detail.errorCode = String(error.code ?? error.cause.code).slice(0, 128);
+      detail.willRetry =
+        attempt < 2 && ["fetch", "body"].includes(detail.phase);
+      // Do not let cancellation hide the original status/checksum/body error.
+      void response?.body?.cancel().catch(() => {});
     }
+    detail.finishedAt = new Date().toISOString();
+    detail.elapsedMs = Math.round(performance.now() - started);
+    await onAttempts(attempts);
+    if (delivery) return delivery;
+    if (!detail.willRetry) {
+      const message =
+        detail.phase === "fetch"
+          ? "Canonical CDN receipt verification request failed"
+          : failure.message;
+      throw new Error(
+        `${message} [key=${key}; phase=${detail.phase}; attempt=${attempt + 1}/3; bodyBytes=${detail.bodyBytesRead}/${bytes.length}]`,
+        { cause: failure },
+      );
+    }
+    await setTimeout(250 * 4 ** attempt);
   }
-  if (
-    response.status !== 200 ||
-    response.headers.get("content-type") !== "image/webp"
-  ) {
-    await response.body?.cancel();
-    throw new Error(
-      `Canonical CDN receipt verification failed (HTTP ${response.status})`,
-    );
-  }
-  const received = await responseBytes(response, bytes.length);
-  if (sha256(received) !== sha256(bytes))
-    throw new Error("Canonical CDN receipt checksum mismatch");
-  return {
-    method: "fresh-canonical-cdn-get-sha256",
-    url: `${CDN}/${key}`,
-    byteLength: received.length,
-    sha256: sha256(received),
-    contentType: response.headers.get("content-type"),
-    cacheControl: response.headers.get("cache-control"),
-    etag: response.headers.get("etag"),
-    immutableCacheVerified: false,
-    verifiedAt: new Date().toISOString(),
-  };
 }
 
 export async function acceptMCPReceipts({
@@ -170,7 +225,10 @@ export async function acceptMCPReceipts({
   receiptSource = "cloudflare-mcp",
   fetcher = globalThis.fetch,
   sharp,
+  concurrency = 4,
 }) {
+  if (!Number.isSafeInteger(concurrency) || concurrency < 1 || concurrency > 4)
+    throw new Error("CDN receipt concurrency must be an integer from 1 to 4");
   if (!["cloudflare-mcp", "cloudflare-rest"].includes(receiptSource))
     throw new Error("Receipt source must be cloudflare-mcp or cloudflare-rest");
   const rest = receiptSource === "cloudflare-rest";
@@ -389,61 +447,155 @@ export async function acceptMCPReceipts({
       typeof evidence.images !== "object"
     )
       throw new Error(`Conflicting ${sourceLabel} publication evidence`);
-    for (const {
-      row,
-      optimized,
-      originalProof,
-      publicProof,
-      operation,
-    } of checked) {
-      const delivery = await canonicalDelivery(
-        publicKey(row),
-        optimized,
-        fetcher,
-      );
-      evidence.images[row.meaningId] = {
-        meaningRevision: row.meaningRevision,
-        sha256: row.sha256,
-        receiptFileSha256: sha256(receiptBytes),
-        original: local
-          ? originalProof
-          : {
-              ...originalProof,
-              method: "operator-mcp-put-receipt-size-etag-md5",
-              privateGetSha256Verified: false,
-              privateHTTPMetadataVerified: false,
-              bucketExposureVerifiedByThisTool: false,
+    const entryFor = (
+      { row, originalProof, publicProof, operation },
+      delivery,
+    ) => ({
+      meaningRevision: row.meaningRevision,
+      sha256: row.sha256,
+      receiptFileSha256: sha256(receiptBytes),
+      original: local
+        ? originalProof
+        : {
+            ...originalProof,
+            method: "operator-mcp-put-receipt-size-etag-md5",
+            privateGetSha256Verified: false,
+            privateHTTPMetadataVerified: false,
+            bucketExposureVerifiedByThisTool: false,
+          },
+      ...(rest
+        ? {
+            publicObject: {
+              ...publicProof,
+              operation,
+              newPutReported: operation === "uploaded",
+              method:
+                operation === "uploaded"
+                  ? "operator-rest-put-receipt-size-etag-md5"
+                  : "operator-rest-existing-metadata-readback-size-etag-md5",
             },
-        ...(rest
-          ? {
-              publicObject: {
-                ...publicProof,
-                operation,
-                newPutReported: operation === "uploaded",
-                method:
-                  operation === "uploaded"
-                    ? "operator-rest-put-receipt-size-etag-md5"
-                    : "operator-rest-existing-metadata-readback-size-etag-md5",
-              },
-            }
-          : {
-              publicPut: {
-                ...publicProof,
-                method: "operator-mcp-put-receipt-size-etag-md5",
-              },
-            }),
-        publicDelivery: delivery,
-      };
-      // Evidence precedes import-ready metadata; a failed GET never adds a record.
-      await atomicJSON(evidencePath, evidence);
-      published.set(row.meaningId, publicRecord(row));
-      await atomicJSON(manifestPath, {
-        schemaVersion: 1,
-        images: [...published.values()],
-      });
+          }
+        : {
+            publicPut: {
+              ...publicProof,
+              method: "operator-mcp-put-receipt-size-etag-md5",
+            },
+          }),
+      publicDelivery: delivery,
+    });
+    const reusable = (item) => {
+      const prior = evidence.images[item.row.meaningId];
+      const delivery = prior?.publicDelivery;
+      const latestAttempt = evidence.cdnAttempts?.[item.row.meaningId]?.at(-1);
+      if (
+        !published.has(item.row.meaningId) ||
+        !prior ||
+        !/^[a-f0-9]{64}$/.test(prior.receiptFileSha256 ?? "") ||
+        delivery?.method !== "fresh-canonical-cdn-get-sha256" ||
+        delivery.url !== `${CDN}/${publicKey(item.row)}` ||
+        delivery.sha256 !== item.row.sha256 ||
+        delivery.byteLength !== item.optimized.length ||
+        delivery.contentType !== "image/webp" ||
+        delivery.immutableCacheVerified !== false ||
+        !Number.isFinite(Date.parse(delivery.verifiedAt))
+      )
+        return false;
+      // Never hide a later failed/interrupted check behind an older successful
+      // image entry. Legacy accepted entries have no per-attempt history.
+      if (
+        latestAttempt &&
+        (latestAttempt.outcome !== "verified" ||
+          latestAttempt.status !== 200 ||
+          latestAttempt.bodySHA256 !== item.row.sha256 ||
+          latestAttempt.bodyBytesRead !== item.optimized.length)
+      )
+        return false;
+      const expected = entryFor(item, delivery);
+      if (
+        prior.meaningRevision !== expected.meaningRevision ||
+        prior.sha256 !== expected.sha256
+      )
+        return false;
+      for (const key of ["original", rest ? "publicObject" : "publicPut"])
+        for (const [field, value] of Object.entries(expected[key]))
+          if (field !== "verifiedAt" && prior[key]?.[field] !== value)
+            return false;
+      // Collection SHA may differ for an exact subset. The original attribution
+      // stays untouched; reuse requires the same individually validated receipt,
+      // current local original/public bytes and prior successful full CDN proof.
+      return true;
+    };
+    const pending = checked.filter((item) => !(rest && reusable(item)));
+    const reusedAccepted = checked.length - pending.length;
+    let cursor = 0,
+      freshCDNVerified = 0,
+      stopped = false,
+      failure;
+    let writes = Promise.resolve();
+    const persist = (operation) => {
+      writes = writes.then(operation);
+      return writes;
+    };
+    const worker = async () => {
+      while (!stopped && cursor < pending.length) {
+        const item = pending[cursor++];
+        const { row, optimized } = item;
+        const history = evidence.cdnAttempts?.[row.meaningId] ?? [];
+        try {
+          const delivery = await canonicalDelivery(
+            publicKey(row),
+            optimized,
+            fetcher,
+            (attempts) => {
+              const last = attempts.at(-1);
+              if (last.outcome === "failed" && !last.willRetry) stopped = true;
+              return persist(async () => {
+                evidence.cdnAttempts ??= {};
+                evidence.cdnAttempts[row.meaningId] = [
+                  ...history,
+                  ...attempts.map((attempt) => ({
+                    ...attempt,
+                    receiptFileSha256: sha256(receiptBytes),
+                  })),
+                ];
+                await atomicJSON(evidencePath, evidence);
+              });
+            },
+          );
+          await persist(async () => {
+            evidence.images[row.meaningId] = entryFor(item, delivery);
+            // Serialized evidence precedes import-ready metadata. Other workers
+            // cannot race a stale manifest write over a successful acceptance.
+            await atomicJSON(evidencePath, evidence);
+            published.set(row.meaningId, publicRecord(row));
+            await atomicJSON(manifestPath, {
+              schemaVersion: 1,
+              images: [...published.values()],
+            });
+            freshCDNVerified++;
+          });
+        } catch (error) {
+          stopped = true;
+          failure ??= error;
+        }
+      }
+    };
+    // Stop assigning work after a terminal failure, but drain bounded in-flight
+    // GETs and durable writes before releasing the exclusive publication lock.
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, pending.length) }, worker),
+    );
+    await writes;
+    if (failure) throw failure;
+    if (freshCDNVerified + reusedAccepted !== checked.length) {
+      throw new Error("Incomplete CDN receipt acceptance");
     }
     return {
+      // verified counts validated receipt/local-byte bindings, including reuse;
+      // freshCDNVerified is the number of new successful network body checks.
       verified: checked.length,
+      freshCDNVerified,
+      reusedAccepted,
       published: published.size,
       prepared: planned.size,
       remaining: planned.size - published.size,
@@ -501,6 +653,8 @@ async function main() {
         originalArchive: options["original-archive"] ?? "cloud",
         localArchiveRoot: options["local-archive-root"],
         receiptSource: options["receipt-source"] ?? "cloudflare-mcp",
+        concurrency:
+          options.concurrency === undefined ? 4 : Number(options.concurrency),
       }),
     ),
   );

@@ -64,6 +64,103 @@ const storedResponse = (body = bytes, overrides = {}) =>
     },
   });
 
+async function receiptFixture(directory, count) {
+  const catalogPath = join(directory, "catalog.json");
+  const candidatesPath = join(directory, "candidates.json");
+  const receiptsPath = join(directory, "receipts.json");
+  const localArchiveRoot = join(directory, "archive");
+  const meanings = Array.from({ length: count }, (_, i) => ({
+    meaningId: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+    meaningRevision: "a".repeat(64),
+  }));
+  const source = fileURLToPath(
+    new URL(
+      `../../apps/web/public/images/meanings/${row.meaningId}.webp`,
+      import.meta.url,
+    ),
+  );
+  await atomicJSON(catalogPath, { schemaVersion: 1, meanings });
+  await atomicJSON(candidatesPath, {
+    images: meanings.map((meaning) => ({
+      ...meaning,
+      source,
+      alt: row.alt,
+      approved: true,
+      approvedBy: "synthetic-test-review",
+    })),
+  });
+  await prepare({ catalogPath, candidatesPath, workdir: directory });
+  const prepared = JSON.parse(
+    await readFile(join(directory, "prepared.json")),
+  ).images;
+  const images = new Map();
+  const objects = [];
+  for (const item of prepared) {
+    const native = await readFile(within(directory, item.originalFile));
+    const optimized = await readFile(within(directory, item.publicFile));
+    const archive = join(localArchiveRoot, archiveKey(item));
+    await mkdir(dirname(archive), { recursive: true });
+    await writeFile(archive, native);
+    images.set(`${CDN}/${publicKey(item)}`, optimized);
+    objects.push({
+      meaningId: item.meaningId,
+      meaningRevision: item.meaningRevision,
+      sha256: item.sha256,
+      operation: "uploaded",
+      public: {
+        key: publicKey(item),
+        size: optimized.length,
+        sourceSha256: sha256(optimized),
+        etag: createHash("md5").update(optimized).digest("hex"),
+        contentType: "image/webp",
+        cacheControl: null,
+      },
+    });
+  }
+  const receipt = {
+    schemaVersion: 1,
+    transport: "cloudflare-rest-public-only-local-archive-v1",
+    accountId: "a".repeat(32),
+    publicBucket: PUBLIC_BUCKET,
+    objects,
+  };
+  await atomicJSON(receiptsPath, receipt);
+  return {
+    prepared,
+    images,
+    receipt,
+    args: {
+      catalogPath,
+      receiptsPath,
+      workdir: directory,
+      expectedAccountId: receipt.accountId,
+      originalArchive: "local",
+      localArchiveRoot,
+      receiptSource: "cloudflare-rest",
+    },
+  };
+}
+
+function interruptedBody(body) {
+  let pulled = false;
+  return new Response(
+    new ReadableStream({
+      async pull(controller) {
+        if (!pulled) {
+          pulled = true;
+          controller.enqueue(body.subarray(0, 5));
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        controller.error(
+          new DOMException("Body deadline elapsed", "TimeoutError"),
+        );
+      },
+    }),
+    { headers: { "content-type": "image/webp" } },
+  );
+}
+
 test("public identity is meaning/revision/content-specific and excludes archive metadata", () => {
   assert.equal(
     key,
@@ -962,6 +1059,232 @@ test("public-only MCP mode independently verifies local originals and never requ
       await readFile(join(directory, "published-mcp-local.json")),
       before,
     );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("receipt acceptance retries body streaming with a fresh deadline and per-attempt evidence", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "receipt-body-retry-"));
+  try {
+    const f = await receiptFixture(directory, 1);
+    const signals = [];
+    let calls = 0;
+    const result = await acceptMCPReceipts({
+      ...f.args,
+      fetcher: async (url, options) => {
+        signals.push(options.signal);
+        const body = f.images.get(url);
+        return ++calls === 1 ? interruptedBody(body) : storedResponse(body);
+      },
+    });
+    assert.equal(calls, 2);
+    assert.notEqual(signals[0], signals[1]);
+    assert.equal(result.freshCDNVerified, 1);
+    assert.equal(result.reusedAccepted, 0);
+    const evidence = JSON.parse(
+      await readFile(join(directory, "rest-local-publication-evidence.json")),
+    );
+    const attempts = evidence.cdnAttempts[f.prepared[0].meaningId];
+    assert.equal(attempts.length, 2);
+    assert.equal(attempts[0].phase, "body");
+    assert.equal(attempts[0].bodyBytesRead, 5);
+    assert.equal(attempts[0].status, 200);
+    assert.equal(attempts[0].outcome, "failed");
+    assert.equal(attempts[0].errorName, "TimeoutError");
+    assert.equal(attempts[1].outcome, "verified");
+    assert.equal(attempts[1].bodyBytesRead, [...f.images.values()][0].length);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("receipt acceptance bounds body retries, drains in-flight successes and resumes accepted records", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "receipt-resume-"));
+  try {
+    const f = await receiptFixture(directory, 3);
+    const badURL = [...f.images.keys()][1];
+    const calls = new Map();
+    await assert.rejects(
+      acceptMCPReceipts({
+        ...f.args,
+        fetcher: async (url) => {
+          calls.set(url, (calls.get(url) ?? 0) + 1);
+          const body = f.images.get(url);
+          return url === badURL ? interruptedBody(body) : storedResponse(body);
+        },
+      }),
+      /Body deadline elapsed.*phase=body.*attempt=3/,
+    );
+    assert.equal(calls.get(badURL), 3);
+    const manifestPath = join(directory, "published-rest-local.json");
+    const evidencePath = join(
+      directory,
+      "rest-local-publication-evidence.json",
+    );
+    const before = JSON.parse(await readFile(manifestPath));
+    const beforeEvidence = JSON.parse(await readFile(evidencePath));
+    assert.equal(before.images.length, 2);
+    assert.equal(Object.keys(beforeEvidence.images).length, 2);
+    assert.equal(beforeEvidence.cdnAttempts[f.prepared[1].meaningId].length, 3);
+    await assert.rejects(readFile(join(directory, "publication.lock")), {
+      code: "ENOENT",
+    });
+    let resumedCalls = 0;
+    // Collection bytes can differ after preserving an exact receipt subset.
+    await atomicJSON(f.args.receiptsPath, {
+      ...f.receipt,
+      subsetLabel: "resume",
+    });
+    const resumed = await acceptMCPReceipts({
+      ...f.args,
+      fetcher: async (url) => {
+        resumedCalls++;
+        assert.equal(url, badURL);
+        return storedResponse(f.images.get(url));
+      },
+    });
+    assert.equal(resumedCalls, 1);
+    assert.equal(resumed.verified, 3);
+    assert.equal(resumed.freshCDNVerified, 1);
+    assert.equal(resumed.reusedAccepted, 2);
+    const afterEvidence = JSON.parse(await readFile(evidencePath));
+    for (const item of before.images)
+      assert.deepEqual(
+        afterEvidence.images[item.meaningId],
+        beforeEvidence.images[item.meaningId],
+      );
+    const finalManifest = await readFile(manifestPath);
+    const finalEvidence = await readFile(evidencePath);
+    const replay = await acceptMCPReceipts({
+      ...f.args,
+      fetcher: async () =>
+        assert.fail("valid accepted records must not refetch"),
+    });
+    assert.equal(replay.freshCDNVerified, 0);
+    assert.equal(replay.reusedAccepted, 3);
+    assert.deepEqual(await readFile(manifestPath), finalManifest);
+    assert.deepEqual(await readFile(evidencePath), finalEvidence);
+    // The live accepted records predate per-attempt diagnostics.
+    const legacyEvidence = JSON.parse(finalEvidence);
+    delete legacyEvidence.cdnAttempts;
+    await atomicJSON(evidencePath, legacyEvidence);
+    const legacyBytes = await readFile(evidencePath);
+    const legacyReplay = await acceptMCPReceipts({
+      ...f.args,
+      fetcher: async () =>
+        assert.fail("legacy valid acceptance must not refetch"),
+    });
+    assert.equal(legacyReplay.reusedAccepted, 3);
+    assert.equal(legacyReplay.freshCDNVerified, 0);
+    assert.deepEqual(await readFile(evidencePath), legacyBytes);
+    // An accepted row without matching delivery evidence is not reusable.
+    const corruptEvidence = JSON.parse(finalEvidence);
+    corruptEvidence.images[f.prepared[0].meaningId].publicDelivery.sha256 =
+      "0".repeat(64);
+    await atomicJSON(evidencePath, corruptEvidence);
+    let repairedCalls = 0;
+    const repaired = await acceptMCPReceipts({
+      ...f.args,
+      fetcher: async (url) => {
+        repairedCalls++;
+        assert.equal(url, [...f.images.keys()][0]);
+        return storedResponse(f.images.get(url));
+      },
+    });
+    assert.equal(repairedCalls, 1);
+    assert.equal(repaired.reusedAccepted, 2);
+    const interruptedEvidence = JSON.parse(await readFile(evidencePath));
+    interruptedEvidence.cdnAttempts[f.prepared[2].meaningId].push({
+      outcome: "failed",
+      phase: "body",
+      status: 200,
+      bodyBytesRead: 5,
+    });
+    await atomicJSON(evidencePath, interruptedEvidence);
+    let interruptedCalls = 0;
+    const retried = await acceptMCPReceipts({
+      ...f.args,
+      fetcher: async (url) => {
+        interruptedCalls++;
+        assert.equal(url, [...f.images.keys()][2]);
+        return storedResponse(f.images.get(url));
+      },
+    });
+    assert.equal(interruptedCalls, 1);
+    assert.equal(retried.reusedAccepted, 2);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("receipt acceptance uses bounded concurrent GETs and stops scheduling after a terminal mismatch", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "receipt-concurrency-"));
+  try {
+    const f = await receiptFixture(directory, 8);
+    let active = 0;
+    let peak = 0;
+    let calls = 0;
+    const fetcher = async (url) => {
+      calls++;
+      active++;
+      peak = Math.max(peak, active);
+      const body = f.images.get(url);
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            setTimeout(() => {
+              controller.enqueue(body);
+              controller.close();
+              active--;
+            }, 25);
+          },
+        }),
+        { headers: { "content-type": "image/webp" } },
+      );
+    };
+    await assert.rejects(
+      acceptMCPReceipts({ ...f.args, concurrency: 5, fetcher }),
+      /concurrency/,
+    );
+    assert.equal(calls, 0);
+    const result = await acceptMCPReceipts({ ...f.args, fetcher });
+    assert.equal(result.freshCDNVerified, 8);
+    assert.equal(calls, 8);
+    assert.equal(peak, 4);
+    assert.equal(active, 0);
+    // Different receipts force one fresh check per row without bypassing provenance.
+    f.receipt.objects.forEach(
+      (item) => (item.operation = "reconciled-existing"),
+    );
+    await atomicJSON(f.args.receiptsPath, f.receipt);
+    calls = 0;
+    const badURL = [...f.images.keys()][0];
+    await assert.rejects(
+      acceptMCPReceipts({
+        ...f.args,
+        fetcher: async (url) => {
+          if (url === badURL) {
+            calls++;
+            return storedResponse(Buffer.alloc(f.images.get(url).length));
+          }
+          return fetcher(url);
+        },
+      }),
+      /checksum mismatch/,
+    );
+    assert.ok(calls <= 4, "no queued GET begins after terminal mismatch");
+    assert.equal(active, 0, "lock must outlive all in-flight requests/writes");
+    const evidence = JSON.parse(
+      await readFile(join(directory, "rest-local-publication-evidence.json")),
+    );
+    assert.equal(
+      evidence.images[f.prepared[0].meaningId].publicObject.operation,
+      "uploaded",
+    );
+    await assert.rejects(readFile(join(directory, "publication.lock")), {
+      code: "ENOENT",
+    });
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
