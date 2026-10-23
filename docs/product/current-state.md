@@ -105,23 +105,43 @@ root activation/readback pass. Every previous 1,939 field, row order and top-lev
 metadata remains unchanged, including all three replacements. The batch now
 contributes 873 published images across sixteen receipt collections; 124 remain held.
 
-The next subscription-only cloud run completed with 991 saved images, seven
-refusals and two uncertain submissions. It reports 991 producer and 991
-independent reviews, retaining 154 disagreements. Its 58 native packs and two
-final metadata ZIPs total 2,341,067,929 bytes. All sixty files are now downloaded,
-full-SHA verified and copied into local intake. Secure content verification and
-the receiver review remain pending; transport checks do not establish full image
-decoding, receipt reconstruction or semantic approval of 991 images. Two initially
-missing transfers arrived after one explicit retry; that history remains recorded.
-The cloud workspace is now unavailable, so no new workspace cleanup was performed.
-Another run stopped at its storage floor with an unavailable executor: 848 saved,
-five refused, three uncertain and 144 untouched; 344 independent reviews were
-last verified. Its exports cover 796 originals, leaving 52 saved originals and
-new reviews unexported. A further run also stopped at its storage floor; another
-reservation remains idle. Capacity guards are unchanged. Generation and
-reservation remain separate from local approval and publication. Only cloud
-transport copies with verified local preservation are eligible for the authorized
-cleanup; earlier cleanup STOP conditions remain in force, with no new deletion.
+The next subscription-only cloud run has 991 saved images, seven refusals and
+two uncertain submissions. Local intake now verifies every saved native PNG,
+every reviewed 960 × 640 WebP, all 991 exact derivative reproductions and all
+991 accessible saved-tool receipt reconstructions. Its 58 native packs and two
+final metadata ZIPs total 2,341,067,929 bytes; all sixty transfers are preserved.
+Two initially missing transfers arrived after one explicit retry, with that
+history retained. The 991 producer and 991 author-disjoint full-image reviews
+retain 154 disagreements. Local phone-size visual checks and reconciliation are
+still in progress; technical intake adds no prepared or selected coverage.
+
+The permanent local archive now independently preserves 9,051 objects totaling
+7,948,711,937 bytes, plus its 5,193,296-byte completion manifest. It includes all
+991 originals, saved receipts, review evidence, transport ZIPs and batch history.
+A separate full SHA-256 readback checked every archived object and confirmed
+that the copies do not share their working source files' inodes. Originals and
+history stay on the owner's computer; none were uploaded to R2.
+
+Another run stopped at the storage floor with its executor unavailable: 848
+saved, five refused, three uncertain and 144 untouched. Independent reviews were
+last verified at 344. Its exports cover 796 originals, leaving 52 saved originals
+and later reviews unexported. Both final metadata ZIPs are locally verified;
+their complete descriptors identify 48 native packs totaling 2,000,530,612 bytes,
+which remain unreceived. No image coverage is inferred from those descriptors.
+A further run stopped at its disk floor. An idle reservation's fresh read-only
+check also found the executor unavailable, with no new generation calls or
+verified free-space reading. Capacity guards are unchanged.
+
+For authorized cloud cleanup, 102 exact saved-Library transport copies were
+moved to recoverable Trash after full local backup verification. A fresh scan
+checked all 247 ZIPs in both download folders; 231 matched previously verified
+VocaNova artifacts. The other sixteen were outside the known artifact set and
+were excluded. No additional verified VocaNova archive was found. A fresh
+paginated cloud readback confirms the same 102 Trash entries. The 103 older
+backed byte identities whose exact cloud targets remain unresolved or were not
+found are retained. No permanent purge, local deletion or live R2 change was
+performed; quota reduction was not measured. Earlier generation-workspace
+cleanup STOP conditions remain in force and were not retried.
 
 Earlier batches retain their original outcomes. The first 100-image run has 44
 included first attempts, a separately approved second **admit** attempt, 51 local

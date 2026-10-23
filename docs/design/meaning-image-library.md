@@ -244,25 +244,43 @@ metadata plus the three replacements are unchanged. This batch now contributes
 bytes local across sixteen receipt collections; 124 saved images remain held.
 Unresolved held, refused and uncertain outcomes add no approved coverage.
 
-The next subscription-only cloud run reports 991 saved images, seven refusals
-and two uncertain submissions, with 991 producer and 991 independent reviews
-and 154 disagreements preserved. Its 58 native packs and two final metadata ZIPs
-total 2,341,067,929 bytes. All sixty files are now downloaded, full-SHA verified
-and copied into local intake. Secure content verification and receiver review
-remain pending; transport checks do not establish full image decoding, receipt
-reconstruction or semantic approval of 991 images and add no prepared or selected
-coverage. Two initially missing transfers arrived after one explicit retry; that
-history remains recorded. The cloud workspace is now unavailable, preventing new
-workspace cleanup.
-Another batch stopped at its disk floor with the executor unavailable: 848 saved, five refused, three uncertain and
-144 untouched. Its last verified independent-review count is 344; 796 originals
-are exported and 52 saved originals plus new reviews are unexported. Its final
-reply has complete descriptors for two metadata ZIPs and links to 48 native packs
-without their individual sizes/hashes. Those links do not establish transfer.
-A further batch stopped at its disk floor; another reservation remains idle.
-Capacity guards are unchanged. Only cloud transport copies with verified local
-preservation are eligible for authorized cleanup; earlier cleanup STOP conditions
-remain in force. No new deletion is established here.
+The next subscription-only cloud run has 991 saved images, seven refusals and
+two uncertain submissions. Local intake now verifies every saved native PNG,
+every reviewed 960 × 640 WebP, all 991 exact derivative reproductions and all
+991 accessible saved-tool receipt reconstructions. Its 58 native packs and two
+final metadata ZIPs total 2,341,067,929 bytes; all sixty transfers are preserved.
+Two initially missing transfers arrived after one explicit retry, with that
+history retained. The 991 producer and 991 author-disjoint full-image reviews
+retain 154 disagreements. Local phone-size visual checks and reconciliation are
+still in progress; technical intake adds no prepared or selected coverage.
+
+The permanent local archive now independently preserves 9,051 objects totaling
+7,948,711,937 bytes, plus its 5,193,296-byte completion manifest. It includes all
+991 originals, saved receipts, review evidence, transport ZIPs and batch history.
+A separate full SHA-256 readback checked every archived object and confirmed
+that the copies do not share their working source files' inodes. Originals and
+history stay on the owner's computer; none were uploaded to R2.
+
+Another run stopped at the storage floor with its executor unavailable: 848
+saved, five refused, three uncertain and 144 untouched. Independent reviews were
+last verified at 344. Its exports cover 796 originals, leaving 52 saved originals
+and later reviews unexported. Both final metadata ZIPs are locally verified;
+their complete descriptors identify 48 native packs totaling 2,000,530,612 bytes,
+which remain unreceived. No image coverage is inferred from those descriptors.
+A further run stopped at its disk floor. An idle reservation's fresh read-only
+check also found the executor unavailable, with no new generation calls or
+verified free-space reading. Capacity guards are unchanged.
+
+For authorized cloud cleanup, 102 exact saved-Library transport copies were
+moved to recoverable Trash after full local backup verification. A fresh scan
+checked all 247 ZIPs in both download folders; 231 matched previously verified
+VocaNova artifacts. The other sixteen were outside the known artifact set and
+were excluded. No additional verified VocaNova archive was found. A fresh
+paginated cloud readback confirms the same 102 Trash entries. The 103 older
+backed byte identities whose exact cloud targets remain unresolved or were not
+found are retained. No permanent purge, local deletion or live R2 change was
+performed; quota reduction was not measured. Earlier generation-workspace
+cleanup STOP conditions remain in force and were not retried.
 
 The ten-image cloud pilot is included after independent visual review, verified
 local original archival and fresh CDN-byte checks. The first 100-image cloud
