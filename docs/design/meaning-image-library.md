@@ -57,7 +57,7 @@ behavior after a single-image purge, plus repeated 404 cache bypasses; the rule'
 configured TTL alone does not prove delivery behavior or whole-site performance.
 The later REST public objects carry the one-year
 `public, max-age=31536000, immutable` browser header, verified on actual CDN
-responses, including every image in the latest 869-image addition.
+responses, including every image in the latest 873-image addition.
 Historical MCP objects and the first five REST uploads retain
 their original browser metadata; the new header is not a claim about every asset.
 
@@ -153,9 +153,9 @@ preserved separately and excluded from the approved upload plan.
 
 ## Acceptance checkpoint
 
-The 23 October local checkpoint contains **1,939 selected published meanings** and
-**1,939 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
-in the selected delivery manifest; **8,112 meanings still need prepared artwork**.
+The 23 October local checkpoint contains **1,943 selected published meanings** and
+**1,943 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
+in the selected delivery manifest; **8,108 meanings still need prepared artwork**.
 The latest 1,000-attempt cloud batch retains 997 saved originals and complete
 accessible returned receipts locally, two refused outcomes and one uncertain
 submission boundary. Producer and author-disjoint full-image reviews originally yielded 805
@@ -224,24 +224,45 @@ final receipts distinguish three existing-object reconciliations from two new
 uploads. Separate canonical CDN full-byte checks, independent selected-metadata
 verification and root activation/readback pass. All previous 1,934 fields, row
 order and top-level metadata plus the three corrected replacements are unchanged.
-This batch now contributes 869 published images totaling 81,724,114 public bytes,
+That checkpoint contributed 869 published images totaling 81,724,114 public bytes,
 with 2,179,231,404 native bytes local across fifteen receipt collections;
-128 saved images remain held.
+128 saved images remained held.
+
+A subsequent thirty-original review approved **yard**, **struggle**, **defeat**
+and **describe**. The **yard** ruler is legible; its separate comparison pieces
+are approximate, with the independent disagreement retained. **Fever** stays held
+after actual mobile review found its necessary thermometer reading too small,
+superseding its native-size candidate recommendation. Five mocked app-size checks
+passed technically; root separately inspected all five normal viewport screenshots.
+The four add 371,540 public bytes while 10,207,352 native bytes remain local.
+The initial prewrite-readback failure caused no PUT and remains preserved alongside
+the explicit operator reconciliation. The completed run made four new PUTs; fresh
+canonical CDN full-byte checks, independent selected-metadata checks and root
+activation/readback pass. All previous 1,939 fields, row order and top-level
+metadata plus the three replacements are unchanged. This batch now contributes
+873 published images totaling 82,095,654 public bytes, with 2,189,438,756 native
+bytes local across sixteen receipt collections; 124 saved images remain held.
 Unresolved held, refused and uncertain outcomes add no approved coverage.
 
 The next subscription-only cloud run reports 991 saved images, seven refusals
 and two uncertain submissions, with 991 producer and 991 independent reviews
 and 154 disagreements preserved. Its 58 native packs and two final metadata ZIPs
-total 2,341,067,929 bytes. None matched the two local download folders in the latest
-local download scan; transfer, local intake and approval remain pending. These cloud
-results add no prepared or selected coverage. Another batch stopped at its disk
-floor with the executor unavailable: 848 saved, five refused, three uncertain and
+total 2,341,067,929 bytes. All sixty files are now downloaded, full-SHA verified
+and copied into local intake. Secure content verification and receiver review
+remain pending; transport checks do not establish full image decoding, receipt
+reconstruction or semantic approval of 991 images and add no prepared or selected
+coverage. Two initially missing transfers arrived after one explicit retry; that
+history remains recorded. The cloud workspace is now unavailable, preventing new
+workspace cleanup.
+Another batch stopped at its disk floor with the executor unavailable: 848 saved, five refused, three uncertain and
 144 untouched. Its last verified independent-review count is 344; 796 originals
 are exported and 52 saved originals plus new reviews are unexported. Its final
 reply has complete descriptors for two metadata ZIPs and links to 48 native packs
 without their individual sizes/hashes. Those links do not establish transfer.
 A further batch stopped at its disk floor; another reservation remains idle.
-Capacity guards are unchanged.
+Capacity guards are unchanged. Only cloud transport copies with verified local
+preservation are eligible for authorized cleanup; earlier cleanup STOP conditions
+remain in force. No new deletion is established here.
 
 The ten-image cloud pilot is included after independent visual review, verified
 local original archival and fresh CDN-byte checks. The first 100-image cloud
@@ -280,8 +301,8 @@ The selected delivery checkpoint binds canonical CDN-byte verification and full
 local-original SHA-256 checks. Its three reviewed replacements for **word**,
 **win** (the race scene) and **fine** remain unchanged, excluding superseded
 artwork while preserving history. Separate selected MCP
-(516) and REST (1,423) records preserve actual transport provenance. The latest
-read-only R2 inventory contains **1,942 public objects / 175,361,158 bytes**,
+(516) and REST (1,427) records preserve actual transport provenance. The latest
+read-only R2 inventory contains **1,946 public objects / 175,732,698 bytes**,
 including three superseded objects. Both retired buckets remain absent. Existing
 managed Wrangler authentication provided public-only uploads; the latest
 authenticated two-page storage inventory used the Cloudflare MCP connector.
@@ -347,6 +368,18 @@ and **cab** at 1280px/light. Root inspected all four viewport screenshots.
 Technical rendering assertions passed; the separate sentence-legibility gate
 held **literally**. These checks use synthetic API/auth and do not establish
 real CDN performance, all five pictures' full viewport matrix or staging acceptance.
+
+A later single default-network comparison returned the exact 19,926-byte percent
+image through Node in 313ms, direct Chromium navigation in 5,327ms and the actual
+word page in 4,578ms. Browser stage telemetry reports about 5,166ms and 4,236ms in
+secure connection setup. This narrows the observed stage in these samples; the
+underlying cause and the older failures' stage remain unknown. The direct
+navigation's attempted five-second DOM snapshot failed during navigation and is
+retained. One image, sequential ordering, bundled headless Chromium and synthetic
+API/auth do not establish performance acceptance. No fix or configuration change
+was made; both owned servers were stopped. A bounded handshake-level capture on a
+natural recurrence is the next diagnostic step.
+
 The earlier PostgreSQL rehearsal imported the then-current 1,070-image manifest
 and separately exercised a synthetic 10,051-row fixture. Full artwork coverage,
 the final manifest import rehearsal, one consolidated PR, required hosted checks
