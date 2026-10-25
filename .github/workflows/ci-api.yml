@@ -88,6 +88,21 @@ jobs:
             exit 1
           fi
 
+      - name: Verify image publication transactions against PostgreSQL without skips
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          test_log="$(mktemp)"
+          trap 'rm -f "$test_log"' EXIT
+          go test -race ./business/meaningmedia -count=1 -v | tee "$test_log"
+          for case in TestMeaningImagesPostgreSQLPublicationRevisionAndIdempotence TestMeaningImagesPostgreSQLBatchedImportRollsBackAcrossBatchBoundary; do
+            grep -Eq "^--- PASS: $case " "$test_log"
+          done
+          if grep -Eq '^[[:space:]]*--- SKIP:' "$test_log"; then
+            echo "Image publication PostgreSQL cases must not skip" >&2
+            exit 1
+          fi
+
       - name: Verify discovery and review transactions against PostgreSQL without skips
         working-directory: apps/api
         run: |

@@ -255,6 +255,10 @@ describe("external meaning picture delivery", () => {
       { ...image, height: 2.5 },
     ]) assert.equal(getExternalMeaningPicture(meaningId, bad), undefined);
     assert.equal(getExternalMeaningPicture(meaningId), undefined);
+    for (const malformedId of ["-".repeat(36), "a".repeat(36)]) {
+      const malformed = { ...image, meaningId: malformedId, imageUrl: `https://images.vocanova.site/meanings/${malformedId}/${meaningRevision}/${sha256}.webp` };
+      assert.equal(getExternalMeaningPicture(malformedId, malformed), undefined);
+    }
   });
 });
 

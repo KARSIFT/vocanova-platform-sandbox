@@ -45,7 +45,9 @@ export function getExternalMeaningPicture(
   if (
     !image ||
     image.meaningId !== meaningId ||
-    !/^[0-9a-f-]{36}$/.test(meaningId) ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+      meaningId,
+    ) ||
     !/^[a-f0-9]{64}$/.test(image.meaningRevision) ||
     !/^[a-f0-9]{64}$/.test(image.sha256) ||
     (expectedRevision && image.meaningRevision !== expectedRevision) ||
