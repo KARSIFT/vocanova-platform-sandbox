@@ -1,5 +1,18 @@
 # Vocanova current product state
 
+## Image release preparation — 26 October 2026
+
+Cloudflare R2 inventory on 26 October contains 7,718 current meaning images.
+Three superseded public versions were deleted at the owner’s request and their
+exact CDN URLs purged. Current replacement objects remain intact. These storage
+counts do not establish deployment or database import.
+
+Live pre-release checks identify staging 0.4.6 (fa7b6c84) and production 0.4.3
+(9066da07), each using the original 92 bundled pictures. The new meaning-images
+API returns 404 in both. Release requires the consolidated delivery PR, passing
+CI/review, staging deployment plus verified metadata import/readback, then the
+manual production workflow and its own import/readback.
+
 ## Meaning image library — 1,943-image checkpoint, 23 October 2026
 
 The delivery branch adds a portable, meaning-specific image library with a stable
