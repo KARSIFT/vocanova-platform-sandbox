@@ -346,7 +346,12 @@ export function LessonPlayer({
                 <p className="mt-4 text-xl leading-relaxed text-neutral-900">
                   {step.word.definition}
                 </p>
-                <MeaningPicture meaningId={step.word.meaningId} />
+                <MeaningPicture
+                  meaningId={step.word.meaningId}
+                  image={step.word.image}
+                  meaningRevision={step.pronunciationRevision}
+                  resolveMissing
+                />
                 <blockquote className="mt-5 border-l-4 border-primary-300 pl-4 text-lg text-neutral-700">
                   {step.word.example}
                 </blockquote>

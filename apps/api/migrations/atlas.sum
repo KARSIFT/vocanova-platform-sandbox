@@ -1,4 +1,4 @@
-h1:WUL1qGMML8T0jfMWX2fGzvupn0RugcVNfL0IOEnE+Do=
+h1:Z4djaEKMEUnARM0PKLidpCgfE1gKe/zhz2XkxpFYkXQ=
 20260724210000_identity_foundation.sql h1:kCE91pYCtOUccWkoJGp8Ow1N7oOWjxAvGcPQtSIC17k=
 20260724210001_oauth_state.sql h1:8UfSmhz20WitPSfl/I/KlApBO0VK39xYS053oC3IEiU=
 20260725100000_voc026_p1_content_tables.sql h1:rTIXQ0O1B1X6fu82HtnYS3xb0KU3yYQO/kJmui0C9j8=
@@ -46,3 +46,4 @@ h1:WUL1qGMML8T0jfMWX2fGzvupn0RugcVNfL0IOEnE+Do=
 20261018130000_pronunciation_audio.sql h1:tbSyF8rk0ioGY+C1CRy6FxoEJnmAhke2w2TrSsrG6QM=
 20261018150000_pronunciation_generation_budget.sql h1:/8ywYbMy0i9tgOoS6fa4llqSHP9ga9baIoBjR/cpHLQ=
 20261018170000_review_attempt_daily_eligibility_index.sql h1:W3DtyRaECOCT4oyXUS9QfkzXShq5buljeD0kzNvXUig=
+20261020170000_meaning_image_assets.sql h1:EU1+n+1tM6S8Ug29/rvNc45rctwHn/uTi8rfVRbkDgM=

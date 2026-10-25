@@ -112,7 +112,11 @@ export default async function SavedWordDetailPage({
           </p>
         ) : null}
 
-        <MeaningPicture meaningId={meaning.id} />
+        <MeaningPicture
+          meaningId={meaning.id}
+          image={meaning.image}
+          meaningRevision={meaning.meaningRevision}
+        />
         <MeaningTeaching meaning={meaning} />
         <details className="mt-4 border-t border-neutral-200 pt-2">
           <summary className="min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">

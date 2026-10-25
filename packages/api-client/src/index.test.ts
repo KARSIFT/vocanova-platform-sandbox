@@ -15,6 +15,32 @@ import {
 } from "./index.js";
 
 describe("VocanovaClient", () => {
+  it("reads bounded meaning-image IDs with authenticated request options", async () => {
+    let calledUrl = "";
+    let calledInit: RequestInit | undefined;
+    const controller = new AbortController();
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      credentials: "include",
+      fetch: async (input, init) => {
+        calledUrl = String(input);
+        calledInit = init;
+        return Response.json({ items: [] });
+      },
+    });
+    const { data } = await client.getMeaningImages(
+      ["meaning-one", "meaning/two"],
+      { signal: controller.signal },
+    );
+    const url = new URL(calledUrl);
+    assert.equal(url.pathname, "/api/v1/meaning-images");
+    assert.equal(url.searchParams.get("meaningIds"), "meaning-one,meaning/two");
+    assert.equal(calledInit?.method, "GET");
+    assert.equal(calledInit?.credentials, "include");
+    assert.equal(calledInit?.signal, controller.signal);
+    assert.deepEqual(data.items, []);
+  });
+
   it("keeps daily lesson mutations tied to the exact session and retry intent", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const controller = new AbortController();

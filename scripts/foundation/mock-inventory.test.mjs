@@ -35,6 +35,7 @@ test("current delivery registers only the reviewed learning feature boundaries",
     "/api/v1/daily-lessons/{sessionId}",
     "/api/v1/daily-lessons/{sessionId}/actions",
     "/api/v1/pronunciation",
+    "/api/v1/meaning-images",
   ])
     assert.equal(isRegisteredAPIPath(route), true, route);
   for (const module of [
@@ -43,6 +44,7 @@ test("current delivery registers only the reviewed learning feature boundaries",
     "wordknowledge",
     "achievements",
     "pronunciation",
+    "meaningmedia",
   ])
     assert.equal(isRegisteredBusinessModule(module), true, module);
   for (const schema of [
@@ -54,6 +56,7 @@ test("current delivery registers only the reviewed learning feature boundaries",
     "userlearningpreferences.go",
     "userwordknowledge.go",
     "wordknowledgeaction.go",
+    "meaningimageasset.go",
   ])
     assert.equal(isRegisteredSchemaFile(schema), true, schema);
   assert.deepEqual(validateMockInventory(), []);
@@ -75,6 +78,9 @@ test("registered feature families do not admit invented routes, modules, or sche
     "/api/v1/lesson-sessions/",
     "/api/v1/pronunciation/admin",
     "/api/v1/pronunciation/learner-text",
+    "/api/v1/meaning-images/admin",
+    "/api/v1/meaning-images/upload",
+    "/api/v1/meaning-images/learner-text",
     "/api/v1/meaning-knowledge/",
   ])
     assert.equal(isRegisteredAPIPath(route), false, route);
@@ -266,6 +272,7 @@ test("learning route sources and exact migration table inventories remain bounde
     "daily_lessons.go",
     "knowledge_map.go",
     "pronunciation.go",
+    "meaningmedia.go",
   ]) {
     const source = readFileSync(
       path.join(root, "apps/api/app/api", file),
@@ -284,6 +291,7 @@ test("learning route sources and exact migration table inventories remain bounde
     "20261017100000_daily_lessons.sql",
     "20261017100001_knowledge_catalog.sql",
     "20261018130000_pronunciation_audio.sql",
+    "20261020170000_meaning_image_assets.sql",
   ]) {
     assert.equal(isRegisteredMigrationFile(migration), true, migration);
     const source = readFileSync(

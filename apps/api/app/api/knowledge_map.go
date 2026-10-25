@@ -7,6 +7,8 @@ import (
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaningmedia"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
 	"github.com/danielgtaylor/huma/v2"
 )
 
@@ -44,12 +46,35 @@ func mapKnowledgeCatalogError(err error) error {
 		return huma.Error500InternalServerError("Could not access your knowledge map")
 	}
 }
-func RegisterKnowledgeMap(api huma.API, svc *knowledgecatalog.Service, authSvc *auth.Service) {
+func RegisterKnowledgeMap(api huma.API, svc *knowledgecatalog.Service, authSvc *auth.Service, media ...*meaningmedia.Service) {
 	private := func(ctx huma.Context, next func(huma.Context)) { ctx.SetHeader("Cache-Control", "no-store"); next(ctx) }
 	huma.Register(api, huma.Operation{OperationID: "GetKnowledgeMap", Method: http.MethodGet, Path: "/api/v1/knowledge-map", Summary: "Explore the sourced 10000-word map in bands of 100", Tags: []string{"Learning"}, Middlewares: []func(huma.Context, func(huma.Context)){private, RequireAuth()}}, func(ctx context.Context, in *KnowledgeMapInput) (*KnowledgeMapOutput, error) {
 		state, err := svc.Read(ctx, RequesterUserID(ctx), in.Band)
 		if err != nil {
 			return nil, mapKnowledgeCatalogError(err)
+		}
+		for i := range state.CurrentBand.Items {
+			item := &state.CurrentBand.Items[i]
+			item.MeaningRevision = meaningidentity.Revision(item.MeaningID.String(), item.WordText, item.PartOfSpeech, item.ShortDefinition)
+		}
+		if len(media) > 0 && media[0] != nil && len(state.CurrentBand.Items) > 0 {
+			ids := make([]string, 0, len(state.CurrentBand.Items))
+			for _, item := range state.CurrentBand.Items {
+				ids = append(ids, item.MeaningID.String())
+			}
+			images, err := media[0].Read(ctx, ids)
+			if err == nil {
+				byID := map[string]meaningmedia.Image{}
+				for _, image := range images {
+					byID[image.MeaningID] = image
+				}
+				for i := range state.CurrentBand.Items {
+					item := &state.CurrentBand.Items[i]
+					if image, ok := byID[item.MeaningID.String()]; ok && image.MeaningRevision == item.MeaningRevision {
+						item.Image = &image
+					}
+				}
+			}
 		}
 		return &KnowledgeMapOutput{CacheControl: "no-store", Body: *state}, nil
 	})

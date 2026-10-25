@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaningmedia"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 )
@@ -50,17 +52,19 @@ type WordUsageNoteDTO struct {
 
 // WordMeaningDTO is a meaning with examples and usage notes.
 type WordMeaningDTO struct {
-	ID                string             `json:"id" format:"uuid" doc:"Meaning identifier"`
-	PartOfSpeech      string             `json:"partOfSpeech" doc:"Part of speech"`
-	ShortDefinition   string             `json:"shortDefinition" doc:"Short definition"`
-	LearnerDefinition string             `json:"learnerDefinition,omitempty" doc:"Learner-friendly definition"`
-	SelfReportedKnown bool               `json:"selfReportedKnown" doc:"Requester self-assessment, independent of review mastery"`
-	Saved             bool               `json:"saved" doc:"Whether the authenticated requester has saved this meaning"`
-	UserWordID        string             `json:"userWordId,omitempty" format:"uuid" doc:"Saved record identifier when this meaning is saved"`
-	ReviewState       string             `json:"reviewState,omitempty" enum:"new,learning,reviewing,mastered,ignored,archived" doc:"Learner-visible saved-word state"`
-	Due               bool               `json:"due,omitempty" doc:"Whether this saved word is due according to server time"`
-	Examples          []WordExampleDTO   `json:"examples" doc:"Example sentences"`
-	UsageNotes        []WordUsageNoteDTO `json:"usageNotes" doc:"Usage notes"`
+	MeaningRevision   string              `json:"meaningRevision,omitempty"`
+	Image             *meaningmedia.Image `json:"image,omitempty"`
+	ID                string              `json:"id" format:"uuid" doc:"Meaning identifier"`
+	PartOfSpeech      string              `json:"partOfSpeech" doc:"Part of speech"`
+	ShortDefinition   string              `json:"shortDefinition" doc:"Short definition"`
+	LearnerDefinition string              `json:"learnerDefinition,omitempty" doc:"Learner-friendly definition"`
+	SelfReportedKnown bool                `json:"selfReportedKnown" doc:"Requester self-assessment, independent of review mastery"`
+	Saved             bool                `json:"saved" doc:"Whether the authenticated requester has saved this meaning"`
+	UserWordID        string              `json:"userWordId,omitempty" format:"uuid" doc:"Saved record identifier when this meaning is saved"`
+	ReviewState       string              `json:"reviewState,omitempty" enum:"new,learning,reviewing,mastered,ignored,archived" doc:"Learner-visible saved-word state"`
+	Due               bool                `json:"due,omitempty" doc:"Whether this saved word is due according to server time"`
+	Examples          []WordExampleDTO    `json:"examples" doc:"Example sentences"`
+	UsageNotes        []WordUsageNoteDTO  `json:"usageNotes" doc:"Usage notes"`
 }
 
 // WordDetailDTO is a canonical word with its meanings.
@@ -121,6 +125,15 @@ type GetWordOutput struct {
 // preferences reader takes precedence, including an authoritative unknown focus.
 // A lookup failure retains the original onboarding fallback.
 func RegisterContent(api huma.API, svc *content.Service, usersSvc *users.Service, preferences ...LearningPreferencesReader) {
+	registerContent(api, svc, usersSvc, nil, preferences...)
+}
+
+// RegisterContentWithImages adds optional shared media without requiring callers
+// to request each meaning separately. Media failures retain the learning text.
+func RegisterContentWithImages(api huma.API, svc *content.Service, usersSvc *users.Service, media *meaningmedia.Service, preferences ...LearningPreferencesReader) {
+	registerContent(api, svc, usersSvc, media, preferences...)
+}
+func registerContent(api huma.API, svc *content.Service, usersSvc *users.Service, media *meaningmedia.Service, preferences ...LearningPreferencesReader) {
 	registerCanonicalSearch(api, svc)
 	huma.Register(api, huma.Operation{
 		OperationID: "ListJourneySituations",
@@ -204,6 +217,29 @@ func RegisterContent(api huma.API, svc *content.Service, usersSvc *users.Service
 		}
 		out := &GetWordOutput{}
 		out.Body.Word = wordToDTO(word)
+		if media != nil {
+			for offset := 0; offset < len(out.Body.Word.Meanings); offset += meaningmedia.MaxBatch {
+				end := min(offset+meaningmedia.MaxBatch, len(out.Body.Word.Meanings))
+				ids := make([]string, 0, end-offset)
+				for _, m := range out.Body.Word.Meanings[offset:end] {
+					ids = append(ids, m.ID)
+				}
+				images, err := media.Read(ctx, ids)
+				if err != nil {
+					continue
+				}
+				byID := map[string]meaningmedia.Image{}
+				for _, image := range images {
+					byID[image.MeaningID] = image
+				}
+				for i := offset; i < end; i++ {
+					m := &out.Body.Word.Meanings[i]
+					if image, ok := byID[m.ID]; ok && image.MeaningRevision == m.MeaningRevision {
+						m.Image = &image
+					}
+				}
+			}
+		}
 		return out, nil
 	})
 }
@@ -244,6 +280,7 @@ func wordToDTO(w *content.WordDetail) WordDetailDTO {
 			userWordID = m.UserWordID.String()
 		}
 		meanings[i] = WordMeaningDTO{
+			MeaningRevision:   meaningidentity.Revision(m.ID.String(), w.Text, m.PartOfSpeech, m.ShortDefinition),
 			ID:                m.ID.String(),
 			PartOfSpeech:      m.PartOfSpeech,
 			ShortDefinition:   m.ShortDefinition,

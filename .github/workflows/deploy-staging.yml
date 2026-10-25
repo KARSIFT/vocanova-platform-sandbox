@@ -636,6 +636,13 @@ jobs:
             -o /tmp/deploy-bundle/apps/api/bin/p1-content-seed \
             ./cmd/seed
           chmod +x /tmp/deploy-bundle/apps/api/bin/p1-content-seed
+          # Ship the same-revision operator tool. Reviewed image metadata is
+          # transferred and imported separately after canonical/CDN verification.
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -C apps/api \
+            -o /tmp/deploy-bundle/apps/api/bin/meaning-media-import \
+            ./cmd/meaning-media-import
+          chmod +x /tmp/deploy-bundle/apps/api/bin/meaning-media-import
           # T06's migration files. Atlas's default
           # versioned glob is `*.sql`, so the .down.sql
           # .example files are deliberately NOT copied
