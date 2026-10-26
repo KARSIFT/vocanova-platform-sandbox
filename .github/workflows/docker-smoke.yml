@@ -13,6 +13,10 @@ on:
     paths:
       - "apps/web/**"
       - "packages/**"
+      - "infra/nginx/**"
+      - "infra/nginx-production/**"
+      - "infra/nginx-shared/**"
+      - "infra/scripts/verify_auth_proxy.py"
       - ".github/workflows/docker-smoke.yml"
       - "scripts/foundation/voc110-web-container-runtime.test.mjs"
 
@@ -31,6 +35,9 @@ jobs:
     steps:
       - name: Check out reviewed revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Verify actual nginx cookie and client IP isolation
+        run: python3 infra/scripts/verify_auth_proxy.py --require-docker
 
       - name: Build, boot, and HTTP-smoke the production web image
         env:

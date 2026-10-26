@@ -104,6 +104,7 @@ jobs:
         id: mint_production_session
         env:
           SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN }}
+          SYNTHETIC_COOKIE_ENVIRONMENT: production
         run: |
           set -euo pipefail
           if [ -z "${SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
@@ -111,8 +112,7 @@ jobs:
             exit 1
           fi
           chmod +x infra/scripts/mint-synthetic-session.sh
-          SESSION_COOKIE_PREFIX=vocanova_session \
-            infra/scripts/mint-synthetic-session.sh \
+          infra/scripts/mint-synthetic-session.sh \
             "https://api-production.vocanova.site"
 
       # Mirror the intended production smoke kill-switch expectations.
@@ -126,7 +126,7 @@ jobs:
           EXPECT_OAUTH_ENABLED: "true"
           EXPECT_NEW_SIGNUPS_ENABLED: "false"
           EXPECT_AI_ENABLED: "true"
-          SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie }}
+          SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie_header }}
         run: |
           set -euo pipefail
           chmod +x infra/scripts/run-scheduled-synthetic.sh
@@ -176,6 +176,7 @@ jobs:
         id: mint_staging_session
         env:
           SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.STAGING_SMOKE_TEST_SESSION_MINT_TOKEN }}
+          SYNTHETIC_COOKIE_ENVIRONMENT: staging
         run: |
           set -euo pipefail
           if [ -z "${SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
@@ -228,6 +229,8 @@ jobs:
           STAGING_WEB_BASE_URL: "https://staging.vocanova.site"
           E2E_SESSION_COOKIE: ${{ steps.mint_staging_session.outputs.session_cookie }}
           E2E_CSRF_TOKEN: ${{ steps.mint_staging_session.outputs.csrf_token }}
+          E2E_SESSION_COOKIE_NAME: ${{ steps.mint_staging_session.outputs.session_cookie_name }}
+          E2E_CSRF_COOKIE_NAME: ${{ steps.mint_staging_session.outputs.csrf_cookie_name }}
         run: |
           set -euo pipefail
           pnpm --filter @vocanova/web exec playwright test \
@@ -251,6 +254,7 @@ jobs:
         id: mint_production_session
         env:
           SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN }}
+          SYNTHETIC_COOKIE_ENVIRONMENT: production
         run: |
           set -euo pipefail
           if [ -z "${SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
@@ -258,8 +262,7 @@ jobs:
             exit 1
           fi
           chmod +x infra/scripts/mint-synthetic-session.sh
-          SESSION_COOKIE_PREFIX=vocanova_session \
-            infra/scripts/mint-synthetic-session.sh \
+          infra/scripts/mint-synthetic-session.sh \
             "https://api-production.vocanova.site"
 
       # Same intended kill-switch state as journey-content: route-sweep also
@@ -270,7 +273,7 @@ jobs:
           EXPECT_OAUTH_ENABLED: "true"
           EXPECT_NEW_SIGNUPS_ENABLED: "false"
           EXPECT_AI_ENABLED: "true"
-          SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie }}
+          SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie_header }}
         run: |
           set -euo pipefail
           chmod +x infra/scripts/run-scheduled-synthetic.sh

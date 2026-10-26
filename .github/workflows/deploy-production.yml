@@ -759,11 +759,12 @@ jobs:
       - name: Mint synthetic smoke-test session for the production smoke suite
         id: mint_production_session
         env:
-          PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN }}
+          SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN }}
+          SYNTHETIC_COOKIE_ENVIRONMENT: production
           PRODUCTION_API_BASE_URL: https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}
         run: |
           set -euo pipefail
-          if [ -z "${PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
+          if [ -z "${SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
             echo "ERROR: PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN is required for the production core-loop smoke check" >&2
             echo "  It is the same value the 'Sync production smoke-test session mint token' step writes" >&2
             echo "  into the api container's SMOKE_TEST_SESSION_MINT_TOKEN; VOC-050-T01 does not register" >&2
@@ -771,28 +772,12 @@ jobs:
             exit 1
           fi
 
-          response_json="$(curl -fsS --max-time 20 \
-            -X POST \
-            -H "Authorization: Bearer ${PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN}" \
-            -H "Accept: application/json" \
-            "${PRODUCTION_API_BASE_URL}/ops/synthetic-smoke-test/session")"
-
-          session_token="$(printf '%s' "$response_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["session_cookie"])')"
-          if [ -z "$session_token" ]; then
-            echo "ERROR: the production session-mint endpoint returned an empty session value" >&2
-            exit 1
-          fi
-
-          # The mint endpoint returns the OPAQUE session value, not a
-          # Cookie header pair, while smoke-test-production.sh passes
-          # SMOKE_TEST_SESSION_COOKIE straight through as a whole
-          # `Cookie:` header (see its section # 5. and case 5 of
-          # smoke-test-production.selftest.sh). The `vocanova_session=`
-          # name is therefore added here; without it the API would see
-          # no session cookie at all and the core-loop checks would 401
-          # instead of passing.
-          echo "::add-mask::$session_token"
-          echo "session_cookie=vocanova_session=$session_token" >> "$GITHUB_OUTPUT"
+          # The shared helper validates the authoritative production cookie
+          # names and masks the opaque values. session_cookie_header is the
+          # full `<session_cookie_name>=<opaque>` pair that
+          # smoke-test-production.sh sends whole as its `Cookie:` header (see
+          # its section # 5. and case 5 of smoke-test-production.selftest.sh).
+          bash infra/scripts/mint-synthetic-session.sh "$PRODUCTION_API_BASE_URL"
           echo "Minted a synthetic smoke-test session for the production smoke suite."
 
       # VOC-038-T02: replaces the manual curl/SSH checks used ad hoc
@@ -806,8 +791,8 @@ jobs:
       # true, but this hardcoded expectation still said false, failing
       # the suite over a stale assumption rather than a real defect.
       # VOC-050-T04: SMOKE_TEST_SESSION_COOKIE is now supplied from the
-      # mint step above (a full `vocanova_session=<opaque>` Cookie header
-      # value), so the suite's section # 5. runs its real
+      # mint step above (a full `vocanova_production_session=<opaque>`
+      # Cookie header value), so the suite's section # 5. runs its real
       # GET /api/v1/me and GET /api/v1/journey-situations checks instead
       # of the previous non-fatal SKIP. Both are read-only; the script's
       # documented no-side-effects design is unchanged.
@@ -817,7 +802,7 @@ jobs:
           EXPECT_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
           EXPECT_NEW_SIGNUPS_ENABLED: "false"
           EXPECT_AI_ENABLED: "true"
-          SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie }}
+          SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie_header }}
         run: |
           bash infra/scripts/smoke-test-production.sh \
             "https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}" \

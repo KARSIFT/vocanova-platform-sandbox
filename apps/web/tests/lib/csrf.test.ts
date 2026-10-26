@@ -72,3 +72,17 @@ it("shares one /me recovery request between concurrent callers", async () => {
   release?.();
   assert.deepEqual(await Promise.all([first, second]), ["restored", "restored"]);
 });
+
+it("treats a malformed CSRF cookie as missing and recovers it via /me", async () => {
+  installBrowser();
+  cookies = "vocanova_theme=dark; vocanova_csrf=%E0%A4%A";
+  let requests = 0;
+  globalThis.fetch = (() => {
+    requests += 1;
+    cookies = "vocanova_theme=dark; vocanova_csrf=restored";
+    return Promise.resolve(Response.json({ onboardingStatus: "completed" }));
+  }) as typeof globalThis.fetch;
+
+  assert.equal(await getOrRefreshCSRFToken(), "restored");
+  assert.equal(requests, 1);
+});
