@@ -154,7 +154,7 @@ test("VOC-085-TEST-10: production deploy still invokes the strengthened smoke su
   );
   assert.match(
     deployProduction,
-    /SMOKE_TEST_SESSION_COOKIE: \$\{\{ steps\.mint_production_session\.outputs\.session_cookie \}\}/,
+    /SMOKE_TEST_SESSION_COOKIE: \$\{\{ steps\.mint_production_session\.outputs\.session_cookie_header \}\}/,
     "deploy must pass the workflow-minted synthetic session into the smoke suite",
   );
 

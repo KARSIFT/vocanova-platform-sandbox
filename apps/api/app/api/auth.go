@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/danielgtaylor/huma/v2"
@@ -26,19 +25,9 @@ func sessionTokenFromHuma(c huma.Context, svc *auth.Service) string {
 	return sessionCookieValue(c, svc.SessionCookieName())
 }
 
-// clientIPFromHuma extracts a best-effort client IP from the Huma context.
+// clientIPFromHuma uses the same trusted-proxy policy as the auth domain.
 func clientIPFromHuma(c huma.Context) string {
-	if xff := c.Header("X-Forwarded-For"); xff != "" {
-		if i := strings.Index(xff, ","); i > 0 {
-			return strings.TrimSpace(xff[:i])
-		}
-		return strings.TrimSpace(xff)
-	}
-	if xri := c.Header("X-Real-Ip"); xri != "" {
-		return strings.TrimSpace(xri)
-	}
-	host, _, _ := strings.Cut(c.RemoteAddr(), ":")
-	return host
+	return auth.ClientIP(c.RemoteAddr(), c.Header("X-Real-IP"))
 }
 
 // csrfCookieValue reads the configured double-submit CSRF cookie from the request.

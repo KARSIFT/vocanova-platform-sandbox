@@ -112,3 +112,62 @@ func TestOAuthSessionCookieKeepsSecurityAndScopeForBothChoices(t *testing.T) {
 		assert.Equal(t, !persistent, cookie.Expires.IsZero())
 	}
 }
+
+// TestEnvironmentCookieNames pins the per-tier cookie names. Staging and
+// production share the parent cookie domain, so their names must differ
+// from each other and from the legacy names local/test environments use.
+func TestEnvironmentCookieNames(t *testing.T) {
+	cases := []struct {
+		environment string
+		session     string
+		csrf        string
+	}{
+		{"staging", "vocanova_staging_session", "vocanova_staging_csrf"},
+		{"production", "vocanova_production_session", "vocanova_production_csrf"},
+		{" Production\n", "vocanova_production_session", "vocanova_production_csrf"},
+		{"local", LegacySessionCookieName, LegacyCSRFCookieName},
+		{"test", LegacySessionCookieName, LegacyCSRFCookieName},
+		{"", LegacySessionCookieName, LegacyCSRFCookieName},
+		{"prod", LegacySessionCookieName, LegacyCSRFCookieName},
+		{"staging-preview", LegacySessionCookieName, LegacyCSRFCookieName},
+	}
+	for _, tc := range cases {
+		session, csrf := EnvironmentCookieNames(tc.environment)
+		assert.Equal(t, tc.session, session, "session cookie name for %q", tc.environment)
+		assert.Equal(t, tc.csrf, csrf, "csrf cookie name for %q", tc.environment)
+	}
+}
+
+func TestEnvironmentCookieNamesNeverCollideAcrossTiers(t *testing.T) {
+	stagingSession, stagingCSRF := EnvironmentCookieNames("staging")
+	productionSession, productionCSRF := EnvironmentCookieNames("production")
+	seen := map[string]bool{}
+	for _, name := range []string{
+		stagingSession, stagingCSRF, productionSession, productionCSRF,
+		LegacySessionCookieName, LegacyCSRFCookieName, "vocanova_oauth_state",
+	} {
+		assert.False(t, seen[name], "cookie name %q is reused", name)
+		seen[name] = true
+	}
+}
+
+// TestCookieHelpersUseEnvironmentCookieNames confirms the cookie writers
+// emit whatever names the config carries, so the production wiring's tier
+// names reach Set-Cookie while the OAuth state cookie stays host-only.
+func TestCookieHelpersUseEnvironmentCookieNames(t *testing.T) {
+	session, csrf := EnvironmentCookieNames("staging")
+	cfg := CookieConfig{
+		Name: session, CSRName: csrf, OAuthStateName: "vocanova_oauth_state",
+		Domain: ".vocanova.site",
+	}
+	expires := time.Now().Add(time.Hour)
+
+	assert.Equal(t, "vocanova_staging_session", SessionCookie(cfg, "v", expires).Name)
+	assert.Equal(t, "vocanova_staging_session", ClearSessionCookie(cfg).Name)
+	_, csrfCookie := CSRFToken(cfg)
+	assert.Equal(t, "vocanova_staging_csrf", csrfCookie.Name)
+	assert.Equal(t, "vocanova_staging_csrf", ClearCSRFCookie(cfg).Name)
+	stateCookie := OAuthStateCookie(cfg, "v", expires)
+	assert.Equal(t, "vocanova_oauth_state", stateCookie.Name)
+	assert.Equal(t, "", stateCookie.Domain)
+}

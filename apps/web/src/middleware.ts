@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { filterForwardedCookieHeader } from "./lib/cookies";
 import { getApiBaseURL } from "./lib/env";
 import { connectionErrorDocument } from "./lib/connection-error";
 import { THEME_COOKIE_NAME } from "./lib/theme-preference";
@@ -98,7 +99,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const signInUrl = new URL(`/login?${returnTo}`, request.url);
 
   const apiBaseURL = getApiBaseURL();
-  const cookieHeader = request.headers.get("cookie") ?? "";
+  // Only this tier's own credentials reach the API; see lib/cookies.ts.
+  const cookieHeader = filterForwardedCookieHeader(
+    request.headers.get("cookie") ?? "",
+  );
 
   let meResponse: Response;
   try {

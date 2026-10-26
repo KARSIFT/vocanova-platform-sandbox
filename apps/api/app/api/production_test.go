@@ -467,12 +467,22 @@ func TestRegisterSyntheticSmokeTestSessionMint_AuthAndMintBehavior(t *testing.T)
 	assert.Equal(t, http.StatusOK, okResp.Code)
 
 	var out struct {
-		SessionCookie string `json:"session_cookie"`
-		CSRFToken     string `json:"csrf_token"`
+		SessionCookie     string `json:"session_cookie"`
+		CSRFToken         string `json:"csrf_token"`
+		SessionCookieName string `json:"session_cookie_name"`
+		CSRFCookieName    string `json:"csrf_cookie_name"`
 	}
 	require.NoError(t, json.NewDecoder(okResp.Body).Decode(&out))
 	assert.NotEmpty(t, out.SessionCookie)
 	assert.NotEmpty(t, out.CSRFToken)
+	require.NotEmpty(t, out.SessionCookieName)
+	require.NotEmpty(t, out.CSRFCookieName)
+	sessionCookie := findCookie(okResp.Result().Cookies(), out.SessionCookieName)
+	csrfCookie := findCookie(okResp.Result().Cookies(), out.CSRFCookieName)
+	require.NotNil(t, sessionCookie, "mint metadata must identify the issued session cookie")
+	require.NotNil(t, csrfCookie, "mint metadata must identify the issued csrf cookie")
+	assert.True(t, sessionCookie.Value == out.SessionCookie, "session metadata must describe the issued cookie")
+	assert.True(t, csrfCookie.Value == out.CSRFToken, "csrf metadata must describe the issued cookie")
 
 	_, err = svc.ValidateSession(context.Background(), out.SessionCookie)
 	require.NoError(t, err)

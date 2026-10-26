@@ -1,5 +1,15 @@
 # Vocanova current product state
 
+## Authentication boundary hardening — 26 October 2026
+
+The authentication implementation selects separate staging/production session and
+CSRF cookie names, filters foreign-tier cookies at the shared edge and server web
+reads, normalizes proxy client addresses, and bounds expired rate-limit storage.
+See [environment authentication boundaries](../operations/environment-auth-isolation.md)
+for rollout, verification and the remaining shared-domain/shared-host trust boundary.
+Deployment acceptance belongs to the release PR and fresh workflow/browser evidence;
+source or mock-backed checks alone do not establish live authentication.
+
 ## Image release preparation — 26 October 2026
 
 Cloudflare R2 inventory on 26 October contains 7,718 current meaning images.

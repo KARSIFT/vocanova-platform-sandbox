@@ -146,11 +146,17 @@ function toRunnableScript(typeScriptSource: string): string {
 }
 
 async function readMiddlewareScripts(): Promise<string> {
-  const [envModuleSource, middlewareSource] = await Promise.all([
+  const [envModuleSource, themeSource, cookiesSource, middlewareSource] = await Promise.all([
     readFile(ENV_MODULE_SOURCE_PATH, "utf8"),
+    readFile(resolve(WEB_APP_ROOT, "src/lib/theme-preference.ts"), "utf8"),
+    readFile(resolve(WEB_APP_ROOT, "src/lib/cookies.ts"), "utf8"),
     readFile(MIDDLEWARE_SOURCE_PATH, "utf8"),
   ]);
-  return `${toRunnableScript(envModuleSource)}\n${toRunnableScript(middlewareSource)}`;
+  // Evaluate real helper dependencies before middleware; stripping imports alone
+  // would hide missing bindings until the auth path executes.
+  return [envModuleSource, themeSource, cookiesSource, middlewareSource]
+    .map(toRunnableScript)
+    .join("\n");
 }
 
 /**
