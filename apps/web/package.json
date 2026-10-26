@@ -18,7 +18,7 @@
     "check:meaning-pictures": "node scripts/generate-meaning-pictures.mjs --check"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.70.0",
+    "@sentry/nextjs": "^10.75.2",
     "@vocanova/api-client": "workspace:*",
     "next": "16.4.1",
     "react": "19.2.8",
