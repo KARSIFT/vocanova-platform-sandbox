@@ -72,6 +72,9 @@ func (l *FixedWindowRateLimiter) Allow(ctx context.Context, key string) (bool, e
 	case ok && !now.Before(b.resetAt):
 		b.count = 0
 		b.resetAt = now.Add(l.window)
+		// Keep earliestReset as a conservative lower bound. A capacity sweep
+		// recomputes it; advancing it to this key could skip another live key
+		// that expires earlier. At most one extra bounded sweep is acceptable.
 	case !ok:
 		if len(l.buckets) >= l.maxKeys {
 			if !l.earliestReset.IsZero() && !now.Before(l.earliestReset) {

@@ -30,7 +30,7 @@ func mustAllow(t *testing.T, l *FixedWindowRateLimiter, key string, want bool) {
 }
 
 func TestFixedWindowRateLimiterDefaultCapacityIsEnforced(t *testing.T) {
-	l := NewFixedWindowRateLimiter(clock.Real{}, time.Minute, 1)
+	l := NewFixedWindowRateLimiter(clock.Fixed{T: time.Date(2026, 10, 26, 12, 0, 0, 0, time.UTC)}, time.Minute, 1)
 	for i := 0; i < DefaultRateLimiterMaxKeys; i++ {
 		mustAllow(t, l, fmt.Sprintf("default-%d", i), true)
 	}
