@@ -20,11 +20,11 @@ jobs:
       - name: Generate with repository policy
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "29c5882437ea544a4bc3062a1efa73c5e8d71723"
+          test "$(git rev-parse HEAD^)" = "2b1f9538058712f8b7b48b74ce7a11d737f5659c"
           git show 6226873662c15f841a558fa76db7bd708c6802e3:pnpm-lock.yaml > pnpm-lock.yaml
           corepack enable
           corepack prepare pnpm@11.14.0 --activate
-          pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile --minimum-release-age=1440
+          pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
           git diff --exit-code -- package.json apps/web/package.json pnpm-workspace.yaml
           git rev-parse HEAD > lockfile-source-sha.txt
           sha256sum pnpm-lock.yaml > lockfile-sha256.txt
