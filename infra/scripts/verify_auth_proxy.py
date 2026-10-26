@@ -254,4 +254,3 @@ if __name__ == "__main__":
     except (AssertionError, RuntimeError, OSError, ValueError, subprocess.TimeoutExpired) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         sys.exit(1)
-
