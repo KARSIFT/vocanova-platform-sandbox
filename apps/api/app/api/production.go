@@ -654,9 +654,13 @@ type SyntheticSmokeTestSessionMintInput struct {
 type SyntheticSmokeTestSessionMintOutput struct {
 	Body struct {
 		Status        string `json:"status" example:"issued"`
-		SessionCookie string `json:"session_cookie" doc:"Opaque vocanova_session value for the synthetic smoke-test account"`
-		CSRFToken     string `json:"csrf_token" doc:"Double-submit CSRF token paired with the vocanova_csrf cookie"`
+		SessionCookie string `json:"session_cookie" doc:"Opaque session cookie value for the synthetic smoke-test account"`
+		CSRFToken     string `json:"csrf_token" doc:"Double-submit CSRF token paired with the configured CSRF cookie"`
 		ExpiresAt     string `json:"expires_at" format:"date-time"`
+
+		// Additive: the configured names of the cookies carrying the values above.
+		SessionCookieName string `json:"session_cookie_name" doc:"Name of the session cookie the session_cookie value belongs to in this environment"`
+		CSRFCookieName    string `json:"csrf_cookie_name" doc:"Name of the double-submit CSRF cookie the csrf_token value belongs to in this environment"`
 	}
 }
 
@@ -708,6 +712,9 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 		return nil, nil, fmt.Errorf("build oauth provider: %w", err)
 	}
 
+	// Staging and production share the parent SessionDomain, so each tier
+	// issues its own session/CSRF names; see auth.EnvironmentCookieNames.
+	sessionCookieName, csrfCookieName := auth.EnvironmentCookieNames(cfg.Environment)
 	authCfg := auth.Config{
 		Environment:            cfg.Environment,
 		BaseURL:                cfg.BaseURL,
@@ -718,8 +725,8 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 		MagicLinkLifetime:      15 * time.Minute,
 		OAuthStateLifetime:     10 * time.Minute,
 		Cookie: auth.CookieConfig{
-			Name:           "vocanova_session",
-			CSRName:        "vocanova_csrf",
+			Name:           sessionCookieName,
+			CSRName:        csrfCookieName,
 			OAuthStateName: "vocanova_oauth_state",
 			Domain:         cfg.SessionDomain,
 			// Intentionally NOT cfg.SessionDomain: the OAuth state cookie
@@ -1050,7 +1057,8 @@ func RegisterSyntheticSmokeTestSessionMint(api huma.API, authSvc *auth.Service, 
 		}
 
 		c := authHumaContext(ctx)
-		c.AppendHeader("Set-Cookie", authSvc.SessionCookie(sessionToken, session.ExpiresAt).String())
+		sessionCookie := authSvc.SessionCookie(sessionToken, session.ExpiresAt)
+		c.AppendHeader("Set-Cookie", sessionCookie.String())
 		csrfToken, csrfCookie := authSvc.IssueCSRFCookie()
 		if csrfCookie == nil || csrfToken == "" {
 			return nil, huma.Error500InternalServerError("failed to issue csrf cookie")
@@ -1062,6 +1070,8 @@ func RegisterSyntheticSmokeTestSessionMint(api huma.API, authSvc *auth.Service, 
 		out.Body.SessionCookie = sessionToken
 		out.Body.CSRFToken = csrfToken
 		out.Body.ExpiresAt = session.ExpiresAt.UTC().Format(time.RFC3339)
+		out.Body.SessionCookieName = sessionCookie.Name
+		out.Body.CSRFCookieName = csrfCookie.Name
 		return out, nil
 	})
 }

@@ -68,8 +68,16 @@ import {
 
 const SESSION_COOKIE_ENV = "E2E_SESSION_COOKIE";
 const CSRF_COOKIE_ENV = "E2E_CSRF_TOKEN";
-const SESSION_COOKIE_NAME = "vocanova_session";
-const CSRF_COOKIE_NAME = "vocanova_csrf";
+// Deployed staging names are authoritative mint metadata. Require the exact
+// staging names so a legacy or wrong-tier name never silently passes.
+const SESSION_COOKIE_NAME = requiredCookieName(
+  "E2E_SESSION_COOKIE_NAME",
+  "vocanova_staging_session",
+);
+const CSRF_COOKIE_NAME = requiredCookieName(
+  "E2E_CSRF_COOKIE_NAME",
+  "vocanova_staging_csrf",
+);
 
 // The review session refetches after the last card in its batch, so
 // "review everything due" is a loop. The bound keeps a large
@@ -113,6 +121,16 @@ function requiredEnv(name: string): string {
   if (!value) {
     throw new Error(
       `${name} must be set for the staging core-loop journey. deploy-staging.yml supplies it from the VOC-050-T01 session-mint endpoint.`,
+    );
+  }
+  return value;
+}
+
+function requiredCookieName(name: string, expected: string): string {
+  const value = requiredEnv(name);
+  if (value !== expected) {
+    throw new Error(
+      `${name} must be the deployed staging cookie name ${expected}.`,
     );
   }
   return value;

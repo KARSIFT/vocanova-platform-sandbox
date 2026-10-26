@@ -1,0 +1,39 @@
+name: One-off lockfile repair
+on:
+  push:
+    branches: ["dependabot/npm_and_yarn/sentry/nextjs-10.75.2"]
+    paths: [".github/workflows/oneoff-lockfile-repair.yml"]
+permissions:
+  contents: read
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24.18.0"
+      - name: Generate with repository policy
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "c554c85b3284b4752651be9dd9a489129beea019"
+          git show edfe07b4560431f02c57e1045f71956dd660f216:pnpm-lock.yaml > pnpm-lock.yaml
+          corepack enable
+          corepack prepare pnpm@11.14.0 --activate
+          pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
+          git diff --exit-code -- package.json apps/web/package.json pnpm-workspace.yaml
+          git rev-parse HEAD > lockfile-source-sha.txt
+          sha256sum pnpm-lock.yaml > lockfile-sha256.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: lockfile-repair-integrated-1500
+          path: |
+            pnpm-lock.yaml
+            lockfile-source-sha.txt
+            lockfile-sha256.txt
+          retention-days: 1
+          if-no-files-found: error

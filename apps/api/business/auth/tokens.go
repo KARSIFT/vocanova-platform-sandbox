@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -68,6 +69,31 @@ func normalizeEmail(email string) string {
 // normalize an email the same way this package does internally.
 func NormalizeEmail(email string) string {
 	return normalizeEmail(email)
+}
+
+// Legacy cookie names, kept for local, test and unknown environments so
+// fixtures and local development keep their existing behavior.
+const (
+	LegacySessionCookieName = "vocanova_session"
+	LegacyCSRFCookieName    = "vocanova_csrf"
+)
+
+// EnvironmentCookieNames returns the session and CSRF cookie names for a
+// deployment environment. Staging and production both scope these cookies
+// to the shared parent domain, so each deployed tier needs its own names
+// to keep a sign-in on one tier from overwriting the other's session.
+// Matching ignores case and surrounding whitespace; any other environment
+// (local, test, unknown) keeps the legacy names. The host-only OAuth state
+// cookie keeps its single name and is not covered here.
+func EnvironmentCookieNames(environment string) (sessionName, csrfName string) {
+	switch strings.ToLower(strings.TrimSpace(environment)) {
+	case "staging":
+		return "vocanova_staging_session", "vocanova_staging_csrf"
+	case "production":
+		return "vocanova_production_session", "vocanova_production_csrf"
+	default:
+		return LegacySessionCookieName, LegacyCSRFCookieName
+	}
 }
 
 // CookieConfig holds session and CSRF cookie settings.
@@ -200,18 +226,19 @@ func ClearOAuthStateCookie(cfg CookieConfig) *http.Cookie {
 	}
 }
 
-// clientIP returns a best-effort client IP for rate-limiting from a Huma
-// context or a raw HTTP request.
-func clientIP(remoteAddr string, headers http.Header) string {
-	if xff := headers.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.Index(xff, ","); i > 0 {
-			return strings.TrimSpace(xff[:i])
-		}
-		return strings.TrimSpace(xff)
+// ClientIP reads the single address normalized by the trusted reverse proxy.
+// Public ingress must overwrite X-Real-IP; untrusted forwarding chains are never
+// used as rate-limit identities. Without a valid proxy value, use the TCP peer.
+func ClientIP(remoteAddr, realIP string) string {
+	if ip := net.ParseIP(strings.TrimSpace(realIP)); ip != nil {
+		return ip.String()
 	}
-	if xri := headers.Get("X-Real-Ip"); xri != "" {
-		return strings.TrimSpace(xri)
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		host = strings.Trim(remoteAddr, "[]")
 	}
-	host, _, _ := strings.Cut(remoteAddr, ":")
-	return host
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.String()
+	}
+	return "unknown"
 }

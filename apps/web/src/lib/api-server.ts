@@ -3,12 +3,16 @@ import { redirect } from "next/navigation";
 
 import { ApiResponseError, VocanovaClient } from "@vocanova/api-client";
 
+import { filterForwardedCookieHeader } from "./cookies";
 import { getApiBaseURL } from "./env";
 import { fetchWithServerReadDeadline } from "./server-read-fetch";
 
 export async function createServerApiClient(): Promise<VocanovaClient> {
   const incomingHeaders = await headers();
-  const cookieHeader = incomingHeaders.get("cookie") ?? "";
+  // Only this tier's own credentials reach the API; see cookies.ts.
+  const cookieHeader = filterForwardedCookieHeader(
+    incomingHeaders.get("cookie") ?? "",
+  );
 
   return new VocanovaClient({
     baseURL: getApiBaseURL(),

@@ -105,6 +105,16 @@ test("VOC-086-TEST-12: synthetic checks reuse mint secrets and mask sessions", (
     /echo\s+["']?\$session/,
     "mint script must not echo the session variable",
   );
+  assert.match(
+    mintScript,
+    /SYNTHETIC_COOKIE_ENVIRONMENT/,
+    "mint script must validate cookie names against the expected tier",
+  );
+  assert.doesNotMatch(
+    workflowSource,
+    /SESSION_COOKIE_PREFIX/,
+    "legacy prefix mode mixed raw and prefixed cookie semantics",
+  );
 
   for (const jobId of [
     "staging-oauth-expected-state",
@@ -128,6 +138,11 @@ test("VOC-086-TEST-12: synthetic checks reuse mint secrets and mask sessions", (
     assert.match(jobBlock, /EXPECT_MAGIC_LINK_ENABLED: "false"/);
     assert.match(jobBlock, /EXPECT_NEW_SIGNUPS_ENABLED: "false"/);
     assert.match(jobBlock, /EXPECT_AI_ENABLED: "true"/);
+    assert.match(jobBlock, /SYNTHETIC_COOKIE_ENVIRONMENT: production/);
+    assert.match(
+      jobBlock,
+      /SMOKE_TEST_SESSION_COOKIE: \$\{\{ steps\.mint_production_session\.outputs\.session_cookie_header \}\}/,
+    );
   }
 
   const fixture =
@@ -163,6 +178,18 @@ test("VOC-086-TEST-12: synthetic checks reuse mint secrets and mask sessions", (
       stagingJob.indexOf("Mint synthetic smoke-test session"),
     "the guarded staging fixture must be prepared before its session is minted",
   );
+  assert.match(stagingJob, /SYNTHETIC_COOKIE_ENVIRONMENT: staging/);
+  for (const [variable, output] of [
+    ["E2E_SESSION_COOKIE_NAME", "session_cookie_name"],
+    ["E2E_CSRF_COOKIE_NAME", "csrf_cookie_name"],
+  ]) {
+    assert.match(
+      stagingJob,
+      new RegExp(
+        `${variable}: \\$\\{\\{ steps\\.mint_staging_session\\.outputs\\.${output} \\}\\}`,
+      ),
+    );
+  }
 
   assert.match(
     dispatcher,

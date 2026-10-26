@@ -91,6 +91,17 @@ function stagingOrigin(raw: string, hostname: string): string {
   }
   return url.origin;
 }
+// Deployed staging cookie names are authoritative mint metadata. Require the
+// exact staging names so a legacy or wrong-tier name never silently passes.
+function stagingCookieNames(): { session: string; csrf: string } {
+  const session = process.env.E2E_SESSION_COOKIE_NAME;
+  const csrf = process.env.E2E_CSRF_COOKIE_NAME;
+  if (session !== "vocanova_staging_session" || csrf !== "vocanova_staging_csrf")
+    throw new Error(
+      "E2E_SESSION_COOKIE_NAME and E2E_CSRF_COOKIE_NAME must be the deployed staging cookie names.",
+    );
+  return { session, csrf };
+}
 // Node fetch deliberately avoids Playwright APIRequestContext diagnostic steps,
 // which retain authenticated request headers in failed-test HTML/JSON reports.
 // The public journey validates exact staging origins before calling this helper.
@@ -126,11 +137,13 @@ export async function safeStagingRequest(
     ) {
       throw new Error("Request outside the bounded pronunciation acceptance");
     }
+    const cookieNames = stagingCookieNames();
     const cookies = (await context.cookies(apiOrigin)).filter(
       (cookie) =>
-        cookie.name === "vocanova_session" || cookie.name === "vocanova_csrf",
+        cookie.name === cookieNames.session ||
+        cookie.name === cookieNames.csrf,
     );
-    if (!cookies.some((cookie) => cookie.name === "vocanova_session")) {
+    if (!cookies.some((cookie) => cookie.name === cookieNames.session)) {
       throw new Error("Session cookie missing");
     }
     const requestHeaders: Record<string, string> = {
@@ -140,7 +153,7 @@ export async function safeStagingRequest(
     };
     if (method === "DELETE" || method === "POST") {
       const csrf = cookies.find(
-        (cookie) => cookie.name === "vocanova_csrf",
+        (cookie) => cookie.name === cookieNames.csrf,
       )?.value;
       if (!csrf) throw new Error("CSRF cookie missing");
       requestHeaders["X-CSRF-Token"] = csrf;
@@ -212,6 +225,7 @@ test("connected maturity journey against real staging", async ({
   );
   const session = requiredEnv("E2E_SESSION_COOKIE");
   const csrf = requiredEnv("E2E_CSRF_TOKEN");
+  const cookieNames = stagingCookieNames();
   const cookieDomain =
     process.env.STAGING_SESSION_COOKIE_DOMAIN ?? ".vocanova.site";
   if (cookieDomain !== ".vocanova.site")
@@ -227,7 +241,7 @@ test("connected maturity journey against real staging", async ({
     );
   await context.addCookies([
     {
-      name: "vocanova_session",
+      name: cookieNames.session,
       value: session,
       domain: cookieDomain,
       path: "/",
@@ -235,7 +249,7 @@ test("connected maturity journey against real staging", async ({
       sameSite: "Lax",
     },
     {
-      name: "vocanova_csrf",
+      name: cookieNames.csrf,
       value: csrf,
       domain: cookieDomain,
       path: "/",
