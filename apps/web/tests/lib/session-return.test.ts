@@ -65,13 +65,13 @@ describe("focused session exit destinations", () => {
       assert.deepEqual(
         getSessionExit("/discovery", `?band=${band}&word=4001`),
         {
-          href: `/knowledge-map?band=${band}#range-words`,
-          label: "Back to word map",
+          href: `/discover?band=${band}#range-words`,
+          label: "Back to Journey",
         },
       );
     assert.equal(
       getSessionExit("/discovery", new URLSearchParams("band=42"))?.href,
-      "/knowledge-map?band=42#range-words",
+      "/discover?band=42#range-words",
     );
   });
   it("uses the first range for missing, duplicate or invalid bands", () => {
@@ -89,7 +89,7 @@ describe("focused session exit destinations", () => {
     ])
       assert.equal(
         getSessionExit("/discovery", query)?.href,
-        "/knowledge-map?band=1#range-words",
+        "/discover?band=1#range-words",
         query,
       );
   });

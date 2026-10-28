@@ -75,7 +75,7 @@ export function MeaningSaveButton({
     }
   }
 
-  const label = saved ? "Saved" : "Save";
+  const label = saved ? "Saved" : "Save to review";
   const ariaLabel = saved
     ? `Remove ${wordText} from saved words`
     : `Save ${wordText}: ${shortDefinition}`;
@@ -89,9 +89,28 @@ export function MeaningSaveButton({
         aria-pressed={saved}
         aria-label={ariaLabel}
         aria-busy={status === "loading"}
-        className="min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-700 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className={`inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50 ${saved ? "border-primary-200 bg-primary-50 text-primary-800 hover:bg-primary-100" : "border-primary-300 bg-white text-primary-700 hover:bg-primary-50"}`}
       >
-        {status === "loading" ? "Saving..." : label}
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="size-4 fill-none stroke-current stroke-2"
+        >
+          {saved ? (
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="m5 12.5 4.5 4.5L19 7.5"
+            />
+          ) : (
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 5v14M5 12h14"
+            />
+          )}
+        </svg>
+        {status === "loading" ? "Saving…" : label}
       </button>
       {errorMessage ? (
         <p role="alert" aria-live="polite" className="text-sm text-red-700">

@@ -153,8 +153,8 @@ for (const theme of ["light", "dark"] as const) {
       page.getByRole("link", { name: /^keep in touch / }),
     ).toContainText("Saved");
     await page.getByRole("link", { name: /^meet up / }).click();
-    await expect(
-      page.getByText("phrasal verb · A2", { exact: true }),
-    ).toBeVisible();
+    const main = page.getByRole("main");
+    await expect(main.getByText("phrasal verb", { exact: true }).first()).toBeVisible();
+    await expect(main.getByText("A2", { exact: true }).first()).toBeVisible();
   });
 }

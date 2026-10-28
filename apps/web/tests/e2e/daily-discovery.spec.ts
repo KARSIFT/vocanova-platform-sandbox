@@ -16,6 +16,16 @@ async function chooseReviewDate(page: Page, choice: "7d" | "known") {
     .click();
 }
 
+// Journey keeps the range's word list behind a disclosure.
+async function openRangeWords(page: Page) {
+  const summary = page
+    .getByRole("main")
+    .locator("summary")
+    .filter({ hasText: "Words in this range" });
+  if ((await summary.locator("..").getAttribute("open")) === null)
+    await summary.click();
+}
+
 async function learner(page: Page, count = 2) {
   const baseURL = test.info().project.use.baseURL;
   if (!baseURL) throw new Error("A local test base URL is required");
@@ -822,19 +832,28 @@ test("all 100 ranges are reachable, discovery confirms choices before advancing,
   page,
 }) => {
   await learner(page, 0);
-  await page.goto("/knowledge-map");
-  await page.getByText("Choose a range · 1–10,000", { exact: true }).click();
-  await expect(
-    page
-      .getByRole("navigation", { name: "Word ranges", exact: true })
-      .getByRole("link"),
-  ).toHaveCount(100);
-  await page
-    .getByRole("link", {
-      name: "Words 9901 to 10000, 0 already know, 0 learning, 100 new",
-      exact: true,
-    })
-    .click();
+  await page.goto("/discover");
+  if (test.info().project.name.startsWith("mobile-")) {
+    // Phones choose among the same 100 ranges with a full-size chooser.
+    const choice = page.getByRole("combobox", { name: "Go to a range" });
+    await expect(choice.locator("option")).toHaveCount(100);
+    await choice.selectOption({
+      label: "Words 9,901–10,000: 0 known, 0 learning",
+    });
+    await page.getByRole("button", { name: "Show", exact: true }).click();
+  } else {
+    await expect(
+      page
+        .getByRole("navigation", { name: "Word ranges", exact: true })
+        .getByRole("link"),
+    ).toHaveCount(100);
+    await page
+      .getByRole("link", {
+        name: "Words 9901 to 10000, 0 already know, 0 learning, 100 new",
+        exact: true,
+      })
+      .click();
+  }
   await expect(
     page.getByRole("heading", { name: "Words 9,901–10,000", exact: true }),
   ).toBeVisible();
@@ -853,10 +872,14 @@ test("all 100 ranges are reachable, discovery confirms choices before advancing,
   await expect(
     page.getByRole("heading", { name: "Map word 3", exact: true }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Knowledge map", exact: true }).click();
+  await page
+    .getByRole("banner")
+    .getByRole("link", { name: "Back to Journey", exact: true })
+    .click();
   await expect(page.getByText("1 already know", { exact: true })).toBeVisible();
   await expect(page.getByText("1 learning", { exact: true })).toBeVisible();
   await page.reload();
+  await openRangeWords(page);
   await expect(
     page.getByRole("link", { name: "1 the Already know", exact: true }),
   ).toBeVisible();
@@ -879,8 +902,11 @@ test("discovery continues to the next unseen range after 100 acknowledged assess
   ).toBeFocused();
   await expect(page).toHaveURL(/\/discovery\?band=2&word=101$/);
 
-  await page.goto("/knowledge-map?band=1");
-  const discover = page.getByRole("link", { name: "Discover", exact: true });
+  await page.goto("/discover?band=1");
+  const discover = page.getByRole("link", {
+    name: "Discover words",
+    exact: true,
+  });
   await expect(discover).toHaveAttribute("href", "/discovery?band=2");
   await discover.click();
   await page
@@ -981,11 +1007,11 @@ test("an entirely assessed map has no guided word but keeps explicit revisits", 
   await expect(
     page.getByRole("button", { name: "Start discovering", exact: true }),
   ).toHaveCount(0);
-  const map = page.getByRole("link", { name: "Knowledge map", exact: true });
-  await expect(map).toHaveAttribute(
-    "href",
-    "/knowledge-map?band=1#range-words",
-  );
+  const map = page.getByRole("link", {
+    name: "Open your word map",
+    exact: true,
+  });
+  await expect(map).toHaveAttribute("href", "/discover?band=1#range-words");
   await map.click();
   await expect(
     page.getByText("10,000 already know", { exact: true }),
@@ -994,8 +1020,9 @@ test("an entirely assessed map has no guided word but keeps explicit revisits", 
     page.getByText("No new words left to discover.", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Discover", exact: true }),
+    page.getByRole("link", { name: "Discover words", exact: true }),
   ).toHaveCount(0);
+  await openRangeWords(page);
   const revisit = page.getByRole("link", {
     name: "1 the Already know",
     exact: true,
@@ -1018,7 +1045,7 @@ test("an entirely assessed map has no guided word but keeps explicit revisits", 
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "View map", exact: true }),
-  ).toHaveAttribute("href", "/knowledge-map?band=1");
+  ).toHaveAttribute("href", "/discover?band=1");
   await page.goto("/discovery?band=100");
   await expect(
     page.getByRole("heading", {
@@ -1027,8 +1054,8 @@ test("an entirely assessed map has no guided word but keeps explicit revisits", 
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Knowledge map", exact: true }),
-  ).toHaveAttribute("href", "/knowledge-map?band=100#range-words");
+    page.getByRole("link", { name: "Open your word map", exact: true }),
+  ).toHaveAttribute("href", "/discover?band=100#range-words");
 });
 
 test("a concurrent range completion offers a bounded retry instead of claiming the map is complete", async ({
@@ -1200,10 +1227,10 @@ test("discovery header returns to the selected range after a cross-range decisio
   await page.goto("/discovery?band=41&word=4100");
   const exit = page
     .getByRole("banner")
-    .getByRole("link", { name: "Back to word map", exact: true });
+    .getByRole("link", { name: "Back to Journey", exact: true });
   await expect(exit).toHaveAttribute(
     "href",
-    "/knowledge-map?band=41#range-words",
+    "/discover?band=41#range-words",
   );
   await page
     .getByRole("button", { name: "Start discovering", exact: true })
@@ -1215,11 +1242,11 @@ test("discovery header returns to the selected range after a cross-range decisio
   await expect(page).toHaveURL(/\/discovery\?band=42&word=4101$/);
   await expect(exit).toHaveAttribute(
     "href",
-    "/knowledge-map?band=42#range-words",
+    "/discover?band=42#range-words",
   );
   await exit.focus();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/knowledge-map\?band=42#range-words$/);
+  await expect(page).toHaveURL(/\/discover\?band=42#range-words$/);
   await expect(page.locator("#range-words")).toContainText("4,101");
   await expect(page.locator("#range-words")).toBeInViewport();
 });
@@ -1231,39 +1258,39 @@ test("discovery header tracks history query changes and rejects invalid range li
   await page.goto("/discovery?band=41&word=4001");
   const exit = page
     .getByRole("banner")
-    .getByRole("link", { name: "Back to word map", exact: true });
+    .getByRole("link", { name: "Back to Journey", exact: true });
   await expect(exit).toHaveAttribute(
     "href",
-    "/knowledge-map?band=41#range-words",
+    "/discover?band=41#range-words",
   );
   await page.evaluate(() =>
     window.history.pushState(null, "", "/discovery?band=100&word=9901"),
   );
   await expect(exit).toHaveAttribute(
     "href",
-    "/knowledge-map?band=100#range-words",
+    "/discover?band=100#range-words",
   );
   await page.goBack();
   await expect(exit).toHaveAttribute(
     "href",
-    "/knowledge-map?band=41#range-words",
+    "/discover?band=41#range-words",
   );
   await page.goForward();
   await expect(exit).toHaveAttribute(
     "href",
-    "/knowledge-map?band=100#range-words",
+    "/discover?band=100#range-words",
   );
   await page.goBack();
   await expect(exit).toHaveAttribute(
     "href",
-    "/knowledge-map?band=41#range-words",
+    "/discover?band=41#range-words",
   );
   await page.evaluate(() =>
     window.history.replaceState(null, "", "/discovery?band=41&band=99"),
   );
   await expect(exit).toHaveAttribute(
     "href",
-    "/knowledge-map?band=1#range-words",
+    "/discover?band=1#range-words",
   );
 });
 
@@ -1648,13 +1675,13 @@ test.describe("discovery exit before hydration", () => {
     await page.goto("/discovery?band=41&word=4001");
     const exit = page
       .getByRole("banner")
-      .getByRole("link", { name: "Back to word map", exact: true });
+      .getByRole("link", { name: "Back to Journey", exact: true });
     await expect(exit).toHaveAttribute(
       "href",
-      "/knowledge-map?band=41#range-words",
+      "/discover?band=41#range-words",
     );
     await exit.click();
-    await expect(page).toHaveURL(/\/knowledge-map\?band=41#range-words$/);
+    await expect(page).toHaveURL(/\/discover\?band=41#range-words$/);
     await expect(page.locator("#range-words")).toContainText("4,001");
   });
 });
@@ -1683,20 +1710,18 @@ test("guided discovery retains its server-resolved range before Start", async ({
     page.getByRole("button", { name: "Start discovering", exact: true }),
   ).toBeVisible();
   await expect(
-    page
-      .getByRole("main")
-      .getByRole("link", { name: "Knowledge map", exact: true }),
-  ).toHaveAttribute("href", "/knowledge-map?band=41#range-words");
+    page.getByRole("main").getByText("Words 4,001–4,100", { exact: true }),
+  ).toBeVisible();
   const exit = page
     .getByRole("banner")
-    .getByRole("link", { name: "Back to word map", exact: true });
+    .getByRole("link", { name: "Back to Journey", exact: true });
   await expect(exit).toHaveAttribute(
     "href",
-    "/knowledge-map?band=41#range-words",
+    "/discover?band=41#range-words",
   );
   expect(playbackRequests).toBe(0);
   await exit.click();
-  await expect(page).toHaveURL(/\/knowledge-map\?band=41#range-words$/);
+  await expect(page).toHaveURL(/\/discover\?band=41#range-words$/);
 });
 
 test.describe("review schedule device calendar", () => {

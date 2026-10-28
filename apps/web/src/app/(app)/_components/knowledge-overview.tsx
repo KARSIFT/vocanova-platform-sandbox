@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import type { KnowledgeSummary } from "@vocanova/api-client";
 
 export function KnowledgeOverview({ summary }: { summary: KnowledgeSummary }) {

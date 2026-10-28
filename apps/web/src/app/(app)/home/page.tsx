@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import { createHash } from "node:crypto";
 import { Suspense } from "react";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
@@ -8,6 +8,7 @@ import { StartDailyLessonButton } from "../reviews/_components/daily-lesson-star
 import { PracticeJourney } from "../practice/_components/practice-journey";
 import {
   ApiResponseError,
+  type DailyMission,
   type PracticeSessionsResponse,
   type SavedMeaning,
   type MeaningImagesResponse,
@@ -80,6 +81,40 @@ async function HomeMeaningPicture({
   );
 }
 
+const MISSION_STATUS: Record<DailyMission["status"], string> = {
+  open: "In progress",
+  completed: "Completed",
+  protected: "Protected by a grace day",
+  missed: "Missed",
+};
+
+/** Only the parts today's mission actually contains, with its own numbers. */
+function missionGoals(mission: DailyMission) {
+  const goals = [
+    {
+      label: "Reviews",
+      done: mission.reviewsCompleted,
+      target: mission.reviewTarget,
+      optional: false,
+    },
+  ];
+  if (mission.newWordTarget)
+    goals.push({
+      label: "New words",
+      done: mission.newWordsCompleted ?? 0,
+      target: mission.newWordTarget,
+      optional: false,
+    });
+  if (mission.sentencePracticeTarget)
+    goals.push({
+      label: "Sentence practice",
+      done: mission.sentencePracticesCompleted ?? 0,
+      target: mission.sentencePracticeTarget,
+      optional: true,
+    });
+  return goals;
+}
+
 export default async function HomePage() {
   const client = await createServerApiClient();
   // Start the secondary read concurrently, capturing rejection immediately.
@@ -102,16 +137,17 @@ export default async function HomePage() {
   } catch (error) {
     requireAuthRedirect(error, "/home");
   }
-  const firstWord = savedWordsResponse.data.items[0];
-  const spotlightRevision = firstWord
-    ? spotlightMeaningRevision(firstWord)
+  // Saved words arrive newest first, so this is the learner's latest word.
+  const latestWord = savedWordsResponse.data.items[0];
+  const latestRevision = latestWord
+    ? spotlightMeaningRevision(latestWord)
     : undefined;
   // Optional media never delays Review or the primary Home controls. The lookup
   // is bounded to one meaning, catches failure immediately and has a deadline.
-  const spotlightRead =
-    firstWord && spotlightRevision && !firstWord.image
+  const pictureRead =
+    latestWord && latestRevision && !latestWord.image
       ? Promise.allSettled([
-          client.getMeaningImages([firstWord.meaningId], {
+          client.getMeaningImages([latestWord.meaningId], {
             cache: "no-store",
             signal: AbortSignal.timeout(3000),
           }),
@@ -121,264 +157,257 @@ export default async function HomePage() {
   const currentLesson = dailyLessonResponse.data.session;
   const mission = dailyMissionResponse.data;
   const { reviewsCompleted, streak } = mission;
-  const action = currentLesson
-    ? {
-        href: "/review",
-        label: "Continue review",
-        title: "Review words",
-      }
-    : dueReviewWords > 0
-      ? {
-          href: "/review",
-          label: "Start review",
-          title: "Review words",
-        }
-      : {
-          href: "/discovery",
-          label: "Discover words",
-          title: "Review complete",
-        };
+  const discoveryIsNext = !currentLesson && dueReviewWords === 0;
+  const goals = missionGoals(mission);
+  const wordHref = latestWord
+    ? `/words/${encodeURIComponent(latestWord.userWordId)}`
+    : undefined;
 
   return (
-    <PageContainer className="learning-overview max-w-[72rem]">
-      <header className="overview-title">
+    <PageContainer className="today max-w-[72rem]">
+      <header className="today-head">
         <h1>Today</h1>
-        <Link
-          href="/progress"
-          className="streak-label"
-          aria-label={`${streak.currentStreakCount}-day streak. View progress`}
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className="size-5 fill-none stroke-current stroke-[1.7]"
+        {streak.currentStreakCount > 0 ? (
+          <Link
+            href="/progress"
+            className="streak-note"
+            aria-label={`${streak.currentStreakCount}-day streak. View progress`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M13 3c1 5-4 5-3 9 1-1 2-2 2-3 4 2 6 5 5 8a6 6 0 0 1-11-1c-1-5 4-7 7-13Z"
-            />
-          </svg>
-          <span>
-            <strong>{streak.currentStreakCount}</strong>-day streak
-          </span>
-        </Link>
-      </header>
-      <div className="study-desk">
-        <section aria-label="Review words" className="daily-focus">
-          <p className="mission-kicker">
-            {currentLesson
-              ? "Review in progress"
-              : dueReviewWords > 0
-                ? "Today’s review"
-                : "All caught up"}
-          </p>
-          <h2 id="todays-mission-heading">{action.title}</h2>
-          <p className="mission-copy">
-            {currentLesson
-              ? "Pick up where you left off."
-              : dueReviewWords > 0
-                ? `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`
-                : "No words are due. Discover something new whenever you like."}
-          </p>
-          <div className="mission-actions">
-            {!currentLesson && dueReviewWords > 0 ? (
-              <StartDailyLessonButton
-                className="learning-primary"
-                label={action.label}
-              />
-            ) : (
-              <Link href={action.href} className="learning-primary">
-                {action.label}
-              </Link>
-            )}
-            <p className="daily-meter">
-              Reviewed today: <strong>{reviewsCompleted}</strong>
-            </p>
-          </div>
-        </section>
-        <section
-          aria-labelledby="saved-words-heading"
-          className="word-spotlight"
-        >
-          <div className="word-spotlight-head">
-            <h2
-              id="saved-words-heading"
-              className="text-sm font-semibold text-neutral-600"
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-5 fill-none stroke-current stroke-[1.7]"
             >
-              Your vocabulary
-            </h2>
-            <Link href="/words" className="learning-text-link text-sm">
-              See all
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13 3c1 5-4 5-3 9 1-1 2-2 2-3 4 2 6 5 5 8a6 6 0 0 1-11-1c-1-5 4-7 7-13Z"
+              />
+            </svg>
+            <span>
+              <strong>{streak.currentStreakCount}</strong>-day streak
+            </span>
+          </Link>
+        ) : null}
+      </header>
+
+      <section aria-label="Review words" className="next-step">
+        <p className="next-step-label">
+          {currentLesson
+            ? "Review in progress"
+            : dueReviewWords > 0
+              ? "Your next step"
+              : "All caught up"}
+        </p>
+        <h2 id="todays-mission-heading">
+          {discoveryIsNext ? "Review complete" : "Review words"}
+        </h2>
+        <p className="next-step-copy">
+          {currentLesson
+            ? "Pick up where you left off."
+            : dueReviewWords > 0
+              ? `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`
+              : "No words are due. Discover something new whenever you like."}
+        </p>
+        <div className="next-step-actions">
+          {currentLesson ? (
+            <Link
+              href="/review"
+              prefetch="auto"
+              className="vn-btn vn-btn-primary"
+            >
+              Continue review
+            </Link>
+          ) : dueReviewWords > 0 ? (
+            <StartDailyLessonButton
+              className="vn-btn vn-btn-primary"
+              label="Start review"
+            />
+          ) : (
+            <Link href="/discovery" className="vn-btn vn-btn-primary">
+              Discover words
+            </Link>
+          )}
+          <p className="next-step-meta">
+            Reviewed today: <strong>{reviewsCompleted}</strong>
+          </p>
+        </div>
+      </section>
+
+      <section aria-labelledby="today-goal-heading" className="today-goal">
+        <div className="today-goal-head">
+          <h2 id="today-goal-heading" className="section-title">
+            Today’s goal
+          </h2>
+          <p className="goal-status" data-status={mission.status}>
+            {MISSION_STATUS[mission.status]}
+          </p>
+        </div>
+        <dl className="goal-rows">
+          {goals.map((goal) => (
+            <div key={goal.label} className="goal-row">
+              <dt>
+                {goal.label}
+                {goal.optional ? (
+                  <span className="ml-1.5 text-sm font-normal text-neutral-600">
+                    (optional)
+                  </span>
+                ) : null}
+              </dt>
+              <dd>
+                {goal.done} of {goal.target}
+              </dd>
+              <progress
+                aria-hidden="true"
+                value={Math.min(goal.done, goal.target)}
+                max={goal.target}
+              />
+            </div>
+          ))}
+        </dl>
+        {mission.status === "open" &&
+        !currentLesson &&
+        dueReviewWords === 0 &&
+        reviewsCompleted < mission.reviewTarget ? (
+          <p className="pb-2 text-sm text-neutral-600">
+            No words are due right now. Save new words in Discover, then check
+            back here for review.
+          </p>
+        ) : null}
+      </section>
+
+      <div className="keep-going">
+        <h2 className="section-title">Keep going</h2>
+        <Suspense
+          fallback={
+            <section
+              aria-label="Your learning path"
+              aria-busy="true"
+              className="min-h-[9.5rem] rounded-2xl border border-neutral-200 bg-white p-4"
+            >
+              <h3 className="font-semibold text-neutral-900">
+                Today’s practice
+              </h3>
+              <p role="status" className="mt-1 text-neutral-600">
+                Loading practice…
+              </p>
+            </section>
+          }
+        >
+          <HomePractice read={practiceRead} />
+        </Suspense>
+        {discoveryIsNext ? null : (
+          <div className="keep-going-row">
+            <div>
+              <h3>New words</h3>
+              <p>Hear a word, then choose Learn or Already know.</p>
+            </div>
+            <Link href="/discovery" className="vn-btn vn-btn-secondary">
+              Discover
             </Link>
           </div>
-          {firstWord ? (
-            <div className="word-spotlight-body">
-              {spotlightRead && spotlightRevision ? (
-                <Suspense
-                  fallback={
-                    <MeaningPicture
-                      meaningId={firstWord.meaningId}
-                      meaningRevision={spotlightRevision}
-                    />
-                  }
-                >
-                  <HomeMeaningPicture
-                    read={spotlightRead}
-                    meaningId={firstWord.meaningId}
-                    meaningRevision={spotlightRevision}
-                  />
-                </Suspense>
-              ) : (
-                <MeaningPicture
-                  meaningId={firstWord.meaningId}
-                  image={firstWord.image}
-                  meaningRevision={spotlightRevision}
-                />
-              )}
-              <Link
-                href={`/words/${encodeURIComponent(firstWord.userWordId)}`}
-                className="spotlight-word"
-              >
-                {firstWord.wordText}
-              </Link>
-              <p className="mt-1 text-neutral-600">
-                {firstWord.shortDefinition}
-              </p>
-              <div id="sentence-practice" className="spotlight-links">
-                <Link href="/discovery" className="vn-chip-link">
-                  Discover another word
-                </Link>
-                <Link href="/lists" className="vn-chip-link">
-                  Personal lists
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="spotlight-empty">
-              <div className="spotlight-empty-art" aria-hidden="true">
-                Aa
-              </div>
-              <p className="text-2xl font-bold tracking-tight text-neutral-900">
-                A word worth keeping.
-              </p>
-              <p className="text-neutral-600">
-                Save a word to start your collection.
-              </p>
-              <Link href="/vocabulary" className="vn-chip-link mt-2">
-                Find a word
-              </Link>
-            </div>
-          )}
-        </section>
-        <div className="home-practice">
-          <Suspense
-            fallback={
-              <section
-                aria-label="Your learning path"
-                aria-busy="true"
-                className="min-h-[25rem] rounded-3xl border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:min-h-[23rem]"
-              >
-                <h2 className="text-xl font-bold text-neutral-900">
-                  Today’s practice
-                </h2>
-                <p role="status" className="mt-2 text-neutral-600">
-                  Loading practice…
-                </p>
-              </section>
-            }
-          >
-            <HomePractice read={practiceRead} />
-          </Suspense>
-        </div>
-        <div className="home-explore">
-          <h2 id="explore-heading" className="home-section-title">
-            More ways to learn
-          </h2>
-          <nav aria-label="Explore your English">
-            <ul className="study-shortcuts">
-              {EXPLORE_LINKS.map(({ href, label, caption, symbol, tone }) => (
-                <li key={href}>
-                  <span
-                    className={`shortcut-symbol${tone === "lavender" ? " shortcut-symbol-lavender" : ""}`}
-                    aria-hidden="true"
-                  >
-                    {symbol}
-                  </span>
-                  <span>
-                    <Link
-                      href={href}
-                      aria-describedby={`explore-${href.slice(1)}`}
-                    >
-                      {label}
-                    </Link>
-                    <span
-                      id={`explore-${href.slice(1)}`}
-                      className="shortcut-caption"
-                    >
-                      {caption}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </div>
+        )}
+        <nav aria-label="Explore your English" className="flex flex-wrap gap-2">
+          {EXPLORE_LINKS.map(([href, label, prefetch]) => (
+            <Link
+              key={href}
+              href={href}
+              prefetch={prefetch}
+              className="vn-chip-link"
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
       </div>
+
+      <section aria-labelledby="latest-word-heading" className="latest-word">
+        {latestWord && wordHref ? (
+          <>
+            {pictureRead && latestRevision ? (
+              <Suspense
+                fallback={
+                  <MeaningPicture
+                    meaningId={latestWord.meaningId}
+                    meaningRevision={latestRevision}
+                  />
+                }
+              >
+                <HomeMeaningPicture
+                  read={pictureRead}
+                  meaningId={latestWord.meaningId}
+                  meaningRevision={latestRevision}
+                />
+              </Suspense>
+            ) : (
+              <MeaningPicture
+                meaningId={latestWord.meaningId}
+                image={latestWord.image}
+                meaningRevision={latestRevision}
+              />
+            )}
+            <div className="latest-word-body">
+              <div className="latest-word-head">
+                <h2
+                  id="latest-word-heading"
+                  className="text-sm font-semibold text-neutral-600"
+                >
+                  Your latest word
+                </h2>
+                <Link
+                  href="/words"
+                  prefetch="auto"
+                  className="vn-text-link text-sm"
+                >
+                  All your words
+                </Link>
+              </div>
+              <p className="latest-word-title">
+                <Link href={wordHref} prefetch="auto" className="headword">
+                  {latestWord.wordText}
+                </Link>
+                <span className="pos">{latestWord.partOfSpeech}</span>
+              </p>
+              <p className="text-neutral-700">{latestWord.shortDefinition}</p>
+              <div className="latest-word-actions">
+                <Link
+                  href={`${wordHref}#sentence-practice`}
+                  prefetch="auto"
+                  className="vn-text-link"
+                >
+                  Write a sentence with it
+                </Link>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="latest-word-empty">
+            <h2
+              id="latest-word-heading"
+              className="text-sm font-semibold text-neutral-600"
+            >
+              Your latest word
+            </h2>
+            <p className="headword text-3xl">Nothing saved yet</p>
+            <p className="text-neutral-600">
+              Choose Learn on a new word and it will wait for you here.
+            </p>
+            <Link href="/vocabulary" className="vn-text-link">
+              Search for a word
+            </Link>
+          </div>
+        )}
+      </section>
     </PageContainer>
   );
 }
 
-function ExploreIcon({ d }: { d: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="fill-none stroke-current stroke-[1.8]"
-      aria-hidden="true"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-    </svg>
-  );
-}
-
+// Practice and stories have instant loading states, which only show at once
+// when prefetched; the others prefetch on intent.
 const EXPLORE_LINKS = [
-  {
-    href: "/practice",
-    label: "Practice",
-    caption: "Listening, recall and mistakes",
-    symbol: <ExploreIcon d="M4.75 12a7.25 7.25 0 1 0 2.2-5.2M4.75 4.75v4h4" />,
-    tone: "blue",
-  },
-  {
-    href: "/knowledge-map",
-    label: "Word map",
-    caption: "Browse 100-word groups",
-    symbol: (
-      <ExploreIcon d="M4.75 4.75h5.5v5.5h-5.5zM13.75 4.75h5.5v5.5h-5.5zM4.75 13.75h5.5v5.5h-5.5zM13.75 13.75h5.5v5.5h-5.5z" />
-    ),
-    tone: "blue",
-  },
-  {
-    href: "/stories",
-    label: "Short stories",
-    caption: "Words inside a conversation",
-    symbol: "Aa",
-    tone: "lavender",
-  },
-  {
-    href: "/plan",
-    label: "Your plan",
-    caption: "Pace and direction",
-    symbol: <ExploreIcon d="M6 5h12v15H6zM9 3v4m6-4v4M9 11h6m-6 4h4" />,
-    tone: "blue",
-  },
-  {
-    href: "/courses",
-    label: "Situations",
-    caption: "Guided lessons by place",
-    symbol: (
-      <ExploreIcon d="M12 20.25s-6.25-5.4-6.25-10.5a6.25 6.25 0 1 1 12.5 0c0 5.1-6.25 10.5-6.25 10.5Zm0-8.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z" />
-    ),
-    tone: "lavender",
-  },
+  ["/practice", "Practice", "auto"],
+  ["/stories", "Short stories", "auto"],
+  ["/courses", "Situations", false],
+  ["/lists", "Personal lists", false],
+  ["/plan", "Your plan", false],
 ] as const;

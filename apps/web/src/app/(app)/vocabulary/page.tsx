@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import Form from "next/form";
 import {
   ApiResponseError,
@@ -125,6 +125,7 @@ export default async function VocabularyPage({
       </div>
       <Form
         action="/vocabulary"
+        prefetch={false}
         key={resultURL(after)}
         role="search"
         className="my-6 rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5"

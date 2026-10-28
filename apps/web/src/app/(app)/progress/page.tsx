@@ -1,10 +1,15 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer, Surface } from "@/ui/surface";
 import { getCompletionDayView } from "./completion-day-view";
 import { Achievements } from "../_components/achievements";
+
+// A count the server did not report is shown as unknown, never as zero.
+function formatCount(value: unknown): string {
+  return typeof value === "number" ? value.toLocaleString() : "—";
+}
 
 function formatActivityDate(localDate: string): string {
   const date = new Date(`${localDate}T00:00:00Z`);
@@ -78,8 +83,6 @@ export default async function ProgressPage() {
 
   const summaryStyle =
     "min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
-  const linkStyle =
-    "inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800";
   const knowledge = knowledgeResponse?.data;
   const stages = knowledge
     ? ([
@@ -108,7 +111,8 @@ export default async function ProgressPage() {
         <div>
           <h1 className="page-title">Progress</h1>
           <p className="page-lede">
-            Your saved words, recent days and milestones, as recorded.
+            What you have learned, the days you practised and the milestones you
+            reached, as recorded.
           </p>
         </div>
         <Link href="/words" className="vn-chip-link">
@@ -119,42 +123,46 @@ export default async function ProgressPage() {
       {knowledge ? (
         <Surface className="mt-6" aria-labelledby="vocabulary-map-heading">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2
-              id="vocabulary-map-heading"
-              className="text-xl font-bold text-neutral-900"
-            >
-              Your vocabulary map
+            <h2 id="vocabulary-map-heading" className="section-title">
+              Your saved words
             </h2>
-            <Link href="/vocabulary?view=map" className={linkStyle}>
-              Explore knowledge map
+            <Link href="/discover" className="vn-text-link">
+              Open your word map
             </Link>
           </div>
+          {/* Two separate records: words saved for review, and words the
+              learner said they already know. Neither is a proficiency score. */}
+          <dl className="progress-totals">
+            <div>
+              <dt>Saved to learn</dt>
+              <dd>{formatCount(knowledge.saved)}</dd>
+            </div>
+            <div>
+              <dt>Marked already known</dt>
+              <dd>{formatCount(knowledge.selfReportedKnown)}</dd>
+            </div>
+          </dl>
           <StageBar stages={stages} />
-          <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+          <ol aria-label="Review stages" className="stage-flow">
             {stages.map(({ label, count, swatch }) => (
-              <div
-                key={label}
-                className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3"
-              >
-                <dt className="flex items-center gap-2 text-sm text-neutral-600">
+              <li key={label}>
+                <span className="stage-flow-label">
                   <span
                     aria-hidden="true"
                     className={`size-2.5 rounded-full ${swatch}`}
                   />
                   {label}
-                </dt>
-                <dd className="mt-1 text-3xl font-semibold tabular-nums text-neutral-900">
-                  {count}
-                </dd>
-              </div>
+                </span>
+                <span className="stage-flow-count">{count}</span>
+              </li>
             ))}
-          </dl>
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-200 pt-3">
+          </ol>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-200 pt-3">
             <p className="text-sm text-neutral-600">
               {knowledge.saved} saved · {knowledge.due} ready for review
             </p>
             {knowledge.due > 0 && (
-              <Link href="/review" className={linkStyle}>
+              <Link href="/review" className="vn-text-link">
                 Start review
               </Link>
             )}
@@ -168,7 +176,7 @@ export default async function ProgressPage() {
             </p>
             <Link
               href="/vocabulary?view=map&knowledge=known"
-              className={`${linkStyle} mt-2`}
+              className="vn-text-link mt-2"
             >
               {knowledge.selfReportedKnown}{" "}
               {knowledge.selfReportedKnown === 1 ? "meaning" : "meanings"}{" "}
@@ -187,48 +195,44 @@ export default async function ProgressPage() {
         </Surface>
       ) : (
         <p role="status" className="mt-6 text-neutral-700">
-          Your vocabulary map is unavailable right now. Your other progress is
+          Your saved words are unavailable right now. Your other progress is
           below.
         </p>
       )}
 
       <Surface className="mt-4" aria-labelledby="completion-history-heading">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2
-            id="completion-history-heading"
-            className="text-xl font-bold text-neutral-900"
-          >
+          <h2 id="completion-history-heading" className="section-title">
             Recent activity
           </h2>
-          <p className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-primary-50 px-3 text-sm font-semibold text-primary-800">
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="size-4 fill-none stroke-current stroke-[1.8]"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13 3c1 5-4 5-3 9 1-1 2-2 2-3 4 2 6 5 5 8a6 6 0 0 1-11-1c-1-5 4-7 7-13Z"
-              />
-            </svg>
-            {currentStreakDays}-day streak
+          <p className="inline-flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-700">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-neutral-900">
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-4 fill-none stroke-current stroke-[1.8] text-primary-700"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13 3c1 5-4 5-3 9 1-1 2-2 2-3 4 2 6 5 5 8a6 6 0 0 1-11-1c-1-5 4-7 7-13Z"
+                />
+              </svg>
+              {currentStreakDays}-day streak
+            </span>
+            <span>Best: {longestStreakDays} days</span>
           </p>
         </div>
         {historyWithLabels.length > 0 ? (
-          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          <ul className="activity-days">
             {historyWithLabels.map((day) => (
               <li
                 key={day.localDate}
-                className={`flex min-h-12 min-w-0 items-center justify-between gap-3 rounded-xl border-l-4 px-4 py-2.5 ${day.view.className}`}
+                data-status={day.view.label}
+                className={`activity-day ${day.view.className}`}
               >
-                <time
-                  dateTime={day.localDate}
-                  className="shrink-0 text-sm font-semibold"
-                >
-                  {day.label}
-                </time>
-                <p className="min-w-0 text-right text-sm">{day.view.label}</p>
+                <time dateTime={day.localDate}>{day.label}</time>
+                <p>{day.view.label}</p>
               </li>
             ))}
           </ul>
@@ -237,14 +241,23 @@ export default async function ProgressPage() {
             <p className="text-neutral-700">
               Complete a daily mission to start your history.
             </p>
-            <Link href="/home" className={`${linkStyle} mt-2`}>
+            <Link href="/home" className="vn-text-link mt-2">
               Go to today&apos;s mission
             </Link>
           </div>
         )}
       </Surface>
 
-      <div className="mt-4 divide-y divide-neutral-200 rounded-[1.25rem] border border-neutral-200 bg-white px-[var(--spacing-md)] shadow-[var(--vn-shadow-card)] sm:px-[var(--spacing-lg)]">
+      {achievementsResponse ? (
+        <Achievements achievements={achievementsResponse.data} />
+      ) : (
+        <p role="status" className="mt-6 text-neutral-700">
+          Your milestones could not load. Your other progress is still
+          available.
+        </p>
+      )}
+
+      <div className="mt-4 divide-y divide-neutral-200 rounded-[1.25rem] border border-neutral-200 bg-white px-[var(--spacing-md)] sm:px-[var(--spacing-lg)]">
         {lessonResponse ? (
           <details className="py-2">
             <summary className={summaryStyle}>
@@ -269,7 +282,7 @@ export default async function ProgressPage() {
                   <li key={item.key} className="py-3">
                     <Link
                       href={`/learn/${encodeURIComponent(item.key)}`}
-                      className={linkStyle}
+                      className="vn-text-link"
                     >
                       {item.title}
                     </Link>
@@ -281,14 +294,14 @@ export default async function ProgressPage() {
                   </li>
                 ))}
             </ul>
-            <Link href="/courses" className={`${linkStyle} mb-2`}>
+            <Link href="/courses" className="vn-text-link mb-2">
               Browse courses
             </Link>
           </details>
         ) : (
           <p role="status" className="py-4 text-neutral-700">
             Your lesson progress could not load.{" "}
-            <Link href="/courses" className={linkStyle}>
+            <Link href="/courses" className="vn-text-link">
               Browse courses
             </Link>
           </p>
@@ -321,21 +334,18 @@ export default async function ProgressPage() {
                   ))}
                 </ul>
               ) : (
-                <Link href="/writing" className={`${linkStyle} mt-2`}>
+                <Link href="/writing" className="vn-text-link mt-2">
                   Write your first sentence
                 </Link>
               ))}
-            <Link
-              href="/progress/sentences"
-              className={`${linkStyle} mt-2 mb-2`}
-            >
+            <Link href="/progress/sentences" className="vn-text-link mt-2 mb-2">
               View sentence history
             </Link>
           </details>
           {!sentencesResponse && (
             <p role="status" className="pb-3 text-neutral-700">
               Your recent writing could not load.{" "}
-              <Link href="/progress/sentences" className={linkStyle}>
+              <Link href="/progress/sentences" className="vn-text-link">
                 Open sentence history to try again.
               </Link>
             </p>
@@ -374,14 +384,6 @@ export default async function ProgressPage() {
           </details>
         </section>
       </div>
-      {achievementsResponse ? (
-        <Achievements achievements={achievementsResponse.data} />
-      ) : (
-        <p role="status" className="mt-6 text-neutral-700">
-          Your milestones could not load. Your other progress is still
-          available.
-        </p>
-      )}
     </PageContainer>
   );
 }
@@ -396,7 +398,7 @@ function StageBar({
   return (
     <div
       aria-hidden="true"
-      className="mt-5 flex h-2.5 w-full overflow-hidden rounded-full bg-neutral-200"
+      className="mt-4 flex h-2 w-full overflow-hidden rounded-full bg-neutral-200"
     >
       {total > 0
         ? stages.map((stage) =>

@@ -47,7 +47,7 @@ for (const theme of ["light", "dark"] as const) {
     });
     await page.goto("/progress");
     const summary = page.getByRole("region", { name: "Learning summary" });
-    const map = page.getByRole("region", { name: "Your vocabulary map" });
+    const map = page.getByRole("region", { name: "Your saved words" });
     expect((await map.boundingBox())!.y).toBeLessThan(
       (await summary.boundingBox())!.y,
     );

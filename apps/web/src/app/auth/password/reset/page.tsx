@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 
 import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
 import { AuthShell } from "@/ui/auth-shell";

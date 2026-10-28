@@ -1,7 +1,7 @@
 "use client";
 
 import { replaceSessionLocation } from "../_components/session-route";
-import Link from "next/link";
+import Link from "@/ui/link";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { VocabularySources } from "@/ui/vocabulary-sources";
 import { useEffect, useRef, useState } from "react";
@@ -11,10 +11,16 @@ import {
 } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
+import { getExternalMeaningPicture } from "@/lib/meaning-pictures";
 import { handleApiError } from "@/lib/session";
 import { deviceSpeech, type PronunciationState } from "@/lib/speech";
 import {
+  applyWordState,
+  confirmedWordState,
+  confirmsChoice,
+  journeyRangeHref,
   nextDiscoveryTarget,
+  wordState,
   wordStateLabel,
   type KnowledgeMapData,
 } from "../knowledge-map/models";
@@ -55,6 +61,13 @@ export function Discovery({
   const displayedRank = item?.rank;
   const displayedWord = item?.wordText;
   const displayedMeaning = item?.meaningId;
+  // The likely next word: the first unseen one after this word in the range.
+  const upcoming = data.currentBand.items.find(
+    (word) =>
+      word.rank > (displayedRank ?? 0) &&
+      !word.selfReportedKnown &&
+      !word.saved,
+  );
 
   useEffect(() => {
     if (!error) return;
@@ -97,6 +110,21 @@ export function Discovery({
         );
     }
   }, [started, displayedRank, displayedWord, displayedMeaning, muted, done]);
+
+  // Warm the browser cache with the next word's approved picture while the
+  // learner reads this one, so the following card appears complete.
+  useEffect(() => {
+    if (!started || !upcoming?.image) return;
+    const picture = getExternalMeaningPicture(
+      upcoming.meaningId,
+      upcoming.image,
+      upcoming.meaningRevision,
+    );
+    if (!picture) return;
+    const preload = new Image();
+    preload.decoding = "async";
+    preload.src = picture.src;
+  }, [started, upcoming]);
 
   function start() {
     if (!item) return;
@@ -145,29 +173,48 @@ export function Discovery({
     try {
       const csrf = await getOrRefreshCSRFToken();
       if (!csrf) throw new Error("Session not ready");
-      await createApiClient().decideKnowledgeMapWord(
+      const { data: result } = await createApiClient().decideKnowledgeMapWord(
         request.body,
         request.key,
         { headers: { "X-CSRF-Token": csrf } },
       );
-      // Read confirmed state before choosing the next unseen word. Keep the
-      // exact pending intent until a different range, if needed, also loads.
+      // Use the meaning's state as the server reports it. When it is exactly
+      // what this choice produces, continue within the range without
+      // re-reading all 100 words; a later word changed elsewhere still
+      // surfaces as a revision conflict when it is chosen.
+      const state = confirmedWordState(result, request.body);
+      if (state && confirmsChoice(state, request.body.decision)) {
+        const local = applyWordState(data, request.body.meaningId, state);
+        const nextInRange = local.currentBand.items.find(
+          (word) => !word.selfReportedKnown && !word.saved,
+        );
+        if (nextInRange) {
+          pending.current = null;
+          setData(local);
+          setRank(nextInRange.rank);
+          return;
+        }
+      }
+      // A replayed receipt that reports a different current state (changed
+      // since, in another tab or by a removal), an incomplete response or the
+      // end of the range: read confirmed state before choosing the next unseen
+      // word. Keep the exact pending intent until that range loads.
       const client = createApiClient();
       const current = (await client.getKnowledgeMap(band)).data;
       const target = nextDiscoveryTarget(current);
-      const confirmed =
+      const fresh =
         target && target.band !== band
           ? (await client.getKnowledgeMap(target.band)).data
           : current;
       const nextWord = target
-        ? confirmed.currentBand.items.find(
+        ? fresh.currentBand.items.find(
             (word) => !word.selfReportedKnown && !word.saved,
           )
         : null;
       if (target && !nextWord)
         throw new Error("The next unseen word could not be confirmed");
       pending.current = null;
-      setData(confirmed);
+      setData(fresh);
       if (!nextWord) setDone(true);
       else setRank(nextWord.rank);
     } catch (failure) {
@@ -227,8 +274,8 @@ export function Discovery({
     return (
       <div className={styles.focus}>
         <p role="alert">This word could not load.</p>
-        <Link href={`/knowledge-map?band=${band}`} className={styles.secondary}>
-          Back to map
+        <Link href={journeyRangeHref(band)} className={styles.secondary}>
+          Back to Journey
         </Link>
       </div>
     );
@@ -241,69 +288,82 @@ export function Discovery({
           Your choices are saved. Keep the words you are learning fresh with a
           short review.
         </p>
-        <div className={styles.actions}>
+        <div className={styles.startActions}>
           <Link className={styles.primary} href="/reviews">
             Review words
           </Link>
-          <Link
-            className={styles.secondary}
-            href={`/knowledge-map?band=${band}`}
-          >
+          <Link className={styles.secondary} href={`/discover?band=${band}`}>
             View map
           </Link>
         </div>
       </div>
     );
 
+  const rangeName = bandSummary
+    ? `Words ${bandSummary.startRank.toLocaleString()}–${bandSummary.endRank.toLocaleString()}`
+    : "";
+
   return (
     <div className={styles.focus}>
       <div className={styles.top}>
-        <Link
-          href={`/knowledge-map?band=${band}#range-words`}
-          className={styles.back}
-        >
-          Knowledge map
-        </Link>
+        <span className={styles.counter}>{rangeName}</span>
         <span className={styles.counter}>
-          {item.rank.toLocaleString()} / {data.totalWords.toLocaleString()}
+          Word {item.rank.toLocaleString()} of{" "}
+          {data.totalWords.toLocaleString()}
         </span>
       </div>
-      <progress
-        className={styles.progress}
-        value={item.rank - 1}
-        max={data.totalWords}
-        aria-label="Position in word map"
-      />
+      {/* This range at a glance: one mark per word, the current one outlined. */}
+      <div
+        className={`${styles.strip} ${styles.discoveryStrip}`}
+        aria-hidden="true"
+      >
+        {data.currentBand.items.map((word) => (
+          <span
+            key={word.meaningId}
+            data-state={wordState(word)}
+            data-next={word.rank === item.rank ? "true" : undefined}
+          />
+        ))}
+      </div>
       {!started ? (
         <section className={styles.start}>
           <h1 className={styles.title}>Discover your next words</h1>
           <p>
             Hear a word, read its meaning, then choose Learn or Already know.
+            {bandSummary
+              ? ` ${bandSummary.unseenCount} new ${bandSummary.unseenCount === 1 ? "word is" : "words are"} waiting in this range.`
+              : ""}
           </p>
-          <button type="button" className={styles.primary} onClick={start}>
-            Start discovering
-          </button>
-          <div className={styles.audio}>
-            <button type="button" aria-pressed={!muted} onClick={toggleSound}>
-              {muted ? "Sound off" : "Sound on"}
+          <div className={styles.startActions}>
+            <button type="button" className={styles.primary} onClick={start}>
+              Start discovering
             </button>
+            <div className={styles.audio}>
+              <button type="button" aria-pressed={!muted} onClick={toggleSound}>
+                {muted ? "Sound off" : "Sound on"}
+              </button>
+            </div>
           </div>
         </section>
       ) : (
         <>
           <article className={styles.card} aria-labelledby="discovery-word">
-            <div className={styles.header}>
-              <p className={styles.muted}>{item.partOfSpeech}</p>
-              <span className={styles.state}>{wordStateLabel(item)}</span>
+            <div className={styles.entry}>
+              <h1
+                id="discovery-word"
+                ref={titleRef}
+                tabIndex={-1}
+                className={`headword ${styles.cardWord}`}
+              >
+                {item.wordText}
+              </h1>
+              <span className={styles.stateChip} data-state={wordState(item)}>
+                {wordStateLabel(item)}
+              </span>
             </div>
-            <h1
-              id="discovery-word"
-              ref={titleRef}
-              tabIndex={-1}
-              className={styles.cardWord}
-            >
-              {item.wordText}
-            </h1>
+            <div className={styles.entryMeta}>
+              <p className="pos">{item.partOfSpeech}</p>
+            </div>
             <div className={styles.audio}>
               <span className="sr-only">AI-generated pronunciation</span>
               <button
@@ -335,34 +395,35 @@ export function Discovery({
               meaningId={item.meaningId}
               image={item.image}
               meaningRevision={item.meaningRevision}
+              priority
             />
             {item.exampleSentence && (
               <p className={styles.example}>{item.exampleSentence}</p>
             )}
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.primary}
-                disabled={busy || conflict || Boolean(pending.current)}
-                onClick={() => void decide("learn")}
-              >
-                Learn
-              </button>
-              <button
-                type="button"
-                className={styles.secondary}
-                disabled={busy || conflict || Boolean(pending.current)}
-                onClick={() => void decide("known")}
-              >
-                Already know
-              </button>
-            </div>
-            {busy && (
-              <p role="status" className={styles.status}>
-                Saving your choice…
-              </p>
-            )}
           </article>
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.primary}
+              disabled={busy || conflict || Boolean(pending.current)}
+              onClick={() => void decide("learn")}
+            >
+              Learn
+            </button>
+            <button
+              type="button"
+              className={styles.secondary}
+              disabled={busy || conflict || Boolean(pending.current)}
+              onClick={() => void decide("known")}
+            >
+              Already know
+            </button>
+          </div>
+          {busy && (
+            <p role="status" className={styles.status}>
+              Saving your choice…
+            </p>
+          )}
           {error && (
             <div
               ref={errorRef}
@@ -393,16 +454,6 @@ export function Discovery({
               )}
             </div>
           )}
-          <p className={styles.status}>
-            Words {bandSummary?.startRank.toLocaleString()}–
-            {bandSummary?.endRank.toLocaleString()}
-          </p>
-          <Link
-            className={styles.back}
-            href={`/knowledge-map?band=${band}#range-words`}
-          >
-            Choose another word
-          </Link>
         </>
       )}
       <VocabularySources attribution={data.attribution} />

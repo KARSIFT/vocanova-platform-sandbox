@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
@@ -97,27 +97,12 @@ export default async function PracticePage({
         }
       />
 
-      <nav
-        aria-label="Practice activities"
-        className="flex flex-wrap gap-x-6 border-y border-neutral-200 py-3"
-      >
-        <Link href="/discovery" className={linkStyle}>
-          Discover words
-        </Link>
-        <Link href="/stories" className={linkStyle}>
-          Short stories
-        </Link>
-      </nav>
-
       <section
         aria-labelledby="practice-review-heading"
-        className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 py-5"
+        className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-4"
       >
         <div className="min-w-0 flex-1 basis-48">
-          <h2
-            id="practice-review-heading"
-            className="text-lg font-bold text-neutral-900"
-          >
+          <h2 id="practice-review-heading" className="section-title">
             Review words
           </h2>
           {dueCount === undefined ? (
@@ -133,32 +118,57 @@ export default async function PracticePage({
             </p>
           )}
         </div>
-        <Link href="/review" className={linkStyle}>
+        <Link href="/review" className="vn-btn vn-btn-secondary min-h-11">
           {canStartReview ? "Start review" : "Open reviews"}
         </Link>
       </section>
 
-      <Link href="/courses" className={`${linkStyle} mt-3`}>
-        Explore situation lessons
-      </Link>
-
-      <div className="flex flex-wrap gap-x-6 border-t border-neutral-200 pt-3">
-        <Link href="/progress/sentences" className={linkStyle}>
-          Open sentence history
-        </Link>
-        <Link
-          href={
-            firstWord
-              ? `/vocabulary/${encodeURIComponent(firstWord.wordSlug)}`
-              : "/vocabulary"
-          }
-          className={linkStyle}
-        >
-          {firstWord
-            ? `Listen to ${firstWord.wordText}`
-            : "Find a word to hear"}
-        </Link>
-      </div>
+      {/* One list of the other ways to practise, instead of scattered rows. */}
+      <nav aria-label="Practice activities" className="mt-6">
+        <h2 className="section-title">More ways to practise</h2>
+        <ul className="mt-2 divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white">
+          {[
+            {
+              href: "/discovery",
+              label: "Discover words",
+              text: "Hear a new word and choose Learn or Already know.",
+            },
+            {
+              href: "/stories",
+              label: "Short stories",
+              text: "Read your words inside a short conversation.",
+            },
+            {
+              href: "/courses",
+              label: "Explore situation lessons",
+              text: "Guided lessons for a place, such as a cafe or an airport.",
+            },
+            {
+              href: "/progress/sentences",
+              label: "Open sentence history",
+              text: "Your sentences and their feedback.",
+            },
+            {
+              href: firstWord
+                ? `/vocabulary/${encodeURIComponent(firstWord.wordSlug)}`
+                : "/vocabulary",
+              label: firstWord
+                ? `Listen to ${firstWord.wordText}`
+                : "Find a word to hear",
+              text: firstWord
+                ? "Hear your latest word again."
+                : "Search any word and hear it.",
+            },
+          ].map((item) => (
+            <li key={item.label} className="px-4 py-2">
+              <Link href={item.href} className={linkStyle}>
+                {item.label}
+              </Link>
+              <p className="pb-1 text-sm text-neutral-600">{item.text}</p>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </PageContainer>
   );
 }

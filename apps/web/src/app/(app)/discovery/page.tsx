@@ -1,8 +1,9 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer } from "@/ui/surface";
 import {
+  journeyRangeHref,
   nextDiscoveryTarget,
   validBand,
   type KnowledgeMapData,
@@ -60,12 +61,14 @@ export default async function DiscoveryPage({
             ? "New words changed elsewhere. Try again to load your next word."
             : "Words could not load."}
         </p>
-        <a href={returnTo} className={styles.secondary}>
-          Try again
-        </a>
-        <Link href="/knowledge-map" className={styles.back}>
-          Knowledge map
-        </Link>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <a href={returnTo} className={styles.secondary}>
+            Try again
+          </a>
+          <Link href="/discover" className={styles.back}>
+            Open your word map
+          </Link>
+        </div>
       </PageContainer>
     );
   if (initialRank === undefined)
@@ -75,11 +78,8 @@ export default async function DiscoveryPage({
         <p className={styles.definition}>
           Choose a word on the map to revisit it.
         </p>
-        <Link
-          href={`/knowledge-map?band=${band}#range-words`}
-          className={styles.primary}
-        >
-          Knowledge map
+        <Link href={journeyRangeHref(band)} className={styles.primary}>
+          Open your word map
         </Link>
       </PageContainer>
     );

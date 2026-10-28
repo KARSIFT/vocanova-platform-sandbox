@@ -1,27 +1,13 @@
-import * as Sentry from "@sentry/nextjs";
-import {
-  sanitizeTelemetryEvent,
-  sanitizeTelemetryBreadcrumb,
-} from "./lib/telemetry-privacy";
+import { routerTransitionStart, startMonitoring } from "./lib/monitoring";
 
-const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+// The error monitor is about a quarter of the shared JavaScript, so it loads
+// after the page has rendered instead of in the critical bundle. Errors raised
+// before then are kept and reported once it is ready (see lib/monitoring.ts).
+startMonitoring();
 
-if (sentryDsn) {
-  Sentry.init({
-    dsn: sentryDsn,
-    sendDefaultPii: false,
-    beforeSend: sanitizeTelemetryEvent,
-    beforeBreadcrumb: sanitizeTelemetryBreadcrumb,
-    environment:
-      process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
-    release: process.env.NEXT_PUBLIC_SENTRY_RELEASE,
-    // `debug` and `spotlight` are the two options that can surface a Sentry
-    // developer UI/console output in the browser. Both are pinned off rather
-    // than left to their defaults so a production or staging build can never
-    // render Sentry's dev overlay to an end user (VOC-051-TEST-01).
-    debug: false,
-    spotlight: false,
-  });
+export function onRouterTransitionStart(
+  href: string,
+  navigationType: string,
+): void {
+  routerTransitionStart(href, navigationType);
 }
-
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

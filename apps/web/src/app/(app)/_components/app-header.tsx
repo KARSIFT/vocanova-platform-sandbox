@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useSyncExternalStore } from "react";
-import Link from "next/link";
+import Link from "@/ui/link";
 import Form from "next/form";
 import { usePathname, useSearchParams } from "next/navigation";
 
@@ -11,7 +11,8 @@ import { CSRF_COOKIE_NAME, deleteCookie } from "@/lib/cookies";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { clearOAuthContinuation } from "@/lib/oauth-continuation";
 import { handleSessionExpired, isSessionExpiredError } from "@/lib/session";
-import { BrandMark, BrandSymbol } from "@/ui/brand-mark";
+import { BrandSymbol } from "@/ui/brand-mark";
+import { markNavigationStart } from "@/ui/navigation-state";
 
 import {
   clearSentenceFeedbackDrafts,
@@ -155,15 +156,21 @@ export function AppHeader() {
         <div
           className={`app-header-inner ${pathname === "/vocabulary" ? "app-header-search-page" : ""}`}
         >
-          <Link
-            href="/home"
-            className="inline-flex min-h-11 items-center gap-[var(--spacing-sm)] rounded-lg pr-[var(--spacing-sm)]"
-          >
-            <BrandMark />
+          <Link href="/home" prefetch="auto" className="header-brand">
+            <BrandSymbol />
+            <span className="header-wordmark">VocaNova</span>
           </Link>
           {pathname !== "/vocabulary" && (
             <Form
               action="/vocabulary"
+              // The search page is only needed once a word is submitted.
+              prefetch={false}
+              onSubmit={(event) => {
+                const query = new FormData(event.currentTarget).get("q");
+                markNavigationStart(
+                  `/vocabulary?${new URLSearchParams({ q: String(query ?? "") })}`,
+                );
+              }}
               role="search"
               aria-label="Word search"
               className="header-search"
@@ -184,7 +191,7 @@ export function AppHeader() {
                 id="header-word-query"
                 name="q"
                 type="search"
-                placeholder="Search any word…"
+                placeholder="Search…"
                 maxLength={100}
                 autoComplete="off"
                 spellCheck={false}
@@ -214,6 +221,8 @@ export function AppHeader() {
                 <Link
                   key={href}
                   href={href}
+                  // Primary destinations are worth a viewport prefetch.
+                  prefetch="auto"
                   aria-current={active ? "page" : undefined}
                 >
                   <Icon />
@@ -268,7 +277,10 @@ export function AppHeader() {
                   d="M14 4.75h3.25a2 2 0 0 1 2 2v10.5a2 2 0 0 1-2 2H14M10 16l4-4-4-4m4 4H4.75"
                 />
               </svg>
-              {status.type === "loading" ? "Signing out..." : "Log out"}
+              {/* Icon-only on phones; the text stays the accessible name. */}
+              <span className="header-label">
+                {status.type === "loading" ? "Signing out…" : "Log out"}
+              </span>
             </button>
           </div>
         </div>

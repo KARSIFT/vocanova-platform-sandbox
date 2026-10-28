@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import type { StoryVocabulary } from "@vocanova/api-client";
 import { textLink } from "../../practice/_components/practice-styles";
 

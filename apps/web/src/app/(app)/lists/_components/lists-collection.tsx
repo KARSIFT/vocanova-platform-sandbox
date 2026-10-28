@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useRouter } from "next/navigation";
 import type { WordListsResponse } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";

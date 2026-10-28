@@ -1,10 +1,48 @@
 # Vocanova current product state
 
-## Calm study desk UI pass — 28 October 2026 (local, awaiting review)
+## Learner experience and speed redesign — 28 October 2026 (local, awaiting review)
+
+Following the owner's request for a larger change than the calm study desk, the
+delivery branch `claude/learner-ux-performance` (from main `6ccbb03e`) applies
+the [word atlas](../design/learning-workspace.md#word-atlas-late-october-2026)
+direction and the measured fixes in
+[performance and recovery](performance-reliability.md#prefetch-deferred-monitoring-and-feedback--28-october-2026).
+
+- **Home** leads with one next step (review or discovery, unchanged backend
+  selection), then today's real mission values, the practice path as a secondary
+  row, and the learner's latest saved word with its picture and a direct link to
+  write a sentence with that meaning. The five-tile grid and the duplicate
+  primary practice button are gone.
+- **Journey** is the one home of the 10,000-word map: the selected range (a
+  100-mark strip, written counts, the next word and one Discover action) beside
+  an atlas of all 100 ranges. Plain Journey opens the first range with new
+  words; `/knowledge-map` redirects there, and range links, retries and sign-in
+  returns stay on Journey. At 360px the page is 1,845px tall instead of 4,927px.
+  Phones choose ranges with a full-size chooser; from 40rem the map squares are
+  44px links with arrow-key movement.
+- **Discovery** keeps Learn/Already know within thumb reach and advances within a
+  range from the server's reported state of the decided meaning, one request per
+  word. A replayed receipt that reports a different current state (another tab,
+  a removal), an incomplete response or a range change still re-reads the map.
+- **Word pages, saved words and Progress** set headwords as dictionary entries,
+  make Save a clear meaning-specific toggle, regroup Practice's scattered links,
+  and show saved and self-assessed words as separate records.
+- **Speed and feedback**: most links prefetch on intent instead of on view
+  (idle prefetch on Home 26 → 12 requests, API reads 32 → 18) while primary and
+  prominent links keep their instant loading states, the error monitor loads
+  after the page with bounded recovery, every in-app tap is acknowledged at once,
+  discovery needs one request per word within a range, and situation word pages
+  need one fewer sequential API wave.
+
+Evidence is local synthetic-fixture rendering, browser tests and lab timings
+against a production build with a mock API. It does not establish live
+authentication, database timing, field performance or deployment.
+
+## Calm study desk UI pass — 28 October 2026 (merged in #1503)
 
 A presentation-only redesign on branch `claude/ui-quality-redesign` applies the
-[calm study desk](../design/learning-workspace.md#calm-study-desk-october-2026)
-direction across the public page, sign-in, Home, Journey, Progress, Situation
+calm study desk direction (since superseded by the
+[word atlas](../design/learning-workspace.md#word-atlas-late-october-2026)) across the public page, sign-in, Home, Journey, Progress, Situation
 courses, word detail and Settings. Home's backend-selected action becomes one
 blue mission card; Journey adds "Places to use English" situation cards above
 the knowledge map; Progress shows stage counts with a proportion bar and a

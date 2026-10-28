@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/ui/link";
 import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";

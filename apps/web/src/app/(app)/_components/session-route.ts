@@ -27,8 +27,8 @@ export function getSessionExit(
         ? values[0]
         : "1";
     return {
-      href: `/knowledge-map?band=${band}#range-words`,
-      label: "Back to word map",
+      href: `/discover?band=${band}#range-words`,
+      label: "Back to Journey",
     };
   }
   if (pathname.startsWith("/learn/"))

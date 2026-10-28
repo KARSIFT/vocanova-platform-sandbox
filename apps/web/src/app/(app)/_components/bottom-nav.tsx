@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { usePathname } from "next/navigation";
 
 import { isPrimaryNavItemActive } from "./bottom-nav-state";
@@ -31,6 +31,8 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              // Primary destinations are worth a viewport prefetch.
+              prefetch="auto"
               aria-current={isActive ? "page" : undefined}
               className={`group flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 rounded-xl text-xs transition-colors ${
                 isActive

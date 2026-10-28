@@ -64,7 +64,7 @@ for (const theme of ["light", "dark"] as const) {
     });
 
     await page.goto("/progress");
-    let overview = page.getByRole("region", { name: "Your vocabulary map" });
+    let overview = page.getByRole("region", { name: "Your saved words" });
     await overview.locator("summary").click();
     await expect(
       overview.getByText("0 saved · 0 ready for review", {
@@ -97,7 +97,7 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeVisible();
 
     await page.goto("/progress");
-    overview = page.getByRole("region", { name: "Your vocabulary map" });
+    overview = page.getByRole("region", { name: "Your saved words" });
     await overview.locator("summary").click();
     await expect(
       overview.getByText("1 saved · 1 ready for review", {
@@ -149,7 +149,7 @@ for (const theme of ["light", "dark"] as const) {
       page.getByRole("button", { name: "Remove pour from saved words" }),
     ).toBeVisible();
     await page.goto("/progress");
-    overview = page.getByRole("region", { name: "Your vocabulary map" });
+    overview = page.getByRole("region", { name: "Your saved words" });
     await overview.locator("summary").click();
     await expect(
       overview.getByRole("link", {

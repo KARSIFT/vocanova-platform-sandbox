@@ -40,7 +40,7 @@ for (const theme of ["light", "dark"] as const) {
     await textbox.fill("I invite my friend to dinner.");
     expect(mutations).toEqual([]);
     await page.goto("/progress");
-    const map = page.getByRole("region", { name: "Your vocabulary map" });
+    const map = page.getByRole("region", { name: "Your saved words" });
     const writingHistory = page.getByRole("region", { name: "Sentence practice", exact: true });
     const rewards = page.getByRole("region", { name: "Learning summary" });
     expect((await map.boundingBox())!.y).toBeLessThan((await rewards.boundingBox())!.y);

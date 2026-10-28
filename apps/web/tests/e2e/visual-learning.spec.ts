@@ -203,7 +203,7 @@ test("Home streams the saved-word picture without delaying Review", async ({ pag
   await page.goto("/home", { waitUntil: "commit" });
   const review=page.getByRole("region", {name:"Review words",exact:true});
   await expect(review.getByRole("button",{name:"Start review",exact:true})).toBeEnabled();
-  const picture=page.getByRole("region",{name:"Your vocabulary",exact:true}).getByTestId("meaning-picture").getByRole("img");
+  const picture=page.getByRole("region",{name:"Your latest word",exact:true}).getByTestId("meaning-picture").getByRole("img");
   await expect(picture).toHaveAttribute("src", /_next\/image/);
   await expect(picture).toHaveAttribute("src", /^https:\/\/images\.vocanova\.site\/meanings\//);
   await expect.poll(()=>picture.evaluate((element)=>(element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
@@ -221,7 +221,7 @@ for (const mode of ["stale", "unavailable"] as const) {
       ...(mode==="unavailable"?[{name:"e2e_meaning_images_status",value:"503",url:baseURL!}]:[]),
     ]);
     await page.goto("/home");
-    const picture=page.getByRole("region",{name:"Your vocabulary",exact:true}).getByTestId("meaning-picture").getByRole("img");
+    const picture=page.getByRole("region",{name:"Your latest word",exact:true}).getByTestId("meaning-picture").getByRole("img");
     await expect(picture).toHaveAttribute("src",/_next\/image/);
     await expect.poll(()=>picture.evaluate((element)=>(element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     await expect(page.getByRole("region",{name:"Review words",exact:true}).getByRole("button",{name:"Start review",exact:true})).toBeEnabled();
@@ -312,7 +312,11 @@ for (const theme of ["light", "dark"] as const) {
       expect(box.width).toBeGreaterThanOrEqual(44);
       expect(box.height).toBeGreaterThanOrEqual(44);
       await page.screenshot({ path: testInfo.outputPath(`pending-picture-${theme}.png`) });
+      // Audit at a stable position: mid-page, controls passing behind the
+      // sticky header are partly covered. The retry target is measured above.
+      await page.evaluate(() => window.scrollTo(0, 0));
       expect((await scanForAxeViolations(page)).criticalOrSerious).toEqual([]);
+      await frame.scrollIntoViewIfNeeded();
       expect(await page.evaluate(() => document.visibilityState)).toBe("visible");
       const originalImage = await frame.getByRole("img").elementHandle();
       const responsePromise = page.waitForResponse((response) => new URL(response.url()).searchParams.has("vocanova_retry"));

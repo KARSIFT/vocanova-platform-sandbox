@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/ui/link";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
 import { textLink } from "../practice/_components/practice-styles";
