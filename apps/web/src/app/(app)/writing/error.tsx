@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/ui/link";
 import { PageContainer, Surface } from "@/ui/surface";
 import {
   primaryAction,

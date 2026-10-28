@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { createApiClient } from "@/lib/api";
@@ -71,11 +71,19 @@ export function PracticeJourney({
     return (
       <section
         aria-label="Your learning path"
-        className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)]"
+        className={
+          compact
+            ? "rounded-2xl border border-neutral-200 bg-white p-4"
+            : "rounded-3xl border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)]"
+        }
       >
-        <h2 className="text-xl font-bold text-neutral-900">
-          {compact ? "Today’s practice" : "Your learning path"}
-        </h2>
+        {compact ? (
+          <h3 className="font-semibold text-neutral-900">Today’s practice</h3>
+        ) : (
+          <h2 className="text-xl font-bold text-neutral-900">
+            Your learning path
+          </h2>
+        )}
         <p role="status" className="mt-2 text-neutral-600">
           We could not load your learning path.
         </p>
@@ -97,87 +105,102 @@ export function PracticeJourney({
     { length: compact ? 3 : lesson - first + 3 },
     (_, index) => first + index,
   );
+  const completed = `${journey.completedLessons} ${journey.completedLessons === 1 ? "lesson" : "lessons"} completed`;
   return (
     <section
       aria-label="Your learning path"
-      className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:p-6"
+      className={
+        compact
+          ? "rounded-2xl border border-neutral-200 bg-white p-4"
+          : "rounded-3xl border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:p-6"
+      }
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-neutral-900">
-            {compact ? "Today’s practice" : "Your path"}
-          </h2>
-          {compact && (
-            <p className="mt-1 text-neutral-600">
-              Listen. Complete. Put it together.
-            </p>
-          )}
-        </div>
-        <span className="shrink-0 whitespace-nowrap rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-primary-800">
-          {journey.todayCompletedLessons} / {journey.dailyGoal}
-          {compact ? "" : " today"}
-        </span>
-      </div>
-      <progress
-        aria-label="Practice lessons today"
-        value={today}
-        max={journey.dailyGoal}
-        className="mt-5 h-2.5 w-full"
-      />
-      <p className="mt-2 text-sm text-neutral-600">
-        {journey.completedLessons}{" "}
-        {journey.completedLessons === 1 ? "lesson" : "lessons"} completed
-      </p>
       {compact ? (
+        // Home's secondary activity: the same durable path, without competing
+        // with the review action for attention.
         <>
-          <ol
-            aria-label="Practice path"
-            className="relative mt-5 grid grid-cols-3 gap-2 before:absolute before:inset-x-[16.5%] before:top-6 before:h-0.5 before:rounded-full before:bg-neutral-200 before:content-['']"
-          >
-            {nodes.map((number) => {
-              const done = number < lesson;
-              const active = number === lesson;
-              return (
-                <li
-                  key={number}
-                  aria-current={active ? "step" : undefined}
-                  className="flex min-w-0 flex-col items-center text-center"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`relative flex size-12 items-center justify-center rounded-full border-b-4 font-bold ${done ? "border-primary-300 bg-primary-100 text-primary-800" : active ? "border-primary-900 bg-primary-700 text-white ring-4 ring-primary-100" : "border-neutral-300 bg-neutral-100 text-neutral-600"}`}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-neutral-900">
+                Today’s practice
+              </h3>
+              <p className="text-sm text-neutral-600">{completed}</p>
+            </div>
+            <span className="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-neutral-700">
+              {journey.todayCompletedLessons} of {journey.dailyGoal} today
+            </span>
+          </div>
+          <progress
+            aria-label="Practice lessons today"
+            value={today}
+            max={journey.dailyGoal}
+            className="mt-3 h-1.5 w-full"
+          />
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <ol
+              aria-label="Practice path"
+              className="flex items-center gap-1.5"
+            >
+              {nodes.map((number) => {
+                const done = number < lesson;
+                const active = number === lesson;
+                return (
+                  <li
+                    key={number}
+                    aria-current={active ? "step" : undefined}
+                    className={`inline-flex min-h-8 items-center rounded-full px-2.5 text-xs font-semibold ${done ? "bg-primary-50 text-primary-800" : active ? "bg-primary-700 text-white" : "border border-neutral-200 text-neutral-600"}`}
                   >
-                    {done ? "✓" : active ? "▶" : number}
-                  </span>
-                  <span className="mt-2 text-sm font-semibold text-neutral-900">
+                    <span className="sr-only">
+                      {done
+                        ? "Completed: "
+                        : active
+                          ? "Current: "
+                          : "Coming next: "}
+                    </span>
                     Lesson {number}
-                  </span>
-                  <span className="text-xs text-neutral-600">
-                    {done ? "Completed" : active ? "Current" : "Coming next"}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-          {current ? (
-            <Link
-              href={`/practice/session/${encodeURIComponent(current.id)}`}
-              className={`${primaryAction} mt-5 w-full`}
-            >
-              Continue practice
-            </Link>
-          ) : (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void start()}
-              className={`${primaryAction} mt-5 w-full`}
-            >
-              Start practice lesson
-            </button>
-          )}
+                  </li>
+                );
+              })}
+            </ol>
+            {current ? (
+              <Link
+                href={`/practice/session/${encodeURIComponent(current.id)}`}
+                className="vn-btn vn-btn-secondary min-h-11"
+              >
+                Continue practice
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void start()}
+                className="vn-btn vn-btn-secondary min-h-11"
+              >
+                Start practice lesson
+              </button>
+            )}
+          </div>
         </>
       ) : (
+        <>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <h2 className="text-xl font-bold tracking-tight text-neutral-900">
+              Your path
+            </h2>
+            <span className="shrink-0 whitespace-nowrap rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-primary-800">
+              {journey.todayCompletedLessons} / {journey.dailyGoal} today
+            </span>
+          </div>
+          <progress
+            aria-label="Practice lessons today"
+            value={today}
+            max={journey.dailyGoal}
+            className="mt-5 h-2.5 w-full"
+          />
+          <p className="mt-2 text-sm text-neutral-600">{completed}</p>
+        </>
+      )}
+      {compact ? null : (
         <ol
           aria-label="Practice path"
           className="mx-auto mt-4 max-w-[24rem] space-y-3"

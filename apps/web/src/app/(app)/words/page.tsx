@@ -1,11 +1,11 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import {
   ApiResponseError,
   type ListSavedWordsResponse,
 } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer } from "@/ui/surface";
+import { PageContainer } from "@/ui/surface";
 
 import { RemoveSavedWordButton } from "./_components/remove-saved-word-button";
 import { ReloadSavedWordsButton } from "./_components/reload-saved-words-button";
@@ -93,10 +93,7 @@ export default async function SavedWordsPage({
     <PageContainer>
       <div className="flex flex-wrap items-start justify-between gap-[var(--spacing-md)]">
         <div>
-          <Eyebrow>Words you chose</Eyebrow>
-          <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
-            Saved vocabulary
-          </h1>
+          <h1 className="page-title">Saved vocabulary</h1>
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
             Revisit words, practice them in a sentence, or remove what you no
             longer need.
@@ -290,11 +287,11 @@ export default async function SavedWordsPage({
               return (
                 <li
                   key={savedWord.userWordId}
-                  className="flex flex-col justify-between gap-[var(--spacing-md)] rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm"
+                  className="flex flex-col justify-between gap-[var(--spacing-md)] rounded-[1.25rem] border border-neutral-200 bg-white p-[var(--spacing-lg)]"
                 >
                   <div>
                     <div className="flex flex-wrap items-baseline gap-[var(--spacing-xs)]">
-                      <h2 className="text-lg font-semibold text-neutral-900">
+                      <h2 className="headword text-2xl">
                         <Link
                           href={`/words/${savedWord.userWordId}`}
                           className="rounded-sm hover:text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
@@ -302,7 +299,7 @@ export default async function SavedWordsPage({
                           {savedWord.wordText}
                         </Link>
                       </h2>
-                      <span className="text-sm text-neutral-600">
+                      <span className="pos text-sm">
                         {savedWord.partOfSpeech}
                       </span>
                     </div>
@@ -322,7 +319,7 @@ export default async function SavedWordsPage({
                     <Link
                       href={`/words/${savedWord.userWordId}`}
                       aria-label={`Open ${savedWord.wordText} details and sentence practice`}
-                      className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                      className="vn-btn vn-btn-secondary min-h-11"
                     >
                       Open word
                     </Link>

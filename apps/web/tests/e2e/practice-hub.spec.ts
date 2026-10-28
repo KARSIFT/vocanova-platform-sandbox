@@ -183,6 +183,10 @@ for (const theme of ["light", "dark"] as const) {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(page.viewportSize()!.width);
+    // Audit at a stable position, as dictionary-search does: mid-page, a row
+    // passing behind the sticky header is always partly covered. Every link's
+    // actual size is checked above.
+    await page.evaluate(() => window.scrollTo(0, 0));
     const accessibility = await scanForAxeViolations(page);
     expect(
       accessibility.criticalOrSerious,

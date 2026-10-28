@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import type { LessonRecommendationResponse } from "@vocanova/api-client";
 
 const action =

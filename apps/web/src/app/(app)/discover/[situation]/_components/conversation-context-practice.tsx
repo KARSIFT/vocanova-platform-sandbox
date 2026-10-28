@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useEffect, useRef, useState } from "react";
 
 import type { ConversationPracticeCase } from "./conversation-context-content";

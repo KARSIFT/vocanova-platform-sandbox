@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/ui/link";
 
 interface SettingsAccountErrorProps {
   error: Error & { digest?: string };

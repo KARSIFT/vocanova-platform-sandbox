@@ -3,26 +3,23 @@ export default function HomeLoading() {
     <div
       aria-busy="true"
       aria-label="Loading home"
-      className="animate-pulse p-[var(--spacing-lg)]"
+      className="mx-auto grid w-full max-w-[72rem] gap-5 px-[var(--spacing-md)] py-4 motion-safe:animate-pulse sm:px-[var(--spacing-xl)] lg:py-8"
     >
-      <section className="rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm">
-        <div className="h-6 w-1/3 rounded bg-neutral-200" />
-        <div className="mt-[var(--spacing-sm)] h-4 w-1/2 rounded bg-neutral-200" />
-        <div className="mt-[var(--spacing-xs)] h-4 w-2/3 rounded bg-neutral-200" />
-        <div className="mt-[var(--spacing-md)] h-[var(--spacing-sm)] w-full rounded-full bg-neutral-200" />
-      </section>
-
-      <section className="mt-[var(--spacing-lg)] rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm">
-        <div className="h-5 w-1/3 rounded bg-neutral-200" />
-        <div className="mt-[var(--spacing-sm)] h-4 w-full rounded bg-neutral-200" />
-      </section>
-
-      <div className="mt-[var(--spacing-lg)] h-4 w-1/4 rounded bg-neutral-200" />
-      <div className="mt-[var(--spacing-sm)] h-4 w-1/4 rounded bg-neutral-200" />
-      <div className="mt-[var(--spacing-lg)] flex gap-[var(--spacing-md)]">
-        <div className="h-[var(--spacing-2xl)] w-1/3 rounded bg-neutral-200" />
-        <div className="h-[var(--spacing-2xl)] w-1/3 rounded bg-neutral-200" />
+      <div aria-hidden="true">
+        <div className="h-9 w-32 rounded-lg bg-neutral-200" />
       </div>
+      <div
+        aria-hidden="true"
+        className="h-56 rounded-[1.5rem] bg-primary-100"
+      />
+      <div
+        aria-hidden="true"
+        className="h-48 rounded-[1.25rem] border border-neutral-200 bg-white"
+      />
+      <div
+        aria-hidden="true"
+        className="h-40 rounded-2xl border border-neutral-200 bg-white"
+      />
     </div>
   );
 }

@@ -319,7 +319,7 @@ for (const theme of ["light", "dark"] as const) {
           () => window.__pronunciationTest.cancellations,
         );
         await main
-          .getByRole("link", { name: "Back to Journey", exact: true })
+          .getByRole("link", { name: "Back to Ordering at a cafe", exact: true })
           .click();
         await expect(page).toHaveURL(/\/discover\/ordering-at-a-cafe$/);
         expect(
@@ -1015,10 +1015,10 @@ test("discovery automatically speaks each word, supports mute and explicit repla
     () => window.__pronunciationTest.cancellations,
   );
   await page
-    .getByRole("link", { name: "Back to word map", exact: true })
+    .getByRole("link", { name: "Back to Journey", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Knowledge map", exact: true }),
+    page.getByRole("heading", { name: "Journey", exact: true }),
   ).toBeVisible();
   expect(
     await page.evaluate(() => window.__pronunciationTest.cancellations),

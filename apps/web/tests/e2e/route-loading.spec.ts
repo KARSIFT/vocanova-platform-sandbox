@@ -153,7 +153,7 @@ test.describe("Route loading states", () => {
     await expect(status.locator("..")).toHaveAttribute("aria-busy", "true");
     await navigation;
     await expect(
-      page.getByRole("heading", { name: "Knowledge map", level: 1 }),
+      page.getByRole("heading", { name: "Journey", level: 1 }),
     ).toBeVisible({ timeout: 10_000 });
   });
 

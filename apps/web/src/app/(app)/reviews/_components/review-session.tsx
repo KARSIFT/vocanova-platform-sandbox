@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { ApiResponseError } from "@vocanova/api-client";

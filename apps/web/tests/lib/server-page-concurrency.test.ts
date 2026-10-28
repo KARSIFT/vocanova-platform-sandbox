@@ -270,7 +270,7 @@ describe("page error semantics", () => {
     });
   }
   for (const [optional, unavailable] of [
-    ["knowledge-summary", "Your vocabulary map is unavailable right now."],
+    ["knowledge-summary", "Your saved words are unavailable right now."],
     ["lessons", null],
     ["achievements", "Your milestones could not load."],
   ] as const) {

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/ui/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { SentenceFeedbackResult } from "@vocanova/api-client";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import Link from "next/link";
+import Link from "@/ui/link";
 import type { WordListDetail, WordListSummary } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import {

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import type { VocabularySearchItem } from "@vocanova/api-client";
 
 function stage(item: VocabularySearchItem) {

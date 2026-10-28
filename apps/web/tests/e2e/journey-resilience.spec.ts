@@ -49,7 +49,7 @@ for (const theme of ["light", "dark"] as const) {
       vocanova_theme: theme,
     });
     await expect(
-      page.getByRole("heading", { name: "Knowledge map", level: 1 }),
+      page.getByRole("heading", { name: "Journey", level: 1 }),
     ).toBeVisible();
     await expect(
       page.getByRole("alert").filter({ hasText: "Your map could not load." }),

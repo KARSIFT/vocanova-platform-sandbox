@@ -267,7 +267,8 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // stands in for the Go content API - is actually on the page, so a
     // regression that silently drops one of these fields from the DTO,
     // client, or component fails this test instead of shipping unnoticed.
-    await expect(page.getByText("verb", { exact: true })).toBeVisible();
+    // The entry header and each meaning both name the kind of word.
+    await expect(page.getByText("verb", { exact: true }).first()).toBeVisible();
     await expect(
       page.getByText("to make liquid flow into a container"),
     ).toBeVisible();
@@ -591,10 +592,11 @@ for (const initiallySaved of [false, true]) {
       expect(prepared.ok()).toBe(true);
     }
     await page.goto("/discover/ordering-at-a-cafe/pour");
-    // This is the previous staging selector's actual first result. Changing
-    // playback speed cannot serve as evidence that a meaning was saved.
-    const slow = page.locator("button[aria-pressed]").first();
-    await expect(slow).toHaveAccessibleName("Slow pronunciation of pour");
+    // Speed toggles also use aria-pressed (an earlier staging selector picked
+    // one). Changing playback speed cannot serve as evidence of saving.
+    const slow = page
+      .getByRole("button", { name: "Slow pronunciation of pour", exact: true })
+      .first();
     await expect(slow).toHaveAttribute("aria-pressed", "false");
     const save = getFirstMeaningSaveControl(page);
     await expect(save).toHaveCount(1);

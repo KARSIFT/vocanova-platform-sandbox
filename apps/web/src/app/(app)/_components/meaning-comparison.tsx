@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import type { WordDetail } from "@vocanova/api-client";
 
 export function meaningAnchor(meaningId: string) {

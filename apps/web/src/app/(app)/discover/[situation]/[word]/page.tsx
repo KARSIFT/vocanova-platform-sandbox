@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import { notFound } from "next/navigation";
 
 import { ApiResponseError } from "@vocanova/api-client";
@@ -19,6 +19,11 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
   let situationResponse: Awaited<ReturnType<typeof client.getJourneySituation>>;
   let response: Awaited<ReturnType<typeof client.getCanonicalWord>>;
   let currentUserResponse: Awaited<ReturnType<typeof client.getCurrentUser>>;
+  // The word read starts with the situation read instead of after it. Results
+  // are still checked in the original order: situation and membership first.
+  const wordRead = Promise.allSettled([client.getCanonicalWord(word)]).then(
+    ([result]) => result,
+  );
   try {
     [situationResponse, currentUserResponse] = await Promise.all([
       client.getJourneySituation(situation),
@@ -27,7 +32,9 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
     if (!isWordInSituation(situationResponse.data.meanings, word)) {
       notFound();
     }
-    response = await client.getCanonicalWord(word);
+    const wordResult = await wordRead;
+    if (wordResult.status === "rejected") throw wordResult.reason;
+    response = wordResult.value;
   } catch (error) {
     if (error instanceof ApiResponseError && error.status === 404) {
       notFound();
@@ -43,13 +50,12 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
         href={`/discover/${situation}`}
         className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800"
       >
-        Back to Journey
+        Back to {situationResponse.data.situation.title}
       </Link>
 
       <WordDetailContent
         word={wordData}
         userId={currentUserResponse.data.id}
-        contextTitle={situationResponse.data.situation.title}
         source="journey"
       />
     </PageContainer>

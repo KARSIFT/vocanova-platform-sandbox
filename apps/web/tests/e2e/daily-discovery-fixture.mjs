@@ -31,7 +31,11 @@ export async function handleDailyDiscovery({
   dueWords,
 }) {
   const path = url.pathname;
+  const removal =
+    req.method === "DELETE" &&
+    /^\/api\/v1\/user-words\/map-meaning-(\d+)$/.exec(path);
   if (
+    !removal &&
     !path.startsWith("/api/v1/knowledge-map") &&
     !path.startsWith("/api/v1/daily-lessons")
   )
@@ -124,6 +128,10 @@ export async function handleDailyDiscovery({
             rank === 1
               ? "Used before a person or thing that is already clear."
               : "A synthetic meaning for this browser fixture.",
+          // One realistic example keeps the card as long as real content.
+          ...(rank === 1
+            ? { exampleSentence: "The bus to the station is late again." }
+            : {}),
           selfReportedKnown: entry?.decision === "known",
           saved: entry?.decision === "learn",
           due: entry?.decision === "learn",
@@ -132,9 +140,37 @@ export async function handleDailyDiscovery({
       }),
     },
   });
+  // Like the API's decision result: the meaning as it is now.
+  const decisionState = (rank, decision) => {
+    const entry = mapEntry(rank);
+    return {
+      meaningId: `map-meaning-${rank}`,
+      decision,
+      revision: revision(entry?.revision ?? 0),
+      selfReportedKnown: entry?.decision === "known",
+      saved: entry?.decision === "learn",
+      due: entry?.decision === "learn",
+    };
+  };
+  if (removal) {
+    if (!checkCsrf(req, cookies, res, logLine)) return true;
+    const rank = Number(removal[1]);
+    const entry = mapEntry(rank);
+    // Removing a saved word leaves no learning or known state behind.
+    if (entry?.decision === "learn")
+      state.mapDecisions.set(rank, {
+        decision: "removed",
+        revision: entry.revision + 1,
+      });
+    return send(200, {});
+  }
   if (req.method === "GET" && path === "/api/v1/knowledge-map") {
     if (cookies.e2e_knowledge_map === "unavailable")
       return send(503, { detail: "Map unavailable" });
+    // The identity check still passes; only this read reports expiry, so the
+    // page's own sign-in return address is observable.
+    if (cookies.e2e_knowledge_map === "expired")
+      return send(401, { detail: "Session expired" });
     const band = Number(url.searchParams.get("band") ?? 1);
     return Number.isInteger(band) && band >= 1 && band <= 100
       ? send(200, map(band))
@@ -165,9 +201,11 @@ export async function handleDailyDiscovery({
   const body = await readJsonBody(req);
   if (path === "/api/v1/knowledge-map/decisions") {
     const prior = state.mapReceipts.get(key);
+    // A replayed receipt reports the meaning's current state with the original
+    // decision, as the API does; it never re-applies an older choice.
     if (prior)
       return prior.body === JSON.stringify(body)
-        ? send(200, prior.result)
+        ? send(200, decisionState(prior.rank, body.decision))
         : send(409, { detail: "Conflicting retry" });
     const rank = Number(body.meaningId?.replace("map-meaning-", ""));
     const entry = mapEntry(rank);
@@ -182,13 +220,8 @@ export async function handleDailyDiscovery({
       return send(409, { detail: "Word changed" });
     const next = (entry?.revision ?? 0) + 1;
     state.mapDecisions.set(rank, { decision: body.decision, revision: next });
-    const result = {
-      meaningId: body.meaningId,
-      decision: body.decision,
-      revision: revision(next),
-    };
-    state.mapReceipts.set(key, { body: JSON.stringify(body), result });
-    return send(200, result);
+    state.mapReceipts.set(key, { body: JSON.stringify(body), rank });
+    return send(200, decisionState(rank, body.decision));
   }
   const step = (word) => ({
     id: randomUUID(),

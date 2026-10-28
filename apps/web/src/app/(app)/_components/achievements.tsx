@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import type { AchievementList } from "@vocanova/api-client";
 
 const nextSteps = {
@@ -20,10 +20,7 @@ export function Achievements({
       className="mt-4 rounded-[1.25rem] border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:p-6"
     >
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <h2
-          id="achievements-heading"
-          className="text-xl font-bold text-neutral-900"
-        >
+        <h2 id="achievements-heading" className="section-title">
           Your milestones
         </h2>
         <p className="rounded-full bg-secondary-50 px-3 py-1 text-sm font-semibold text-secondary-800">

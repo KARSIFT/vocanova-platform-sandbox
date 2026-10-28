@@ -61,10 +61,18 @@ export interface KnowledgeMapDecision {
   expectedRevision: string;
 }
 
+/**
+ * The meaning's current server state after a decision. A replayed idempotency
+ * key returns the state as it is now, which can differ from `decision` when a
+ * later action (another tab, a removal) changed the meaning since.
+ */
 export interface KnowledgeMapDecisionResult {
   meaningId: string;
   decision: "learn" | "known";
   revision: string;
+  selfReportedKnown: boolean;
+  saved: boolean;
+  due: boolean;
 }
 
 export interface DailyLesson {

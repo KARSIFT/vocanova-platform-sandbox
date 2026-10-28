@@ -93,3 +93,65 @@ Future investigation can measure real database query timings and low-end-device
 execution before changing monitoring imports, and assess bounded waiting for other
 learning requests while preserving exact pending intents. This delivery does not
 claim every possible product defect is removed.
+
+## Prefetch, deferred monitoring and feedback — 28 October 2026
+
+The owner again reported a slow-feeling app. Public staging and production
+documents and API health answered in about 150ms on a reused connection from the
+owner's region, with no multi-second stall, so the investigation measured the
+authenticated flows locally: a production build, the mock API, synthetic
+learners, installed Chrome, medians of 3–7 samples. These are lab results, not
+field data, database timings or INP.
+
+**Causes found.** Each protected page view started 24–26 router prefetches, and
+every prefetch passed the identity check: one Home view made 32 API reads (27
+identity checks), Journey 27; blocking prefetch cut Next server CPU per Journey
+view from about 100ms to 30ms. Every route also shipped the error-monitoring
+SDK in its critical JavaScript (about 52KB compressed of 211–237KB). Routes
+without a loading state showed nothing for 355–530ms after a tap at 150ms API
+latency. A situation word page read the word only after validating the
+situation (three API waves), and each discovery choice waited for its POST and
+then a full re-read of the 100-word range.
+
+**Changes and results** (before → after, same build settings and fixtures):
+
+| Measure                                        |                  Before |                   After |
+| ---------------------------------------------- | ----------------------: | ----------------------: |
+| Idle RSC prefetches, Home / Journey (1280px)   |                 26 / 24 |                 12 / 10 |
+| API reads per view, Home / Journey             |                 32 / 27 |                 18 / 13 |
+| Critical JS, Home / Journey (compressed)       |         236.5 / 211.5KB |         182.8 / 158.7KB |
+| Mobile cold `load`, Home / Journey / search¹   | 2,040 / 1,674 / 1,633ms | 1,719 / 1,374 / 1,373ms |
+| Situation word page at 150ms API latency       |         474ms (3 waves) |         319ms (2 waves) |
+| Discovery choice to next word (desktop, 150ms) |                  374ms² |                   193ms |
+| First acknowledgement of a tap (150ms API)     |                 0–530ms |                  4–94ms |
+| Journey page height at 360px                   |                 4,927px |                 1,845px |
+
+¹ 4× CPU slowdown, 1.6 Mbps/150ms emulated network, 50ms per API response; the
+monitored build (well-formed fake DSN) measured 1,720 / 1,380 / 1,380ms.
+² One baseline sample.
+
+- Links prefetch on intent (a resting pointer or keyboard focus, not touch
+  scrolling). Primary navigation and prominent links into routes with a loading
+  state still prefetch on view: without that, a tap showed the loading state
+  only after the identity check and React held content back, measured 524ms
+  versus 377ms for Home → Practice. Middleware authentication is unchanged.
+- The monitoring SDK loads from a three-export module after `load` and idle
+  time, so its 51.8KB compressed chunk is off the critical path (a whole-package
+  dynamic import would have been 162KB). Early errors are buffered (at most 20)
+  and drained once; a failed download or initialisation is retried at most
+  three times, at least 10 seconds apart, on the next error, report or `online`
+  event, without unhandled rejections. Errors before the client bundle runs are
+  missed, as they were with the earlier eager initialisation.
+- A shared indeterminate bar acknowledges every in-app navigation within a frame
+  and clears on arrival, cancellation, Back/Forward or a 15-second fallback.
+- Discovery advances within a range from the server's reported state of the
+  decided meaning; replays that report a different current state still re-read.
+
+**Limits.** No real PostgreSQL or production authenticated timing was measured
+(Docker was unavailable). Production's web server reaches the API through the
+public edge, unlike staging's internal address; each identity check therefore
+costs more there, which this change reduces but does not measure. Mobile FCP
+under 4× CPU emulation was 20–40ms later after the change in three samples per
+route, while `load` improved 15–18%; the cause was not isolated. Journey's
+compressed document grew from 21.7 to 25.6KB because the map is rendered both
+as links and as a phone picture with a range chooser.

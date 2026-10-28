@@ -13,45 +13,63 @@ blue actions (`#1d4ed8`), and soft lavender context (`#ede9fe`). These are roles
 in the existing generated palette, not a second token source. Dark mode maps the
 same roles to the existing dark surfaces and readable foregrounds.
 
-Use a system sans-serif stack, a compact type scale, comfortable line height,
-and left-aligned reading content. Headlines should introduce the page without
+Use a system sans-serif stack for the interface and a system serif only for
+vocabulary headwords, a compact type scale, comfortable line height, and
+left-aligned reading content. Headlines should introduce the page without
 displacing its primary action. Large numbers belong to real progress, not
 decorative marketing statistics. Borders group related information; shadows
 and rounded corners should be restrained.
 
-### Calm study desk (October 2026)
+### Word atlas (late October 2026)
 
-The shared presentation layer follows one composition: a neutral canvas,
-white cards with a soft edge, and at most one confident blue surface per screen
-for the backend-selected next action. Lavender marks context (situations,
-level ranges, milestones), never a primary action.
+The current direction treats vocabulary like a well-made pocket dictionary that
+also knows where the learner is. It replaces the earlier calm study desk while
+keeping its palette roles, control sizes and layered control styles.
 
-- **Roles, not new colors.** `globals.css` defines `--vn-canvas` and
-  `--vn-shadow-card` from the generated palette. Dark mode places cards one
-  step lighter than the canvas so grouping does not rely on borders alone.
-- **Type.** Page titles use `.page-title` (bold, slightly tightened tracking)
-  with an optional `.page-lede`. Headings balance their lines. Avoid very tight
-  display tracking; it reduces legibility for learners reading a second
-  language.
-- **Shapes.** Cards use 1.25–1.5rem radii; navigation, chips and the Home
-  mission action use pills; form controls and form buttons share 48px height
-  and a 0.85rem radius (`.auth-input`, `.auth-primary`, `.auth-secondary`).
-  Filled brand actions get a subtle pressable lower edge.
-- **Navigation.** Home, Journey and Progress use the same icons in the desktop
-  header and the mobile bottom bar (`nav-icons.tsx`); the visible label is the
-  accessible name and the active item has a tinted pill.
-- **Cards that link.** When a card has a title and a description, only the title
-  is the link text; the description is referenced with `aria-describedby` and
-  the link stretches over the card. This keeps link names short and exact.
-- **Progress bars.** Native `<progress>` stays in use for semantics and is
-  styled globally. Decorative proportion bars (such as Progress stages) are
-  hidden from assistive technology because the counts are shown as text.
-- **Controls inherit authored utilities.** The global `font: inherit` reset for
-  form controls lives in `@layer base`, and reusable control classes such as
-  `.auth-input` live in `@layer components`, so utilities (for example the
-  password field's right padding for its Show/Hide toggle) apply as written.
-- **No global color transitions on filled actions.** A disabled control that
-  becomes enabled must not animate through low-contrast intermediate colors.
+- **Words are the hero.** Vocabulary headwords (discovery card, word pages,
+  Home's latest word, saved words, Journey's next word) use the system serif
+  stack in `--vn-headword-font` with the part of speech in italics beside them,
+  like a dictionary entry. Interface headings and reading text stay in the sans
+  stack. No web font is downloaded.
+- **One filled action per screen.** `.vn-btn-primary` marks the backend-selected
+  next step (Home's review/discovery panel, Journey's Discover words, the
+  discovery Learn button). Other actions are outline (`.vn-btn-secondary`), text
+  links (`.vn-text-link`) or chips. Home's practice path keeps its own action as
+  an outline button so review and practice never compete.
+- **The 10,000-word map is a picture of real progress.** Journey shows the
+  selected range of 100 words (a 100-mark strip, counts in text, the next word
+  and one action) beside an atlas of all 100 ranges: rows of 1,000 words, each
+  square filled from the bottom by already-known (blue) then learning (lavender)
+  words. From 40rem every square is a link of at least 44px, with one Tab stop
+  and arrow-key movement; on phones the atlas is a picture and a native range
+  chooser plus Previous/Next 100 change ranges. Colour never carries meaning
+  alone: counts are written next to every visual.
+- **Disjoint counts only.** Map counts (already known, learning, new) come from
+  the knowledge map and never overlap. Progress shows saved words and
+  self-assessed known words as two separate records, never a sum, and review
+  stages describe saved words only. Home's goal rows show the day's mission
+  values as returned; they are targets, not a promise that more words are due.
+- **Immediate, honest feedback.** Every in-app link marks its navigation at
+  once with a thin indeterminate bar (`NavigationProgress`); routes keep their
+  loading skeletons and polite announcements. Nothing shows invented progress.
+  Use `@/ui/link`: it prefetches on intent. Give primary navigation and
+  prominent links into routes with a `loading.tsx` `prefetch="auto"`, so their
+  loading state appears at once; only add a loading state where it can be
+  prefetched, because a late one makes React hold the content back.
+- **Quiet chrome.** Phones get a single 56px header row (symbol, search, settings,
+  icon-only Log out with its text as the accessible name) above the content and
+  the three-item bottom navigation. Focused sessions pin their decision buttons
+  to the bottom edge on phones and reserve scroll space so they never hide the
+  focused control.
+- **Roles, not new colours.** `globals.css` defines `--vn-canvas`,
+  `--vn-shadow-card`, `--vn-known`, `--vn-learning` and `--vn-unseen` from the
+  generated palette; dark mode maps the same roles. Lavender marks context and
+  learning, never a primary action.
+- **Controls inherit authored utilities.** The `font: inherit` reset lives in
+  `@layer base` and reusable control classes such as `.auth-input` in
+  `@layer components`, so utilities (for example the password field's padding
+  for its Show/Hide toggle) apply as written. Filled actions do not animate
+  colour between disabled and enabled states.
 
 ## Layout and interaction
 
@@ -60,21 +78,22 @@ level ranges, milestones), never a primary action.
 - Authentication shares the brand and visual language of the learning workspace.
   Only configured sign-in methods appear. Visual changes do not activate password
   registration; its verification and recovery email requirements still apply.
-- Home keeps the backend-selected next action prominent as the single blue
-  mission card. On mobile the reading order is mission, saved word, practice
-  path, then "More ways to learn" tiles; desktop places the saved word beside
-  the mission and practice path. Empty vocabulary shows an invitation, not
-  placeholder progress.
+- Home reads in one order on phones: the next step (the blue panel with the
+  backend-selected action and "Reviewed today"), today's goal (the mission's own
+  review, new-word and optional sentence values and status), keep going (the
+  practice path and, when review is next, a Discover row), then the latest saved
+  word with its picture and a direct link to write a sentence with that meaning.
+  Wide screens put the goal and the latest word in a rail beside the next step.
+  The streak appears as quiet text only when it is above zero.
 - Home, Journey, and Progress remain the three primary destinations. Mobile uses
-  thumb-reachable bottom navigation; desktop places navigation beside or above
-  the workspace. There is one accessible primary navigation at each size.
-- Journey presents situations as places to use language: "Places to use
-  English" cards (from the situations API, with an honest unavailable message)
-  sit above the knowledge map, which remains the page's `Knowledge map` view.
-  The situation cards stream in their own Suspense boundary, and the "More ways
-  to learn" links render whether or not the map or situations reads succeed.
-  Word content remains readable, and saving or review outcomes remain
-  backend-authoritative.
+  thumb-reachable bottom navigation; desktop places navigation beside the search
+  field. There is one accessible primary navigation at each size.
+- Journey is the one home of the word map: `/discover?band=N#range-words` opens
+  a range, plain Journey opens the first range with new words, and the earlier
+  `/knowledge-map?band=N` address redirects there. Range links, retries and
+  sign-in returns stay on Journey. "Places to use English" situation cards stream
+  in their own Suspense boundary and, with the other ways to learn, render
+  whether or not the map or situations reads succeed.
 - Settings groups learning preferences and makes profile, account security, and
   appearance easy to find. Light, Dark, and System remain device preferences.
 

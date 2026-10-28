@@ -1,10 +1,10 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 import { notFound } from "next/navigation";
 
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer } from "@/ui/surface";
+import { PageContainer } from "@/ui/surface";
 
 import { getSituationDetailView } from "./_components/situation-view";
 import { getConversationPractice } from "./_components/conversation-context-content";
@@ -85,12 +85,16 @@ export default async function SituationDiscoverPage({
       >
         All courses
       </Link>
-      <Eyebrow>
-        {situationData.category.replaceAll("_", " ")}
-        {situationData.levelBand
-          ? ` · ${formatLevelBand(situationData.levelBand)}`
-          : ""}
-      </Eyebrow>
+      <p className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral-600">
+        <span className="capitalize">
+          {situationData.category.replaceAll("_", " ")}
+        </span>
+        {situationData.levelBand ? (
+          <span className="rounded-full bg-secondary-50 px-2.5 py-0.5 text-secondary-800">
+            {formatLevelBand(situationData.levelBand)}
+          </span>
+        ) : null}
+      </p>
       <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
         {situationData.title}
       </h1>

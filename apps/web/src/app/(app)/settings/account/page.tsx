@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/ui/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
