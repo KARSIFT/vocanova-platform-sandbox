@@ -20,7 +20,7 @@ export default async function ConnectionErrorPage({
   return (
     <AuthShell>
       <Surface className="space-y-5">
-        <h1 className="text-2xl font-semibold text-neutral-900">
+        <h1 className="text-2xl font-bold tracking-[-0.02em] text-neutral-900">
           We couldn&apos;t connect
         </h1>
         <p className="text-base leading-7 text-neutral-700">
@@ -29,10 +29,7 @@ export default async function ConnectionErrorPage({
         </p>
         {/* A full navigation rechecks the session rather than reusing a cached
             failed route transition. No private learner data is rendered here. */}
-        <a
-          href={safeDestination}
-          className="inline-flex min-h-11 items-center font-semibold text-primary-700 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-        >
+        <a href={safeDestination} className="auth-primary w-full sm:w-auto">
           Try again
         </a>
       </Surface>

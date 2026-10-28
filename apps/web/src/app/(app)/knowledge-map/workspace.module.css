@@ -9,10 +9,10 @@
   flex-wrap: wrap;
 }
 .title {
-  font-size: clamp(1.75rem, 5vw, 2.4rem);
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
   line-height: 1.15;
-  font-weight: 750;
-  letter-spacing: -0.035em;
+  font-weight: 700;
+  letter-spacing: -0.03em;
   margin: 0.5rem 0 0.75rem;
   color: var(--color-neutral-900);
 }
@@ -23,13 +23,13 @@
   color: var(--color-neutral-900);
 }
 .mapHeader .title {
-  font-size: clamp(1.5rem, 4.8vw, 2.4rem);
+  font-size: clamp(1.5rem, 4.8vw, 2.25rem);
 }
 .mapHeader {
   gap: 0.5rem;
 }
 .mapHeader .primary {
-  padding-inline: 0.75rem;
+  padding-inline: 1.35rem;
 }
 .muted,
 .back {
@@ -51,7 +51,7 @@
   justify-content: center;
   align-items: center;
   padding: 0.7rem 1.1rem;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 1rem;
   font-weight: 650;
   text-align: center;
@@ -61,10 +61,19 @@
 .primary {
   background: var(--color-primary-700);
   color: white;
+  box-shadow: inset 0 -2px 0 rgb(15 23 42 / 0.2);
+}
+.primary:hover {
+  background: var(--color-primary-800);
 }
 .secondary {
-  background: var(--color-neutral-50);
+  background: var(--color-white);
+  border-color: var(--color-neutral-300);
   color: var(--color-primary-800);
+}
+.secondary:hover {
+  border-color: var(--color-primary-300);
+  background: var(--color-primary-50);
 }
 .primary:disabled,
 .secondary:disabled {
@@ -73,25 +82,32 @@
 }
 .legend {
   display: flex;
-  gap: 0.5rem 1.5rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
   padding: 0;
-  margin: 1rem 0 0.5rem;
+  margin: 0.75rem 0 0.25rem;
   list-style: none;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 .legend li {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-height: 36px;
+  padding: 0.25rem 0.85rem;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-neutral-700);
+  font-variant-numeric: tabular-nums;
 }
 .knownDot,
 .learningDot,
 .newDot {
   display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
   border: 1px solid var(--color-neutral-400);
 }
 .knownDot,
@@ -130,10 +146,11 @@
   gap: 6px;
 }
 .rangePicker {
-  border: 1px solid var(--color-neutral-300);
-  border-radius: 12px;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 1rem;
   padding: 0.25rem 1rem;
-  background: var(--color-neutral-50);
+  background: var(--color-white);
+  box-shadow: var(--vn-shadow-card);
 }
 .rangePicker summary {
   min-height: 48px;
@@ -153,10 +170,10 @@
 }
 .band {
   background: var(--color-neutral-50);
-  border: 1px solid var(--color-neutral-300);
+  border: 1px solid var(--color-neutral-200);
   min-height: 48px;
   padding: 8px 5px;
-  border-radius: 5px;
+  border-radius: 10px;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -183,31 +200,38 @@
   height: 100%;
 }
 .range {
-  margin-top: 1.25rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-neutral-200);
+  margin-top: 1.5rem;
   scroll-margin-top: 1rem;
 }
 .words {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 .word {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 4px;
-  padding: 10px;
+  padding: 10px 12px;
   min-height: 88px;
-  border: 1px solid var(--color-neutral-300);
-  border-radius: 6px;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 14px;
   overflow-wrap: anywhere;
   color: var(--color-neutral-900);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+.word:hover {
+  border-color: var(--color-primary-400);
+  transform: translateY(-1px);
 }
 .word strong {
   font-size: 1rem;
+  font-weight: 650;
   line-height: 1.25;
 }
 .rank,
@@ -219,13 +243,15 @@
 .known {
   background: var(--color-primary-50);
   border-color: var(--color-primary-300);
+  box-shadow: inset 3px 0 0 var(--color-primary-600);
 }
 .learning {
   background: var(--color-secondary-50);
   border-color: var(--color-secondary-300);
+  box-shadow: inset 3px 0 0 var(--color-secondary-500);
 }
 .unseen {
-  background: var(--color-neutral-50);
+  background: var(--color-white);
 }
 .focus {
   max-width: 44rem;
@@ -247,23 +273,23 @@
 }
 .progress {
   width: 100%;
-  height: 5px;
+  height: 8px;
   display: block;
-  accent-color: var(--color-primary-700);
 }
 .card {
   margin: 1.5rem 0;
   padding: clamp(1.25rem, 5vw, 2.5rem);
   border: 1px solid var(--color-neutral-200);
-  border-radius: 12px;
-  background: var(--color-neutral-50);
+  border-radius: 1.5rem;
+  background: var(--color-white);
+  box-shadow: var(--vn-shadow-card);
 }
 .cardWord {
-  font-size: clamp(2rem, 8vw, 3.5rem);
+  font-size: clamp(2rem, 8vw, 3.25rem);
   line-height: 1.1;
   overflow-wrap: anywhere;
-  letter-spacing: -0.04em;
-  font-weight: 750;
+  letter-spacing: -0.03em;
+  font-weight: 700;
   margin: 0.75rem 0;
 }
 .definition {
@@ -297,8 +323,9 @@
   min-height: 44px;
   min-width: 44px;
   border: 1px solid var(--color-neutral-300);
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  background: var(--color-white);
   color: var(--color-primary-800);
   font-size: 1rem;
   cursor: pointer;
@@ -313,7 +340,7 @@
   border: 1px solid var(--color-neutral-300);
   background: var(--color-neutral-50);
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: 1rem;
   margin-top: 1rem;
   font-size: 1rem;
 }
@@ -337,6 +364,9 @@
   .bands {
     grid-template-columns: repeat(8, minmax(0, 1fr));
   }
+  .words {
+    gap: 10px;
+  }
   .band {
     font-size: 0.875rem;
   }
@@ -351,6 +381,9 @@
   background: #1d4ed8;
   color: #fff;
   border-color: #93c5fd;
+}
+:global([data-theme="dark"]) .primary:hover {
+  background: #1e40af;
 }
 :global([data-theme="dark"]) :is(.secondary, .audio button, .ordering summary) {
   color: #93c5fd;

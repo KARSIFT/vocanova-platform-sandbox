@@ -31,15 +31,17 @@ export function WordDetailContent({
     <>
       <div className="mt-[var(--spacing-md)]">
         {contextTitle ? (
-          <p className="mb-2 text-sm text-neutral-600">{contextTitle}</p>
+          <p className="mb-3 inline-flex rounded-full bg-secondary-50 px-3 py-1 text-sm font-semibold text-secondary-800">
+            {contextTitle}
+          </p>
         ) : null}
-        <h1 className="text-2xl font-semibold text-neutral-900">
+        <h1 className="text-[clamp(2.25rem,6vw,3rem)] font-bold leading-[1.05] tracking-[-0.03em] text-neutral-900 [overflow-wrap:anywhere]">
           {wordData.text}
         </h1>
         {wordData.meanings.length === 0 && (
           <ListenButton text={wordData.text} />
         )}
-        <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+        <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
           {wordData.wordType.replaceAll("_", " ")}
           {wordData.difficultyLevel
             ? ` · ${formatLevelBand(wordData.difficultyLevel)}`
@@ -50,7 +52,7 @@ export function WordDetailContent({
       <MeaningComparison word={wordData} />
 
       <section className="mt-[var(--spacing-lg)]">
-        <h2 className="text-xl font-semibold text-neutral-900">Meanings</h2>
+        <h2 className="text-xl font-bold text-neutral-900">Meanings</h2>
         <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-md)]">
           {wordData.meanings.map((meaning, index) => {
             const additionalDefinition = getAdditionalDefinition(
@@ -67,15 +69,15 @@ export function WordDetailContent({
                 key={meaning.id}
                 id={meaningAnchor(meaning.id)}
                 tabIndex={-1}
-                className="scroll-mt-24 rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm"
+                className="scroll-mt-24 rounded-[1.5rem] border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-[var(--vn-shadow-card)] sm:p-[var(--spacing-lg)]"
               >
                 <div className="flex flex-wrap items-start justify-between gap-[var(--spacing-md)]">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-neutral-900">
+                    <p className="inline-flex rounded-full bg-primary-50 px-2.5 py-0.5 text-sm font-semibold text-primary-800">
                       {meaning.partOfSpeech}
                     </p>
                     <ListenButton text={wordData.text} meaningId={meaning.id} />
-                    <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+                    <p className="mt-[var(--spacing-xs)] text-lg leading-snug text-neutral-900">
                       {meaning.shortDefinition}
                     </p>
                     {additionalDefinition ? (

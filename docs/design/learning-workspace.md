@@ -19,6 +19,40 @@ displacing its primary action. Large numbers belong to real progress, not
 decorative marketing statistics. Borders group related information; shadows
 and rounded corners should be restrained.
 
+### Calm study desk (October 2026)
+
+The shared presentation layer follows one composition: a neutral canvas,
+white cards with a soft edge, and at most one confident blue surface per screen
+for the backend-selected next action. Lavender marks context (situations,
+level ranges, milestones), never a primary action.
+
+- **Roles, not new colors.** `globals.css` defines `--vn-canvas` and
+  `--vn-shadow-card` from the generated palette. Dark mode places cards one
+  step lighter than the canvas so grouping does not rely on borders alone.
+- **Type.** Page titles use `.page-title` (bold, slightly tightened tracking)
+  with an optional `.page-lede`. Headings balance their lines. Avoid very tight
+  display tracking; it reduces legibility for learners reading a second
+  language.
+- **Shapes.** Cards use 1.25–1.5rem radii; navigation, chips and the Home
+  mission action use pills; form controls and form buttons share 48px height
+  and a 0.85rem radius (`.auth-input`, `.auth-primary`, `.auth-secondary`).
+  Filled brand actions get a subtle pressable lower edge.
+- **Navigation.** Home, Journey and Progress use the same icons in the desktop
+  header and the mobile bottom bar (`nav-icons.tsx`); the visible label is the
+  accessible name and the active item has a tinted pill.
+- **Cards that link.** When a card has a title and a description, only the title
+  is the link text; the description is referenced with `aria-describedby` and
+  the link stretches over the card. This keeps link names short and exact.
+- **Progress bars.** Native `<progress>` stays in use for semantics and is
+  styled globally. Decorative proportion bars (such as Progress stages) are
+  hidden from assistive technology because the counts are shown as text.
+- **Controls inherit authored utilities.** The global `font: inherit` reset for
+  form controls lives in `@layer base`, and reusable control classes such as
+  `.auth-input` live in `@layer components`, so utilities (for example the
+  password field's right padding for its Show/Hide toggle) apply as written.
+- **No global color transitions on filled actions.** A disabled control that
+  becomes enabled must not animate through low-contrast intermediate colors.
+
 ## Layout and interaction
 
 - The public page shows vocabulary in a recognisable situation and explains the
@@ -26,14 +60,21 @@ and rounded corners should be restrained.
 - Authentication shares the brand and visual language of the learning workspace.
   Only configured sign-in methods appear. Visual changes do not activate password
   registration; its verification and recovery email requirements still apply.
-- Home keeps the backend-selected next action prominent. Secondary vocabulary
-  and practice information can use additional desktop space without competing
-  with the daily mission.
+- Home keeps the backend-selected next action prominent as the single blue
+  mission card. On mobile the reading order is mission, saved word, practice
+  path, then "More ways to learn" tiles; desktop places the saved word beside
+  the mission and practice path. Empty vocabulary shows an invitation, not
+  placeholder progress.
 - Home, Journey, and Progress remain the three primary destinations. Mobile uses
   thumb-reachable bottom navigation; desktop places navigation beside or above
   the workspace. There is one accessible primary navigation at each size.
-- Journey presents situations as places to use language. Word content remains
-  readable, and saving or review outcomes remain backend-authoritative.
+- Journey presents situations as places to use language: "Places to use
+  English" cards (from the situations API, with an honest unavailable message)
+  sit above the knowledge map, which remains the page's `Knowledge map` view.
+  The situation cards stream in their own Suspense boundary, and the "More ways
+  to learn" links render whether or not the map or situations reads succeed.
+  Word content remains readable, and saving or review outcomes remain
+  backend-authoritative.
 - Settings groups learning preferences and makes profile, account security, and
   appearance easy to find. Light, Dark, and System remain device preferences.
 
