@@ -185,6 +185,9 @@ test("the word map is one Tab stop with arrow-key movement", async ({
   await expect(
     page.getByRole("heading", { name: "Words 2,201–2,300", level: 2 }),
   ).toBeVisible();
+  // Map squares are not prefetched, so the range renders a moment before its
+  // streamed metadata and the title is briefly absent. Audit the settled page.
+  await expect(page).toHaveTitle("Vocanova");
   const { criticalOrSerious } = await scanForAxeViolations(page);
   expect(criticalOrSerious, formatViolations(criticalOrSerious).join("\n")).toEqual([]);
   expect(

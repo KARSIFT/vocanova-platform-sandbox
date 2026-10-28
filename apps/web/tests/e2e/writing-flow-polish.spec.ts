@@ -37,6 +37,30 @@ async function openMeaningChooser(page: Page, selectedWord: string) {
   await expect(details).toHaveAttribute("open", "");
 }
 
+// At the end of the writing step the meaning chooser can rest under the sticky
+// header with only a sliver below it, and how much shows depends on font
+// metrics. Focus must bring its whole target clear of the header.
+async function expectChooserRevealedByFocus(page: Page, selectedWord: string) {
+  const chooser = page.getByText(`Change meaning: ${selectedWord}`, {
+    exact: true,
+  });
+  await chooser.focus();
+  const [header, box] = await Promise.all([
+    page.getByRole("banner").boundingBox(),
+    chooser.boundingBox(),
+  ]);
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+  expect(box!.y).toBeGreaterThanOrEqual(header!.y + header!.height);
+  expect(
+    await chooser.evaluate((summary) => {
+      const { x, y, width, height } = summary.getBoundingClientRect();
+      return summary.contains(
+        document.elementFromPoint(x + width / 2, y + height / 2),
+      );
+    }),
+  ).toBe(true);
+}
+
 for (const theme of ["light", "dark"]) {
   test(`inline save opens writing only after confirmation and compares exact edits in ${theme}`, async ({
     page,
@@ -87,6 +111,10 @@ for (const theme of ["light", "dark"]) {
       comparison.getByText("I invite you.", { exact: true }),
     ).toBeVisible();
     await expect(comparison.locator("mark")).toHaveText(["i", "!", "I", "."]);
+    await expectChooserRevealedByFocus(page, "invite");
+    // Audit from a stable position, as dictionary-search does; the chooser's
+    // actual target is checked above.
+    await page.evaluate(() => window.scrollTo(0, 0));
     expect((await scanForAxeViolations(page)).criticalOrSerious).toEqual([]);
     expect(
       await page.evaluate(

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { scanForAxeViolations } from "./axe-helper";
 test.beforeEach(async ({ context, baseURL }) => {
   await context.addCookies([
@@ -8,6 +8,29 @@ test.beforeEach(async ({ context, baseURL }) => {
     { name: "e2e_daily_conversation", value: "true", url: baseURL! },
   ]);
 });
+
+// At the end of the writing step the meaning chooser can rest under the sticky
+// header with only a sliver below it, and how much shows depends on font
+// metrics. Focus must bring its whole target clear of the header.
+async function expectChooserRevealedByFocus(page: Page) {
+  const chooser = page.getByText("Change meaning: invite", { exact: true });
+  await chooser.focus();
+  const [header, box] = await Promise.all([
+    page.getByRole("banner").boundingBox(),
+    chooser.boundingBox(),
+  ]);
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+  expect(box!.y).toBeGreaterThanOrEqual(header!.y + header!.height);
+  expect(
+    await chooser.evaluate((summary) => {
+      const { x, y, width, height } = summary.getBoundingClientRect();
+      return summary.contains(
+        document.elementFromPoint(x + width / 2, y + height / 2),
+      );
+    }),
+  ).toBe(true);
+}
+
 for (const theme of ["light", "dark"])
   test(`topic writing selects exact meaning and retains draft on failure in ${theme}`, async ({
     page,
@@ -92,6 +115,10 @@ for (const theme of ["light", "dark"])
     await expect(draft).toHaveValue(
       "I would like to invite you to dinner on Friday.",
     );
+    await expectChooserRevealedByFocus(page);
+    // Audit the restored page from a stable position, as dictionary-search
+    // does; the chooser's actual target is checked above.
+    await page.evaluate(() => window.scrollTo(0, 0));
     expect((await scanForAxeViolations(page)).criticalOrSerious).toEqual([]);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
