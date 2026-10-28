@@ -71,7 +71,7 @@ export function PracticeJourney({
     return (
       <section
         aria-label="Your learning path"
-        className="rounded-2xl border border-neutral-200 bg-white p-5"
+        className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)]"
       >
         <h2 className="text-xl font-bold text-neutral-900">
           {compact ? "Today’s practice" : "Your learning path"}
@@ -100,7 +100,7 @@ export function PracticeJourney({
   return (
     <section
       aria-label="Your learning path"
-      className="rounded-2xl border border-primary-200 bg-white p-4 sm:p-6"
+      className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -113,7 +113,7 @@ export function PracticeJourney({
             </p>
           )}
         </div>
-        <span className="shrink-0 whitespace-nowrap rounded-full bg-primary-50 px-3 py-2 text-sm font-semibold tabular-nums text-primary-800">
+        <span className="shrink-0 whitespace-nowrap rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-primary-800">
           {journey.todayCompletedLessons} / {journey.dailyGoal}
           {compact ? "" : " today"}
         </span>
@@ -122,7 +122,7 @@ export function PracticeJourney({
         aria-label="Practice lessons today"
         value={today}
         max={journey.dailyGoal}
-        className="mt-4 h-2 w-full accent-primary-700"
+        className="mt-5 h-2.5 w-full"
       />
       <p className="mt-2 text-sm text-neutral-600">
         {journey.completedLessons}{" "}
@@ -132,7 +132,7 @@ export function PracticeJourney({
         <>
           <ol
             aria-label="Practice path"
-            className="relative mt-5 grid grid-cols-3 gap-2"
+            className="relative mt-5 grid grid-cols-3 gap-2 before:absolute before:inset-x-[16.5%] before:top-6 before:h-0.5 before:rounded-full before:bg-neutral-200 before:content-['']"
           >
             {nodes.map((number) => {
               const done = number < lesson;
@@ -145,7 +145,7 @@ export function PracticeJourney({
                 >
                   <span
                     aria-hidden="true"
-                    className={`flex size-12 items-center justify-center rounded-full border-b-4 font-bold ${done ? "border-primary-300 bg-primary-100 text-primary-800" : active ? "border-primary-900 bg-primary-700 text-white ring-4 ring-primary-100" : "border-neutral-300 bg-neutral-100 text-neutral-500"}`}
+                    className={`relative flex size-12 items-center justify-center rounded-full border-b-4 font-bold ${done ? "border-primary-300 bg-primary-100 text-primary-800" : active ? "border-primary-900 bg-primary-700 text-white ring-4 ring-primary-100" : "border-neutral-300 bg-neutral-100 text-neutral-600"}`}
                   >
                     {done ? "✓" : active ? "▶" : number}
                   </span>

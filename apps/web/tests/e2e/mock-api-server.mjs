@@ -79,6 +79,9 @@
 //   GET    /api/v1/progress                          -> 200 Progress
 //
 //   GET    /api/v1/journey-situations                -> 200 { items: [...] }
+//                                                       (`e2e_journey_situations`
+//                                                       = unavailable -> 503,
+//                                                       slow -> delayed 200)
 //   GET    /api/v1/journey-situations/:slug          -> 200 SituationResponse
 //   GET    /api/v1/canonical-words/:slug             -> 200 WordDetailResponse
 //
@@ -110,6 +113,8 @@ import {
   dailyConversationWords,
 } from "./seed-content-fixture.mjs";
 
+// Below the web server read deadline, so the slow list still arrives.
+const SLOW_SITUATIONS_MS = 4000;
 // Synthetic dictionary examples verify presentation and recovery, not corpus
 // coverage. Include the real complete license so source disclosure is exercised.
 const dictionaryLicense = readFileSync(
@@ -1657,6 +1662,16 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/api/v1/journey-situations") {
+    // Optional Journey context: lets browser tests prove the map and other
+    // entry points never wait for, or depend on, this list.
+    if (cookies.e2e_journey_situations === "unavailable") {
+      logLine(req, 503);
+      jsonResponse(res, 503, { detail: "Situations unavailable" });
+      return;
+    }
+    if (cookies.e2e_journey_situations === "slow") {
+      await new Promise((resolve) => setTimeout(resolve, SLOW_SITUATIONS_MS));
+    }
     logLine(req, 200);
     jsonResponse(
       res,

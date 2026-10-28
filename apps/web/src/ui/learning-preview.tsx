@@ -9,13 +9,15 @@ export function LearningPreview() {
   return (
     <section
       aria-label="Learning example"
-      className="mx-auto w-full max-w-[31rem] overflow-hidden rounded-2xl border border-neutral-200 bg-white p-5 shadow-[0_12px_35px_rgb(30_41_59_/_0.08)] sm:p-6"
+      className="mx-auto w-full max-w-[31rem] overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_24px_60px_-30px_rgb(30_41_59_/_0.35)] sm:p-6"
     >
       <div className="flex items-center justify-between gap-3 border-b border-neutral-200 pb-3">
         <p className="text-sm font-semibold text-primary-700">
           Try a learning example
         </p>
-        <span className="text-sm text-neutral-500">Daily conversation</span>
+        <span className="rounded-full bg-secondary-50 px-2.5 py-0.5 text-xs font-semibold text-secondary-800">
+          Daily conversation
+        </span>
       </div>
       <div aria-live="polite" className="mt-4">
         {showFeedback ? (
@@ -29,7 +31,7 @@ export function LearningPreview() {
             <p className="mt-1 text-lg text-neutral-900">
               I want invite my friend.
             </p>
-            <div className="mt-4 border-l-4 border-primary-300 bg-primary-50 px-4 py-3">
+            <div className="mt-4 rounded-r-xl border-l-4 border-primary-300 bg-primary-50 px-4 py-3">
               <p className="text-sm font-semibold text-primary-800">
                 Suggested sentence
               </p>
@@ -70,7 +72,7 @@ export function LearningPreview() {
         type="button"
         aria-pressed={showFeedback}
         onClick={() => setShowFeedback(!showFeedback)}
-        className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800"
+        className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800"
       >
         {showFeedback ? "Back to the word" : "See example feedback"}
       </button>

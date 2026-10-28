@@ -14,6 +14,8 @@ import {
 interface MagicLinkFormProps {
   returnTo: string;
   emailLabel?: string;
+  /** Use a quieter action when another sign-in method leads the page. */
+  secondary?: boolean;
 }
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -30,6 +32,7 @@ function oauthReturnTo(returnTo: string): string {
 export function MagicLinkForm({
   returnTo,
   emailLabel = "Email address",
+  secondary = false,
 }: MagicLinkFormProps) {
   const [email, setEmail] = useState("");
   const [phase, setPhase] = useState<"idle" | "sending" | "sent">("idle");
@@ -83,7 +86,7 @@ export function MagicLinkForm({
         aria-labelledby="check-email-heading"
         className="space-y-[var(--spacing-md)]"
       >
-        <div className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-md)] text-primary-900">
+        <div className="rounded-xl border border-primary-200 bg-primary-50 p-[var(--spacing-md)] text-primary-900">
           <h2 id="check-email-heading" className="text-lg font-semibold">
             Check your email
           </h2>
@@ -105,7 +108,7 @@ export function MagicLinkForm({
             onClick={() => void requestLink()}
             disabled={isSending || resendSeconds > 0}
             aria-busy={isSending}
-            className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="auth-primary"
           >
             {isSending
               ? "Sending..."
@@ -123,7 +126,7 @@ export function MagicLinkForm({
               clearOAuthContinuation();
             }}
             disabled={isSending}
-            className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="auth-secondary"
           >
             Use a different email
           </button>
@@ -158,7 +161,7 @@ export function MagicLinkForm({
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="mt-[var(--spacing-xs)] block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
+          className="auth-input mt-[var(--spacing-xs)]"
         />
       </div>
       {errorMessage ? (
@@ -174,7 +177,7 @@ export function MagicLinkForm({
         type="submit"
         disabled={phase === "sending"}
         aria-busy={phase === "sending"}
-        className="min-h-[var(--spacing-2xl)] w-full rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className={`${secondary ? "auth-secondary" : "auth-primary"} w-full`}
       >
         {phase === "sending" ? "Sending..." : "Send sign-in link"}
       </button>
@@ -247,7 +250,7 @@ export function OAuthButton({
         onClick={handleClick}
         disabled={status.type === "loading"}
         aria-busy={status.type === "loading"}
-        className="min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="auth-secondary w-full"
       >
         {status.type === "loading" ? "Redirecting..." : "Continue with Google"}
       </button>

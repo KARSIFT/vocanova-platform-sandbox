@@ -25,7 +25,7 @@ export function RecommendedLesson({
   return (
     <section
       aria-labelledby="recommended-lesson-heading"
-      className={`${compact ? "border-b border-neutral-200 py-4" : "rounded-2xl bg-white p-5 sm:p-6"} ${className ?? ""}`}
+      className={`${compact ? "border-b border-neutral-200 py-4" : "rounded-[1.25rem] border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:p-6"} ${className ?? ""}`}
     >
       <h2 id="recommended-lesson-heading" className="sr-only">
         {recommendation?.reason === "resume"

@@ -17,16 +17,16 @@ export function Achievements({
   return (
     <section
       aria-labelledby="achievements-heading"
-      className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5"
+      className="mt-4 rounded-[1.25rem] border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:p-6"
     >
       <div className="flex flex-wrap items-end justify-between gap-2">
         <h2
           id="achievements-heading"
-          className="text-2xl font-bold text-neutral-900"
+          className="text-xl font-bold text-neutral-900"
         >
           Your milestones
         </h2>
-        <p className="text-sm font-semibold text-primary-700">
+        <p className="rounded-full bg-secondary-50 px-3 py-1 text-sm font-semibold text-secondary-800">
           {earnedCount} of {achievements.items.length} earned
         </p>
       </div>
@@ -98,7 +98,7 @@ export function Achievements({
                       aria-label={`${item.label} progress`}
                       value={item.current}
                       max={item.target}
-                      className="mt-2 h-2 w-full accent-primary-700"
+                      className="mt-2 h-2 w-full"
                     />
                     <Link
                       href={next.href}

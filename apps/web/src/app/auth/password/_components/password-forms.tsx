@@ -10,11 +10,9 @@ import { normalizeReturnTo } from "@/lib/return-to";
 const PASSWORD_MIN_LENGTH = 15;
 const PASSWORD_MAX_LENGTH = 128;
 
-const inputClassName =
-  "mt-[var(--spacing-xs)] block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600";
+const inputClassName = "auth-input mt-[var(--spacing-xs)]";
 
-const primaryButtonClassName =
-  "inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50";
+const primaryButtonClassName = "auth-primary";
 
 function passwordError(password: string): string | null {
   const length = Array.from(password).length;
@@ -46,7 +44,7 @@ function PasswordInput({
       >
         Password
       </label>
-      <div className="relative">
+      <div className="relative mt-[var(--spacing-xs)]">
         <input
           id={id}
           name={id}
@@ -56,13 +54,13 @@ function PasswordInput({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
-          className={`${inputClassName} pr-20`}
+          className="auth-input pr-20"
         />
         <button
           type="button"
           onClick={() => setVisible((current) => !current)}
           aria-label={visible ? "Hide password" : "Show password"}
-          className="absolute right-[var(--spacing-xs)] top-[var(--spacing-xs)] min-h-[var(--spacing-2xl)] px-[var(--spacing-sm)] text-sm font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          className="absolute inset-y-0 right-1 my-auto inline-flex h-11 min-w-11 items-center justify-center rounded-lg px-[var(--spacing-sm)] text-sm font-semibold text-primary-700 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
           {visible ? "Hide" : "Show"}
         </button>
@@ -193,7 +191,7 @@ export function PasswordSignupForm() {
       <p
         role="status"
         aria-live="polite"
-        className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-md)] text-base text-primary-900"
+        className="rounded-xl border border-primary-200 bg-primary-50 p-[var(--spacing-md)] text-base text-primary-900"
       >
         If this address can create an account, we&apos;ve sent a verification
         link. Open it to finish setting up your password.
@@ -327,7 +325,7 @@ export function PasswordResetRequestForm({
         <p
           role="status"
           aria-live="polite"
-          className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+          className="rounded-xl border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
         >
           If this address can use a password, we&apos;ve sent instructions to
           it.
@@ -393,7 +391,7 @@ export function PasswordResetForm({ token }: { token: string }) {
         <p
           role="status"
           aria-live="polite"
-          className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-md)] text-base text-primary-900"
+          className="rounded-xl border border-primary-200 bg-primary-50 p-[var(--spacing-md)] text-base text-primary-900"
         >
           Your password is ready. Sign in with your email and new password.
         </p>

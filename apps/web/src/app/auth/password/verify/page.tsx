@@ -48,7 +48,7 @@ function VerifyPasswordSignupContent() {
           : "This verification link is invalid, expired, or has already been used.";
   return (
     <AuthShell>
-      <Surface className="w-full space-y-[var(--spacing-md)] border-neutral-200 bg-white shadow-[0_12px_28px_rgb(15_23_42_/_0.07)]">
+      <Surface className="w-full space-y-[var(--spacing-md)]">
         <h1 className="text-2xl font-semibold text-neutral-900">
           Verify your email
         </h1>

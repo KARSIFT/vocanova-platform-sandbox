@@ -23,7 +23,7 @@ export default async function PasswordResetPage({
 
   return (
     <AuthShell>
-      <Surface className="w-full space-y-[var(--spacing-lg)] border-neutral-200 bg-white shadow-[0_12px_28px_rgb(15_23_42_/_0.07)]">
+      <Surface className="w-full space-y-[var(--spacing-lg)]">
         <div className="space-y-[var(--spacing-sm)]">
           <h1 className="text-2xl font-semibold text-neutral-900">
             {hasToken

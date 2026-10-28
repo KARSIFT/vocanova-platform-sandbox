@@ -1,5 +1,17 @@
 # Vocanova current product state
 
+## Calm study desk UI pass — 28 October 2026 (local, awaiting review)
+
+A presentation-only redesign on branch `claude/ui-quality-redesign` applies the
+[calm study desk](../design/learning-workspace.md#calm-study-desk-october-2026)
+direction across the public page, sign-in, Home, Journey, Progress, Situation
+courses, word detail and Settings. Home's backend-selected action becomes one
+blue mission card; Journey adds "Places to use English" situation cards above
+the knowledge map; Progress shows stage counts with a proportion bar and a
+compact dated activity grid. Server authority, authentication, grading, saving
+and idempotency are unchanged. Evidence is local synthetic-fixture rendering
+and browser tests only; it is not deployed or verified against live services.
+
 ## Authentication boundary hardening — 26 October 2026
 
 The authentication implementation selects separate staging/production session and

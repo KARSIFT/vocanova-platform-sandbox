@@ -33,12 +33,12 @@ export function Surface({
   return (
     <section
       className={joinClasses(
-        "rounded-[0.9rem] border p-[var(--spacing-md)] shadow-[0_1px_2px_rgb(15_23_42_/_0.05)] sm:p-[var(--spacing-lg)]",
+        "rounded-[1.25rem] border p-[var(--spacing-md)] sm:p-[var(--spacing-lg)]",
         tone === "primary"
           ? "border-primary-200 bg-primary-50"
           : tone === "secondary"
             ? "border-secondary-200 bg-secondary-50"
-            : "border-neutral-200 bg-white",
+            : "border-neutral-200 bg-white shadow-[var(--vn-shadow-card)]",
         className,
       )}
       {...props}
@@ -49,5 +49,13 @@ export function Surface({
 }
 
 export function Eyebrow({ children }: { children: ReactNode }) {
-  return <p className="text-sm font-semibold text-primary-700">{children}</p>;
+  return (
+    <p className="inline-flex items-center gap-[var(--spacing-xs)] text-sm font-semibold text-primary-700">
+      <span
+        aria-hidden="true"
+        className="size-1.5 shrink-0 rounded-full bg-secondary-400"
+      />
+      {children}
+    </p>
+  );
 }

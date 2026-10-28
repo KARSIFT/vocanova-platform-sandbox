@@ -81,14 +81,37 @@ export default async function ProgressPage() {
   const linkStyle =
     "inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800";
   const knowledge = knowledgeResponse?.data;
+  const stages = knowledge
+    ? ([
+        { label: "New", count: knowledge.new, swatch: "bg-neutral-400" },
+        {
+          label: "Learning",
+          count: knowledge.learning,
+          swatch: "bg-secondary-400",
+        },
+        {
+          label: "Reviewing",
+          count: knowledge.reviewing,
+          swatch: "bg-primary-400",
+        },
+        {
+          label: "Mastered",
+          count: knowledge.mastered,
+          swatch: "bg-primary-700",
+        },
+      ] as const)
+    : [];
 
   return (
     <PageContainer className="max-w-[64rem]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
-          Progress
-        </h1>
-        <Link href="/words" className={linkStyle}>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="page-title">Progress</h1>
+          <p className="page-lede">
+            Your saved words, recent days and milestones, as recorded.
+          </p>
+        </div>
+        <Link href="/words" className="vn-chip-link">
           Saved words
         </Link>
       </div>
@@ -106,17 +129,20 @@ export default async function ProgressPage() {
               Explore knowledge map
             </Link>
           </div>
-          <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
-            {(
-              [
-                ["New", knowledge.new],
-                ["Learning", knowledge.learning],
-                ["Reviewing", knowledge.reviewing],
-                ["Mastered", knowledge.mastered],
-              ] as const
-            ).map(([label, count]) => (
-              <div key={label} className="border-l-2 border-primary-200 pl-3">
-                <dt className="text-sm text-neutral-600">{label}</dt>
+          <StageBar stages={stages} />
+          <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+            {stages.map(({ label, count, swatch }) => (
+              <div
+                key={label}
+                className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3"
+              >
+                <dt className="flex items-center gap-2 text-sm text-neutral-600">
+                  <span
+                    aria-hidden="true"
+                    className={`size-2.5 rounded-full ${swatch}`}
+                  />
+                  {label}
+                </dt>
                 <dd className="mt-1 text-3xl font-semibold tabular-nums text-neutral-900">
                   {count}
                 </dd>
@@ -174,16 +200,27 @@ export default async function ProgressPage() {
           >
             Recent activity
           </h2>
-          <p className="text-sm font-semibold text-primary-700">
+          <p className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-primary-50 px-3 text-sm font-semibold text-primary-800">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-4 fill-none stroke-current stroke-[1.8]"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13 3c1 5-4 5-3 9 1-1 2-2 2-3 4 2 6 5 5 8a6 6 0 0 1-11-1c-1-5 4-7 7-13Z"
+              />
+            </svg>
             {currentStreakDays}-day streak
           </p>
         </div>
         {historyWithLabels.length > 0 ? (
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
             {historyWithLabels.map((day) => (
               <li
                 key={day.localDate}
-                className={`flex min-w-0 items-center justify-between gap-3 rounded-md border-l-4 px-4 py-3 ${day.view.className}`}
+                className={`flex min-h-12 min-w-0 items-center justify-between gap-3 rounded-xl border-l-4 px-4 py-2.5 ${day.view.className}`}
               >
                 <time
                   dateTime={day.localDate}
@@ -207,7 +244,7 @@ export default async function ProgressPage() {
         )}
       </Surface>
 
-      <div className="mt-6 divide-y divide-neutral-200 border-y border-neutral-200">
+      <div className="mt-4 divide-y divide-neutral-200 rounded-[1.25rem] border border-neutral-200 bg-white px-[var(--spacing-md)] shadow-[var(--vn-shadow-card)] sm:px-[var(--spacing-lg)]">
         {lessonResponse ? (
           <details className="py-2">
             <summary className={summaryStyle}>
@@ -346,5 +383,32 @@ export default async function ProgressPage() {
         </p>
       )}
     </PageContainer>
+  );
+}
+
+/** Proportions of the counts shown beside it; decorative, so hidden from AT. */
+function StageBar({
+  stages,
+}: {
+  stages: ReadonlyArray<{ label: string; count: number; swatch: string }>;
+}) {
+  const total = stages.reduce((sum, stage) => sum + stage.count, 0);
+  return (
+    <div
+      aria-hidden="true"
+      className="mt-5 flex h-2.5 w-full overflow-hidden rounded-full bg-neutral-200"
+    >
+      {total > 0
+        ? stages.map((stage) =>
+            stage.count > 0 ? (
+              <span
+                key={stage.label}
+                className={`h-full ${stage.swatch} [&+&]:border-l-2 [&+&]:border-white`}
+                style={{ width: `${(stage.count / total) * 100}%` }}
+              />
+            ) : null,
+          )
+        : null}
+    </div>
   );
 }

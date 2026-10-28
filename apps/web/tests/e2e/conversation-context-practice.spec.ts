@@ -205,7 +205,9 @@ for (const theme of ["light", "dark"] as const) {
     const region = page.getByRole("region", { name: PRACTICE_NAME });
     await expect(region).toBeVisible();
     await expect(
-      page.getByText("0 of 18 words saved", { exact: true }),
+      page
+        .getByRole("region", { name: "Situation progress", exact: true })
+        .getByText("0 of 18 words saved", { exact: true }),
     ).toBeVisible();
     await inspectAndCapture(page, region, testInfo, `context-intro-${theme}`);
 
@@ -305,7 +307,9 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeFocused();
     await expect(start).toBeVisible();
     await expect(
-      page.getByText("0 of 18 words saved", { exact: true }),
+      page
+        .getByRole("region", { name: "Situation progress", exact: true })
+        .getByText("0 of 18 words saved", { exact: true }),
     ).toBeVisible();
     expect(mutations).toEqual([]);
   });
@@ -413,7 +417,9 @@ test("keeps ordinary browsing available when required content is missing and on 
       .getByRole("listitem"),
   ).toHaveCount(17);
   await expect(
-    page.getByText("0 of 17 words saved", { exact: true }),
+    page
+        .getByRole("region", { name: "Situation progress", exact: true })
+        .getByText("0 of 17 words saved", { exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: /^sounds good / }).click();
   await expect(

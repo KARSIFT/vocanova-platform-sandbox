@@ -24,22 +24,20 @@ export default async function SettingsPage() {
 
   return (
     <PageContainer className="lg:max-w-[72rem]">
-      <div className="app-page-heading mb-[var(--spacing-md)] flex items-center justify-between gap-[var(--spacing-md)]">
-        <h1 className="text-3xl font-semibold tracking-[-0.04em] text-neutral-900">
-          Settings
-        </h1>
-        <Link
-          href="/home"
-          className="text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-        >
-          Back to Home
-        </Link>
+      <Link
+        href="/home"
+        className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-primary-700 hover:bg-primary-50 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+      >
+        <span aria-hidden="true">←</span>
+        Back to Home
+      </Link>
+      <div className="app-page-heading mb-[var(--spacing-lg)] mt-1">
+        <h1 className="page-title">Settings</h1>
+        <p className="page-lede">
+          Update your daily review target, review rhythm, and other practice
+          preferences.
+        </p>
       </div>
-
-      <p className="app-page-heading text-base leading-7 text-neutral-700">
-        Update your daily review target, review rhythm, and other practice
-        preferences.
-      </p>
 
       <div className="mt-[var(--spacing-lg)] grid gap-[var(--spacing-lg)] lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
         <aside className="space-y-[var(--spacing-md)]">

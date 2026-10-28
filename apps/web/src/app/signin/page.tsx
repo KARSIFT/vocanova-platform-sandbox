@@ -37,9 +37,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   return (
     <AuthShell>
-      <Surface className="w-full space-y-[var(--spacing-lg)] border-neutral-200 bg-white shadow-[0_12px_28px_rgb(15_23_42_/_0.07)]">
+      <Surface className="w-full space-y-[var(--spacing-lg)]">
         <div className="space-y-[var(--spacing-sm)]">
-          <h1 className="text-xl font-semibold text-neutral-900">
+          <h1 className="text-2xl font-bold tracking-[-0.02em] text-neutral-900">
             Sign in to Vocanova
           </h1>
           <p className="text-base text-neutral-700">
@@ -61,7 +61,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <p
             role="status"
             aria-live="polite"
-            className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-primary-900"
           >
             You&apos;re signed out.
           </p>
@@ -71,7 +71,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <p
             role="status"
             aria-live="polite"
-            className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-primary-900"
           >
             Your previous session had already expired. You can sign in again.
           </p>
@@ -81,7 +81,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <p
             role="status"
             aria-live="polite"
-            className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-primary-900"
           >
             Your session expired. Sign in again to continue.
           </p>
@@ -91,7 +91,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <p
             role="alert"
             aria-live="assertive"
-            className="rounded-md border border-red-200 bg-red-50 p-[var(--spacing-sm)] text-base text-red-800"
+            className="rounded-xl border border-red-200 bg-red-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-red-800"
           >
             {oauthMessage}
           </p>
@@ -101,7 +101,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <p
             role="status"
             aria-live="polite"
-            className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-primary-900"
           >
             Email sign-in links are unavailable right now.{" "}
             {showOAuth ? "You can continue with Google below. " : null}
@@ -152,6 +152,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <MagicLinkForm
             returnTo={safeReturnTo}
             emailLabel={passwordEnabled ? "Email for sign-in link" : undefined}
+            secondary={showPassword}
           />
         ) : null}
 
@@ -159,7 +160,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <p
             role="alert"
             aria-live="assertive"
-            className="rounded-md border border-red-200 bg-red-50 p-[var(--spacing-sm)] text-base text-red-800"
+            className="rounded-xl border border-red-200 bg-red-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-red-800"
           >
             Sign-in is temporarily unavailable. Please try again later.
           </p>

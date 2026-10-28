@@ -79,11 +79,16 @@ export function LessonPath({
             <details
               key={slug}
               open={continuing}
-              className={`rounded-xl border bg-white ${continuing ? "border-primary-300" : "border-neutral-200"}`}
+              className={`rounded-2xl border bg-white shadow-[var(--vn-shadow-card)] ${continuing ? "border-primary-300" : "border-neutral-200"}`}
             >
-              <summary className="min-h-11 cursor-pointer rounded-xl p-4 marker:text-primary-700 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+              <summary className="min-h-11 cursor-pointer rounded-2xl p-4 marker:text-primary-700 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
                 <span className="inline-flex max-w-[90%] items-center gap-3 align-middle font-semibold text-neutral-900">
-                  <SituationIcon slug={slug} />
+                  <span
+                    aria-hidden="true"
+                    className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-50"
+                  >
+                    <SituationIcon slug={slug} />
+                  </span>
                   <span>{group.title}</span>
                 </span>
                 {group.lessons.length > 0 && (
@@ -138,7 +143,7 @@ function LessonRow({ lesson }: { lesson: LessonSummary }) {
       </p>
       {lesson.status === "in_progress" && (
         <progress
-          className="mt-2 h-2 w-full accent-primary-700"
+          className="mt-2 h-2 w-full"
           aria-label={`${lesson.title} progress`}
           value={lesson.completedSteps}
           max={lesson.stepCount}

@@ -11,23 +11,24 @@ import { CSRF_COOKIE_NAME, deleteCookie } from "@/lib/cookies";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { clearOAuthContinuation } from "@/lib/oauth-continuation";
 import { handleSessionExpired, isSessionExpiredError } from "@/lib/session";
-import { BrandMark } from "@/ui/brand-mark";
+import { BrandMark, BrandSymbol } from "@/ui/brand-mark";
 
 import {
   clearSentenceFeedbackDrafts,
   hasSentenceFeedbackDrafts,
 } from "./sentence-feedback-drafts";
 import { isPrimaryNavItemActive } from "./bottom-nav-state";
+import { HomeIcon, JourneyIcon, ProgressIcon } from "./nav-icons";
 import { getSessionExit, SESSION_LOCATION_CHANGED } from "./session-route";
 
 const DESKTOP_NAV_ITEMS = [
-  ["/home", "Home"],
-  ["/discover", "Journey"],
-  ["/progress", "Progress"],
+  ["/home", "Home", HomeIcon],
+  ["/discover", "Journey", JourneyIcon],
+  ["/progress", "Progress", ProgressIcon],
 ] as const;
 
 const sessionExitClass =
-  "inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700";
+  "inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700";
 
 function subscribeSessionLocation(onChange: () => void) {
   window.addEventListener(SESSION_LOCATION_CHANGED, onChange);
@@ -116,15 +117,10 @@ export function AppHeader() {
   const sessionExit = getSessionExit(pathname);
   if (sessionExit) {
     return (
-      <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <header className="app-header">
         <div className="mx-auto flex min-h-14 max-w-[52rem] items-center justify-between gap-4 px-4">
           <span className="inline-flex items-center gap-2 text-sm font-bold text-neutral-900">
-            <span
-              aria-hidden="true"
-              className="grid size-8 place-items-center rounded-lg bg-primary-700 text-white"
-            >
-              V
-            </span>
+            <BrandSymbol size="sm" />
             VocaNova
           </span>
           {pathname === "/discovery" ? (
@@ -155,13 +151,13 @@ export function AppHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 border-b border-neutral-200/90 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <header className="app-header">
         <div
           className={`app-header-inner ${pathname === "/vocabulary" ? "app-header-search-page" : ""}`}
         >
           <Link
             href="/home"
-            className="inline-flex min-h-11 items-center gap-[var(--spacing-sm)] rounded-md pr-[var(--spacing-sm)]"
+            className="inline-flex min-h-11 items-center gap-[var(--spacing-sm)] rounded-lg pr-[var(--spacing-sm)]"
           >
             <BrandMark />
           </Link>
@@ -210,23 +206,23 @@ export function AppHeader() {
           )}
           <nav
             aria-label="Primary"
-            className="header-primary hidden items-center gap-1 lg:flex"
+            className="header-primary hidden items-center gap-0.5 lg:flex"
           >
-            {DESKTOP_NAV_ITEMS.map(([href, label]) => {
+            {DESKTOP_NAV_ITEMS.map(([href, label, Icon]) => {
               const active = isPrimaryNavItemActive(pathname, href);
               return (
                 <Link
                   key={href}
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`inline-flex min-h-11 items-center rounded-md px-3 text-sm font-semibold transition-colors ${active ? "bg-primary-50 text-primary-800" : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"}`}
                 >
+                  <Icon />
                   {label}
                 </Link>
               );
             })}
           </nav>
-          <div className="header-account flex items-center gap-[var(--spacing-xs)]">
+          <div className="header-account flex items-center gap-0.5">
             <Link
               href="/settings"
               aria-label="Settings"
@@ -235,7 +231,7 @@ export function AppHeader() {
                   ? "page"
                   : undefined
               }
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-neutral-700 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-50 hover:text-primary-800"
+              className="header-icon-button"
             >
               <svg
                 aria-hidden="true"
@@ -259,8 +255,19 @@ export function AppHeader() {
               onClick={handleLogout}
               disabled={status.type === "loading"}
               aria-busy={status.type === "loading"}
-              className="min-h-11 rounded-xl px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm font-semibold text-neutral-600 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-100 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-50"
+              className="header-icon-button"
             >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-[1.1rem] fill-none stroke-current stroke-[1.8]"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M14 4.75h3.25a2 2 0 0 1 2 2v10.5a2 2 0 0 1-2 2H14M10 16l4-4-4-4m4 4H4.75"
+                />
+              </svg>
               {status.type === "loading" ? "Signing out..." : "Log out"}
             </button>
           </div>

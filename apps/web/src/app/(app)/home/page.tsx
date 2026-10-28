@@ -159,20 +159,29 @@ export default async function HomePage() {
               d="M13 3c1 5-4 5-3 9 1-1 2-2 2-3 4 2 6 5 5 8a6 6 0 0 1-11-1c-1-5 4-7 7-13Z"
             />
           </svg>
-          {streak.currentStreakCount}-day streak
+          <span>
+            <strong>{streak.currentStreakCount}</strong>-day streak
+          </span>
         </Link>
       </header>
       <div className="study-desk">
-        <div className="study-next">
-          <section aria-label="Review words" className="daily-focus">
-            <h2 id="todays-mission-heading">{action.title}</h2>
-            <p className="mt-2 text-neutral-600">
-              {currentLesson
-                ? "Pick up where you left off."
-                : dueReviewWords > 0
-                  ? `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`
-                  : "No words are due. Discover something new whenever you like."}
-            </p>
+        <section aria-label="Review words" className="daily-focus">
+          <p className="mission-kicker">
+            {currentLesson
+              ? "Review in progress"
+              : dueReviewWords > 0
+                ? "Today’s review"
+                : "All caught up"}
+          </p>
+          <h2 id="todays-mission-heading">{action.title}</h2>
+          <p className="mission-copy">
+            {currentLesson
+              ? "Pick up where you left off."
+              : dueReviewWords > 0
+                ? `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`
+                : "No words are due. Discover something new whenever you like."}
+          </p>
+          <div className="mission-actions">
             {!currentLesson && dueReviewWords > 0 ? (
               <StartDailyLessonButton
                 className="learning-primary"
@@ -183,76 +192,16 @@ export default async function HomePage() {
                 {action.label}
               </Link>
             )}
-            <div className="daily-meter">
-              <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm text-neutral-600">
-                <span>
-                  Reviewed today:{" "}
-                  <strong className="text-neutral-900">
-                    {reviewsCompleted}
-                  </strong>
-                </span>
-              </div>
-            </div>
-          </section>
-          <div className="mt-6">
-            <Suspense
-              fallback={
-                <section
-                  aria-label="Your learning path"
-                  aria-busy="true"
-                  className="min-h-[25rem] rounded-2xl border border-neutral-200 bg-white p-5 sm:min-h-[23rem]"
-                >
-                  <h2 className="text-2xl font-bold text-neutral-900">
-                    Today’s practice
-                  </h2>
-                  <p role="status" className="mt-2 text-neutral-600">
-                    Loading practice…
-                  </p>
-                </section>
-              }
-            >
-              <HomePractice read={practiceRead} />
-            </Suspense>
+            <p className="daily-meter">
+              Reviewed today: <strong>{reviewsCompleted}</strong>
+            </p>
           </div>
-          <Link
-            href="/knowledge-map"
-            className="mt-6 flex min-h-16 items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white p-4 text-lg font-semibold text-neutral-900 hover:border-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700"
-          >
-            <span>Your word map</span>
-            <span className="text-sm font-medium text-primary-700">
-              Explore 100-word groups
-            </span>
-          </Link>
-          <nav aria-label="Explore your English" className="study-shortcuts">
-            <Link href="/practice">
-              <span className="shortcut-symbol" aria-hidden="true">
-                ↺
-              </span>
-              <span>Practice</span>
-            </Link>
-            <Link href="/stories">
-              <span className="shortcut-symbol" aria-hidden="true">
-                Aa
-              </span>
-              <span>Short stories</span>
-            </Link>
-            <Link href="/plan">
-              <svg
-                className="shortcut-symbol fill-none stroke-current stroke-[1.6]"
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-              >
-                <path d="M6 5h12v15H6zM9 3v4m6-4v4M9 11h6m-6 4h4" />
-              </svg>
-              <span>Your plan</span>
-            </Link>
-          </nav>
-        </div>
+        </section>
         <section
           aria-labelledby="saved-words-heading"
           className="word-spotlight"
         >
-          <div className="flex items-center justify-between gap-3">
+          <div className="word-spotlight-head">
             <h2
               id="saved-words-heading"
               className="text-sm font-semibold text-neutral-600"
@@ -264,7 +213,7 @@ export default async function HomePage() {
             </Link>
           </div>
           {firstWord ? (
-            <>
+            <div className="word-spotlight-body">
               {spotlightRead && spotlightRevision ? (
                 <Suspense
                   fallback={
@@ -296,33 +245,140 @@ export default async function HomePage() {
               <p className="mt-1 text-neutral-600">
                 {firstWord.shortDefinition}
               </p>
-              <div
-                id="sentence-practice"
-                className="mt-4 flex flex-wrap gap-x-5 border-t border-neutral-200 pt-2"
-              >
-                <Link href="/discovery" className="learning-text-link">
+              <div id="sentence-practice" className="spotlight-links">
+                <Link href="/discovery" className="vn-chip-link">
                   Discover another word
                 </Link>
-                <Link href="/lists" className="learning-text-link">
+                <Link href="/lists" className="vn-chip-link">
                   Personal lists
                 </Link>
               </div>
-            </>
+            </div>
           ) : (
-            <div className="py-8">
-              <p className="text-2xl font-semibold tracking-tight text-neutral-900">
+            <div className="spotlight-empty">
+              <div className="spotlight-empty-art" aria-hidden="true">
+                Aa
+              </div>
+              <p className="text-2xl font-bold tracking-tight text-neutral-900">
                 A word worth keeping.
               </p>
-              <p className="mt-2 text-neutral-600">
+              <p className="text-neutral-600">
                 Save a word to start your collection.
               </p>
-              <Link href="/vocabulary" className="learning-text-link mt-3">
+              <Link href="/vocabulary" className="vn-chip-link mt-2">
                 Find a word
               </Link>
             </div>
           )}
         </section>
+        <div className="home-practice">
+          <Suspense
+            fallback={
+              <section
+                aria-label="Your learning path"
+                aria-busy="true"
+                className="min-h-[25rem] rounded-3xl border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:min-h-[23rem]"
+              >
+                <h2 className="text-xl font-bold text-neutral-900">
+                  Today’s practice
+                </h2>
+                <p role="status" className="mt-2 text-neutral-600">
+                  Loading practice…
+                </p>
+              </section>
+            }
+          >
+            <HomePractice read={practiceRead} />
+          </Suspense>
+        </div>
+        <div className="home-explore">
+          <h2 id="explore-heading" className="home-section-title">
+            More ways to learn
+          </h2>
+          <nav aria-label="Explore your English">
+            <ul className="study-shortcuts">
+              {EXPLORE_LINKS.map(({ href, label, caption, symbol, tone }) => (
+                <li key={href}>
+                  <span
+                    className={`shortcut-symbol${tone === "lavender" ? " shortcut-symbol-lavender" : ""}`}
+                    aria-hidden="true"
+                  >
+                    {symbol}
+                  </span>
+                  <span>
+                    <Link
+                      href={href}
+                      aria-describedby={`explore-${href.slice(1)}`}
+                    >
+                      {label}
+                    </Link>
+                    <span
+                      id={`explore-${href.slice(1)}`}
+                      className="shortcut-caption"
+                    >
+                      {caption}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
       </div>
     </PageContainer>
   );
 }
+
+function ExploreIcon({ d }: { d: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="fill-none stroke-current stroke-[1.8]"
+      aria-hidden="true"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d={d} />
+    </svg>
+  );
+}
+
+const EXPLORE_LINKS = [
+  {
+    href: "/practice",
+    label: "Practice",
+    caption: "Listening, recall and mistakes",
+    symbol: <ExploreIcon d="M4.75 12a7.25 7.25 0 1 0 2.2-5.2M4.75 4.75v4h4" />,
+    tone: "blue",
+  },
+  {
+    href: "/knowledge-map",
+    label: "Word map",
+    caption: "Browse 100-word groups",
+    symbol: (
+      <ExploreIcon d="M4.75 4.75h5.5v5.5h-5.5zM13.75 4.75h5.5v5.5h-5.5zM4.75 13.75h5.5v5.5h-5.5zM13.75 13.75h5.5v5.5h-5.5z" />
+    ),
+    tone: "blue",
+  },
+  {
+    href: "/stories",
+    label: "Short stories",
+    caption: "Words inside a conversation",
+    symbol: "Aa",
+    tone: "lavender",
+  },
+  {
+    href: "/plan",
+    label: "Your plan",
+    caption: "Pace and direction",
+    symbol: <ExploreIcon d="M6 5h12v15H6zM9 3v4m6-4v4M9 11h6m-6 4h4" />,
+    tone: "blue",
+  },
+  {
+    href: "/courses",
+    label: "Situations",
+    caption: "Guided lessons by place",
+    symbol: (
+      <ExploreIcon d="M12 20.25s-6.25-5.4-6.25-10.5a6.25 6.25 0 1 1 12.5 0c0 5.1-6.25 10.5-6.25 10.5Zm0-8.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z" />
+    ),
+    tone: "lavender",
+  },
+] as const;

@@ -44,7 +44,7 @@ export function SpeechSettings({ disabled = false }: { disabled?: boolean }) {
 
   return (
     <details className="min-w-0 max-w-full text-sm text-neutral-700">
-      <summary className="min-h-11 cursor-pointer content-center rounded-md px-3 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+      <summary className="min-h-11 cursor-pointer content-center rounded-full px-3 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
         Voice &amp; speed
       </summary>
       <div className="space-y-3 rounded-xl border border-neutral-200 p-3">
@@ -172,7 +172,7 @@ export function ListenButton({
                 meaningRevision,
               );
           }}
-          className="inline-flex min-h-11 min-w-11 items-center gap-[var(--spacing-xs)] rounded-md px-[var(--spacing-sm)] text-sm font-semibold text-primary-700 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          className="inline-flex min-h-11 min-w-11 items-center gap-[var(--spacing-xs)] rounded-full border border-primary-200 bg-primary-50 px-[var(--spacing-md)] text-sm font-semibold text-primary-800 hover:border-primary-300 hover:bg-primary-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
           <svg
             aria-hidden="true"
@@ -197,7 +197,7 @@ export function ListenButton({
           aria-pressed={slow}
           disabled={active}
           onClick={() => update({ rate: slow ? 0.85 : 0.7 })}
-          className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-neutral-200 px-[var(--spacing-sm)] text-sm ${slow ? "text-primary-800" : "text-neutral-700"} hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 aria-pressed:border-primary-600 aria-pressed:bg-primary-50 disabled:cursor-default disabled:opacity-60`}
+          className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-neutral-200 px-[var(--spacing-md)] text-sm ${slow ? "text-primary-800" : "text-neutral-700"} hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 aria-pressed:border-primary-600 aria-pressed:bg-primary-50 disabled:cursor-default disabled:opacity-60`}
         >
           Slow
         </button>

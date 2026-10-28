@@ -35,9 +35,10 @@ export default async function CoursesPage() {
     <PageContainer className="max-w-[72rem]">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
-            Situation courses
-          </h1>
+          <h1 className="page-title">Situation courses</h1>
+          <p className="page-lede">
+            Short guided lessons for the places you use English.
+          </p>
         </div>
         <div className="flex flex-wrap gap-x-5">
           <Link
@@ -59,10 +60,7 @@ export default async function CoursesPage() {
         browseHref="#journey-lessons"
         browseLabel={lessonResponse ? "All lessons" : "Explore situations"}
       />
-      <nav
-        aria-label="Ways to practise"
-        className="my-4 flex flex-wrap gap-x-5 border-b border-neutral-200 pb-3"
-      >
+      <nav aria-label="Ways to practise" className="my-5 flex flex-wrap gap-2">
         {(
           [
             [
@@ -77,11 +75,7 @@ export default async function CoursesPage() {
             ],
           ] as const
         ).map(([href, label]) => (
-          <Link
-            key={href}
-            href={href}
-            className="inline-flex min-h-11 items-center rounded-lg text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
+          <Link key={href} href={href} className="vn-chip-link">
             <span className="block font-semibold">{label}</span>
           </Link>
         ))}
