@@ -273,17 +273,21 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
     exact: true,
   });
   // The range keeps its word tiles behind the "Words in this range" disclosure.
+  // Its Discover words action can link to the same next word, so tiles are
+  // looked up only inside that list.
+  const wordsSummary = range
+    .locator("summary")
+    .filter({ hasText: "Words in this range" });
+  const wordList = wordsSummary.locator("..");
   const openRangeWords = async () => {
-    const summary = range
-      .locator("summary")
-      .filter({ hasText: "Words in this range" });
-    if ((await summary.locator("..").getAttribute("open")) === null)
-      await summary.click();
-    await expect(summary.locator("..")).toHaveAttribute("open", "");
+    if ((await wordList.getAttribute("open")) === null)
+      await wordsSummary.click();
+    await expect(wordList).toHaveAttribute("open", "");
   };
   const tile = () =>
-    range.locator(`a[href="/discovery?band=100&word=${chosen.rank}"]`);
+    wordList.locator(`a[href="/discovery?band=100&word=${chosen.rank}"]`);
   await openRangeWords();
+  await expect(tile()).toHaveCount(1);
   await expect(
     tile().getByText(chosen.wordText, { exact: true }),
   ).toBeVisible();
