@@ -243,11 +243,12 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
     true,
   );
 
+  // The word map is part of Journey; the earlier address still opens it.
   await page.goto("/knowledge-map");
+  await expect(page).toHaveURL(/\/discover\?band=1$/);
   await expect(
-    page.getByRole("heading", { name: "Knowledge map", exact: true }),
+    page.getByRole("heading", { name: "Journey", level: 1, exact: true }),
   ).toBeVisible();
-  await page.locator("summary").filter({ hasText: "Choose a range" }).click();
   const ranges = page
     .getByRole("navigation", { name: "Word ranges", exact: true })
     .getByRole("link");
@@ -259,17 +260,30 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
   ).toEqual(
     Array.from(
       { length: 100 },
-      (_, index) => `/knowledge-map?band=${index + 1}#range-words`,
+      (_, index) => `/discover?band=${index + 1}#range-words`,
     ),
   );
   await ranges.last().click();
+  await expect(page).toHaveURL(/\/discover\?band=100#range-words$/);
   await expect(
     page.getByRole("heading", { name: "Words 9,901–10,000", exact: true }),
   ).toBeVisible();
+  const range = page.getByRole("region", {
+    name: "Words 9,901–10,000",
+    exact: true,
+  });
+  // The range keeps its word tiles behind the "Words in this range" disclosure.
+  const openRangeWords = async () => {
+    const summary = range
+      .locator("summary")
+      .filter({ hasText: "Words in this range" });
+    if ((await summary.locator("..").getAttribute("open")) === null)
+      await summary.click();
+    await expect(summary.locator("..")).toHaveAttribute("open", "");
+  };
   const tile = () =>
-    page
-      .getByRole("region", { name: "Words 9,901–10,000", exact: true })
-      .locator(`a[href="/discovery?band=100&word=${chosen.rank}"]`);
+    range.locator(`a[href="/discovery?band=100&word=${chosen.rank}"]`);
+  await openRangeWords();
   await expect(
     tile().getByText(chosen.wordText, { exact: true }),
   ).toBeVisible();
@@ -372,25 +386,34 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
       await expect(page).toHaveURL(
         new RegExp(`/discovery\\?band=${nextBand}&word=${next.rank}$`),
       );
-      await page
-        .getByRole("link", { name: "Knowledge map", exact: true })
-        .click();
+      // The session's exit returns to the range now on screen.
+      const back = page.getByRole("link", {
+        name: "Back to Journey",
+        exact: true,
+      });
+      await expect(back).toHaveAttribute(
+        "href",
+        `/discover?band=${nextBand}#range-words`,
+      );
+      await back.click();
+      await expect(page).toHaveURL(
+        new RegExp(`/discover\\?band=${nextBand}#range-words$`),
+      );
       if (nextBand !== 100) {
-        await page
-          .locator("summary")
-          .filter({ hasText: "Choose a range" })
-          .click();
         await page
           .getByRole("navigation", { name: "Word ranges", exact: true })
           .getByRole("link")
           .last()
           .click();
+        await expect(page).toHaveURL(/\/discover\?band=100#range-words$/);
       }
     }
+    await openRangeWords();
     await expect(
       tile().getByText("Already know", { exact: true }),
     ).toBeVisible();
     await page.reload();
+    await openRangeWords();
     await expect(
       tile().getByText(chosen.wordText, { exact: true }),
     ).toBeVisible();
@@ -850,7 +873,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       await journey.click();
       await expect(page).toHaveURL(/\/discover$/);
       await expect(
-        page.getByRole("heading", { name: "Knowledge map", exact: true }),
+        page.getByRole("heading", { name: "Journey", level: 1, exact: true }),
       ).toBeVisible();
       const courses = page
         .getByRole("navigation", { name: "More ways to learn", exact: true })
