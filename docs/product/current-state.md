@@ -1,5 +1,25 @@
 # Vocanova current product state
 
+## Meaning pictures — every meaning covered, import pending — 1 November 2026
+
+All 10,051 canonical meanings now have a reviewed public picture. A read-only
+HEAD check found every picture at the public origin with its expected type, size
+and checksum tag (no bodies were downloaded). The last verified import, on 26
+October, recorded 7,718 pictures in staging and production; current live counts
+have not been read because operator access is unavailable. Uploads since then
+add 2,333 relative to that manifest, pending one operator metadata import per
+tier. Meanings without an imported picture show text only. No application
+change is needed: Discovery, word pages, saved words, Home and the teaching
+steps of lessons and practice already show any imported picture. Graded
+questions show none.
+
+A validated private manifest of all 10,051 matches the current source and the
+canonical rows both databases reported on 26 October. A local PostgreSQL 16
+rehearsal with the real seed, starting from the 26 October 7,718, added exactly
+2,333, an exact replay added none, and every row read back exactly. Live
+preflight, import, readback and learner-screen checks remain; see
+[the image library design](../design/meaning-image-library.md#current-coverage--1-november-2026).
+
 ## Learner experience and speed redesign — 28 October 2026 (local, awaiting review)
 
 Following the owner's request for a larger change than the calm study desk, the
@@ -61,6 +81,10 @@ Deployment acceptance belongs to the release PR and fresh workflow/browser evide
 source or mock-backed checks alone do not establish live authentication.
 
 ## Image release preparation — 26 October 2026
+
+Historical pre-release state. The release completed the same day: 0.4.7 reached
+staging and production, and both databases imported and read back 7,718
+pictures. See the 1 November section above for current coverage.
 
 Cloudflare R2 inventory on 26 October contains 7,718 current meaning images.
 Three superseded public versions were deleted at the owner’s request and their

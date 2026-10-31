@@ -1,16 +1,25 @@
 # Meaning image library
 
-Implementation checkpoint: 23 October 2026. This document describes the delivery
-branch and verified storage work; it does not establish full image coverage or a
-staging/production deployment.
+Implementation checkpoint: 1 November 2026. The library, API, learner screens and
+importer have been released since 0.4.7 (26 October); staging and production
+currently run 0.4.15. Every one of the 10,051 canonical meanings now has a
+reviewed public picture. The last verified import (26 October) recorded 7,718
+pictures in each database; the current live counts have not been re-read. See
+[current coverage](#current-coverage--1-november-2026).
 
 ## Learner experience
 
 Pictures support the exact meaning and grammatical use alongside its short
-definition, rather than illustrating a word spelling alone. They appear in teaching/discovery/detail contexts, not in
-graded questions where the scene could reveal the answer. Missing or failed
-pictures leave the learning text usable. Existing reviewed local pictures remain
-a revision-checked fallback.
+definition, rather than illustrating a word spelling alone. They appear on the
+Discovery card, word and saved-word pages, Home's latest saved word, and the
+teaching step of lessons and practice. Graded steps never mount a picture: every
+other lesson and practice step (recall, typed recall, listening, context, gap
+fill, sentence building and meaning choice), daily review, and conversation
+context choices. Browser tests assert that the picture is gone before graded
+lesson and practice steps. The vocabulary self-check and word lists link to the
+word page instead of showing pictures. Missing or failed pictures leave the
+learning text usable. Existing reviewed local pictures remain a revision-checked
+fallback.
 
 Preserve the established landscape picture frame while varying photographs,
 illustrations and simple diagrams. Vary people, objects, environments, color and
@@ -151,7 +160,43 @@ checkpoint is stale as a description of current storage. The already verified We
 publication receipts remain valid. Seven rejected native attempts are
 preserved separately and excluded from the approved upload plan.
 
-## Acceptance checkpoint
+## Current coverage — 1 November 2026
+
+All **10,051** canonical meanings have an approved, reviewed WebP at the public
+origin. A read-only HEAD check of all 10,051 public URLs returned 200 with the
+expected type, byte length and single-part MD5 ETag. That check does not
+download or hash bodies. Full-body SHA-256 checks against the CDN are separate
+publication-time evidence from each upload.
+
+The 26 October release imported and read back **7,718** pictures in both staging
+and production. That is the last verified count, not a fresh reading: current
+live database counts have not been read because operator access is unavailable.
+Uploads since then added **2,333** further pictures relative to that manifest.
+If the targets are unchanged since 26 October, the full import adds exactly
+those. Meanings without an imported row show their text without an empty
+picture frame. The deployed code needs no change: lookups are generic over
+imported rows, and the importer has not changed since that release.
+
+A private import manifest covers all 10,051 meanings. Every revision matches a
+fresh export of the current source and the canonical rows both databases
+reported after the 26 October release. Every row passes the importer, database
+and browser metadata rules, and each file's SHA-256 and WebP header dimensions
+match its record. All 7,718 rows of the 26 October manifest are unchanged in it.
+A local rehearsal used PostgreSQL 16, all migrations and the real canonical
+seed, starting from those 7,718. It added 2,333 in under half a second, and an
+exact replay added none. The service behind the API returned all 10,051
+exactly. A conflicting row in the last of the 21 batches rolled back the whole
+import, including rows from the first batch.
+
+Remaining release evidence, per tier (staging first): read the live canonical
+rows and current image table, import with exact replay, read back all 10,051
+rows in the database and through the authenticated API, then inspect newly
+covered words on the learner screens. Local rehearsal and CDN checks do not
+replace these live steps.
+
+## Historical acceptance checkpoints
+
+The checkpoints below record how coverage grew. Their counts are historical.
 
 The 23 October local checkpoint contains **1,943 selected published meanings** and
 **1,943 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
@@ -399,9 +444,9 @@ was made; both owned servers were stopped. A bounded handshake-level capture on 
 natural recurrence is the next diagnostic step.
 
 The earlier PostgreSQL rehearsal imported the then-current 1,070-image manifest
-and separately exercised a synthetic 10,051-row fixture. Full artwork coverage,
-the final manifest import rehearsal, one consolidated PR, required hosted checks
-and live staging acceptance remain pending. Production promotion is separate.
+and separately exercised a synthetic 10,051-row fixture. The consolidated PR,
+hosted checks and both live releases followed on 26 October. The final
+10,051-row rehearsal is recorded under current coverage.
 
 Historical 20 October checkpoint: 113 public WebPs totaling 7,095,834 bytes had
 been uploaded and freshly CDN SHA-256 verified, including the reviewed 20-image

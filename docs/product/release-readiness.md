@@ -1,6 +1,51 @@
 # Vocanova release readiness
 
+## Meaning pictures: full-coverage import — 1 November 2026
+
+**Ready locally, not yet imported. Blocked on operator access.** The public
+origin holds a reviewed picture for every one of the 10,051 canonical meanings.
+The last verified import (26 October) recorded 7,718 pictures in staging and
+production. Current live counts have not been read, because trusted SSH access
+to the host is unavailable from the operator machine. The 2,333 delta is
+relative to the 26 October manifest and assumes the targets are unchanged. No
+code or deployment change is required; only the metadata import is.
+
+Local evidence:
+
+- A fresh catalogue export from the deployed commit matches the inventory's
+  10,051 meaning IDs and revisions, each independently recomputed.
+- Every row passes the importer, database and browser metadata rules. Each
+  file's SHA-256, size and WebP header dimensions match its record. Pixels were
+  not fully decoded in this check.
+- All 7,718 rows of the 26 October manifest are unchanged in the full manifest.
+- Every manifest revision matches the canonical rows both databases reported
+  after the 26 October release. No content, seed or migration change has merged
+  since.
+- A read-only HEAD check of all 10,051 public URLs returned 200 with the
+  expected type, length and MD5 ETag. It does not hash bodies; full-body
+  SHA-256 CDN checks are separate publication-time evidence.
+- PostgreSQL 16 rehearsal with all migrations, the real seed and the 7,718
+  baseline:
+  - 2,333 added and an exact replay added none.
+  - The API's lookup service returned all 10,051 exactly.
+  - A last-batch conflict rolled back the whole import.
+
+Still required, in order:
+
+1. Staging preflight: live canonical revisions and the current image table.
+2. Staging import with exact replay.
+3. Database readback of all 10,051 rows with no extras.
+4. Authenticated API readback.
+5. A learner-screen check of newly covered words.
+6. The same steps on production.
+
+Local rehearsal and CDN checks are not live acceptance.
+
 ## Image release preparation — 26 October 2026
+
+Historical pre-release state. The release completed the same day: 0.4.7 reached
+staging and production, and both databases imported and read back 7,718
+pictures.
 
 Cloudflare R2 inventory on 26 October contains 7,718 current meaning images.
 Three superseded public versions were deleted at the owner’s request and their
