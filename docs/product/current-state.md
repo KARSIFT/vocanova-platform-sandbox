@@ -1,23 +1,26 @@
 # Vocanova current product state
 
-## Meaning pictures — every meaning covered, import pending — 1 November 2026
+## Meaning pictures — every meaning active — 1 November 2026
 
-All 10,051 canonical meanings now have a reviewed public picture. A read-only
-HEAD check found every picture at the public origin with its expected type, size
-and checksum tag (no bodies were downloaded). The last verified import, on 26
-October, recorded 7,718 pictures in staging and production; current live counts
-have not been read because operator access is unavailable. Uploads since then
-add 2,333 relative to that manifest, pending one operator metadata import per
-tier. Meanings without an imported picture show text only. No application
-change is needed: Discovery, word pages, saved words, Home and the teaching
-steps of lessons and practice already show any imported picture. Graded
-questions show none.
+All 10,051 canonical meanings now have a reviewed picture, and both staging and
+production (0.4.15) serve all of them. No application change or deployment was
+needed. Discovery, word pages, saved words, Home and the teaching steps of
+lessons and practice show the picture; graded questions show none.
 
-A validated private manifest of all 10,051 matches the current source and the
-canonical rows both databases reported on 26 October. A local PostgreSQL 16
-rehearsal with the real seed, starting from the 26 October 7,718, added exactly
-2,333, an exact replay added none, and every row read back exactly. Live
-preflight, import, readback and learner-screen checks remain; see
+On 1 November the operator ran a live preflight on each tier.
+
+- Canonical rows: 10,051 active, with exact revisions.
+- Image table: the 7,718 rows from 26 October, exactly matching the old
+  manifest, with no conflicts.
+
+The operator backed up the image table, then imported the validated 10,051-row
+manifest on staging and then production. Each import added 2,333 rows and an
+exact repeat added none. Final database readback found exactly 10,051 rows on
+each tier, with no duplicates, extras or revision mismatches.
+
+An authenticated readback through each tier's internal API matched all 10,051
+pictures. This was an internal API check, not a public-edge check. A signed-in
+browser on each tier showed the expected picture for **comet**. See
 [the image library design](../design/meaning-image-library.md#current-coverage--1-november-2026).
 
 ## Learner experience and speed redesign — 28 October 2026 (local, awaiting review)

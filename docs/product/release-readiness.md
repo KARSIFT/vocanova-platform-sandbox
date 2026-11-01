@@ -1,45 +1,42 @@
 # Vocanova release readiness
 
-## Meaning pictures: full-coverage import — 1 November 2026
+## Meaning pictures: full-coverage activation — 1 November 2026
 
-**Ready locally, not yet imported. Blocked on operator access.** The public
-origin holds a reviewed picture for every one of the 10,051 canonical meanings.
-The last verified import (26 October) recorded 7,718 pictures in staging and
-production. Current live counts have not been read, because trusted SSH access
-to the host is unavailable from the operator machine. The 2,333 delta is
-relative to the 26 October manifest and assumes the targets are unchanged. No
-code or deployment change is required; only the metadata import is.
+**Complete on staging and production (0.4.15).** Every one of the 10,051
+canonical meanings has an imported, reviewed picture. No code or deployment
+change was required.
 
-Local evidence:
+Live evidence, per tier (staging first, then production):
 
-- A fresh catalogue export from the deployed commit matches the inventory's
-  10,051 meaning IDs and revisions, each independently recomputed.
-- Every row passes the importer, database and browser metadata rules. Each
-  file's SHA-256, size and WebP header dimensions match its record. Pixels were
-  not fully decoded in this check.
-- All 7,718 rows of the 26 October manifest are unchanged in the full manifest.
-- Every manifest revision matches the canonical rows both databases reported
-  after the 26 October release. No content, seed or migration change has merged
-  since.
+- Preflight: 10,051 active canonical rows with exact revisions. The image table
+  held the 26 October 7,718 rows, exactly matching that manifest, with 2,333
+  missing and no conflicts. The image table was backed up before import.
+- Import of the validated 10,051-row manifest, with its digest verified on the
+  host: 2,333 added, and an exact repeat added none.
+- Database readback: exactly 10,051 rows and unique meaning IDs, with no
+  duplicates, extras or revision mismatches. Independent SQL counts agree.
+- Authenticated readback through the internal API: 101 batches matched all
+  10,051 pictures, with none missing, mismatched, duplicated or unexpected. The
+  synthetic session was revoked afterwards. This is an internal API readback,
+  not 101 public-edge requests.
+- A signed-in browser showed **comet**'s picture complete at 960×640 from its
+  immutable URL. Only read-only views were used; no learner data was changed.
+
+Supporting local evidence:
+
+- A fresh catalogue export from the deployed commit matched all 10,051 IDs and
+  revisions.
+- Every row passed the importer, database and browser rules.
+- File SHA-256 and WebP header dimensions matched their records; pixels were not
+  fully decoded.
 - A read-only HEAD check of all 10,051 public URLs returned 200 with the
-  expected type, length and MD5 ETag. It does not hash bodies; full-body
-  SHA-256 CDN checks are separate publication-time evidence.
-- PostgreSQL 16 rehearsal with all migrations, the real seed and the 7,718
-  baseline:
-  - 2,333 added and an exact replay added none.
-  - The API's lookup service returned all 10,051 exactly.
-  - A last-batch conflict rolled back the whole import.
+  expected type, length and MD5 ETag. It did not hash bodies; full-body CDN
+  checks are separate publication-time evidence.
+- A PostgreSQL 16 rehearsal with the real seed added 2,333, a replay added none,
+  and a conflict rolled back the whole import.
 
-Still required, in order:
-
-1. Staging preflight: live canonical revisions and the current image table.
-2. Staging import with exact replay.
-3. Database readback of all 10,051 rows with no extras.
-4. Authenticated API readback.
-5. A learner-screen check of newly covered words.
-6. The same steps on production.
-
-Local rehearsal and CDN checks are not live acceptance.
+Not covered: a check of every picture on the learner screens, or public-edge
+delivery for every image.
 
 ## Image release preparation — 26 October 2026
 

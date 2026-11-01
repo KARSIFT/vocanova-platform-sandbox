@@ -1,10 +1,9 @@
 # Meaning image library
 
 Implementation checkpoint: 1 November 2026. The library, API, learner screens and
-importer have been released since 0.4.7 (26 October); staging and production
-currently run 0.4.15. Every one of the 10,051 canonical meanings now has a
-reviewed public picture. The last verified import (26 October) recorded 7,718
-pictures in each database; the current live counts have not been re-read. See
+importer have been released since 0.4.7 (26 October); staging and production run
+0.4.15. Every one of the 10,051 canonical meanings has a reviewed public picture,
+and both databases have served all of them since the 1 November import. See
 [current coverage](#current-coverage--1-november-2026).
 
 ## Learner experience
@@ -163,36 +162,33 @@ preserved separately and excluded from the approved upload plan.
 ## Current coverage — 1 November 2026
 
 All **10,051** canonical meanings have an approved, reviewed WebP at the public
-origin. A read-only HEAD check of all 10,051 public URLs returned 200 with the
-expected type, byte length and single-part MD5 ETag. That check does not
-download or hash bodies. Full-body SHA-256 checks against the CDN are separate
-publication-time evidence from each upload.
+origin, and both staging and production serve every one of them. A read-only HEAD
+check of all 10,051 public URLs returned 200 with the expected type, byte length
+and single-part MD5 ETag. It does not hash bodies; full-body SHA-256 checks
+against the CDN are separate publication-time evidence from each upload.
 
-The 26 October release imported and read back **7,718** pictures in both staging
-and production. That is the last verified count, not a fresh reading: current
-live database counts have not been read because operator access is unavailable.
-Uploads since then added **2,333** further pictures relative to that manifest.
-If the targets are unchanged since 26 October, the full import adds exactly
-those. Meanings without an imported row show their text without an empty
-picture frame. The deployed code needs no change: lookups are generic over
-imported rows, and the importer has not changed since that release.
+A private import manifest covers all 10,051 meanings. Every revision matched a
+fresh export of the current source. Every row passed the importer, database and
+browser metadata rules, and each file's SHA-256 and WebP header dimensions matched
+its record. A local PostgreSQL 16 rehearsal with the real seed added 2,333 rows
+to the 26 October 7,718. An exact replay added none, and a conflict in the last
+of 21 batches rolled back the whole import.
 
-A private import manifest covers all 10,051 meanings. Every revision matches a
-fresh export of the current source and the canonical rows both databases
-reported after the 26 October release. Every row passes the importer, database
-and browser metadata rules, and each file's SHA-256 and WebP header dimensions
-match its record. All 7,718 rows of the 26 October manifest are unchanged in it.
-A local rehearsal used PostgreSQL 16, all migrations and the real canonical
-seed, starting from those 7,718. It added 2,333 in under half a second, and an
-exact replay added none. The service behind the API returned all 10,051
-exactly. A conflicting row in the last of the 21 batches rolled back the whole
-import, including rows from the first batch.
+On 1 November the operator activated the manifest on staging, then production.
 
-Remaining release evidence, per tier (staging first): read the live canonical
-rows and current image table, import with exact replay, read back all 10,051
-rows in the database and through the authenticated API, then inspect newly
-covered words on the learner screens. Local rehearsal and CDN checks do not
-replace these live steps.
+- Preflight on each tier: 10,051 active canonical rows with exact revisions, and
+  the 26 October 7,718 image rows, unchanged and conflict-free.
+- After a backup, the existing guarded import script added 2,333 rows on each
+  tier, and its repeat added none.
+- Final database readback: exactly 10,051 rows, with no duplicates, extras or
+  revision mismatches.
+- An authenticated readback through each tier's internal API matched all 10,051
+  pictures, and the synthetic session was then revoked. This was not a
+  public-edge check.
+- A signed-in browser showed **comet**'s picture complete at 960×640 on both
+  tiers.
+
+The deployed code needed no change: lookups are generic over imported rows.
 
 ## Historical acceptance checkpoints
 
