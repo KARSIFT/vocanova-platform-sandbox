@@ -186,6 +186,12 @@ verify the actual prior reviewed inventory for the incident.
 
 ### External availability and monitor-host reachability
 
+External production monitors must use `https://production.vocanova.site/`
+and `https://api-production.vocanova.site/healthz`, without the retired
+`:8443` port. The API health endpoint supports both GET and HEAD: both
+check database reachability and return 200 or 503; HEAD has no response body.
+Use GET when checking the JSON health fields.
+
 ```bash
 infra/scripts/verify-voc086-monitoring.sh --skip-socket-proof
 ```

@@ -568,6 +568,27 @@ func TestHealthzHandler_ReportsOkWhenPingSucceeds(t *testing.T) {
 	assert.NotEmpty(t, body.Timestamp)
 }
 
+func TestHealthzHandler_HEADReflectsDatabaseHealth(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		err    error
+		status int
+	}{
+		{"healthy", nil, http.StatusOK},
+		{"unhealthy", errors.New("database connection failed (private details)"), http.StatusServiceUnavailable},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db := &fakeHealthchecker{err: tc.err}
+			api := newHealthzOnlyAPI(t, db)
+			w := httptest.NewRecorder()
+			api.Adapter().ServeHTTP(w, httptest.NewRequest(http.MethodHead, "/healthz", nil))
+			assert.Equal(t, tc.status, w.Code)
+			assert.Equal(t, 1, db.calls, "HEAD must check the database rather than return static success")
+			assert.Empty(t, w.Body.String(), "HEAD must not return a response body")
+		})
+	}
+}
+
 // TestHealthzHandler_ReportsKillSwitchState covers VOC-038-T02: the
 // smoke-test suite asserts kill-switch state via /healthz rather
 // than a state-mutating probe, so /healthz must report exactly the
