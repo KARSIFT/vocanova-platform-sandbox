@@ -606,6 +606,11 @@ func writeCloudflareModerationFailure(w io.Writer, event aifeedback.CloudflareMo
 // HealthzInput is intentionally empty - /healthz takes no parameters.
 type HealthzInput struct{}
 
+// HealthzHeadOutput carries only the status, as HEAD responses have no body.
+type HealthzHeadOutput struct {
+	Status int
+}
+
 // HealthzOutput reports the database-connection state. A healthy
 // response is 200; an unhealthy response is 503 with a body that
 // does not leak the underlying error (per the F2/DOC-11 contract:
@@ -942,7 +947,7 @@ func ControlledSignupReady(oauthEnabled, newSignupsEnabled bool, allowlist map[s
 	return false
 }
 
-// RegisterHealthz installs the unauthenticated GET /healthz probe.
+// RegisterHealthz installs unauthenticated GET and HEAD /healthz probes.
 // It pings the supplied database with a 2-second deadline; a
 // successful ping returns 200 with status="ok", an unsuccessful
 // ping returns 503 with status="unhealthy" and a non-leaking
@@ -950,6 +955,24 @@ func ControlledSignupReady(oauthEnabled, newSignupsEnabled bool, allowlist map[s
 // does not register, because the contract generator has no
 // production database to probe - it is T00-specific.
 func RegisterHealthz(api huma.API, db Healthchecker, switches KillSwitchStatus, controlledSignupReady bool) {
+	ping := func(ctx context.Context) error {
+		pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+		return db.PingContext(pingCtx)
+	}
+	huma.Register(api, huma.Operation{
+		OperationID: "HeadHealthz",
+		Method:      http.MethodHead,
+		Path:        "/healthz",
+		Summary:     "Liveness and database-reachability status without a response body",
+		Tags:        []string{"Operations"},
+	}, func(ctx context.Context, input *HealthzInput) (*HealthzHeadOutput, error) {
+		status := http.StatusOK
+		if err := ping(ctx); err != nil {
+			status = http.StatusServiceUnavailable
+		}
+		return &HealthzHeadOutput{Status: status}, nil
+	})
 	huma.Register(api, huma.Operation{
 		OperationID: "GetHealthz",
 		Method:      http.MethodGet,
@@ -957,11 +980,9 @@ func RegisterHealthz(api huma.API, db Healthchecker, switches KillSwitchStatus, 
 		Summary:     "Liveness and database-reachability probe",
 		Tags:        []string{"Operations"},
 	}, func(ctx context.Context, input *HealthzInput) (*HealthzOutput, error) {
-		pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-		defer cancel()
 		dbStatus := "ok"
 		overall := "ok"
-		if err := db.PingContext(pingCtx); err != nil {
+		if err := ping(ctx); err != nil {
 			dbStatus = "unhealthy"
 			overall = "unhealthy"
 		}
