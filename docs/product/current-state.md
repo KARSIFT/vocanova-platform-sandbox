@@ -31,15 +31,21 @@ recovery stays shared, and a missing token still prevents the write. The focused
 Linux verification passed 22 cases without retries, including seven observed
 uses of the new fallback; full integrated acceptance remains separate.
 
-The ledger preserves the Chromium, Firefox and WebKit failures and corrective
-runs separately. Earlier 84-page Lighthouse checks passed on the recorded
-build; they predate the final refinements. Severe host load affected the late
-local WebKit runs, so those timings do not establish application performance.
-Final integrated acceptance uses the consolidated PR's isolated Chromium,
-Firefox, WebKit and full Lighthouse checks, followed by the guarded staging
-provider/export/CDN gate. Their actual outcomes belong to the PR/deployment
-execution records; this source map alone does not establish a passing run or
-production deployment.
+Final hosted run `42269159776` passed 2,041 cases per browser engine with 35
+intentional viewport skips per engine, zero failures and zero flaky retries.
+All 84 fresh Lighthouse reports met budgets: performance 98–100, accessibility
+100, TBT zero and CLS at most 0.08796. PR #1509 merged through the normal queue
+as `838553f5`, with an identical tree to the tested source.
+
+Its automatic staging run passed release identity, web/API health, OAuth
+initiation, core/maturity journeys and real image CDN delivery. The new strict
+AI/export gate exposed a deployment configuration bug: selecting Cloudflare did
+not remove the prior OpenCode base URL, so moderation received a non-JSON HTTP
+200 response from the wrong service. Export was not reached. The ledger records
+this failure separately from the passing frontend checks. The source sync now replaces stale base URLs with the canonical Cloudflare
+HTTPS endpoint, and the adapter decodes one JSON-string envelope before its
+existing validation. Successful real AI/export acceptance remains required. No
+production promotion is established by these results.
 
 ## Full panel and performance audit — 6 November 2026 (local)
 

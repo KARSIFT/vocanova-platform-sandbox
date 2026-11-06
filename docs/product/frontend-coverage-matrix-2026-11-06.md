@@ -942,3 +942,73 @@ Both affected test files then passed **108/108 cases**, with retries disabled,
 across three widths and all three engines. Production build, web lint,
 formatting, E2E typechecking and diff checks passed for the correction. Fresh
 integrated CI and staging outcomes remain separate acceptance requirements.
+
+
+### Final hosted frontend acceptance and live provider blocker
+
+[PR #1509](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1509)
+merged through the normal queue as `838553f5`. Its tree exactly matched the
+reviewed `c1305865` source. Full run `42269159776` completed all nine jobs:
+
+| Engine | Passed | Failed | Flaky | Intentional viewport skips |
+| --- | ---: | ---: | ---: | ---: |
+| Chromium | 2,041 | 0 | 0 | 35 |
+| Firefox | 2,041 | 0 | 0 | 35 |
+| WebKit | 2,041 | 0 | 0 | 35 |
+
+The combined result is **6,123 passed and 105 skipped**, not 6,228 passed.
+Each job accounted for 692 outcomes and all 104 spec files. No job reruns were
+needed. Firefox 360px spent 25m10s installing browser dependencies before its
+18.1-minute passing suite; installation time is not application performance.
+
+Fresh Lighthouse run `42269159851` produced all 84 reports: performance 100 on
+83 reports and 98 on email-change/mobile-360, accessibility 100 throughout,
+best-practices 96–100, total blocking time zero and CLS 0–0.08796. No report
+had a runtime error. These remain controlled fixture measurements. Standard
+checks, independent review and the required merge-queue checks passed.
+
+Automatic staging run `42277983495` verified the exact deployed release,
+web/API health and OAuth initiation. The real core journey passed in 45.7s,
+and the maturity journey passed in 34.9s. The approved CDN image returned HTTP
+200 and decoded successfully. The fresh AI/export case **failed** before export:
+the service returned HTTP 200 with moderation unavailable, not completed AI
+feedback. The strict assertion was retained.
+
+Read-only diagnostics confined to the reserved synthetic account found no
+saved submission for that run. The sanitized moderation diagnostic was
+`invalid_response`, upstream HTTP 200, provider code zero. Staging selected
+Cloudflare but retained a legacy OpenCode base-URL override; the configured
+listener was OpenCode and the exact request received non-JSON content. The
+deployment sync replaced provider/key/account/model settings but omitted the
+base URL in both deployment workflows. This is a confirmed configuration
+pairing bug; credentials being present did not establish provider readiness.
+
+A separate private regression exposed a parser compatibility defect: a valid
+JSON-string response containing the same object failed, while the object
+response passed and malformed content remained rejected. This defect did not
+cause the observed non-JSON staging response. Neither finding justifies relaxing
+moderation or treating an error alert as successful feedback. The deployment
+and parser corrections require fresh CI/review and a fresh strict staging gate;
+export and successful real AI acceptance remain open until that run completes.
+
+
+The bounded source correction replaces all old base-URL entries and writes the
+canonical Cloudflare HTTPS endpoint in each existing sync block. A behavioral
+test executes the actual workflow shell against temporary synthetic settings:
+both stale-endpoint cases failed before the fix; all eight cases pass afterward,
+including repeated synchronization, unrelated-setting preservation, mode 0600
+and each missing-credential guard. Workflow contracts passed 22/22 and action
+pins passed for all 26 workflows. The full local foundation run reported 313
+passes and the same 11 macOS-specific failures as the preserved earlier baseline;
+this is not a claim that the whole local foundation suite passed.
+
+The adapter correction decodes exactly one JSON-string envelope before existing
+content/refusal validation. Both actual provider classes now accept equivalent
+object/string replies with escaped quotes, backslashes and newlines. The two
+string cases failed before the fix; all 16 new cases passed afterward, including
+null, empty, malformed, double-encoded and refusal rejection. The complete
+AI-feedback package passed 911 tests/subtests with three existing PostgreSQL
+integration skips. Local vet/build passed using Go 1.27.3; pinned-toolchain hosted
+CI and the unchanged real staging gate remain required. Independent source
+review found no actionable issues; no provider retry or acceptance assertion was
+weakened.

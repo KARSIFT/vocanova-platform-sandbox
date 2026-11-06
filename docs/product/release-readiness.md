@@ -3,30 +3,25 @@
 ## Frontend coverage continuation — 6 November 2026
 
 The [43-route control ledger](frontend-coverage-matrix-2026-11-06.md) records
-browser controls, visual inspection, error recovery, pending mutations, and
-cross-engine findings. It preserves historical failures and focused recoveries
-instead of adding overlapping runs into a unique passing count. The earlier
-84-entry Lighthouse pass predates the final calendar/navigation refinements.
-Late local WebKit runs encountered severe host load and pre-document transport
-stalls; those failures require fresh verification and are not performance data.
-The first isolated full run exposed Linux-font wrapping and synchronization
-issues; its exact failed/partial outcomes and corrective evidence are in the
-ledger. The resulting source and test changes require a fresh complete run.
+controls, visual inspection, error recovery, pending mutations and cross-engine
+findings. Final full run `42269159776` passed **6,123 cases with 105 intentional
+viewport skips**, zero failures and zero flaky retries across three engines and
+three widths. Fresh Lighthouse run `42269159851` passed all 84 reports, with
+performance 98–100, accessibility 100, TBT zero and CLS at most 0.08796. Standard
+checks, review and the normal merge queue passed for PR #1509 / `838553f5`.
 
-The final Linux diagnosis reproduced a restored-CSRF-cookie visibility race.
-The bounded recovery correction passed ten original regressions and twelve
-instrumented cases with retries disabled; seven cases exercised the additional
-browser task. Temporary diagnostic code was removed after retaining its
-evidence. The regular inventory is 2,076 cases across 104 files, with 35 expected
-viewport-specific skips per engine. All three browser engines run all three
-viewport projects in isolated CI jobs so the complete workload fits its budget.
+Automatic staging run `42277983495` passed release identity, health, OAuth
+initiation, core/maturity journeys and the live approved-image CDN check.
+Its strict AI/export test failed at moderation before any export: deployment
+selected Cloudflare while retaining an incompatible legacy base URL. The
+source synchronization omitted that setting in both deployment workflows.
+A separate regression also reproduced rejection of a valid JSON-string provider
+response. Neither error is converted into an allowed acceptance result.
 
-Integrated acceptance requires the consolidated PR's isolated Chromium,
-Firefox and WebKit suites, the full 28-surface × three-width Lighthouse matrix,
-normal required checks and review, then the automatic staging provider/export
-acceptance. Keep the PR draft/held until all relevant checks are resolved.
-Check the actual PR and deployment runs for outcomes rather than treating this
-readiness list as evidence that they executed.
+The bounded corrections require fresh relevant CI/review and the unchanged
+strict staging gate. Keep their delivery held until those checks resolve, then
+verify the actual real AI verdict, exact exported submission and CDN outcome.
+Do not equate the earlier synthetic browser success with real-provider success.
 
 Live verification/reset email delivery remains unverified: staging disables
 those methods. The provider/export gate uses the reserved synthetic identity

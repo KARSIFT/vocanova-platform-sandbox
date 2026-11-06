@@ -289,6 +289,15 @@ func parseCloudflareTextResponse(statusCode int, body []byte) (string, error) {
 	}
 
 	content := strings.TrimSpace(string(resp.Result.Response))
+	if strings.HasPrefix(content, `"`) {
+		// Workers AI may wrap the JSON content in a string instead of returning
+		// an object. Decode that envelope once before normal content validation.
+		var decoded string
+		if err := json.Unmarshal(resp.Result.Response, &decoded); err != nil {
+			return "", fmt.Errorf("%w: %v", ErrProviderInvalidResponse, err)
+		}
+		content = strings.TrimSpace(decoded)
+	}
 	if content == "" || content == "null" {
 		return "", ErrProviderInvalidResponse
 	}
@@ -315,16 +324,9 @@ type cloudflareResponseFormat struct {
 }
 
 // cloudflareRunResponse's Result.Response is json.RawMessage, not string.
-// Cloudflare's `response_format: {type: "json_schema", ...}` mode returns
-// `result.response` as an actual parsed JSON object matching the schema
-// (e.g. `{"status":"correct","explanation":"..."}`), not a JSON-encoded
-// string containing that object - confirmed live against the real API
-// (VOC-036-T03's first live-evaluation attempt: every one of 56 calls
-// failed with ProviderCalled=0 because `Response string` could never
-// successfully unmarshal an object). json.RawMessage captures the field's
-// raw bytes verbatim regardless of whether the underlying JSON is a string
-// or an object, which is exactly what downstream extractJSON/json.Unmarshal
-// already expects to receive - no other parsing logic changes needed.
+// Workers AI can return `result.response` as a parsed JSON object or a string
+// containing JSON. RawMessage preserves both shapes; parseCloudflareTextResponse
+// decodes one string envelope before the shared content validation runs.
 type cloudflareRunResponse struct {
 	Result struct {
 		Response json.RawMessage `json:"response"`
