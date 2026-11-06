@@ -207,9 +207,19 @@ for (const theme of ["light", "dark"] as const) {
       await goto(page, "/learn/conversation-basics");
       await page.getByRole("button", { name: "Save invite for review", exact: true }).click();
       for (const word of [invite, confirm]) {
+        // A returned lesson streams before its independently loaded saved
+        // states. Establish this destination and its saved link before
+        // asserting that the untouched sibling still offers saving.
+        await expect(page.getByRole("main").getByRole("heading", {
+          name: "Lesson complete", exact: true, level: 1,
+        })).toBeVisible();
+        const savedLink = page.getByRole("main").getByRole("link", {
+          name: `Open saved ${word.wordText}`, exact: true,
+        });
+        await expect(savedLink).toBeVisible();
         await expect(page.getByRole("button", { name: "Save reschedule for review", exact: true })).toBeEnabled();
         await expect(page.getByRole("link", { name: "Open saved reschedule", exact: true })).toHaveCount(0);
-        await activate(page, page.getByRole("link", { name: `Open saved ${word.wordText}`, exact: true }), `/words/uw-${word.meaningId}`, word.wordText);
+        await activate(page, savedLink, `/words/uw-${word.meaningId}`, word.wordText);
         await goto(page, "/learn/conversation-basics");
       }
     });

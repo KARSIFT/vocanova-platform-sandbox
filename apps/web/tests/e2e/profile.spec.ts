@@ -310,6 +310,12 @@ test("retains the newer profile name after a failed save and submits it on retry
     { displayName: "Earlier name" },
     { displayName: "Later name" },
   ]);
+  // Confirm the successful retry's server-rendered avatar before reloading.
+  await expect(
+    page
+      .getByRole("region", { name: "Your profile", exact: true })
+      .getByText("LN", { exact: true }),
+  ).toBeVisible();
   await page.reload();
   await expect(name).toHaveValue("Later name");
 });

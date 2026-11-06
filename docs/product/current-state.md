@@ -31,6 +31,15 @@ The bounded implementation changes address findings from that pass:
   on browser Back. Profile saves refresh server-rendered initials without
   replacing a newer unsaved name.
 
+The deployment audit also reproduced a stale shared-proxy base-configuration
+mount: the host had the intended URI-only/no-referrer logging configuration,
+but the running container still saw the older file. Staging now validates the
+desired configuration, recreates only nginx when the mounted file differs,
+and verifies convergence before reload. Matching deployments retain normal
+convergence. The brief shared-proxy replacement on detected drift still needs
+normal staging and production acceptance; this is not an established cause of
+the separately observed browser connection interruption.
+
 Local PostgreSQL comparison retained search counts and sort memory, with mixed
 timings: exact `make` improved from 8.189 to 7.886 ms, while broad `a` increased
 from 9.543 to 10.791 ms. These are warm query-plan measurements on the seeded

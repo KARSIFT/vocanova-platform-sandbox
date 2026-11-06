@@ -65,6 +65,10 @@ for (const theme of ["light", "dark"] as const) {
       await name.fill("Landscape learner");
       await page.getByRole("button", { name: "Save profile" }).press("Enter");
       await expect(page.getByRole("status")).toContainText("Your profile has been saved.");
+      // Audit the refreshed server presentation and its streamed metadata.
+      await expect(page.getByRole("region", { name: "Your profile", exact: true })
+        .getByText("LL", { exact: true })).toBeVisible();
+      await expect(page).toHaveTitle("Profile — Vocanova");
       await reflow(page);
       await page.screenshot({ path: info.outputPath(`landscape-profile-${theme}.png`), fullPage: true });
       await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Journey", exact: true }).press("Enter");
@@ -129,6 +133,10 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "Save profile" }).press("Enter");
       await expect(page.getByRole("status")).toContainText("Your profile has been saved.");
       expect(writes).toBe(1);
+      // The saved status precedes router.refresh; the server-rendered avatar
+      // confirms that refresh has committed before a separate reload begins.
+      await expect(page.getByRole("region", { name: "Your profile", exact: true })
+        .getByText("学L", { exact: true })).toBeVisible();
       await page.reload();
       await expect(field).toHaveValue("学習 learner e\u0301 🌱");
       await reflow(page);

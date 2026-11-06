@@ -9,6 +9,31 @@ fresh CI/review, staging acceptance and a separate production promotion. Earlier
 deployment-status entries below are historical. No whole-product completion or
 full manual coverage claim follows from this audit.
 
+Initial hosted acceptance passed Linux foundation **324/324**, API-client
+**61/61**, web **261/261**, and the web/API, PostgreSQL reliability,
+controlled-signup/password and Docker gates. The first full browser run was
+not clean: eight executed projects recorded 5,498 passes, four failures, eight
+flaky cases and 98 intentional skips; the Chromium desktop project failed
+dependency installation before its 701 cases ran. Firefox traces showed
+explicit reloads overlapping confirmed profile refreshes. Case-local tests
+now require the new server-rendered avatar, stable metadata and accessible
+streamed content before subsequent actions/scans, preserving the original
+persistence, Unicode, keyboard and axe checks.
+
+Initial Lighthouse had one Home desktop score of 81 with TBT 431 ms among 84
+reports. Its retry failed dependency setup before auditing. Browser workflows
+now use the explicit supported Ubuntu 24.04 runner to control image drift;
+Ubuntu 26.04 is also supported, so this is not an unsupported-OS diagnosis.
+All jobs, tests, limits and thresholds remain. Fresh final-head results in
+[PR #1511](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1511) must
+establish acceptance; the original failures are not waived.
+
+A separately reproduced stale single-file nginx mount is corrected through
+staging's validated convergence path: only differing mounted content triggers
+nginx-only recreation, with equality checked before reload. Matching content
+does not force recreation. This requires normal live deployment verification
+and can briefly replace the shared proxy when drift is found.
+
 Fresh local evidence for the corrections:
 
 - Web build, lint, web/E2E typechecks and **261 unit tests** passed. The final
@@ -57,7 +82,11 @@ login forms displayed incorrect-credentials, service-unavailable and rate-limit
 feedback, plus the magic-link request/resend screen. These checks used normal UI
 entry and sent no real email; they do not establish production email delivery.
 
-Still separate or unavailable: fresh-user onboarding, successful/replayed live
+Local fresh onboarding was subsequently exercised through normal mock sign-in
+at 360px/dark, including Persian search, Back retention, completion and saved
+review-target persistence. This does not prove fresh production-account setup.
+
+Still separate or unavailable: fresh production onboarding, successful/replayed live
 email/password flows while those capabilities are disabled, destructive account
 deactivation, physical-device/native-picker/IME behavior, audible pronunciation
 quality and spoken screen-reader use. The account-deactivated page and deletion

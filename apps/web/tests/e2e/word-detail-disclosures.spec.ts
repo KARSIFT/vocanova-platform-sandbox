@@ -23,7 +23,9 @@ for (const theme of ["light", "dark"] as const) {
       ]) {
         await page.goto(path);
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-        const heading = page.getByRole("heading", { name: "pour", exact: true });
+        // Streamed route payloads can retain an inactive copy outside main.
+        const main = page.getByRole("main");
+        const heading = main.getByRole("heading", { name: "pour", exact: true });
         await expect(heading).toBeVisible();
         const wordHeader = heading.locator("..");
         await expect(wordHeader.getByText("verb", { exact: true })).toBeVisible();
@@ -32,7 +34,7 @@ for (const theme of ["light", "dark"] as const) {
           difficulty === "default" ? 1 : 0,
         );
         await expect(
-          page.getByText("to make liquid flow into a container", { exact: true }),
+          main.getByText("to make liquid flow into a container", { exact: true }),
         ).toBeVisible();
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),

@@ -180,10 +180,15 @@ test("VOC-081-TEST-06: scoped compose ownership and no routine shared-edge force
   const deployStaging = readFileSync(deployStagingPath, "utf8");
   const deployProduction = readFileSync(deployProductionPath, "utf8");
 
-  assert.doesNotMatch(
+  assert.match(
     deployStaging,
-    /docker compose[^\n]*--force-recreate/,
-    "staging deploy must not force-recreate containers on routine deploys",
+    /if \[ "\$desired_base_config_sha" != "\$mounted_base_config_sha" \]; then\n[^\n]*\n\s+docker compose -f docker-compose\.shared-edge\.yml -p vocanova-shared-edge up -d --no-deps --force-recreate nginx\n\s+else\n\s+docker compose -f docker-compose\.shared-edge\.yml -p vocanova-shared-edge up -d\n\s+fi/,
+    "only verified base-config drift may force-recreate nginx; matching mounts use ordinary convergence",
+  );
+  assert.equal(
+    (deployStaging.match(/docker compose[^\n]*--force-recreate/g) ?? []).length,
+    1,
+    "no other staging path may force-recreate containers",
   );
   assert.doesNotMatch(
     deployStaging,
