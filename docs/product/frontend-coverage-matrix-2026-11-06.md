@@ -806,9 +806,21 @@ bounded corrective runs; they do not replace final full-suite CI acceptance.
 
 On `e9d39485`, isolated Firefox completed **2,035 passed / 41 skipped**, with
 no failed or flaky cases. Chromium completed **2,033 passed / 1 failed /
-1 flaky / 41 skipped**. The full WebKit result and subsequent exact-head
-acceptance are recorded in the consolidated PR rather than inferred from
-focused runs.
+1 flaky / 41 skipped**. WebKit reached its 90-minute suite limit without a
+final Playwright summary. Its completed attempts establish **1,923 passed /
+2 failed / 1 flaky / 39 skipped**, leaving **111 cases without a final outcome**.
+The failures concern session recovery before retrying a sentence submission;
+their Linux-browser diagnosis remains separate from the suite time budget.
+
+WebKit's emitted test durations account for about 89.2 minutes, with no
+completion gap above 32.5 seconds: the timeout reflects the accumulated workload,
+not an observed long infrastructure stall. Firefox and WebKit CI now each use
+three isolated project jobs, one per existing width. All six enumerations report
+692 cases, preserving 2,076 cases per engine. Each retains one worker, unchanged
+per-test deadlines and retries, and a 45-minute suite limit with ten additional
+minutes for setup and artifact upload. Chromium's full job is unchanged.
+Subsequent exact-head acceptance is recorded in the consolidated PR rather
+than inferred from focused runs.
 
 Both failed Chromium traces show the fallback link loading the exact confirmed
 practice document in an independent frame while the original RSC navigation

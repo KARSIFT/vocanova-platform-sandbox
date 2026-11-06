@@ -148,17 +148,19 @@ jobs:
           retention-days: 7
 
   cross-browser-accessibility:
-    name: accessibility (${{ matrix.browser }} + axe-core)
+    name: accessibility (${{ matrix.browser }} / ${{ matrix.project }} + axe-core)
     runs-on: ubuntu-latest
-    # Each engine gets an isolated runner and the entire three-width suite.
-    # Keep individual test deadlines and the base CI retry policy unchanged.
-    # WebKit's complete suite exceeded an hour on an isolated runner. Bound the
-    # suite separately so traces can still upload if that bound is reached.
-    timeout-minutes: 100
+    # All three projects together exhaust each engine's suite: no test filter
+    # or added skips. Each engine/project gets an isolated runner and one worker.
+    # Keep individual deadlines and the base CI retry policy unchanged.
+    # Observed WebKit projects take about 31–33 minutes; reserve extra job time
+    # for setup and failure artifacts after the bounded project suite.
+    timeout-minutes: 55
     strategy:
       fail-fast: false
       matrix:
         browser: [firefox, webkit]
+        project: [home-desktop-1280, mobile-360, mobile-430]
     steps:
       - name: Check out reviewed revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -186,18 +188,18 @@ jobs:
       - name: Install pinned Playwright browser and system dependencies
         run: pnpm --filter @vocanova/web exec playwright install --with-deps "${{ matrix.browser }}"
 
-      - name: Run complete browser suite
-        timeout-minutes: 90
+      - name: Run complete browser project suite
+        timeout-minutes: 45
         env:
           CI: "1"
           VOCANOVA_TEST_BROWSER: ${{ matrix.browser }}
-        run: pnpm --filter @vocanova/web exec playwright test --config playwright.cross-browser.config.ts
+        run: pnpm --filter @vocanova/web exec playwright test --config playwright.cross-browser.config.ts --project "${{ matrix.project }}"
 
       - name: Upload engine artifacts on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: playwright-${{ matrix.browser }}-failure-artifacts
+          name: playwright-${{ matrix.browser }}-${{ matrix.project }}-failure-artifacts
           path: |
             apps/web/test-results/cross-browser-${{ matrix.browser }}/
             apps/web/playwright-report/
