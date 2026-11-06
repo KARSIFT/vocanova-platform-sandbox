@@ -162,11 +162,9 @@ EXPOSE 8080
 # is expanded at HEALTHCHECK time, honoring the same env
 # var the binary uses.
 #
-# The probe is a GET (not a HEAD) because the /healthz
-# route is registered with huma as MethodGet only; the
-# huma/chi combination does not auto-implement HEAD for
-# GET routes, so a HEAD probe returns 405 Method Not
-# Allowed. -O /dev/null discards the tiny JSON body
+# The probe uses GET; external monitors may also use HEAD,
+# which performs the same database check without a body.
+# -O /dev/null discards the tiny JSON body
 # ({"status":"ok","database":"ok",...} - a few hundred
 # bytes at most) and keeps the container log clean.
 # --quiet suppresses wget's progress output; --tries=1
