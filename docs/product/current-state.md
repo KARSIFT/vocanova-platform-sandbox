@@ -1,5 +1,39 @@
 # Vocanova current product state
 
+## Full panel and performance audit — 6 November 2026 (local)
+
+The product-wide audit adds Help, data-export and mobile account coverage, fixes
+the seeded saved-vocabulary test's two-page assumption, and optimizes only the
+knowledge-map aggregate summary. Original item/revision/restore behavior remains
+unchanged. Four SQL alternatives were compared; the selected active-row join
+reduces the full service read from 3.82 seconds to 66 ms in the local 5,000-history
+fixture, with essentially unchanged Go allocations. This is not a production
+latency claim or deployment. See [the audit and acceptance limits](full-panel-performance-audit-2026-11-06.md)
+for browser coverage, memory observations, alternative results and fresh checks.
+
+## Meaning pictures — every meaning active — 1 November 2026
+
+All 10,051 canonical meanings now have a reviewed picture, and both staging and
+production (0.4.15) serve all of them. No application change or deployment was
+needed. Discovery, word pages, saved words, Home and the teaching steps of
+lessons and practice show the picture; graded questions show none.
+
+On 1 November the operator ran a live preflight on each tier.
+
+- Canonical rows: 10,051 active, with exact revisions.
+- Image table: the 7,718 rows from 26 October, exactly matching the old
+  manifest, with no conflicts.
+
+The operator backed up the image table, then imported the validated 10,051-row
+manifest on staging and then production. Each import added 2,333 rows and an
+exact repeat added none. Final database readback found exactly 10,051 rows on
+each tier, with no duplicates, extras or revision mismatches.
+
+An authenticated readback through each tier's internal API matched all 10,051
+pictures. This was an internal API check, not a public-edge check. A signed-in
+browser on each tier showed the expected picture for **comet**. See
+[the image library design](../design/meaning-image-library.md#current-coverage--1-november-2026).
+
 ## Learner experience and speed redesign — 28 October 2026 (local, awaiting review)
 
 Following the owner's request for a larger change than the calm study desk, the
@@ -61,6 +95,10 @@ Deployment acceptance belongs to the release PR and fresh workflow/browser evide
 source or mock-backed checks alone do not establish live authentication.
 
 ## Image release preparation — 26 October 2026
+
+Historical pre-release state. The release completed the same day: 0.4.7 reached
+staging and production, and both databases imported and read back 7,718
+pictures. See the 1 November section above for current coverage.
 
 Cloudflare R2 inventory on 26 October contains 7,718 current meaning images.
 Three superseded public versions were deleted at the owner’s request and their

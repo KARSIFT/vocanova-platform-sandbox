@@ -1,6 +1,62 @@
 # Vocanova release readiness
 
+## Full panel/performance audit — 6 November 2026 (local evidence)
+
+The [full audit report](full-panel-performance-audit-2026-11-06.md) records
+product-wide synthetic browser coverage, twelve passing Lighthouse audits,
+fresh seeded-database API checks, memory observations, and four compared SQL
+alternatives. The selected summary-only optimization preserves learning and
+revision semantics and reduces the mature-history service read in local tests
+from 3.82 seconds to 66 ms with essentially unchanged allocations.
+
+This is local evidence, not a production release. Installed Chrome and Go 1.27.3
+were used where pinned downloads were unavailable; hosted checks on the pinned
+versions remain required. Live providers, physical devices and production
+acceptance retain their separate requirements below.
+
+## Meaning pictures: full-coverage activation — 1 November 2026
+
+**Complete on staging and production (0.4.15).** Every one of the 10,051
+canonical meanings has an imported, reviewed picture. No code or deployment
+change was required.
+
+Live evidence, per tier (staging first, then production):
+
+- Preflight: 10,051 active canonical rows with exact revisions. The image table
+  held the 26 October 7,718 rows, exactly matching that manifest, with 2,333
+  missing and no conflicts. The image table was backed up before import.
+- Import of the validated 10,051-row manifest, with its digest verified on the
+  host: 2,333 added, and an exact repeat added none.
+- Database readback: exactly 10,051 rows and unique meaning IDs, with no
+  duplicates, extras or revision mismatches. Independent SQL counts agree.
+- Authenticated readback through the internal API: 101 batches matched all
+  10,051 pictures, with none missing, mismatched, duplicated or unexpected. The
+  synthetic session was revoked afterwards. This is an internal API readback,
+  not 101 public-edge requests.
+- A signed-in browser showed **comet**'s picture complete at 960×640 from its
+  immutable URL. Only read-only views were used; no learner data was changed.
+
+Supporting local evidence:
+
+- A fresh catalogue export from the deployed commit matched all 10,051 IDs and
+  revisions.
+- Every row passed the importer, database and browser rules.
+- File SHA-256 and WebP header dimensions matched their records; pixels were not
+  fully decoded.
+- A read-only HEAD check of all 10,051 public URLs returned 200 with the
+  expected type, length and MD5 ETag. It did not hash bodies; full-body CDN
+  checks are separate publication-time evidence.
+- A PostgreSQL 16 rehearsal with the real seed added 2,333, a replay added none,
+  and a conflict rolled back the whole import.
+
+Not covered: a check of every picture on the learner screens, or public-edge
+delivery for every image.
+
 ## Image release preparation — 26 October 2026
+
+Historical pre-release state. The release completed the same day: 0.4.7 reached
+staging and production, and both databases imported and read back 7,718
+pictures.
 
 Cloudflare R2 inventory on 26 October contains 7,718 current meaning images.
 Three superseded public versions were deleted at the owner’s request and their

@@ -1,16 +1,24 @@
 # Meaning image library
 
-Implementation checkpoint: 23 October 2026. This document describes the delivery
-branch and verified storage work; it does not establish full image coverage or a
-staging/production deployment.
+Implementation checkpoint: 1 November 2026. The library, API, learner screens and
+importer have been released since 0.4.7 (26 October); staging and production run
+0.4.15. Every one of the 10,051 canonical meanings has a reviewed public picture,
+and both databases have served all of them since the 1 November import. See
+[current coverage](#current-coverage--1-november-2026).
 
 ## Learner experience
 
 Pictures support the exact meaning and grammatical use alongside its short
-definition, rather than illustrating a word spelling alone. They appear in teaching/discovery/detail contexts, not in
-graded questions where the scene could reveal the answer. Missing or failed
-pictures leave the learning text usable. Existing reviewed local pictures remain
-a revision-checked fallback.
+definition, rather than illustrating a word spelling alone. They appear on the
+Discovery card, word and saved-word pages, Home's latest saved word, and the
+teaching step of lessons and practice. Graded steps never mount a picture: every
+other lesson and practice step (recall, typed recall, listening, context, gap
+fill, sentence building and meaning choice), daily review, and conversation
+context choices. Browser tests assert that the picture is gone before graded
+lesson and practice steps. The vocabulary self-check and word lists link to the
+word page instead of showing pictures. Missing or failed pictures leave the
+learning text usable. Existing reviewed local pictures remain a revision-checked
+fallback.
 
 Preserve the established landscape picture frame while varying photographs,
 illustrations and simple diagrams. Vary people, objects, environments, color and
@@ -151,7 +159,40 @@ checkpoint is stale as a description of current storage. The already verified We
 publication receipts remain valid. Seven rejected native attempts are
 preserved separately and excluded from the approved upload plan.
 
-## Acceptance checkpoint
+## Current coverage — 1 November 2026
+
+All **10,051** canonical meanings have an approved, reviewed WebP at the public
+origin, and both staging and production serve every one of them. A read-only HEAD
+check of all 10,051 public URLs returned 200 with the expected type, byte length
+and single-part MD5 ETag. It does not hash bodies; full-body SHA-256 checks
+against the CDN are separate publication-time evidence from each upload.
+
+A private import manifest covers all 10,051 meanings. Every revision matched a
+fresh export of the current source. Every row passed the importer, database and
+browser metadata rules, and each file's SHA-256 and WebP header dimensions matched
+its record. A local PostgreSQL 16 rehearsal with the real seed added 2,333 rows
+to the 26 October 7,718. An exact replay added none, and a conflict in the last
+of 21 batches rolled back the whole import.
+
+On 1 November the operator activated the manifest on staging, then production.
+
+- Preflight on each tier: 10,051 active canonical rows with exact revisions, and
+  the 26 October 7,718 image rows, unchanged and conflict-free.
+- After a backup, the existing guarded import script added 2,333 rows on each
+  tier, and its repeat added none.
+- Final database readback: exactly 10,051 rows, with no duplicates, extras or
+  revision mismatches.
+- An authenticated readback through each tier's internal API matched all 10,051
+  pictures, and the synthetic session was then revoked. This was not a
+  public-edge check.
+- A signed-in browser showed **comet**'s picture complete at 960×640 on both
+  tiers.
+
+The deployed code needed no change: lookups are generic over imported rows.
+
+## Historical acceptance checkpoints
+
+The checkpoints below record how coverage grew. Their counts are historical.
 
 The 23 October local checkpoint contains **1,943 selected published meanings** and
 **1,943 prepared meanings** out of 10,051 canonical meanings. All prepared IDs are
@@ -399,9 +440,9 @@ was made; both owned servers were stopped. A bounded handshake-level capture on 
 natural recurrence is the next diagnostic step.
 
 The earlier PostgreSQL rehearsal imported the then-current 1,070-image manifest
-and separately exercised a synthetic 10,051-row fixture. Full artwork coverage,
-the final manifest import rehearsal, one consolidated PR, required hosted checks
-and live staging acceptance remain pending. Production promotion is separate.
+and separately exercised a synthetic 10,051-row fixture. The consolidated PR,
+hosted checks and both live releases followed on 26 October. The final
+10,051-row rehearsal is recorded under current coverage.
 
 Historical 20 October checkpoint: 113 public WebPs totaling 7,095,834 bytes had
 been uploaded and freshly CDN SHA-256 verified, including the reviewed 20-image
