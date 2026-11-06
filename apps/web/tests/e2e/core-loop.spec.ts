@@ -197,22 +197,15 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
         response.url().includes("/api/v1/onboarding") &&
         response.request().method() === "POST",
     );
+    // The override was needed only to enter onboarding. Remove it before the
+    // real POST completes so the app's own push/refresh reads the saved state.
+    // Keep session and CSRF cookies, and still require the authoritative 200.
+    await context.clearCookies({ name: "e2e_onboarding_status" });
     await page.getByRole("button", { name: "Finish setup" }).click();
     const onboardingResponse = await onboardingResponsePromise;
     expect(onboardingResponse.status()).toBe(200);
 
-    // The mock's /api/v1/onboarding endpoint honors the
-    // e2e_onboarding_status cookie as an unconditional override
-    // (the T07b scan depends on that behavior to land on the
-    // onboarding form). The override would otherwise keep
-    // /me returning onboardingStatus=not_started forever, and
-    // the form's post-submit router.push("/home") would loop
-    // /home -> /onboarding. Clear ONLY the override cookie
-    // (the session + CSRF cookies must stay so the test's
-    // per-session mock state and CSRF-protected mutations
-    // continue to work). Then navigate to /home explicitly.
-    await context.clearCookies({ name: "e2e_onboarding_status" });
-    await page.goto("/home");
+    // Await the application navigation rather than racing it with page.goto.
     await expect(page).toHaveURL(/\/home(\?|$)/);
     const mission = page.getByRole("region", {
       name: "Review words",

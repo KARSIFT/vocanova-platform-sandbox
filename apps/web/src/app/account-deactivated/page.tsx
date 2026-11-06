@@ -36,7 +36,7 @@ export default async function AccountDeactivatedPage({
       <div
         role="status"
         aria-live="polite"
-        className="w-full max-w-[36rem] space-y-[var(--spacing-md)] rounded-xl border border-red-300 bg-white p-[var(--spacing-lg)] text-base text-neutral-900 shadow-sm"
+        className="min-w-0 w-full max-w-[36rem] [overflow-wrap:anywhere] space-y-[var(--spacing-md)] rounded-xl border border-red-300 bg-white p-[var(--spacing-lg)] text-base text-neutral-900 shadow-sm"
       >
         <div>
           <h1 className="text-2xl font-semibold text-red-900">

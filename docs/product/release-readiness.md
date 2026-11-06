@@ -1,5 +1,40 @@
 # Vocanova release readiness
 
+## Frontend coverage continuation — 6 November 2026
+
+The [43-route control ledger](frontend-coverage-matrix-2026-11-06.md) records
+browser controls, visual inspection, error recovery, pending mutations, and
+cross-engine findings. It preserves historical failures and focused recoveries
+instead of adding overlapping runs into a unique passing count. The earlier
+84-entry Lighthouse pass predates the final calendar/navigation refinements.
+Late local WebKit runs encountered severe host load and pre-document transport
+stalls; those failures require fresh verification and are not performance data.
+The first isolated full run exposed Linux-font wrapping and synchronization
+issues; its exact failed/partial outcomes and corrective evidence are in the
+ledger. The resulting source and test changes require a fresh complete run.
+
+The final Linux diagnosis reproduced a restored-CSRF-cookie visibility race.
+The bounded recovery correction passed ten original regressions and twelve
+instrumented cases with retries disabled; seven cases exercised the additional
+browser task. Temporary diagnostic code was removed after retaining its
+evidence. The regular inventory is 2,076 cases across 104 files, with 35 expected
+viewport-specific skips per engine. All three browser engines run all three
+viewport projects in isolated CI jobs so the complete workload fits its budget.
+
+Integrated acceptance requires the consolidated PR's isolated Chromium,
+Firefox and WebKit suites, the full 28-surface × three-width Lighthouse matrix,
+normal required checks and review, then the automatic staging provider/export
+acceptance. Keep the PR draft/held until all relevant checks are resolved.
+Check the actual PR and deployment runs for outcomes rather than treating this
+readiness list as evidence that they executed.
+
+Live verification/reset email delivery remains unverified: staging disables
+those methods. The provider/export gate uses the reserved synthetic identity
+and a workflow-specific sentence; missing approved artwork is an explicit CDN
+skip. Physical phones, native picker/IME interaction and spoken screen-reader
+testing remain separate evidence. Production promotion remains a separate
+manual workflow.
+
 ## Full panel/performance audit — 6 November 2026 (local evidence)
 
 The [full audit report](full-panel-performance-audit-2026-11-06.md) records

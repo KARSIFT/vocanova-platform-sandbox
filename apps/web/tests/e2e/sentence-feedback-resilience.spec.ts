@@ -32,6 +32,50 @@ async function prepareSavedWord(
   ).toBeVisible();
 }
 
+for (const theme of ["light", "dark"] as const) {
+  test(`discarding a failed sentence clears its recoverable draft and stays empty after reload (${theme})`, async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: "vocanova_theme", value: theme, url: baseURL! }]);
+    await page.addInitScript(value => localStorage.setItem("vocanova:theme-preference", value), theme);
+    await prepareSavedWord(page, context, baseURL!);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    const sentence = "I pour tea for my friends.";
+    const input = page.getByRole("textbox", { name: "Write a sentence using pour", exact: true });
+    let submissions = 0;
+    await page.route("**/api/v1/learner-sentences", route => {
+      if (route.request().method() !== "POST") return route.continue();
+      submissions += 1;
+      return route.abort("failed");
+    });
+    await input.fill(sentence);
+    await page.getByRole("button", { name: "Check my sentence", exact: true }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "Unable to check this sentence" })).toBeVisible();
+    const stored = await page.evaluate(sentence => {
+      for (const key of Object.keys(sessionStorage)) {
+        if (!key.startsWith("vocanova:sentence-feedback-draft:")) continue;
+        const draft = JSON.parse(sessionStorage.getItem(key)!);
+        if (draft.sentence === sentence) return { key, idempotencyKey: draft.idempotencyKey };
+      }
+      return null;
+    }, sentence);
+    expect(stored?.idempotencyKey).toBeTruthy();
+    const discard = page.getByRole("button", { name: "Discard draft", exact: true });
+    await discard.focus();
+    await expect(discard).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(input).toHaveValue("");
+    await expect(discard).toHaveCount(0);
+    await expect(page.getByRole("alert").filter({ hasText: "Unable to check this sentence" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Check my sentence", exact: true })).toBeDisabled();
+    expect(await page.evaluate(key => sessionStorage.getItem(key), stored!.key)).toBeNull();
+    await page.reload();
+    await expect(input).toHaveValue("");
+    await expect(discard).toHaveCount(0);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    expect(await page.evaluate(key => sessionStorage.getItem(key), stored!.key)).toBeNull();
+    expect(submissions).toBe(1);
+  });
+}
+
 test("revision retains prior feedback and submits a new request identity", async ({
   page,
   context,

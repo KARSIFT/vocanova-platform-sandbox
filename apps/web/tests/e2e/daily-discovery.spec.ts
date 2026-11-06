@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import type { DailyLesson, KnowledgeMap } from "@vocanova/api-client";
 import { scanForAxeViolations } from "./axe-helper";
+import { pressTab } from "./keyboard-navigation.js";
 
 const reviewSchedule = (page: Page) =>
   page.getByRole("button", { name: /^Show this word again:/ });
@@ -1111,17 +1112,28 @@ test("daily choices remain accessible and unobscured in both themes", async ({
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
-    await page.keyboard.press("Tab");
-    await page.getByRole("radio").last().focus();
-    const radio = await page.getByRole("radio").last().boundingBox();
+    await pressTab(page);
+    const choices = page.getByRole("radio");
+    const choiceCount = await choices.count();
+    expect(choiceCount).toBeGreaterThanOrEqual(2);
+    await choices.last().focus();
+    await expect(choices.last()).toBeFocused();
+    const radio = await choices.last().boundingBox();
     const footer = await page
       .getByRole("region", { name: "Session actions", exact: true })
       .boundingBox();
     if (radio && footer)
       expect(radio.y + radio.height).toBeLessThanOrEqual(footer.y);
+    // Native WebKit does not wrap from the final radio to the first. Verify
+    // every adjacent selection in reverse, then forward within the group.
+    for (let index = choiceCount - 2; index >= 0; index -= 1) {
+      await page.keyboard.press("ArrowUp");
+      await expect(choices.nth(index)).toBeFocused();
+      await expect(choices.nth(index)).toBeChecked();
+    }
     await page.keyboard.press("ArrowDown");
-    await expect(page.getByRole("radio").first()).toBeFocused();
-    await expect(page.getByRole("radio").first()).toBeChecked();
+    await expect(choices.nth(1)).toBeFocused();
+    await expect(choices.nth(1)).toBeChecked();
   }
 });
 
@@ -1327,10 +1339,13 @@ for (const theme of ["light", "dark"] as const) {
         .evaluate((element) => element.scrollWidth <= element.clientWidth),
     ).toBe(true);
     const next = page.getByRole("button", { name: "Continue", exact: true });
+    // Firefox may serialize a CSS 44px target as 43.999969482421875px.
+    // Allow only 0.001px of geometry precision while keeping the 44px minimum.
+    const geometryPrecision = 0.001;
     for (const control of [schedule, next]) {
       await control.focus();
       const bounds = await control.boundingBox();
-      expect(bounds!.height).toBeGreaterThanOrEqual(44);
+      expect(bounds!.height + geometryPrecision).toBeGreaterThanOrEqual(44);
       expect(bounds!.y).toBeGreaterThanOrEqual(0);
       expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(
         page.viewportSize()!.height,
@@ -1374,7 +1389,7 @@ for (const theme of ["light", "dark"] as const) {
       page.viewportSize()!.height,
     );
     for (const option of await menu.getByRole("menuitemradio").all())
-      expect((await option.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      expect((await option.boundingBox())!.height + geometryPrecision).toBeGreaterThanOrEqual(44);
     await page.screenshot({
       path: testInfo.outputPath(`review-schedule-open-${theme}.png`),
       fullPage: true,
@@ -1413,11 +1428,11 @@ for (const theme of ["light", "dark"] as const) {
     await expect(menu).toHaveCount(0);
     await expect(schedule).toBeFocused();
     await schedule.press("Enter");
-    await page.keyboard.press("Tab");
+    await pressTab(page);
     await expect(menu).toHaveCount(0);
     await expect(next).toBeFocused();
     await schedule.click();
-    await page.keyboard.press("Shift+Tab");
+    await pressTab(page, { backwards: true });
     await expect(menu).toHaveCount(0);
     await expect(schedule).toBeFocused();
     await schedule.click();

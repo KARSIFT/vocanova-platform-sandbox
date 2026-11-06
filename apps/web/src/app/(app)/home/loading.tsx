@@ -1,10 +1,13 @@
 export default function HomeLoading() {
   return (
-    <div
+    <section
       aria-busy="true"
-      aria-label="Loading home"
+      aria-labelledby="home-loading-status"
       className="mx-auto grid w-full max-w-[72rem] gap-5 px-[var(--spacing-md)] py-4 motion-safe:animate-pulse sm:px-[var(--spacing-xl)] lg:py-8"
     >
+      <p id="home-loading-status" role="status" className="sr-only">
+        Loading home
+      </p>
       <div aria-hidden="true">
         <div className="h-9 w-32 rounded-lg bg-neutral-200" />
       </div>
@@ -20,6 +23,6 @@ export default function HomeLoading() {
         aria-hidden="true"
         className="h-40 rounded-2xl border border-neutral-200 bg-white"
       />
-    </div>
+    </section>
   );
 }

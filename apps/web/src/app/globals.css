@@ -651,7 +651,10 @@ progress::-moz-progress-bar {
 }
 @media (min-width: 64rem) {
   .app-header-inner {
-    grid-template-columns: auto minmax(12rem, 1fr) auto auto;
+    /* Let enlarged text move whole controls onto another row instead of
+     * forcing the account actions beyond the viewport. */
+    display: flex;
+    flex-wrap: wrap;
     gap: 1.25rem;
     min-height: 4.5rem;
     padding: 0.5rem 2rem;
@@ -668,6 +671,7 @@ progress::-moz-progress-bar {
     letter-spacing: -0.035em;
   }
   .header-search {
+    flex: 1 1 12rem;
     width: 100%;
     max-width: 24rem;
     justify-self: center;
@@ -676,7 +680,7 @@ progress::-moz-progress-bar {
     display: block;
   }
   .header-account {
-    grid-column: 4;
+    margin-left: auto;
   }
   .header-icon-button {
     padding-inline: 0.65rem;
@@ -935,7 +939,7 @@ progress::-moz-progress-bar {
   margin-top: 1.25rem;
 }
 .next-step .vn-btn-primary {
-  min-width: 10rem;
+  min-width: min(10rem, 100%);
   border-color: #ffffff;
   background: #ffffff;
   color: var(--color-primary-800);
@@ -965,6 +969,7 @@ progress::-moz-progress-bar {
 }
 .today-goal-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem;
@@ -1058,6 +1063,8 @@ progress::-moz-progress-bar {
 
 .keep-going {
   display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.6rem;
 }
 .keep-going-row {
@@ -1133,12 +1140,13 @@ progress::-moz-progress-bar {
 }
 .stage-flow {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
   gap: 0.5rem 1rem;
   margin-top: 0.85rem;
 }
 .stage-flow li {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
@@ -1160,7 +1168,11 @@ progress::-moz-progress-bar {
 }
 .activity-days {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Keep at most four days across; enlarged text can reduce the columns. */
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, max(8rem, calc((100% - 1.5rem) / 4))), 1fr)
+  );
   gap: 0.5rem;
   margin-top: 1rem;
 }
@@ -1168,6 +1180,7 @@ progress::-moz-progress-bar {
   display: flex;
   min-width: 0;
   min-height: 3rem;
+  overflow-wrap: anywhere;
   flex-direction: column;
   justify-content: center;
   padding: 0.45rem 0.75rem;
@@ -1181,14 +1194,6 @@ progress::-moz-progress-bar {
 }
 .activity-day p {
   font-size: 0.8rem;
-}
-@media (min-width: 40rem) {
-  .stage-flow {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-  .activity-days {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
 
 :root[data-theme="dark"]

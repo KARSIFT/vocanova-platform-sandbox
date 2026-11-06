@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
+import { pressTab } from "./keyboard-navigation.js";
 
 const apiURL = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
 const form = (page: Page) =>
@@ -102,7 +103,7 @@ for (const theme of ["light", "dark"] as const) {
       exact: true,
     });
     await form(page).getByRole("combobox", { name: "Main focus", exact: true }).focus();
-    await page.keyboard.press("Tab");
+    await pressTab(page);
     await expect(save).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(form(page).getByRole("status")).toHaveText(

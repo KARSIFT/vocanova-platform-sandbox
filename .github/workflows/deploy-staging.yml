@@ -1647,6 +1647,22 @@ jobs:
           pnpm --filter @vocanova/web exec playwright test \
             --config playwright.staging.config.ts maturity.staging.spec.ts
 
+      # Separate real-provider success from the core gate's explicit-error UI.
+      # Maturity leaves this reserved synthetic session valid. No secrets leave CI.
+      - name: Verify staging provider success, export and CDN delivery
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        env:
+          CI: "1"
+          STAGING_WEB_BASE_URL: "https://staging.vocanova.site"
+          E2E_PROVIDER_DATA_ACCEPTANCE: "true"
+          E2E_SESSION_COOKIE: ${{ steps.mint_staging_maturity_session.outputs.session_cookie }}
+          E2E_CSRF_TOKEN: ${{ steps.mint_staging_maturity_session.outputs.csrf_token }}
+          E2E_SESSION_COOKIE_NAME: ${{ steps.mint_staging_maturity_session.outputs.session_cookie_name }}
+          E2E_CSRF_COOKIE_NAME: ${{ steps.mint_staging_maturity_session.outputs.csrf_cookie_name }}
+        run: |
+          pnpm --filter @vocanova/web exec playwright test \
+            --config playwright.staging.config.ts --output test-results-staging-provider provider-data-acceptance.spec.ts
+
       # Retain only the validated public-word clip, including on successful
       # runs. Authenticated reports and traces are not part of this artifact.
       - name: Retain the validated public pronunciation sample

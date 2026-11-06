@@ -9,7 +9,7 @@ import {
 import { Surface } from "@/ui/surface";
 
 const inputStyle =
-  "mt-2 min-h-12 w-full min-w-0 max-w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
+  "mt-2 min-h-12 scroll-my-24 w-full min-w-0 max-w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus:outline focus:outline-[3px] focus:outline-offset-[3px] focus:outline-primary-500";
 
 export function CalendarReminder() {
   const [startDate, setStartDate] = useState("");
@@ -25,6 +25,18 @@ export function CalendarReminder() {
     updatedAt: Date;
   } | null>(null);
   const downloads = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    // Settings can stream its loading shell before this target exists. Both
+    // client routing and native document fragments can consume their initial
+    // scroll attempt too early, so honor these entry links when we mount.
+    if (window.location.hash === "#practice-reminder") {
+      heading.current?.closest("#practice-reminder")?.scrollIntoView();
+    } else if (window.location.hash === "#calendar-reminder-heading") {
+      heading.current?.scrollIntoView();
+    }
+  }, []);
 
   useEffect(() => {
     const now = new Date();
@@ -114,11 +126,12 @@ export function CalendarReminder() {
     <Surface
       id="practice-reminder"
       aria-labelledby="calendar-reminder-heading"
-      className="mt-6 scroll-mt-6"
+      className="mt-6 scroll-mt-24"
     >
       <h2
+        ref={heading}
         id="calendar-reminder-heading"
-        className="text-xl font-bold text-neutral-900"
+        className="scroll-mt-24 text-xl font-bold text-neutral-900"
       >
         Calendar reminder
       </h2>
@@ -135,7 +148,7 @@ export function CalendarReminder() {
         onSubmit={download}
         className="mt-4"
       >
-        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-4">
           <label
             className="min-w-0 font-semibold text-neutral-900"
             htmlFor="reminder-start-date"

@@ -124,6 +124,10 @@ for (const theme of ["light", "dark"] as const) {
         name: "Remove keep in touch from saved words",
       }),
     ).toBeVisible();
+    // The save label changes before the route refresh commits. This new
+    // server-gated disclosure confirms saved state and userWordId are rendered
+    // before the independent library navigation can interrupt that refresh.
+    await expect(page.getByRole("main").locator("summary").filter({ hasText: /^Optional writing$/ })).toHaveCount(1);
     await page.goto("/words");
     await page
       .getByRole("link", {

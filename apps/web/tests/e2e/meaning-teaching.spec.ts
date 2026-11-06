@@ -133,15 +133,26 @@ for (const theme of ["light", "dark"] as const) {
         value: DeviceUtterance,
       });
     });
+    // This case checks authored pronunciation on dictionary and saved detail.
+    // Seed its saved prerequisite through the real mock mutation: the authored
+    // catalog read is stateless (saved=false), so it cannot provide a rendered
+    // save-refresh marker. RSC transport EOF is not a UI readiness signal.
+    const api = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
+    const canonical = await context.request.get(`${api}/api/v1/canonical-words/sounds-good`);
+    expect(canonical.status()).toBe(200);
+    const { word } = await canonical.json();
+    expect(word.meanings).toHaveLength(1);
+    const meaningId = word.meanings[0].id;
+    const csrf = (await context.cookies()).find(cookie => cookie.name === "vocanova_csrf")!.value;
+    const saved = await context.request.post(`${api}/api/v1/user-words`, {
+      headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+      data: { meaningId, source: "journey" },
+    });
+    expect(saved.status()).toBe(200);
+    expect(await saved.json()).toMatchObject({ meaningId });
     await page.goto("/discover/daily-conversation/sounds-good");
     const main = page.getByRole("main");
-    await main.getByRole("button", { name: /^Save sounds good:/ }).click();
-    await expect(
-      main.getByRole("button", {
-        name: "Remove sounds good from saved words",
-        exact: true,
-      }),
-    ).toBeVisible();
+    await expect(main.getByRole("heading", { name: "sounds good", level: 1, exact: true })).toBeVisible();
     for (const route of ["/vocabulary/sounds-good", "/words"]) {
       await page.goto(route);
       if (route === "/words")

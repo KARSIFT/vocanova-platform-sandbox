@@ -6,6 +6,7 @@ import {
   formatViolations,
   scanForAxeViolations,
 } from "./axe-helper";
+import { pressTab } from "./keyboard-navigation.js";
 
 const apiURL = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
 async function writeHeaders(context: BrowserContext) {
@@ -80,7 +81,8 @@ test("create, search, rename and delete a personal list with keyboard controls",
   ).toBeVisible();
   const name = main.getByLabel("List name", { exact: true });
   await name.fill("Travel conversations");
-  await name.press("Tab");
+  await expect(name).toBeFocused();
+  await pressTab(page);
   await expect(
     main.getByRole("button", { name: "Create list", exact: true }),
   ).toBeFocused();

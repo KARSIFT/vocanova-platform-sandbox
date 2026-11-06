@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type BrowserContext } from "@playwright/test";
 import { scanForAxeViolations } from "./axe-helper";
 async function waitForPictureVisibility(frame: Locator, visible: boolean) {
   await frame.locator(":scope > div").evaluate((element, expected) =>
@@ -13,6 +13,24 @@ async function waitForPictureVisibility(frame: Locator, visible: boolean) {
       });
       observer.observe(element);
     }), visible);
+}
+
+// Home image cases require saved state, not another UI-save assertion. Prepare
+// it through the mock mutation so an unrelated open RSC refresh cannot race the
+// next document navigation (the authored catalog itself is stateless).
+async function prepareSavedInvite(context: BrowserContext) {
+  const api = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
+  const canonical = await context.request.get(`${api}/api/v1/canonical-words/invite`);
+  expect(canonical.status()).toBe(200);
+  const { word } = await canonical.json();
+  const meaningId = word.meanings[0].id;
+  const csrf = (await context.cookies()).find(cookie => cookie.name === "vocanova_csrf")!.value;
+  const saved = await context.request.post(`${api}/api/v1/user-words`, {
+    headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+    data: { meaningId, source: "journey" },
+  });
+  expect(saved.status()).toBe(200);
+  expect(await saved.json()).toMatchObject({ meaningId, saved: true });
 }
 
 test.beforeEach(async ({ context, baseURL }) => {
@@ -188,9 +206,7 @@ test("changed canonical meaning hides obsolete local artwork without an empty bo
 
 
 test("Home streams the saved-word picture without delaying Review", async ({ page, context, baseURL }) => {
-  await page.goto("/vocabulary/invite");
-  await page.getByRole("button", { name: /^Save invite:/ }).click();
-  await expect(page.getByRole("button", { name: "Remove invite from saved words", exact: true })).toBeVisible();
+  await prepareSavedInvite(context);
   await context.addCookies([
     { name: "e2e_review_fixture_count", value: "2", url: baseURL! },
     { name: "e2e_meaning_image", value: "ready", url: baseURL! },
@@ -212,9 +228,7 @@ test("Home streams the saved-word picture without delaying Review", async ({ pag
 
 for (const mode of ["stale", "unavailable"] as const) {
   test(`Home retains its reviewed local fallback when image metadata is ${mode}`, async ({ page,context,baseURL })=>{
-    await page.goto("/vocabulary/invite");
-    await page.getByRole("button",{name:/^Save invite:/}).click();
-    await expect(page.getByRole("button",{name:"Remove invite from saved words",exact:true})).toBeVisible();
+    await prepareSavedInvite(context);
     await context.addCookies([
       {name:"e2e_review_fixture_count",value:"2",url:baseURL!},
       {name:"e2e_meaning_image",value:mode==="stale"?"stale":"ready",url:baseURL!},
@@ -289,10 +303,16 @@ for (const theme of ["light", "dark"] as const) {
     ]);
     let release = () => {};
     const delayed = new Promise<void>((resolve) => { release = resolve; });
+    // An attempt is identified by its resource URL / explicit retry nonce.
+    // Firefox may request the same original URL during SSR and hydration;
+    // transport duplicates must receive the same fixture outcome.
     const urls: string[] = [];
+    const transportURLs: string[] = [];
     await page.route("https://images.vocanova.site/meanings/**", async (route) => {
-      urls.push(route.request().url());
-      if (urls.length === 1) await delayed;
+      const url = route.request().url();
+      transportURLs.push(url);
+      if (!urls.includes(url)) urls.push(url);
+      if (!new URL(url).searchParams.has("vocanova_retry")) await delayed;
       const id = new URL(route.request().url()).pathname.split("/")[2];
       await route.fulfill({ contentType: "image/webp", body: readFileSync(new URL(`../../public/images/meanings/${id}.webp`, import.meta.url)) });
     });
@@ -331,7 +351,8 @@ for (const theme of ["light", "dark"] as const) {
       await testInfo.attach("retry-request-state", { contentType: "application/json", body: JSON.stringify({
         oldImageStillConnected: await originalImage?.evaluate((element) => element.isConnected),
         currentImage: await frame.getByRole("img").evaluate((element: HTMLImageElement) => ({ src: element.getAttribute("src"), complete: element.complete, naturalWidth: element.naturalWidth, visibility: document.visibilityState })),
-        requestedURLs: urls,
+        requestedURLs: transportURLs,
+        attemptURLs: urls,
       }) });
       await expect.poll(() => urls.length).toBe(2);
       const originalURL = new URL(urls[0]!);
@@ -367,9 +388,16 @@ test("a cached teaching picture remounts without a stale loading state", async (
   const image = picture.getByRole("img");
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
   const originalSrc = await image.getAttribute("src");
-  await preview.getByRole("button", { name: "See example feedback", exact: true }).click();
+  // This branch verifies retained keyboard focus. Native Safari pointer clicks
+  // do not focus buttons; learner-workspace covers the pointer return action.
+  const toggle = preview.getByRole("button", { name: "See example feedback", exact: true });
+  await toggle.focus();
+  await expect(toggle).toBeFocused();
+  await page.keyboard.press("Enter");
   await expect(picture).toHaveCount(0);
-  await preview.getByRole("button", { name: "Back to the word", exact: true }).click();
+  const returnToWord = preview.getByRole("button", { name: "Back to the word", exact: true });
+  await expect(returnToWord).toBeFocused();
+  await page.keyboard.press("Space");
   await expect(image).toHaveAttribute("src", originalSrc!);
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
   await page.clock.install();
@@ -389,11 +417,16 @@ for (const outcome of ["local fallback", "terminal unavailability"] as const) {
       ]);
       let release = () => {};
       const pending = new Promise<void>((resolve) => { release = resolve; });
+      // Keep fixture failures tied to the explicit retry nonce, not a raw
+      // request ordinal: Firefox can duplicate the original image request.
       const requests: string[] = [];
+      let failedRetryURL: string | undefined;
       await page.route("https://images.vocanova.site/meanings/**", async (route) => {
-        requests.push(route.request().url());
-        if (new URL(route.request().url()).searchParams.has("vocanova_retry")) {
-          if (requests.length === 2) {
+        const url = route.request().url();
+        if (!requests.includes(url)) requests.push(url);
+        if (new URL(url).searchParams.has("vocanova_retry")) {
+          failedRetryURL ??= url;
+          if (url === failedRetryURL) {
             await route.abort("failed");
             return;
           }

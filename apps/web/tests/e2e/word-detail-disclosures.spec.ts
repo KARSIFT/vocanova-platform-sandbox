@@ -56,7 +56,7 @@ test("native writing opened before hydration preserves its reload target", async
     await nativePage.reload();
     await expect(writing).toBeVisible();
     await expect(writing).toHaveValue("I pour tea into my cup.");
-    await expect(nativePage.locator("#sentence-practice")).toHaveAttribute(
+    await expect(nativePage.getByRole("main").locator("#sentence-practice")).toHaveAttribute(
       "open",
       "",
     );
@@ -73,7 +73,7 @@ for (const theme of ["light", "dark"] as const) {
     page,
     context,
     baseURL,
-  }) => {
+  }, testInfo) => {
     await context.addCookies([
       { name: "vocanova_session", value: randomUUID(), url: baseURL! },
       { name: "vocanova_csrf", value: randomUUID(), url: baseURL! },
@@ -88,6 +88,7 @@ for (const theme of ["light", "dark"] as const) {
       name: "Write a sentence using pour",
     });
     const practice = page
+      .getByRole("main")
       .locator("summary")
       .filter({ hasText: "Optional writing" });
     await expect(writing).toBeHidden();
@@ -118,7 +119,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/words/uw-mean-pour#sentence-practice");
     await expect(writing).toBeVisible();
     await expect(writing).toHaveValue("I pour coffee before work.");
-    await expect(page.locator("#sentence-practice")).toHaveAttribute(
+    await expect(page.getByRole("main").locator("#sentence-practice")).toHaveAttribute(
       "open",
       "",
     );
@@ -127,7 +128,7 @@ for (const theme of ["light", "dark"] as const) {
     // before hashchange opens the writing disclosure again.
     const immediate = await page.evaluate(() => {
       const disclosure =
-        document.querySelector<HTMLDetailsElement>("#sentence-practice")!;
+        document.querySelector<HTMLDetailsElement>("#main-content #sentence-practice")!;
       const wasOpen = disclosure.open;
       disclosure.querySelector("summary")!.click();
       window.location.hash = "sentence-practice";
@@ -141,7 +142,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(writing).toBeVisible();
     await expect(page).toHaveURL(/#sentence-practice$/);
     await expect(writing).toHaveValue("I pour coffee before work.");
-    const tools = page.locator("summary").filter({ hasText: "Personal tools" });
+    const tools = page.getByRole("main").locator("summary").filter({ hasText: "Personal tools" });
     await expect(
       page.getByRole("button", { name: "Edit knowledge and note" }),
     ).toBeVisible();
@@ -159,8 +160,35 @@ for (const theme of ["light", "dark"] as const) {
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    const { criticalOrSerious } = await scanForAxeViolations(page);
-    expect(criticalOrSerious).toEqual([]);
+    // Preserve the actual focused-control evidence before normalizing scroll.
+    // Earlier audio controls can be partly behind the sticky header at this
+    // offset; they are not the control the learner is currently operating.
+    await expect(tools).toBeFocused();
+    expect(await tools.evaluate(element => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const points = [
+        [rect.left + 2, rect.top + 2], [rect.right - 2, rect.top + 2],
+        [rect.left + 2, rect.bottom - 2], [rect.right - 2, rect.bottom - 2],
+        [rect.left + rect.width / 2, rect.top + rect.height / 2],
+      ];
+      return rect.width > 0 && rect.height > 0 && rect.top >= 0
+        && rect.bottom <= innerHeight && rect.left >= 0 && rect.right <= innerWidth
+        && style.outlineStyle !== "none" && parseFloat(style.outlineWidth) >= 2
+        && points.every(([x, y]) => {
+          const hit = document.elementFromPoint(x!, y!);
+          return hit !== null && element.contains(hit);
+        });
+    }), "Focused Personal tools must remain visible and unobscured").toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`personal-tools-focused-${theme}.png`) });
+    const scroll = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
+    try {
+      await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
+      const { criticalOrSerious } = await scanForAxeViolations(page);
+      expect(criticalOrSerious).toEqual([]);
+    } finally {
+      await page.evaluate(({ x, y }) => window.scrollTo({ top: y, left: x, behavior: "instant" }), scroll);
+    }
   });
 }
 
@@ -180,37 +208,38 @@ test("manually opened sentence practice restores the visible draft and exact ret
   });
   await expect(writing).toBeHidden();
   await openPersonalTools(page);
-  await page.locator("summary").filter({ hasText: "Optional writing" }).click();
+  await page.getByRole("main").locator("summary").filter({ hasText: "Optional writing" }).click();
   await expect(writing).toBeVisible();
   await expect(page).toHaveURL(
     /\/vocabulary\/pour\?from=home#sentence-practice$/,
   );
   const draft = "I pour water into a glass.";
   await writing.fill(draft);
-  let firstRequest: { key: string | undefined; body: unknown } | undefined;
-  await page.route(
-    "**/api/v1/learner-sentences",
-    async (route) => {
-      firstRequest = {
-        key: route.request().headers()["idempotency-key"],
-        body: route.request().postDataJSON(),
-      };
-      await route.fulfill({
-        status: 401,
-        contentType: "application/problem+json",
-        body: JSON.stringify({ detail: "Authentication required" }),
-      });
-    },
-    { times: 1 },
+  // Exercise the fixture's HTTP auth boundary without changing browser
+  // request interception while the 401 starts a full-document navigation.
+  await context.addCookies([
+    { name: "e2e_unauthenticated", value: "1", url: baseURL! },
+  ]);
+  const rejectedSubmission = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().endsWith("/api/v1/learner-sentences"),
   );
   await page.getByRole("button", { name: "Check my sentence" }).click();
+  const rejectedResponse = await rejectedSubmission;
+  expect(rejectedResponse.status()).toBe(401);
+  const firstRequest = {
+    key: rejectedResponse.request().headers()["idempotency-key"],
+    body: rejectedResponse.request().postDataJSON(),
+  };
   await expect(page).toHaveURL(/\/login\?returnTo=/);
   const returnTo = new URL(page.url()).searchParams.get("returnTo");
   expect(returnTo).toBe("/vocabulary/pour?from=home#sentence-practice");
-  expect(firstRequest?.key).toBeTruthy();
+  expect(firstRequest.key).toBeTruthy();
 
   // The fixture retains this learner's session; emulate the same-user return
   // destination without claiming this exercises a real identity provider.
+  await context.clearCookies({ name: "e2e_unauthenticated" });
   await page.goto(returnTo!);
   await expect(writing).toBeVisible();
   await expect(writing).toHaveValue(draft);
@@ -221,8 +250,8 @@ test("manually opened sentence practice restores the visible draft and exact ret
   );
   await page.getByRole("button", { name: "Check my sentence" }).click();
   const retry = await submitted;
-  expect(retry.headers()["idempotency-key"]).toBe(firstRequest!.key);
-  expect(retry.postDataJSON()).toEqual(firstRequest!.body);
+  expect(retry.headers()["idempotency-key"]).toBe(firstRequest.key);
+  expect(retry.postDataJSON()).toEqual(firstRequest.body);
   await expect(
     page.getByText("Sentence checked", { exact: true }).locator(".."),
   ).toContainText(draft);

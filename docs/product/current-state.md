@@ -1,5 +1,46 @@
 # Vocanova current product state
 
+## Frontend coverage continuation — 6 November 2026
+
+The [control and scenario ledger](frontend-coverage-matrix-2026-11-06.md)
+maps all 43 page-route patterns to concrete controls and assertions. Added
+coverage includes responsive authentication, pending account requests, real
+render-boundary recovery, keyboard destinations, enlarged text, alternative
+access modes, and dynamic lesson/review/practice/story states.
+
+The implementation refreshes failed server payloads on retry, reflows
+headers/cards/forms with enlarged text, and restores calendar fragments when
+the streamed target mounts. WebKit checks additionally exposed native-select
+overflow and calendar focus visibility: scoped CSS preserves range text and
+keeps the focused date/time control clear of fixed navigation. Actual link
+navigation now cancels its pending intent-prefetch timer to avoid requesting
+the same destination again. A final Linux-font check additionally repairs
+long-text wrapping on eight surfaces. The existing navigation indicator now
+lives in the shared root layout so public Help also acknowledges delayed
+transitions into the app.
+The confirmed-session “Open practice” fallbacks on Home and Practice now use
+fresh document navigation, so ordinary keyboard activation can recover while
+the automatic client-router request remains stalled without starting a second
+session.
+
+Linux WebKit also exposed a session-recovery race: a successful `/me` response
+could restore the CSRF cookie before `document.cookie` reflected it. Recovery
+now yields one browser task only when the immediate refreshed-cookie read is
+missing, then reads once more. Existing-token reads remain immediate, concurrent
+recovery stays shared, and a missing token still prevents the write. The focused
+Linux verification passed 22 cases without retries, including seven observed
+uses of the new fallback; full integrated acceptance remains separate.
+
+The ledger preserves the Chromium, Firefox and WebKit failures and corrective
+runs separately. Earlier 84-page Lighthouse checks passed on the recorded
+build; they predate the final refinements. Severe host load affected the late
+local WebKit runs, so those timings do not establish application performance.
+Final integrated acceptance uses the consolidated PR's isolated Chromium,
+Firefox, WebKit and full Lighthouse checks, followed by the guarded staging
+provider/export/CDN gate. Their actual outcomes belong to the PR/deployment
+execution records; this source map alone does not establish a passing run or
+production deployment.
+
 ## Full panel and performance audit — 6 November 2026 (local)
 
 The product-wide audit adds Help, data-export and mobile account coverage, fixes

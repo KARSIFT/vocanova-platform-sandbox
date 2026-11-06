@@ -5,6 +5,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { completeOnboardingIfRedirected } from "./onboarding-journey";
 import { scanForAxeViolations } from "./axe-helper";
+import { pressTab } from "./keyboard-navigation.js";
 
 async function startOnboarding(
   page: Page,
@@ -164,7 +165,8 @@ for (const language of [
       const choice = page.getByRole("button", {
         name: new RegExp(`^${language.label}`),
       });
-      await field.press("Tab");
+      await expect(field).toBeFocused();
+      await pressTab(page);
       await expect(choice).toBeFocused();
       await choice.press("Enter");
       await expect(choice).toHaveAttribute("aria-pressed", "true");

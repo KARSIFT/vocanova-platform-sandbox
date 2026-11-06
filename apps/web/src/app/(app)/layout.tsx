@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 
-import { NavigationProgress } from "@/ui/navigation-feedback";
-
 import { AppHeader } from "./_components/app-header";
 import { BottomNav } from "./_components/bottom-nav";
 import { CSRFRecovery } from "./_components/csrf-recovery";
@@ -18,7 +16,6 @@ export default function AppShellLayout({
       >
         Skip to main content
       </a>
-      <NavigationProgress />
       <OAuthContinuation />
       <CSRFRecovery />
       <AppHeader />

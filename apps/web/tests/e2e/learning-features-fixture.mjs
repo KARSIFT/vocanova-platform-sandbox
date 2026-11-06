@@ -495,6 +495,8 @@ export async function handleLearningFeatures({
   if (req.method === "GET" && url.pathname === "/api/v1/canonical-words") {
     if (cookies.e2e_vocabulary === "unavailable")
       return send(503, { detail: "Fixture vocabulary unavailable" });
+    if (cookies.e2e_vocabulary === "invalid-cursor" && url.searchParams.has("after"))
+      return send(400, { detail: "Fixture vocabulary cursor expired" });
     const q = (url.searchParams.get("q") ?? "").toLowerCase();
     const category = url.searchParams.get("category");
     const level = url.searchParams.get("level");
@@ -539,7 +541,10 @@ export async function handleLearningFeatures({
             !word.selfReportedKnown)),
     );
     const offset = Number(url.searchParams.get("after") ?? 0);
-    const limit = Number(url.searchParams.get("limit") ?? 20);
+    // A small server page exercises real pagination over existing canonical
+    // meanings without inventing extra words or duplicate meaning identities.
+    const limit = cookies.e2e_vocabulary === "paginated"
+      ? 2 : Number(url.searchParams.get("limit") ?? 20);
     const items = filtered.slice(offset, offset + limit);
     const hasMore = offset + limit < filtered.length;
     return send(200, {

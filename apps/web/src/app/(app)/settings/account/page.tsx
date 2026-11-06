@@ -28,7 +28,7 @@ export default async function SettingsAccountPage() {
 
   return (
     <PageContainer>
-      <div className="mb-[var(--spacing-md)] flex items-center justify-between">
+      <div className="mb-[var(--spacing-md)] flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-neutral-900">Account</h1>
         <Link
           href="/settings"
@@ -59,7 +59,7 @@ export default async function SettingsAccountPage() {
         </p>
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-900">
           Current address:{" "}
-          <span className="font-medium">
+          <span className="font-medium [overflow-wrap:anywhere]">
             {currentEmail ? currentEmail : "Not available"}
           </span>
         </p>

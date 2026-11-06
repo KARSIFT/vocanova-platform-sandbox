@@ -22,7 +22,9 @@ criterion names:
 | `/reviews`  |   *   |   *   |    *     |
 | `/progress` |   *   |   *   |    *     |
 
-That is 12 audits per run. The DOC-08 thresholds are:
+That is the default local core matrix of 12 audits. CI sets
+`LIGHTHOUSE_SCOPE=full` for 28 entry surfaces at three widths (84 audits).
+Both modes use the same DOC-08 thresholds:
 
 - **Performance** >= 85
 - **Accessibility** >= 95
@@ -40,8 +42,8 @@ tuple. The T09 acceptance criterion is explicit that a
 shortfall must be reported as an honest limitation, not
 silently lowered or skipped. The run also writes a per-audit
 JSON report under `apps/web/lighthouse-reports/` (gitignored)
-so the failing audit can be inspected post hoc - the report
-files are uploaded as a CI artifact on failure.
+so each audit can be inspected afterward. Passing and failing report files
+are uploaded as a CI artifact with seven-day retention.
 
 ## Why this is `lighthouse` directly and not `@lhci/cli`
 
@@ -73,10 +75,8 @@ contract in three ways:
    accessibility workflow uses for `T07a`/`T07b`/`T08`.
 2. **Local server, not live network.** Every audited URL is
    `http://127.0.0.1:3000/...` - a fixed address bound to
-   the production build's local listener. The CI environment
-   cannot reach the public internet during the run (the
-   workflow does not need to), and the runner never hits a
-   remote host.
+   the production build's local listener. Full mode requires a loopback
+   target and synthetic sessions; it does not measure a deployed site.
 3. **Simulated throttling, not devtools throttling.** The
    runner uses `throttlingMethod: 'simulate'` (Lighthouse's
    Lantern simulation) instead of `devtools` throttling.
@@ -112,17 +112,19 @@ pnpm install --frozen-lockfile
 
 # 2. Build the web app (the runner audits the production
 #    build, not the dev server).
-pnpm --filter @vocanova/web build
+API_BASE_URL=http://127.0.0.1:8180 \
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8180 pnpm --filter @vocanova/web build
 
 # 3. Start the two servers the runner expects to find at
-#    http://127.0.0.1:8080 (mock API) and
-#    http://127.0.0.1:3000 (Next.js production server).
-node apps/web/tests/e2e/mock-api-server.mjs &
-pnpm --filter @vocanova/web start --port 3000 &
+#    http://127.0.0.1:8180 (mock API) and
+#    http://127.0.0.1:3100 (Next.js production server).
+#    CI retains its own isolated 8080/3000 defaults.
+MOCK_API_PORT=8180 node apps/web/tests/e2e/mock-api-server.mjs &
+API_BASE_URL=http://127.0.0.1:8180 \
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8180 pnpm --filter @vocanova/web start --port 3100 &
 
-# 4. Run the suite. The runner exits non-zero on the first
-#    audit that misses a DOC-08 threshold.
-pnpm --filter @vocanova/web test:lighthouse
+# 4. Run the core suite. The runner exits non-zero for missed budgets.
+LIGHTHOUSE_URL_PREFIX=http://127.0.0.1:3100 pnpm --filter @vocanova/web test:lighthouse
 ```
 
 A local run needs a Chrome / Chromium binary on `$PATH`. The repository-managed
@@ -139,7 +141,7 @@ the runner at a specific binary.
 tests/lighthouse/
   README.md           <- this file
   runner.mjs          <- the audit driver; one Chrome instance
-                         reused across all 12 audits
+                         reused across the selected audit matrix
   assertions.mjs      <- DOC-08 threshold constants + per-audit
                          assertion helper (single source of truth
                          for the score bars)
@@ -169,3 +171,43 @@ workflow file itself (the same `paths` filter the
   consume it). If a future package adopts LHCI for trend
   tracking, the same `budget.json` values map directly
   into an LHCI `assert.assertions` block.
+
+## Full entry-surface audit
+
+`LIGHTHOUSE_SCOPE=full` extends the same runner to all 28 public, authentication,
+account and learner entry surfaces listed in `full-screens.mjs`, at the same
+three widths (84 audits). CI uses full mode; the default local invocation still
+runs the original 12.
+The existing budgets, simulated throttling and storage reset are unchanged.
+
+For the owner's local 3100/8180 setup, build and start the production preview
+with the local helper, then run serially with other browser/memory tests:
+
+```bash
+LIGHTHOUSE_SCOPE=full LIGHTHOUSE_URL_PREFIX=http://127.0.0.1:3100 \
+  pnpm --filter @vocanova/web test:lighthouse
+```
+
+Full mode requires a loopback target. It clears cookies before every audit,
+adds a unique synthetic session/CSRF pair for authenticated surfaces, and leaves
+public/authentication entry surfaces without that session. No real sign-in or
+provider operation is performed. The existing exact URL/status assertion rejects
+redirected sign-in, onboarding or error documents; the runner supplies its own Puppeteer Page to Lighthouse's supported fourth
+argument and verifies the expected visible H1 in that exact document after the
+audit. Lighthouse normally closes pages it creates internally before returning;
+caller ownership keeps the audited page available until this check completes.
+The page is closed in a finally block before the next audit. The Puppeteer
+runtime comes from the installed, pinned Lighthouse dependency. Discovery starts at an explicit canonical range and
+word to avoid mistaking client URL normalization for a redirect.
+
+Reports go to `apps/web/lighthouse-reports/full/`. Set
+`LIGHTHOUSE_SCREEN_NAMES=signin,password-reset` to run a named diagnostic subset;
+the output lists exactly those screens and must not be reported as full coverage.
+Unknown names fail before execution. Omit the filter for the complete84 audits.
+
+These are entry-state audits using synthetic API fixtures. Password verification,
+magic-link confirmation and email-change confirmation use their missing-token
+states; they do not establish successful provider delivery. Interactive sessions,
+error recovery, pending mutations, physical devices and long-session memory remain
+separate browser checks. A failed heading or document check exits with runner
+error; a score miss remains a failure at the original threshold.

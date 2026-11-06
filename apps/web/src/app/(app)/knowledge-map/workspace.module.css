@@ -1,6 +1,7 @@
 /* Journey's word map and the focused discovery session share this module. */
 
 .journey {
+  container: journey / inline-size;
   max-width: 72rem;
 }
 .journeyHead {
@@ -260,13 +261,18 @@
 }
 .rangeForm > div {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.35rem;
 }
 .rangeForm select {
+  /* WebKit's native option renderer can overflow its correctly sized box at
+   * enlarged text. Paint containment keeps the native selected value visible;
+   * overflow:hidden on the select instead blanks its selected value. */
+  contain: paint;
   min-width: 0;
   min-height: 48px;
-  flex: 1;
+  flex: 1 1 12rem;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-neutral-300);
   border-radius: 0.85rem;
@@ -388,27 +394,31 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+/* Container rem units follow enlarged text; viewport media-query rem units
+ * use the initial font size and can leave the range column only a few pixels. */
 @media (min-width: 64rem) {
-  .mapLayout {
-    /* Wide enough for ten 44px squares beside the row labels. */
-    grid-template-columns: minmax(0, 1fr) minmax(33rem, 0.95fr);
-    grid-template-areas:
-      "range atlas"
-      "places atlas";
-    gap: 1.5rem 2.5rem;
-  }
-  .mapLayout > .rangeCard {
-    grid-area: range;
-  }
-  .mapLayout > .atlasSection {
-    grid-area: atlas;
-  }
-  .mapLayout > .placesSection {
-    grid-area: places;
-    margin-top: 0.5rem;
-  }
-  .words {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  @container journey (min-width: 56rem) {
+    .mapLayout {
+      /* Wide enough for ten 44px squares beside the row labels. */
+      grid-template-columns: minmax(0, 1fr) minmax(33rem, 0.95fr);
+      grid-template-areas:
+        "range atlas"
+        "places atlas";
+      gap: 1.5rem 2.5rem;
+    }
+    .mapLayout > .rangeCard {
+      grid-area: range;
+    }
+    .mapLayout > .atlasSection {
+      grid-area: atlas;
+    }
+    .mapLayout > .placesSection {
+      grid-area: places;
+      margin-top: 0.5rem;
+    }
+    .words {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 }
 

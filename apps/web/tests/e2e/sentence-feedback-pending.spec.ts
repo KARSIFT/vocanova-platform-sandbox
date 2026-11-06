@@ -388,17 +388,22 @@ test("an expired session during CSRF recovery preserves the intent for same-user
     )
       submissions += 1;
   });
-  await page.route(
-    "**/api/v1/me",
-    (route) =>
-      route.fulfill({
-        status: 401,
-        contentType: "application/problem+json",
-        body: JSON.stringify({ detail: "Authentication required" }),
-      }),
-    { times: 1 },
+  // Keep request interception stable through the native login navigation;
+  // the mock API's auth boundary supplies the recovery request's actual 401.
+  await context.addCookies([
+    {
+      name: "e2e_unauthenticated",
+      value: "1",
+      url: testInfo.project.use.baseURL!,
+    },
+  ]);
+  const rejectedRecovery = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      response.url().endsWith("/api/v1/me"),
   );
   await page.getByRole("button", { name: "Check my sentence" }).click();
+  expect((await rejectedRecovery).status()).toBe(401);
   await expect(page).toHaveURL(/\/login\?returnTo=/);
   const loginURL = new URL(page.url());
   expect(loginURL.searchParams.get("reason")).toBe("session-expired");
@@ -408,6 +413,7 @@ test("an expired session during CSRF recovery preserves the intent for same-user
   expect(submissions).toBe(0);
   const pending = await savedIntent(page, draft);
   expect(pending?.idempotencyKey).toBeTruthy();
+  await context.clearCookies({ name: "e2e_unauthenticated" });
   await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
   await expect(input).toHaveValue(draft);
   const submitted = page.waitForRequest(

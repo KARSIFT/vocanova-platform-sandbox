@@ -11,6 +11,7 @@ import {
 
 import { scanForAxeViolations } from "./axe-helper";
 import { verifyContextPracticeJourney } from "./context-practice-journey";
+import { pressTab } from "./keyboard-navigation.js";
 
 const SITUATION_PATH = "/discover/daily-conversation";
 const PRACTICE_NAME = "Choose the word for the situation";
@@ -164,8 +165,12 @@ async function inspectAndCapture(
     .or(region.getByRole("link"))
     .all()) {
     const box = await control.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-    expect(box?.width).toBeGreaterThanOrEqual(44);
+    // Firefox serializes a CSS 44px control as 43.999969482421875px at
+    // fractional document positions. Allow only 0.001px of numeric error;
+    // retain the 44px target requirement rather than rounding to whole pixels.
+    const geometryPrecision = 0.001;
+    expect((box?.height ?? 0) + geometryPrecision).toBeGreaterThanOrEqual(44);
+    expect((box?.width ?? 0) + geometryPrecision).toBeGreaterThanOrEqual(44);
   }
   // Scan from a stable page position: keyboard-driven practice may leave an
   // unrelated disclosure partially under the sticky header.
@@ -224,11 +229,11 @@ for (const theme of ["light", "dark"] as const) {
       await expect(region).not.toContainText(item.explanation);
       await expect(region).not.toContainText(item.otherExplanation);
       const wrong = region.getByRole("button", { name: item.other });
-      await page.keyboard.press("Tab");
+      await pressTab(page);
       await expect(
         region.getByRole("group").getByRole("button").first(),
       ).toBeFocused();
-      if (index !== 1) await page.keyboard.press("Tab");
+      if (index !== 1) await pressTab(page);
       await expect(wrong).toBeFocused();
       await page.keyboard.press("Enter");
       await expect(region.getByRole("status")).toContainText(
@@ -254,7 +259,7 @@ for (const theme of ["light", "dark"] as const) {
       const retry = region.getByRole("button", { name: "Try again" });
       // Answer buttons become disabled after selection. The next Tab must
       // still reach the recovery action without manually moving focus.
-      await page.keyboard.press("Tab");
+      await pressTab(page);
       await expect(retry).toBeFocused();
       await page.keyboard.press("Enter");
       await expect(region).not.toContainText(item.explanation);
@@ -262,7 +267,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         region.getByRole("group").getByRole("button").first(),
       ).toBeFocused();
-      if (index === 1) await page.keyboard.press("Tab");
+      if (index === 1) await pressTab(page);
       await expect(
         region.getByRole("button", { name: item.correct }),
       ).toBeFocused();
@@ -274,7 +279,7 @@ for (const theme of ["light", "dark"] as const) {
       const next = region.getByRole("button", {
         name: index === CASES.length - 1 ? "Finish practice" : "Next example",
       });
-      await page.keyboard.press("Tab");
+      await pressTab(page);
       await expect(next).toBeFocused();
       await page.keyboard.press("Enter");
     }

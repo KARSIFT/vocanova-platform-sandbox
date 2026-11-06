@@ -43,9 +43,17 @@ concurrency:
 
 jobs:
   accessibility:
-    name: accessibility (Playwright + axe-core)
+    name: accessibility (chromium / ${{ matrix.project }} + axe-core)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # All three projects together exhaust Chromium's suite: no test filter or
+    # added skips. Isolated runners retain one worker and the existing retries.
+    # The full suite took 49.7 minutes; split by viewport and keep time for
+    # failure artifacts after the bounded project suite.
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [home-desktop-1280, mobile-360, mobile-430]
     steps:
       # actions/checkout v7.0.1, pinned to the immutable commit
       # documented at
@@ -119,10 +127,11 @@ jobs:
         # and apps/web/tests/e2e/README.md.
         run: bash infra/scripts/install-playwright-chromium.sh
 
-      - name: Run accessibility suite
+      - name: Run accessibility project suite
+        timeout-minutes: 45
         env:
           CI: "1"
-        run: pnpm --filter @vocanova/web test:e2e
+        run: pnpm --filter @vocanova/web test:e2e --project "${{ matrix.project }}"
 
       # actions/upload-artifact v4, pinned to the immutable commit
       # documented at
@@ -131,7 +140,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: playwright-report
+          name: playwright-chromium-${{ matrix.project }}-report
           path: apps/web/playwright-report/
           retention-days: 7
 
@@ -139,6 +148,64 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: playwright-test-results
+          name: playwright-chromium-${{ matrix.project }}-test-results
           path: apps/web/test-results/
+          retention-days: 7
+
+  cross-browser-accessibility:
+    name: accessibility (${{ matrix.browser }} / ${{ matrix.project }} + axe-core)
+    runs-on: ubuntu-latest
+    # All three projects together exhaust each engine's suite: no test filter
+    # or added skips. Each engine/project gets an isolated runner and one worker.
+    # Keep individual deadlines and the base CI retry policy unchanged.
+    # Observed WebKit projects take about 31–33 minutes; reserve extra job time
+    # for setup and failure artifacts after the bounded project suite.
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+        project: [home-desktop-1280, mobile-360, mobile-430]
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@11.14.0 --activate
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build API client + design tokens
+        run: pnpm run build:packages
+
+      - name: Build @vocanova/web production bundle
+        env:
+          API_BASE_URL: "http://127.0.0.1:8080"
+          NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:8080"
+        run: pnpm --filter @vocanova/web build
+
+      - name: Install pinned Playwright browser and system dependencies
+        run: pnpm --filter @vocanova/web exec playwright install --with-deps "${{ matrix.browser }}"
+
+      - name: Run complete browser project suite
+        timeout-minutes: 45
+        env:
+          CI: "1"
+          VOCANOVA_TEST_BROWSER: ${{ matrix.browser }}
+        run: pnpm --filter @vocanova/web exec playwright test --config playwright.cross-browser.config.ts --project "${{ matrix.project }}"
+
+      - name: Upload engine artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: playwright-${{ matrix.browser }}-${{ matrix.project }}-failure-artifacts
+          path: |
+            apps/web/test-results/cross-browser-${{ matrix.browser }}/
+            apps/web/playwright-report/
           retention-days: 7

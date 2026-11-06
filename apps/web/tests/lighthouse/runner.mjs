@@ -41,6 +41,9 @@
 // limitation" requirement).
 
 import { launch } from "chrome-launcher";
+import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
+import { FULL_SCREENS } from "./full-screens.mjs";
 import lighthouse from "lighthouse";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -54,14 +57,24 @@ import {
   formatCategoryScoreRow,
 } from "./assertions.mjs";
 
+// Reuse the Puppeteer version pinned by Lighthouse; its public Page API is the
+// supported fourth lighthouse() argument. No additional browser download needed.
+const requireFromLighthouse = createRequire(import.meta.resolve("lighthouse"));
+const { connect } = requireFromLighthouse("puppeteer-core");
+
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../..",
 );
+const fullScope = process.env.LIGHTHOUSE_SCOPE === "full";
+if (process.env.LIGHTHOUSE_SCOPE && !["full", "core"].includes(process.env.LIGHTHOUSE_SCOPE)) {
+  throw new Error("LIGHTHOUSE_SCOPE must be core or full.");
+}
 const reportsDir = path.join(
   repositoryRoot,
   "apps/web",
   "lighthouse-reports",
+  ...(fullScope ? ["full"] : []),
 );
 
 // --- Configuration ---------------------------------------------
@@ -126,12 +139,25 @@ const LAYOUTS = [
 // the mobile-first journey - testing the subroutes would
 // measure the same shell (the (app) layout) with different
 // data, not a different layout surface.
-const SCREENS = [
+const CORE_SCREENS = [
   { name: "home", path: "/home" },
   { name: "discover", path: "/discover" },
   { name: "reviews", path: "/reviews" },
   { name: "progress", path: "/progress" },
 ];
+
+const selectedNames = process.env.LIGHTHOUSE_SCREEN_NAMES?.split(",").filter(Boolean);
+if (selectedNames && selectedNames.length === 0) {
+  throw new Error("LIGHTHOUSE_SCREEN_NAMES must select at least one screen when set.");
+}
+const availableScreens = fullScope ? FULL_SCREENS : CORE_SCREENS;
+if (selectedNames?.some((name) => !availableScreens.some((screen) => screen.name === name))) {
+  throw new Error("LIGHTHOUSE_SCREEN_NAMES contains an unknown screen for this scope.");
+}
+const SCREENS = selectedNames ? availableScreens.filter((screen) => selectedNames.includes(screen.name)) : availableScreens;
+if (fullScope && !["127.0.0.1", "localhost", "[::1]"].includes(new URL(URL_PREFIX).hostname)) {
+  throw new Error("Full synthetic Lighthouse audits require a loopback URL.");
+}
 
 // --- Helpers ---------------------------------------------------
 
@@ -191,7 +217,7 @@ function buildChromeLaunchOptions(userDataDir) {
   return opts;
 }
 
-async function runOneAudit({ chrome, url, settings, screen, layout }) {
+async function runOneAudit({ chrome, url, settings, screen, layout, page }) {
   const runnerResult = await lighthouse(url, {
     port: chrome.port,
     output: "json",
@@ -199,7 +225,7 @@ async function runOneAudit({ chrome, url, settings, screen, layout }) {
   }, {
     extends: "lighthouse:default",
     settings,
-  });
+  }, page);
 
   if (!runnerResult || !runnerResult.lhr) {
     throw new Error(
@@ -207,6 +233,24 @@ async function runOneAudit({ chrome, url, settings, screen, layout }) {
     );
   }
   assertAuditedPage({ requestedUrl: url, report: runnerResult.lhr });
+  if (page) {
+    // Lighthouse closes pages it creates itself before returning. Supplying our
+    // own Page keeps this exact audited document alive for the evidence check.
+    if (page.isClosed() || page.url() !== url) {
+      throw new Error(`The audited document changed or closed for ${screen.name}`);
+    }
+    const heading = typeof screen.heading === "string"
+      ? { text: screen.heading }
+      : { source: screen.heading.source, flags: screen.heading.flags };
+    await page.waitForFunction((expected) => {
+      return [...document.querySelectorAll("h1")].some((node) => {
+        const style = getComputedStyle(node);
+        if (!node.getClientRects().length || style.visibility === "hidden" || style.display === "none") return false;
+        const text = node.innerText.replace(/\s+/g, " ").trim();
+        return "text" in expected ? text === expected.text : new RegExp(expected.source, expected.flags).test(text);
+      });
+    }, { timeout: 5000 }, heading);
+  }
   const categories = runnerResult.lhr.categories ?? {};
   return {
     screen: screen.name,
@@ -273,26 +317,39 @@ async function main() {
   // fresh OS temporary directory so audits cannot pollute source or lint input.
   const userDataDir = await mkdtemp(path.join(os.tmpdir(), "vocanova-lighthouse-"));
   let chrome;
+  let browser;
 
   const allResults = [];
   const allFailures = [];
 
   try {
     chrome = await launch(buildChromeLaunchOptions(userDataDir));
+    if (fullScope) browser = await connect({ browserURL: `http://127.0.0.1:${chrome.port}`, defaultViewport: null });
     for (const screen of SCREENS) {
       for (const layout of LAYOUTS) {
         const url = `${URL_PREFIX}${screen.path}`;
         const settings = buildLighthouseSettings({ screen, layout });
+        if (browser) {
+          const context = browser.defaultBrowserContext();
+          await context.deleteCookie(...await context.cookies());
+          if (screen.authenticated) await context.setCookie(
+            { name: "vocanova_session", value: `lighthouse-${randomUUID()}`, domain: new URL(URL_PREFIX).hostname, path: "/" },
+            { name: "vocanova_csrf", value: randomUUID(), domain: new URL(URL_PREFIX).hostname, path: "/" },
+          );
+          // Lighthouse 13.4.1 clears cache/service-worker data, not cookies.
+          // Retain its standard storage reset and throttling settings.
+        }
+
         process.stdout.write(
           `Running ${screen.name} @ ${layout.name} (${url}) ...\n`,
         );
-        const result = await runOneAudit({
-          chrome,
-          url,
-          settings,
-          screen,
-          layout,
-        });
+        const page = browser ? await browser.newPage() : undefined;
+        let result;
+        try {
+          result = await runOneAudit({ chrome, page, url, settings, screen, layout });
+        } finally {
+          await page?.close();
+        }
         allResults.push(result);
 
         const reportPath = path.join(
@@ -328,7 +385,11 @@ async function main() {
     }
   } finally {
     try {
-      await chrome?.kill();
+      try {
+        await browser?.disconnect();
+      } finally {
+        await chrome?.kill();
+      }
     } finally {
       await rm(userDataDir, { recursive: true, force: true });
     }

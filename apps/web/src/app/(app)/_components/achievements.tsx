@@ -37,9 +37,9 @@ export function Achievements({
             return (
               <li
                 key={item.id}
-                className={`rounded-2xl border p-5 ${item.earned ? "border-primary-300 bg-primary-50" : "border-neutral-200 bg-white"}`}
+                className={`min-w-0 rounded-2xl border p-5 [overflow-wrap:anywhere] ${item.earned ? "border-primary-300 bg-primary-50" : "border-neutral-200 bg-white"}`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <span
                     aria-hidden="true"
                     className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.earned ? "bg-primary-700 text-white" : "bg-neutral-100 text-neutral-600"}`}

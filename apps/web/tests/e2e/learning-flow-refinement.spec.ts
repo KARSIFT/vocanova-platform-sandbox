@@ -42,6 +42,9 @@ test("keeps lesson completion simple and optional writing available afterward", 
   ]);
   await page.goto("/vocabulary/pour");
   await page.getByRole("button", { name: /^Save pour:/ }).click();
+  // Saving starts a route refresh. This server-gated disclosure proves the
+  // refreshed saved meaning has committed before a new document navigation.
+  await expect(page.getByRole("main").locator("summary").filter({ hasText: /^Optional writing$/ })).toHaveCount(1);
   await page.goto("/review");
   await startReviewLesson(page);
   await answerReviewWord(page, "to make liquid flow into a container");
