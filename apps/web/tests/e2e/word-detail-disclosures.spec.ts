@@ -3,6 +3,45 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { scanForAxeViolations } from "./axe-helper";
 
+for (const theme of ["light", "dark"] as const) {
+  test(`word details show only available difficulty labels in ${theme}`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await context.addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+      { name: "vocanova_theme", value: theme, url: baseURL! },
+    ]);
+    for (const difficulty of ["unknown", "missing", "default"]) {
+      await context.addCookies([
+        { name: "e2e_word_difficulty", value: difficulty, url: baseURL! },
+      ]);
+      for (const path of [
+        "/vocabulary/pour",
+        "/discover/ordering-at-a-cafe/pour",
+      ]) {
+        await page.goto(path);
+        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+        const heading = page.getByRole("heading", { name: "pour", exact: true });
+        await expect(heading).toBeVisible();
+        const wordHeader = heading.locator("..");
+        await expect(wordHeader.getByText("verb", { exact: true })).toBeVisible();
+        await expect(wordHeader.getByText(/^unknown$/i)).toHaveCount(0);
+        await expect(wordHeader.getByText("A2", { exact: true })).toHaveCount(
+          difficulty === "default" ? 1 : 0,
+        );
+        await expect(
+          page.getByText("to make liquid flow into a container", { exact: true }),
+        ).toBeVisible();
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        ).toBe(true);
+      }
+    }
+  });
+}
+
 test("native writing opened before hydration preserves its reload target", async ({
   page,
   context,

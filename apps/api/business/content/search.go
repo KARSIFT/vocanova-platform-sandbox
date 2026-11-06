@@ -17,13 +17,14 @@ import (
 var ErrInvalidSearch = errors.New("invalid search query or filter")
 
 type SearchRequest struct {
-	UserID      uuid.UUID
-	Knowledge   string
-	Query       string
-	Category    string
-	Level       string
-	AfterCursor string
-	Limit       int
+	UserID        uuid.UUID
+	Knowledge     string
+	Query         string
+	Category      string
+	Level         string
+	AfterCursor   string
+	Limit         int
+	cursorVersion int
 }
 
 // SearchMeaning is one canonical meaning, with a requester-scoped saved state.
@@ -34,6 +35,7 @@ type SearchMeaning struct {
 	ReviewState     string
 	Due             bool
 	normalizedText  string
+	searchRank      int
 }
 
 type SearchResponse struct {
@@ -47,6 +49,7 @@ type searchCursor struct {
 	Filter  string    `json:"f"`
 	Text    string    `json:"t"`
 	ID      uuid.UUID `json:"i"`
+	Rank    int       `json:"r,omitempty"`
 }
 
 func prepareSearch(req SearchRequest) (SearchRequest, searchCursor, error) {
@@ -75,14 +78,21 @@ func prepareSearch(req SearchRequest) (SearchRequest, searchCursor, error) {
 	if req.Limit > 50 {
 		req.Limit = 50
 	}
+	// Continue pre-ranking cursors alphabetically until that chain is exhausted.
+	// Switching their order mid-chain could omit or repeat exact matches.
+	req.cursorVersion = 2
 	var cursor searchCursor
 	if req.AfterCursor != "" {
 		if len(req.AfterCursor) > 2048 {
 			return req, cursor, ErrInvalidCursor
 		}
 		data, err := base64.RawURLEncoding.DecodeString(req.AfterCursor)
-		if err != nil || json.Unmarshal(data, &cursor) != nil || cursor.Version != 1 || cursor.ID == uuid.Nil || cursor.Text == "" || strings.ContainsRune(cursor.Text, 0) || cursor.Filter != searchFilter(req) {
+		if err != nil || json.Unmarshal(data, &cursor) != nil || (cursor.Version != 1 && cursor.Version != 2) || cursor.Rank < 0 || cursor.Rank > 1 || cursor.ID == uuid.Nil || cursor.Text == "" || strings.ContainsRune(cursor.Text, 0) || cursor.Filter != searchFilter(req) {
 			return req, cursor, ErrInvalidCursor
+		}
+		req.cursorVersion = cursor.Version
+		if cursor.Version == 1 {
+			cursor.Rank = 1
 		}
 	}
 	return req, cursor, nil
@@ -95,8 +105,19 @@ func searchFilter(req SearchRequest) string {
 }
 
 func searchNextCursor(req SearchRequest, item SearchMeaning) string {
-	data, _ := json.Marshal(searchCursor{Version: 1, Filter: searchFilter(req), Text: item.normalizedText, ID: item.MeaningID})
+	version := req.cursorVersion
+	if version == 0 {
+		version = 2
+	}
+	data, _ := json.Marshal(searchCursor{Version: version, Filter: searchFilter(req), Text: item.normalizedText, ID: item.MeaningID, Rank: item.searchRank})
 	return base64.RawURLEncoding.EncodeToString(data)
+}
+
+func headwordRank(req SearchRequest, text string) int {
+	if req.cursorVersion != 1 && req.Query != "" && strings.ToLower(text) == req.Query {
+		return 0
+	}
+	return 1
 }
 
 func (s *Service) Search(ctx context.Context, userID uuid.UUID, req SearchRequest) (*SearchResponse, error) {
@@ -181,7 +202,7 @@ func (r *MemoryRepository) SearchMeanings(ctx context.Context, req SearchRequest
 				continue
 			}
 		}
-		items = append(items, SearchMeaning{MeaningSummary: MeaningSummary{MeaningID: meaning.ID, WordID: word.ID, WordText: word.Text, WordSlug: wordSlug(word.NormalizedText), PartOfSpeech: meaning.PartOfSpeech, ShortDefinition: meaning.ShortDefinition}, DifficultyLevel: level, normalizedText: word.NormalizedText})
+		items = append(items, SearchMeaning{MeaningSummary: MeaningSummary{MeaningID: meaning.ID, WordID: word.ID, WordText: word.Text, WordSlug: wordSlug(word.NormalizedText), PartOfSpeech: meaning.PartOfSpeech, ShortDefinition: meaning.ShortDefinition}, DifficultyLevel: level, normalizedText: word.NormalizedText, searchRank: headwordRank(req, word.Text)})
 	}
 	if req.Knowledge != "" {
 		ids := make([]uuid.UUID, len(items))
@@ -212,6 +233,9 @@ func (r *MemoryRepository) SearchMeanings(ctx context.Context, req SearchRequest
 		items = filtered
 	}
 	sort.Slice(items, func(i, j int) bool {
+		if items[i].searchRank != items[j].searchRank {
+			return items[i].searchRank < items[j].searchRank
+		}
 		if items[i].normalizedText != items[j].normalizedText {
 			return items[i].normalizedText < items[j].normalizedText
 		}
@@ -219,7 +243,7 @@ func (r *MemoryRepository) SearchMeanings(ctx context.Context, req SearchRequest
 	})
 	resp := &SearchResponse{Items: []SearchMeaning{}, TotalCount: len(items)}
 	for _, item := range items {
-		if cursor.ID != uuid.Nil && (item.normalizedText < cursor.Text || (item.normalizedText == cursor.Text && item.MeaningID.String() <= cursor.ID.String())) {
+		if cursor.ID != uuid.Nil && (item.searchRank < cursor.Rank || (item.searchRank == cursor.Rank && (item.normalizedText < cursor.Text || (item.normalizedText == cursor.Text && item.MeaningID.String() <= cursor.ID.String())))) {
 			continue
 		}
 		resp.Items = append(resp.Items, item)

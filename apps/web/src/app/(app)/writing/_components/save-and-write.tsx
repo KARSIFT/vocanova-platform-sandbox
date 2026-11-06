@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ApiResponseError, type WordMeaning } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
@@ -15,6 +16,7 @@ export function SaveAndWrite({
   wordSlug,
   wordText,
   shortDefinition,
+  introHeadingId,
   initialMeaning,
   userId,
 }: {
@@ -22,10 +24,12 @@ export function SaveAndWrite({
   wordSlug: string;
   wordText: string;
   shortDefinition?: string;
+  introHeadingId?: string;
   initialMeaning: WordMeaning;
   /** Draft recovery stays disabled when the API omits its stable user id. */
   userId?: string;
 }) {
+  const router = useRouter();
   const [meaning, setMeaning] = useState<WordMeaning | null>(
     initialMeaning.saved && !initialMeaning.userWordId ? null : initialMeaning,
   );
@@ -67,6 +71,13 @@ export function SaveAndWrite({
       : fallback;
   }
 
+  function confirmMeaning(current: WordMeaning) {
+    setMeaning(current);
+    // Replace the cached server props too: returning through browser history
+    // must not restore the pre-save prerequisite. Refresh preserves draft state.
+    router.refresh();
+  }
+
   async function readMeaning() {
     const controller = new AbortController();
     readController.current = controller;
@@ -92,7 +103,7 @@ export function SaveAndWrite({
     setError("");
     try {
       const current = await readMeaning();
-      if (mounted.current) setMeaning(current);
+      if (mounted.current) confirmMeaning(current);
     } catch (cause) {
       if (mounted.current)
         setError(
@@ -138,7 +149,7 @@ export function SaveAndWrite({
         throw new Error("Save response did not match");
       const current = await readMeaning();
       if (!mounted.current) return;
-      setMeaning(current);
+      confirmMeaning(current);
       if (!current.saved)
         setNotice(
           "This meaning is no longer saved. Choose Save and write to add it again.",
@@ -153,7 +164,7 @@ export function SaveAndWrite({
         try {
           const current = await readMeaning();
           if (!mounted.current) return;
-          setMeaning(current);
+          confirmMeaning(current);
           if (!current.saved)
             setNotice(
               "This meaning is not saved. Your earlier request was not reapplied. Choose Save and write to add it.",
@@ -198,6 +209,7 @@ export function SaveAndWrite({
         source="word_detail"
         userId={userId}
         shortDefinition={shortDefinition}
+        introHeadingId={introHeadingId}
       />
     );
   }

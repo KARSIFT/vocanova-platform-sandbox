@@ -10,13 +10,17 @@ export function getSavedWordsView(
   return hasCursor ? "exhausted" : "empty";
 }
 
-export function formatSavedWordStatus(status: string): string | null {
-  switch (status) {
+export function formatSavedWordStatus(
+  status: string,
+  reviewState?: string,
+): string | null {
+  switch (reviewState ?? status) {
     case "new":
       return "New";
     case "learning":
-    case "reviewing":
       return "Learning";
+    case "reviewing":
+      return "Reviewing";
     case "mastered":
       return "Mastered";
     case "ignored":

@@ -56,6 +56,9 @@ export function UnitGuidebook({
         <summary className="min-h-11 cursor-pointer font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
           Useful phrases
         </summary>
+        <p className="mt-3 text-sm text-neutral-600">
+          Audio is optional. You can read every phrase.
+        </p>
         <ol className="mt-3 space-y-4">
           {guide.phrases.map((phrase, index) => (
             <li key={phrase.text}>

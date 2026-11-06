@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
@@ -11,6 +12,7 @@ export function ProfileForm({
 }: {
   initialDisplayName: string;
 }) {
+  const router = useRouter();
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [state, setState] = useState<
     "idle" | "saving" | "saved" | "newer_changes" | "error"
@@ -52,6 +54,7 @@ export function ProfileForm({
           ? "saved"
           : "newer_changes",
       );
+      router.refresh();
     } catch (error) {
       setState("error");
       setMessage(

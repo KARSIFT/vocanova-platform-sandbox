@@ -5,7 +5,7 @@ import { MeaningPicture } from "@/ui/meaning-picture";
 import { ListenButton } from "@/ui/pronunciation";
 import { WordPracticeDisclosure } from "./word-practice-disclosure";
 
-import { formatLevelBand } from "../discover/_components/level-band";
+import { wordDifficultyLabel } from "./word-difficulty-label";
 import { MeaningSaveButton } from "../discover/[situation]/[word]/_components/meaning-save-button";
 import { formatWordReviewState } from "../discover/[situation]/[word]/_components/word-review-state";
 import { SentenceFeedback } from "./sentence-feedback";
@@ -27,6 +27,7 @@ export function WordDetailContent({
   contextTitle,
   source,
 }: WordDetailContentProps) {
+  const difficultyLabel = wordDifficultyLabel(wordData.difficultyLevel);
   return (
     <>
       <div className="mt-[var(--spacing-md)]">
@@ -44,9 +45,9 @@ export function WordDetailContent({
         )}
         <p className="mt-[var(--spacing-sm)] flex flex-wrap items-center gap-x-3 gap-y-1 text-base">
           <span className="pos">{wordData.wordType.replaceAll("_", " ")}</span>
-          {wordData.difficultyLevel ? (
+          {difficultyLabel ? (
             <span className="rounded-full bg-secondary-50 px-2.5 py-0.5 text-sm font-semibold text-secondary-800">
-              {formatLevelBand(wordData.difficultyLevel)}
+              {difficultyLabel}
             </span>
           ) : null}
         </p>

@@ -1,5 +1,43 @@
 # Vocanova current product state
 
+## Manual production audit — 7 November 2026 (fixes awaiting release)
+
+The verified baseline is production **0.4.19 / `5437a2b7`**, promoted by
+workflow `42288146468`. Web/API release identity, health and database checks
+passed. This supersedes the earlier deployment-status notes below; the new
+manual-audit corrections described here are still local and are not deployed.
+
+Manual ChatGPT-browser work exercised real Google sign-in, discovery and search,
+saved words and notes, review scheduling, practice modes, guided lessons,
+stories, personal lists, topic writing and live AI feedback, progress,
+self-check, settings, profile, export, calendar download, public Help and
+authentication recovery pages. Session reload/resume and several wrong-answer,
+empty and recovery paths were operated. The 43-route inventory is a checklist,
+not proof that every control/state/device combination was manually tested.
+
+The bounded implementation changes address findings from that pass:
+
+- Search places exact headwords before definition matches, with rank-aware
+  pagination and uninterrupted alphabetical continuation for older cursors.
+- Word details hide unavailable difficulty metadata. Feedback removes duplicate
+  status headlines while preserving distinct teaching explanations.
+- Saved detail uses the server's learner-facing review stage instead of a
+  legacy raw status; Reviewing remains distinct from Learning.
+- Guided example audio has a single, correct accessible label. Stories and
+  guidebooks explain optional audio once per section, retaining per-control
+  failure feedback.
+- Topic writing reuses its existing meaning introduction and refreshes cached
+  route data after confirmed saved-state reads, preserving its form and draft
+  on browser Back. Profile saves refresh server-rendered initials without
+  replacing a newer unsaved name.
+
+Local PostgreSQL comparison retained search counts and sort memory, with mixed
+timings: exact `make` improved from 8.189 to 7.886 ms, while broad `a` increased
+from 9.543 to 10.791 ms. These are warm query-plan measurements on the seeded
+catalog, not a general speedup or production latency/RSS claim. See
+[release readiness](release-readiness.md#manual-production-audit--7-november-2026)
+for verification, unresolved platform checks and manual coverage limits.
+
 ## Frontend coverage continuation — 6 November 2026
 
 The [control and scenario ledger](frontend-coverage-matrix-2026-11-06.md)

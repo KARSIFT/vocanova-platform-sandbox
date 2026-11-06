@@ -20,7 +20,7 @@ export function StoryAudio({ text, label }: { text: string; label: string }) {
         type="button"
         className={secondaryAction}
         aria-label={active ? `Stop audio: ${label}` : `Play audio: ${label}`}
-        aria-describedby={description}
+        aria-describedby={state.message ? description : undefined}
         onClick={() =>
           active
             ? deviceSpeech.stop(owner.current)
@@ -29,13 +29,15 @@ export function StoryAudio({ text, label }: { text: string; label: string }) {
       >
         {active ? "Stop audio" : "Play line"}
       </button>
-      <p
-        id={description}
-        role={state.message ? "status" : undefined}
-        className="mt-1 text-sm text-neutral-600"
-      >
-        {state.message ?? "Optional device audio. You can read the line above."}
-      </p>
+      {state.message && (
+        <p
+          id={description}
+          role="status"
+          className="mt-1 text-sm text-neutral-600"
+        >
+          {state.message}
+        </p>
+      )}
     </div>
   );
 }
