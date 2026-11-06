@@ -200,6 +200,9 @@ for (const theme of ["light", "dark"] as const) {
     await name.fill("  Mobile audit learner  ");
     await page.getByRole("button", { name: "Save profile" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Your profile has been saved." })).toBeVisible();
+    // Wait for confirmed server presentation before testing explicit reload.
+    await expect(page.getByRole("region", { name: "Your profile", exact: true })
+      .getByText("MA", { exact: true })).toBeVisible();
     await page.reload();
     await expect(name).toHaveValue("Mobile audit learner");
     await checkLayout(page);

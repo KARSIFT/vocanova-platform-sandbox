@@ -10,6 +10,7 @@ import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { compareSentences, type SentenceChange } from "./sentence-comparison";
+import { distinctFeedbackHeadline } from "./sentence-feedback-headline";
 
 import {
   acceptSentenceEdit,
@@ -32,6 +33,8 @@ interface SentenceFeedbackProps {
   /** The API-provided stable user id; drafts stay disabled without it. */
   userId?: string;
   shortDefinition?: string;
+  /** Reuse an enclosing introduction instead of repeating its heading/meaning. */
+  introHeadingId?: string;
   onFeedbackSubmitted?: (result: SentenceFeedbackResult) => void;
 }
 
@@ -55,6 +58,7 @@ export function SentenceFeedback({
   source,
   userId,
   shortDefinition,
+  introHeadingId,
   onFeedbackSubmitted,
 }: SentenceFeedbackProps) {
   const [sentence, setSentence] = useState("");
@@ -248,6 +252,10 @@ export function SentenceFeedback({
   const hasSuccessResult =
     hasResult && result.processingStatus === "completed" && !result.errorCode;
   const statusLabel = result ? getStatusLabel(result.status) : null;
+  const feedbackHeadline = distinctFeedbackHeadline(
+    result?.headline,
+    statusLabel,
+  );
   const characterCount = countSentenceCharacters(sentence);
   const characterCountId = `sentence-character-count-${attemptId}`;
   const characterLimitMessageId = `sentence-character-limit-${attemptId}`;
@@ -314,18 +322,24 @@ export function SentenceFeedback({
 
   return (
     <section
-      aria-labelledby={`sentence-feedback-heading-${attemptId}`}
+      aria-labelledby={
+        introHeadingId ?? `sentence-feedback-heading-${attemptId}`
+      }
       className="mt-[var(--spacing-md)] rounded-md border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm"
     >
-      <h3
-        id={`sentence-feedback-heading-${attemptId}`}
-        className="text-base font-semibold text-neutral-900"
-      >
-        Practice with {targetWord}
-      </h3>
-      {shortDefinition ? (
-        <p className="mt-1 text-sm text-neutral-700">{shortDefinition}</p>
-      ) : null}
+      {!introHeadingId && (
+        <>
+          <h3
+            id={`sentence-feedback-heading-${attemptId}`}
+            className="text-base font-semibold text-neutral-900"
+          >
+            Practice with {targetWord}
+          </h3>
+          {shortDefinition ? (
+            <p className="mt-1 text-sm text-neutral-700">{shortDefinition}</p>
+          ) : null}
+        </>
+      )}
       <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
         Write one sentence using{" "}
         <span className="font-semibold text-neutral-900">{targetWord}</span>.
@@ -425,8 +439,8 @@ export function SentenceFeedback({
               className={`rounded-md p-[var(--spacing-md)] ${getStatusClasses(result.status)}`}
             >
               <p className="text-sm font-semibold">{statusLabel}</p>
-              {result.headline && result.headline !== statusLabel ? (
-                <p className="font-semibold">{result.headline}</p>
+              {feedbackHeadline ? (
+                <p className="font-semibold">{feedbackHeadline}</p>
               ) : null}
               {result.explanation ? (
                 <p className="mt-[var(--spacing-xs)] text-base">

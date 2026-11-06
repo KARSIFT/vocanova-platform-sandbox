@@ -152,7 +152,10 @@ export default async function WritingPage({
               aria-label="Writing with your selected meaning"
               className="mt-6 border-t border-neutral-200 pt-6"
             >
-              <h3 className="text-xl font-bold text-neutral-900">
+              <h3
+                id={`writing-meaning-heading-${selected.meaningId}`}
+                className="text-xl font-bold text-neutral-900"
+              >
                 Write with {selected.wordText}
               </h3>
               {canonical.shortDefinition ? (
@@ -166,6 +169,7 @@ export default async function WritingPage({
                 wordSlug={selected.wordSlug}
                 wordText={selected.wordText}
                 shortDefinition={canonical.shortDefinition}
+                introHeadingId={`writing-meaning-heading-${selected.meaningId}`}
                 initialMeaning={canonical}
                 userId={currentUser.id}
               />

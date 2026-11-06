@@ -76,6 +76,17 @@ test(`a guided lesson resumes, completes and opens its next activities (${theme}
   await expect(
     page.getByRole("heading", { name: "invite", exact: true }),
   ).toBeVisible();
+  const examplePronunciation = page.getByRole("group", {
+    name: "Pronunciation of example",
+    exact: true,
+  });
+  await expect(examplePronunciation).toBeVisible();
+  await expect(
+    examplePronunciation.getByRole("button", { name: "Listen to example", exact: true }),
+  ).toBeVisible();
+  await expect(
+    examplePronunciation.getByRole("button", { name: "Slow pronunciation of example", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "confirm", exact: true }),

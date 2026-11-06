@@ -115,6 +115,8 @@ for (const theme of ["light", "dark"]) {
     // Audit from a stable position, as dictionary-search does; the chooser's
     // actual target is checked above.
     await page.evaluate(() => window.scrollTo(0, 0));
+    // Confirmed saves refresh streamed route metadata; audit the settled page.
+    await expect(page).toHaveTitle("Topic writing — Vocanova");
     expect((await scanForAxeViolations(page)).criticalOrSerious).toEqual([]);
     expect(
       await page.evaluate(

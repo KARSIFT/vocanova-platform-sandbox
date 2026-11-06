@@ -1,5 +1,100 @@
 # Vocanova release readiness
 
+## Manual production audit — 7 November 2026
+
+Production baseline **0.4.19 / `5437a2b7`** was successfully promoted by
+workflow `42288146468`, with matching web/API identities and healthy database.
+The subsequent manual-audit fixes remain local, awaiting one consolidated PR,
+fresh CI/review, staging acceptance and a separate production promotion. Earlier
+deployment-status entries below are historical. No whole-product completion or
+full manual coverage claim follows from this audit.
+
+Initial hosted acceptance passed Linux foundation **324/324**, API-client
+**61/61**, web **261/261**, and the web/API, PostgreSQL reliability,
+controlled-signup/password and Docker gates. The first full browser run was
+not clean: eight executed projects recorded 5,498 passes, four failures, eight
+flaky cases and 98 intentional skips; the Chromium desktop project failed
+dependency installation before its 701 cases ran. Firefox traces showed
+explicit reloads overlapping confirmed profile refreshes. Case-local tests
+now require the new server-rendered avatar, stable metadata and accessible
+streamed content before subsequent actions/scans, preserving the original
+persistence, Unicode, keyboard and axe checks.
+
+Initial Lighthouse had one Home desktop score of 81 with TBT 431 ms among 84
+reports. Its retry failed dependency setup before auditing. Browser workflows
+now use the explicit supported Ubuntu 24.04 runner to control image drift;
+Ubuntu 26.04 is also supported, so this is not an unsupported-OS diagnosis.
+All jobs, tests, limits and thresholds remain. Fresh final-head results in
+[PR #1511](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1511) must
+establish acceptance; the original failures are not waived.
+
+A separately reproduced stale single-file nginx mount is corrected through
+staging's validated convergence path: only differing mounted content triggers
+nginx-only recreation, with equality checked before reload. Matching content
+does not force recreation. This requires normal live deployment verification
+and can briefly replace the shared proxy when drift is found.
+
+Fresh local evidence for the corrections:
+
+- Web build, lint, web/E2E typechecks and **261 unit tests** passed. The final
+  combined browser run passed **96 cases with six existing desktop-only profile
+  skips**, zero failures or retries. It includes saved-detail stage consistency,
+  profile initials and newer-draft races, topic-writing history/draft recovery,
+  and shared feedback regressions.
+- Earlier focused runs passed 132 word-detail/feedback/guided cases, 39
+  story/guide cases and six guided-lesson cases. These overlap and ran on
+  different intermediate bundles; do not add them into a unique final-suite
+  coverage count. Unchanged story/lesson source retained its passing evidence.
+- The affected content suite passed 35 top-level tests against disposable
+  PostgreSQL with **no skips**, including exact ranking, multiple meanings, legacy cursors, deleted
+  cursor boundaries and Memory/PostgreSQL parity. The full installed-toolchain
+  API run passed 2,346 tests/subtests with 116 database-dependent skips; the
+  separate database run covers the changed queries. Content `go vet` passed.
+- Search SQL was compared over 10 warm samples per variant/query on PostgreSQL
+  16 with 10,051 meanings. Counts were unchanged, individual sort memory stayed
+  25–33 kB and no sort spilled. Exact `make`: 8.189 → 7.886 ms; broad `a`:
+  9.543 → 10.791 ms; no-match: 7.299 → 7.087 ms; browse: 7.313 → 7.893 ms.
+  This supports relevance improvement with some additional query cost, not an
+  across-the-board performance or process-memory improvement.
+
+Installed Chrome 156 supplied local browser coverage because the pinned
+Chromium download was unavailable. Go 1.27.3 supplied diagnostic API coverage
+because the declared 1.26.5 download was unavailable. Fresh Linux CI on the
+declared tools remains required. The local foundation run is **313 passed / 324
+total, 11 failed, zero skipped**, not a clean workspace result. Failures were
+six receipt/archive tests rejecting symlinked local roots, two staging-config
+tests failing with BSD `sed`, the monitoring shell harness lacking `coproc`,
+the Chromium-missing fail-closed assertion, and the Graphify repository-bounded
+path test. These baseline macOS failures must remain recorded; Linux
+`ci-web` must establish acceptance rather than silently excluding them.
+
+Manual production coverage includes actual Google completion, several complete
+learning sessions with reload/resume, live AI feedback, list membership,
+settings persistence, profile persistence, parsed calendar download and parsed
+account export. The manual viewport/theme samples were mainly 360px dark for
+core flows, 430px dark for story/list flows, 430px light for settings and 1280px
+light for landing/map. Automated responsive checks provide additional evidence;
+they are not a manual route × state × width × theme × input matrix.
+
+Manual local ChatGPT-browser checks on the final build also verified immediate
+profile-initial updates and restoration without reload. Existing synthetic
+login forms displayed incorrect-credentials, service-unavailable and rate-limit
+feedback, plus the magic-link request/resend screen. These checks used normal UI
+entry and sent no real email; they do not establish production email delivery.
+
+Local fresh onboarding was subsequently exercised through normal mock sign-in
+at 360px/dark, including Persian search, Back retention, completion and saved
+review-target persistence. This does not prove fresh production-account setup.
+
+Still separate or unavailable: fresh production onboarding, successful/replayed live
+email/password flows while those capabilities are disabled, destructive account
+deactivation, physical-device/native-picker/IME behavior, audible pronunciation
+quality and spoken screen-reader use. The account-deactivated page and deletion
+cancel path were inspected without deactivating an account. Support destinations
+were inspected without sending mail. Exact fixes need manual retesting after
+their production promotion, including search ordering/cursors, saved stages,
+feedback labels, audio guidance, writing history recovery and profile initials.
+
 ## Frontend coverage continuation — 6 November 2026
 
 The [43-route control ledger](frontend-coverage-matrix-2026-11-06.md) records

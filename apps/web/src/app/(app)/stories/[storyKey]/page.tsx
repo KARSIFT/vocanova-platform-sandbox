@@ -55,6 +55,9 @@ export default async function StoryReadingPage({
         <h2 className="mb-3 mt-6 text-xl font-bold text-neutral-900">
           Full story
         </h2>
+        <p className="mb-3 text-sm text-neutral-600">
+          Audio is optional. You can read every line.
+        </p>
         <ol className="space-y-4">
           {story.lines.map((line, index) => (
             <li key={line.id} className="rounded-xl bg-neutral-50 p-4">

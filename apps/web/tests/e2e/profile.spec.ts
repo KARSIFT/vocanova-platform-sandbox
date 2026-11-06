@@ -68,12 +68,26 @@ test.describe("Profile and password security", () => {
         .filter({ hasText: "Your profile has been saved." }),
     ).toBeVisible();
     await expect(displayName).toHaveValue("Profile learner");
+    const profile = page.getByRole("region", {
+      name: "Your profile",
+      exact: true,
+    });
+    await expect(profile.getByText("PL", { exact: true })).toBeVisible();
     await page.reload();
     await expect(displayName).toHaveValue("Profile learner");
     // Streaming may retain an inactive copy outside the accessible main.
-    const email = page.getByRole("main").getByText("core-loop-fixture@example.test", { exact: true });
+    const email = page
+      .getByRole("main")
+      .getByText("core-loop-fixture@example.test", { exact: true });
     await expect(email).toHaveCount(1);
     await expect(email).toBeVisible();
+    await displayName.fill("");
+    await page.getByRole("button", { name: "Save profile" }).click();
+    await expect(page.getByRole("status")).toHaveText(
+      "Your profile has been saved.",
+    );
+    await expect(profile.getByText("CL", { exact: true })).toBeVisible();
+    await expect(profile.getByText("PL", { exact: true })).toHaveCount(0);
   });
 
   test("routes an expired profile update back to sign-in without claiming success", async ({
@@ -182,6 +196,11 @@ for (const theme of ["light", "dark"] as const) {
       PROFILE_NEWER_CHANGES_MESSAGE,
     );
     await expect(name).toHaveValue("Later name");
+    await expect(
+      page
+        .getByRole("region", { name: "Your profile", exact: true })
+        .getByText("EN", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText("Your profile has been saved.")).toHaveCount(0);
     expect(requests).toEqual([{ displayName: "Earlier name" }]);
     await name.locator("xpath=ancestor::form").screenshot({
@@ -195,6 +214,11 @@ for (const theme of ["light", "dark"] as const) {
       { displayName: "Earlier name" },
       { displayName: "Later name" },
     ]);
+    await expect(
+      page
+        .getByRole("region", { name: "Your profile", exact: true })
+        .getByText("LN", { exact: true }),
+    ).toBeVisible();
     await page.reload();
     await expect(name).toHaveValue("Later name");
   });
@@ -286,6 +310,12 @@ test("retains the newer profile name after a failed save and submits it on retry
     { displayName: "Earlier name" },
     { displayName: "Later name" },
   ]);
+  // Confirm the successful retry's server-rendered avatar before reloading.
+  await expect(
+    page
+      .getByRole("region", { name: "Your profile", exact: true })
+      .getByText("LN", { exact: true }),
+  ).toBeVisible();
   await page.reload();
   await expect(name).toHaveValue("Later name");
 });

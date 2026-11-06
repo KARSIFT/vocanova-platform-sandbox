@@ -44,7 +44,9 @@ concurrency:
 jobs:
   accessibility:
     name: accessibility (chromium / ${{ matrix.project }} + axe-core)
-    runs-on: ubuntu-latest
+    # Keep browser checks on a stable OS release while ubuntu-latest moves to
+    # 26.04. This controls runner drift; dependency setup still fails closed.
+    runs-on: ubuntu-24.04
     # All three projects together exhaust Chromium's suite: no test filter or
     # added skips. Isolated runners retain one worker and the existing retries.
     # The full suite took 49.7 minutes; split by viewport and keep time for
@@ -154,7 +156,8 @@ jobs:
 
   cross-browser-accessibility:
     name: accessibility (${{ matrix.browser }} / ${{ matrix.project }} + axe-core)
-    runs-on: ubuntu-latest
+    # Match Chromium's explicit OS release across the full browser matrix.
+    runs-on: ubuntu-24.04
     # All three projects together exhaust each engine's suite: no test filter
     # or added skips. Each engine/project gets an isolated runner and one worker.
     # Keep individual deadlines and the base CI retry policy unchanged.

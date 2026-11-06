@@ -361,7 +361,7 @@ export function LessonPlayer({
                     meaningId={
                       step.pronunciationMeaningId ?? step.word.meaningId
                     }
-                    label="Listen to example"
+                    label="example"
                     meaningRevision={step.pronunciationRevision}
                     showCaption={false}
                   />

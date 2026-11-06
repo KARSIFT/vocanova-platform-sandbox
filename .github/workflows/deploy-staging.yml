@@ -190,8 +190,9 @@
 # healthy (Docker's HEALTHCHECK + the compose `up -d` lifecycle
 # make this the default). VOC-067-T03: when
 # `vocanova-shared-edge-nginx` already exists, ordinary deploys
-# only `docker exec nginx -t` + `nginx -s reload` after writing
-# staging's nginx conf — no shared-edge recreate. The rare
+# validate and reload after writing staging's nginx conf. A differing
+# single-file base-config mount triggers a validated nginx-only recreate;
+# matching mounted content keeps the ordinary convergence path. The rare
 # VOC-067-T02 first-start handoff may `docker stop`/`docker rm`
 # the legacy vocanova-nginx container only when the shared-edge
 # container is absent, after preflight succeeds, and attempts to
@@ -1178,9 +1179,9 @@ jobs:
             #    Routine path: staging wrote only /opt/vocanova/infra/nginx
             #    and nginx-shared (never /opt/vocanova/production). After app
             #    containers are up, `docker exec nginx -t` against the running
-            #    shared-edge container; reload only on success. Failed nginx -t
-            #    aborts the deploy without reload — the in-memory config (both
-            #    tiers) stays on the previous generation (VOC-067-AC-04).
+            #    shared-edge container; reload only on success. A stale base
+            #    config mount requires a validated nginx-only recreate. Otherwise
+            #    failed nginx -t leaves the previous generation active for both tiers.
             #
             #    Rare bring-up: when vocanova-shared-edge-nginx is absent,
             #    staging owns docker-compose.shared-edge.yml under infra/ and
@@ -1295,9 +1296,23 @@ jobs:
             if docker inspect "$SHARED_EDGE_CONTAINER" >/dev/null 2>&1; then
               run_shared_edge_nginx_t
               docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge config >/dev/null
-              # Controlled convergence when compose gains network membership or
-              # nginx-shared changes — no --force-recreate on routine deploys.
-              docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge up -d
+              # Tar extraction may replace the host inode behind this single-file
+              # bind. Reload and unchanged compose up do not remount that inode.
+              # Compare bytes after validating the desired full mount set above.
+              desired_base_config_sha=$(sha256sum nginx-shared/nginx.conf)
+              desired_base_config_sha=${desired_base_config_sha%% *}
+              mounted_base_config_sha=$(docker exec "$SHARED_EDGE_CONTAINER" sha256sum /etc/nginx/nginx.conf)
+              mounted_base_config_sha=${mounted_base_config_sha%% *}
+              if [[ ! "$desired_base_config_sha" =~ ^[0-9a-f]{64}$ || ! "$mounted_base_config_sha" =~ ^[0-9a-f]{64}$ ]]; then
+                echo "ERROR: shared-edge base-config hash could not be verified; no convergence attempted" >&2
+                exit 1
+              fi
+              if [ "$desired_base_config_sha" != "$mounted_base_config_sha" ]; then
+                echo "Shared-edge base-config mount differs; recreating only the validated nginx service"
+                docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge up -d --no-deps --force-recreate nginx
+              else
+                docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge up -d
+              fi
               shared_edge_status=starting
               for attempt in $(seq 1 45); do
                 shared_edge_status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' "$SHARED_EDGE_CONTAINER" 2>/dev/null || true)
@@ -1312,7 +1327,13 @@ jobs:
                 exit 1
               fi
               if ! docker exec "$SHARED_EDGE_CONTAINER" nginx -t; then
-                echo "ERROR: shared-edge nginx -t failed after controlled convergence; deploy aborted without reload (previous config still active for both tiers)" >&2
+                echo "ERROR: shared-edge nginx -t failed after controlled convergence; deploy aborted without reload" >&2
+                exit 1
+              fi
+              mounted_base_config_sha=$(docker exec "$SHARED_EDGE_CONTAINER" sha256sum /etc/nginx/nginx.conf)
+              mounted_base_config_sha=${mounted_base_config_sha%% *}
+              if [ "$desired_base_config_sha" != "$mounted_base_config_sha" ]; then
+                echo "ERROR: shared-edge base-config mount still differs after convergence; refusing reload" >&2
                 exit 1
               fi
               docker exec "$SHARED_EDGE_CONTAINER" nginx -s reload

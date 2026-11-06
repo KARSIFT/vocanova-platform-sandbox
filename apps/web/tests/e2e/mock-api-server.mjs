@@ -1762,6 +1762,11 @@ const server = createServer(async (req, res) => {
       jsonResponse(res, 404, { error: "not_found", slug });
       return;
     }
+    if (cookies.e2e_word_difficulty === "unknown") {
+      response.word.difficultyLevel = "unknown";
+    } else if (cookies.e2e_word_difficulty === "missing") {
+      delete response.word.difficultyLevel;
+    }
     logLine(req, 200, { slug });
     jsonResponse(res, 200, response);
     return;

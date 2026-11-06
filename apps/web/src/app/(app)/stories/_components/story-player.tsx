@@ -196,10 +196,12 @@ export function StoryPlayer({
           </div>
         ) : (
           <p className="mt-2 text-neutral-700">
-            Read each line, then continue. Your current step is saved. Audio is
-            optional.
+            Read each line, then continue. Your current step is saved.
           </p>
         )}
+        <p className="mt-3 text-sm text-neutral-600">
+          Audio is optional. You can read every line.
+        </p>
         <ol aria-label="Story dialogue" className="mt-5 space-y-4">
           {session.visibleLines.map((line, index) => (
             <li key={line.id} className="rounded-xl bg-neutral-50 p-4">

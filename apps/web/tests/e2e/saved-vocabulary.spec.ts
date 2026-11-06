@@ -1,4 +1,5 @@
 import { openOptionalWriting } from "./optional-writing";
+import { answerReviewWord, startReviewLesson } from "./review-readiness";
 import { randomUUID } from "node:crypto";
 
 import { expect, test } from "@playwright/test";
@@ -48,7 +49,10 @@ test.describe("Saved vocabulary library", () => {
     // server-gated by saved=true and userWordId, so its mount confirms that
     // refresh committed before the independent library navigation starts.
     await expect(
-      page.getByRole("main").locator("summary").filter({ hasText: /^Optional writing$/ }),
+      page
+        .getByRole("main")
+        .locator("summary")
+        .filter({ hasText: /^Optional writing$/ }),
     ).toHaveCount(1);
 
     await page.goto("/words");
@@ -56,7 +60,11 @@ test.describe("Saved vocabulary library", () => {
       page.getByRole("heading", { name: "Saved vocabulary", level: 1 }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "pour" })).toBeVisible();
-    await expect(page.getByRole("list", { name: "Saved vocabulary results" }).getByText("New", { exact: true })).toBeVisible();
+    await expect(
+      page
+        .getByRole("list", { name: "Saved vocabulary results" })
+        .getByText("New", { exact: true }),
+    ).toBeVisible();
 
     const listScan = await scanForAxeViolations(page);
     expect(
@@ -77,6 +85,31 @@ test.describe("Saved vocabulary library", () => {
     await expect(
       page.getByText("Could you pour me a cup of coffee?"),
     ).toBeVisible();
+    await expect(page.getByText("New", { exact: true })).toBeVisible();
+
+    // The saved record keeps its legacy "new" status after a review. Both
+    // routes must display the server's learner-facing stage instead.
+    await page.goto("/reviews");
+    await startReviewLesson(page);
+    await answerReviewWord(page, "to make liquid flow into a container");
+    await expect(
+      page.getByRole("heading", {
+        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.goto("/words");
+    await expect(
+      page
+        .getByRole("list", { name: "Saved vocabulary results" })
+        .getByText("Learning", { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("link", { name: "Open pour details and sentence practice" })
+      .click();
+    await expect(page).toHaveURL(/\/words\/uw-/);
+    await expect(page.getByText("Learning", { exact: true })).toBeVisible();
+    await expect(page.getByText("New", { exact: true })).toHaveCount(0);
     await openOptionalWriting(page);
     await expect(
       page.getByRole("textbox", { name: "Write a sentence using pour" }),
@@ -103,10 +136,12 @@ test.describe("Saved vocabulary library", () => {
       ]);
       await page.goto("/words");
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-      const guidance = page.getByRole("main").getByText(
-        "Save a useful word from Journey and it will appear here, ready for review and sentence practice.",
-        { exact: true },
-      );
+      const guidance = page
+        .getByRole("main")
+        .getByText(
+          "Save a useful word from Journey and it will appear here, ready for review and sentence practice.",
+          { exact: true },
+        );
       await expect(guidance).toBeVisible();
       const guidanceBox = await guidance.boundingBox();
       expect(guidanceBox).not.toBeNull();

@@ -61,7 +61,10 @@ export default async function SavedWordDetailPage({
   if (!meaning) {
     notFound();
   }
-  const statusLabel = formatSavedWordStatus(savedWord.status);
+  const statusLabel = formatSavedWordStatus(
+    savedWord.status,
+    meaning.reviewState,
+  );
   const additionalDefinition = getAdditionalDefinition(
     meaning.shortDefinition,
     meaning.learnerDefinition,

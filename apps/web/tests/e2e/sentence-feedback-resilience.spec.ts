@@ -4,6 +4,68 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 const WORD_DETAIL_PATH = "/discover/ordering-at-a-cafe/pour#sentence-practice";
 
+for (const theme of ["light", "dark"] as const) {
+  test(`feedback avoids duplicate outcome headings and retains teaching in ${theme}`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await context.addCookies([
+      { name: "vocanova_theme", value: theme, url: baseURL! },
+    ]);
+    await prepareSavedWord(page, context, baseURL!);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    const original = "I pour tea for my friends yesterday.";
+    const corrected = "I poured tea for my friends yesterday.";
+    const explanation = "Verb tense is incorrect.";
+    let headline = "Needs Improvement";
+    await page.route("**/api/v1/learner-sentences", async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          feedbackId: randomUUID(),
+          sentenceId: randomUUID(),
+          attemptId: randomUUID(),
+          processingStatus: "completed",
+          status: "needs_improvement",
+          originalSentence: original,
+          correctedSentence: corrected,
+          headline,
+          explanation,
+          targetWordUsedCorrectly: true,
+          grammarAcceptable: false,
+          meaningClear: true,
+          naturalness: "slightly_unnatural",
+          canRetry: false,
+          reported: false,
+        }),
+      });
+    });
+    const input = page.getByRole("textbox", { name: "Write a sentence using pour" });
+    await input.fill(original);
+    await page.getByRole("button", { name: "Check my sentence", exact: true }).click();
+    const status = page.getByRole("status", { name: "Feedback result: Needs improvement" });
+    await expect(status.getByText(/^needs improvement$/i)).toHaveCount(1);
+    await expect(status.getByText(explanation, { exact: true })).toBeVisible();
+    const comparison = page.getByRole("region", { name: "Sentence comparison" });
+    await expect(comparison).toContainText(original);
+    await expect(comparison).toContainText(corrected);
+
+    // A distinct provider headline must survive the duplicate-label filter.
+    headline = "Use the past tense with yesterday";
+    await page.getByRole("button", { name: "Revise sentence", exact: true }).click();
+    await input.fill("Yesterday I pour tea for my friends.");
+    await page.getByRole("button", { name: "Check my sentence", exact: true }).click();
+    await expect(status.getByText(headline, { exact: true })).toBeVisible();
+    await expect(status.getByText(explanation, { exact: true })).toBeVisible();
+    await expect(status.getByText(/^needs improvement$/i)).toHaveCount(1);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    ).toBe(true);
+  });
+}
+
 async function prepareSavedWord(
   page: Page,
   context: BrowserContext,
