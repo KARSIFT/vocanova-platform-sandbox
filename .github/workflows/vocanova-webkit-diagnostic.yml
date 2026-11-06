@@ -9,6 +9,8 @@ on:
     paths:
       - ".github/workflows/vocanova-webkit-diagnostic.yml"
       - ".github/diagnostics/**"
+      - "apps/web/src/lib/csrf.ts"
+      - "apps/web/tests/lib/csrf.test.ts"
 
 permissions:
   contents: read
@@ -21,7 +23,7 @@ jobs:
   session-diagnostic:
     name: Temporary WebKit mobile-360 session diagnostic
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       CI: "1"
       VOCANOVA_TEST_BROWSER: webkit
@@ -59,16 +61,16 @@ jobs:
         run: |
           mkdir -p .work/webkit-diagnostic
           set -o pipefail
-          pnpm --filter @vocanova/web exec playwright test tests/e2e/sentence-feedback-pending.spec.ts --config playwright.cross-browser.config.ts --grep "failed session recovery" --project mobile-360 --repeat-each 2 --workers 1 --trace on --output test-results/webkit-diagnostic-original 2>&1 | tee .work/webkit-diagnostic/original.log
+          pnpm --filter @vocanova/web exec playwright test tests/e2e/sentence-feedback-pending.spec.ts --config playwright.cross-browser.config.ts --grep "failed session recovery" --project mobile-360 --repeat-each 5 --retries 0 --workers 1 --trace on --output test-results/webkit-diagnostic-original 2>&1 | tee .work/webkit-diagnostic/original.log
 
       - name: Diagnose instrumented session cookie reads
         continue-on-error: true
-        timeout-minutes: 6
+        timeout-minutes: 8
         shell: bash
         run: |
           mkdir -p .work/webkit-diagnostic
           set -o pipefail
-          pnpm --filter @vocanova/web exec playwright test --config ../../.github/diagnostics/sentence-cookie-read-diagnostic.config.ts --project mobile-360 --workers 1 --trace on --output test-results/webkit-diagnostic-instrumented 2>&1 | tee .work/webkit-diagnostic/instrumented.log
+          pnpm --filter @vocanova/web exec playwright test --config ../../.github/diagnostics/sentence-cookie-read-diagnostic.config.ts --project mobile-360 --repeat-each 2 --workers 1 --trace on --output test-results/webkit-diagnostic-instrumented 2>&1 | tee .work/webkit-diagnostic/instrumented.log
 
       - name: Preserve all synthetic diagnostic evidence
         if: always()

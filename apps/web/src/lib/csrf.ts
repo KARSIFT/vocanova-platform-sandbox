@@ -20,7 +20,16 @@ export async function getOrRefreshCSRFToken(): Promise<string | null> {
 
   recoveryInFlight = createApiClient()
     .getCurrentUser()
-    .then(() => getCookieValue(CSRF_COOKIE_NAME))
+    .then(async () => {
+      const refreshed = getCookieValue(CSRF_COOKIE_NAME);
+      if (refreshed) return refreshed;
+
+      // WebKit can finish /me before invalidating document.cookie's earlier
+      // missing-cookie snapshot. Give the browser one task to expose Set-Cookie;
+      // an absent cookie after that still means the session is not ready.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      return getCookieValue(CSRF_COOKIE_NAME);
+    })
     .finally(() => {
       recoveryInFlight = null;
     });
