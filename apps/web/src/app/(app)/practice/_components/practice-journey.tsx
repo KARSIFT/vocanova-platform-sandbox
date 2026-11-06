@@ -280,13 +280,14 @@ export function PracticeJourney({
           Opening your practice…
         </p>
       )}
+      {/* Recover independently if the automatic client navigation stalls. */}
       {openedId && (
-        <Link
+        <a
           href={`/practice/session/${encodeURIComponent(openedId)}`}
           className={`${secondaryAction} mt-3`}
         >
           Open practice
-        </Link>
+        </a>
       )}
       {journey.supportedKnownWords === 0 && (
         <p className="mt-5 text-sm text-neutral-600">

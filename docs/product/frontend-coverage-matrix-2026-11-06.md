@@ -887,3 +887,58 @@ native redirect failed although the correct session-expired UI appeared; its
 five bounded isolated repeats passed without source or assertion changes.
 The original failure remains recorded. Final isolated CI, full Lighthouse,
 review and real staging acceptance are still required on the delivered head.
+
+### Ordinary practice fallback and final Chromium findings
+
+Run `42259089069` on `02f042ca` accounted for all 2,076 cases in each engine:
+
+| Engine | Passed | Failed | Flaky | Skipped |
+| --- | ---: | ---: | ---: | ---: |
+| Chromium | 2,039 | 1 | 1 | 35 |
+| Firefox | 2,041 | 0 | 0 | 35 |
+| WebKit | 2,041 | 0 | 0 | 35 |
+
+Chromium again failed to expose a modified-open practice window as a Playwright
+page, although both traces showed an independent HTTP-200 session document.
+Further changes to the opening gesture were rejected in favor of testing the
+ordinary learner action. With client navigation held, focused Enter on the
+existing fallback failed in all four desktop cases across Home/Practice and
+both themes: the Next Link reused the pending client navigation and issued no
+document request.
+
+Both confirmed-session fallback controls now use native anchors with their
+original encoded same-origin destinations, labels and styles. The automatic
+client navigation remains in place. The regression holds all non-document
+session requests, activates the focused link with Enter and requires the exact
+confirmed session document, healthy heading, enabled Continue control and
+exactly one start POST **before** releasing the client requests. All **36/36**
+cases passed locally across three engines, three widths and both themes;
+independent source review found no authentication or duplicate-start regression.
+
+Chromium's complete suite took 49.7 minutes. It now uses the same complete
+three-project split as the other engines: nine isolated jobs, 692 enumerated
+cases per job, preserving 2,076 per engine. Worker count, per-test deadlines,
+retries and assertions are unchanged; job/artifact names include the project.
+Workflow contracts, action pinning and all nine enumerations passed. The
+preceding run's Firefox 360px dependency installation took 25m43s before its
+passing 16.9-minute suite; that setup delay is not application performance data.
+
+The Chromium flaky 401-return case did issue the correct login document request
+about 1.6ms after the rejected submission, but the document did not commit before
+the five-second assertion. Its one-shot interception was being removed during
+that navigation. A bounded local comparison passed ten original and ten
+server-auth-fixture runs, so interception teardown remains a hypothesis rather
+than a proven cause; no production session-redirect change was made.
+
+The two observed 401-return tests now use the mock server's existing
+unauthenticated-account override and assert the actual HTTP 401, rather than
+fulfilling a one-shot browser interception. Exact login destinations, drafts,
+retry bodies and idempotency keys remain checked, including zero submissions
+before return in the CSRF-recovery case. Only the test override is cleared
+before the explicit same-user return. Independent review found no lost
+assertions or unintended authenticated mutation. This fixture improvement does
+not claim real identity-provider acceptance or erase the original flaky result.
+Both affected test files then passed **108/108 cases**, with retries disabled,
+across three widths and all three engines. Production build, web lint,
+formatting, E2E typechecking and diff checks passed for the correction. Fresh
+integrated CI and staging outcomes remain separate acceptance requirements.

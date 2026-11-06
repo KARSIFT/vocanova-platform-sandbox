@@ -345,13 +345,14 @@ export function PracticeEntry({
           {openedSession ? "Opening your practice…" : "Loading your practice…"}
         </p>
       )}
+      {/* Recover independently if the automatic client navigation stalls. */}
       {openedSession && (
-        <Link
+        <a
           href={`/practice/session/${encodeURIComponent(openedSession)}`}
           className={`${textLink} mt-2`}
         >
           Open practice
-        </Link>
+        </a>
       )}
       {error && (
         <div

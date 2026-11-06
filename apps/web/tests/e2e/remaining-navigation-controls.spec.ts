@@ -178,7 +178,7 @@ for (const theme of ["light", "dark"] as const) {
     });
 
     for (const source of ["/home", "/practice"] as const) {
-      test(`${source} Open practice fallback independently opens its confirmed session without starting again`, async ({ page, context, browserName }) => {
+      test(`${source} Open practice fallback independently opens its confirmed session without starting again`, async ({ page, context }) => {
         await visit(page, source, source === "/home" ? "Today" : "Today’s practice");
         let release!: () => void;
         let arrived!: () => void;
@@ -189,6 +189,10 @@ for (const theme of ["light", "dark"] as const) {
           if (request.method() === "POST" && new URL(request.url()).pathname === "/api/v1/practice-sessions") starts += 1;
         });
         await page.route("**/practice/session/**", async route => {
+          if (route.request().isNavigationRequest()) {
+            await route.continue();
+            return;
+          }
           arrived();
           await held;
           await route.continue();
@@ -200,32 +204,27 @@ for (const theme of ["light", "dark"] as const) {
         const session = await response.json();
         const href = `/practice/session/${session.id}`;
         expect(session.mode).toBe("journey");
-        let fallbackPage: Page | undefined;
         try {
           await navigationStarted;
-          // Keep the automatic router navigation held until the real link has
-          // independently opened its session. A page-scoped route does not
-          // intercept the popup's initial document request.
+          // Keep all client-router requests held until ordinary keyboard
+          // activation independently loads the confirmed session document.
+          // Releasing the automatic navigation cannot satisfy these assertions.
           const fallback = page.getByRole("link", { name: "Open practice", exact: true });
           await expect(fallback).toHaveAttribute("href", href);
           await fallback.focus();
           await expect(fallback).toBeFocused();
-          const opened = context.waitForEvent("page", { timeout: 5000 });
-          // Chromium/Firefox expose a native middle-click tab reliably. In
-          // Linux headless Chromium a Shift-click window can load its document
-          // without being exposed as a Playwright page. WebKit's test browser
-          // does not open middle-click tabs, so use its native Shift window.
-          await fallback.click(browserName === "webkit"
-            ? { modifiers: ["Shift"] }
-            : { button: "middle" });
-          fallbackPage = await opened;
-          await expect(fallbackPage).toHaveURL(new URL(href, test.info().project.use.baseURL!).toString());
-          await expect(fallbackPage.getByRole("heading", { name: "invite", level: 1, exact: true })).toBeVisible();
-          await expect(fallbackPage.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
+          await Promise.all([
+            page.waitForRequest(request => request.isNavigationRequest()
+              && request.resourceType() === "document"
+              && new URL(request.url()).pathname === href, { timeout: 5000 }),
+            page.keyboard.press("Enter"),
+          ]);
+          await expect(page).toHaveURL(new URL(href, test.info().project.use.baseURL!).toString());
+          await expect(page.getByRole("heading", { name: "invite", level: 1, exact: true })).toBeVisible();
+          await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
           expect(starts).toBe(1);
         } finally {
-          try { await fallbackPage?.close(); }
-          finally { release(); }
+          release();
         }
         await expect(page).toHaveURL(new URL(href, test.info().project.use.baseURL!).toString());
         await expect(page.getByRole("heading", { name: "invite", level: 1, exact: true })).toBeVisible();

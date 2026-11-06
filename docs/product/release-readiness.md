@@ -18,7 +18,7 @@ The bounded recovery correction passed ten original regressions and twelve
 instrumented cases with retries disabled; seven cases exercised the additional
 browser task. Temporary diagnostic code was removed after retaining its
 evidence. The regular inventory is 2,076 cases across 104 files, with 35 expected
-viewport-specific skips per engine. Firefox and WebKit each run all three
+viewport-specific skips per engine. All three browser engines run all three
 viewport projects in isolated CI jobs so the complete workload fits its budget.
 
 Integrated acceptance requires the consolidated PR's isolated Chromium,

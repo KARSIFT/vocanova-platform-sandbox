@@ -18,6 +18,10 @@ the same destination again. A final Linux-font check additionally repairs
 long-text wrapping on eight surfaces. The existing navigation indicator now
 lives in the shared root layout so public Help also acknowledges delayed
 transitions into the app.
+The confirmed-session “Open practice” fallbacks on Home and Practice now use
+fresh document navigation, so ordinary keyboard activation can recover while
+the automatic client-router request remains stalled without starting a second
+session.
 
 Linux WebKit also exposed a session-recovery race: a successful `/me` response
 could restore the CSRF cookie before `document.cookie` reflected it. Recovery

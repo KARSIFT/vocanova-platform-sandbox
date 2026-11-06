@@ -215,30 +215,31 @@ test("manually opened sentence practice restores the visible draft and exact ret
   );
   const draft = "I pour water into a glass.";
   await writing.fill(draft);
-  let firstRequest: { key: string | undefined; body: unknown } | undefined;
-  await page.route(
-    "**/api/v1/learner-sentences",
-    async (route) => {
-      firstRequest = {
-        key: route.request().headers()["idempotency-key"],
-        body: route.request().postDataJSON(),
-      };
-      await route.fulfill({
-        status: 401,
-        contentType: "application/problem+json",
-        body: JSON.stringify({ detail: "Authentication required" }),
-      });
-    },
-    { times: 1 },
+  // Exercise the fixture's HTTP auth boundary without changing browser
+  // request interception while the 401 starts a full-document navigation.
+  await context.addCookies([
+    { name: "e2e_unauthenticated", value: "1", url: baseURL! },
+  ]);
+  const rejectedSubmission = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().endsWith("/api/v1/learner-sentences"),
   );
   await page.getByRole("button", { name: "Check my sentence" }).click();
+  const rejectedResponse = await rejectedSubmission;
+  expect(rejectedResponse.status()).toBe(401);
+  const firstRequest = {
+    key: rejectedResponse.request().headers()["idempotency-key"],
+    body: rejectedResponse.request().postDataJSON(),
+  };
   await expect(page).toHaveURL(/\/login\?returnTo=/);
   const returnTo = new URL(page.url()).searchParams.get("returnTo");
   expect(returnTo).toBe("/vocabulary/pour?from=home#sentence-practice");
-  expect(firstRequest?.key).toBeTruthy();
+  expect(firstRequest.key).toBeTruthy();
 
   // The fixture retains this learner's session; emulate the same-user return
   // destination without claiming this exercises a real identity provider.
+  await context.clearCookies({ name: "e2e_unauthenticated" });
   await page.goto(returnTo!);
   await expect(writing).toBeVisible();
   await expect(writing).toHaveValue(draft);
@@ -249,8 +250,8 @@ test("manually opened sentence practice restores the visible draft and exact ret
   );
   await page.getByRole("button", { name: "Check my sentence" }).click();
   const retry = await submitted;
-  expect(retry.headers()["idempotency-key"]).toBe(firstRequest!.key);
-  expect(retry.postDataJSON()).toEqual(firstRequest!.body);
+  expect(retry.headers()["idempotency-key"]).toBe(firstRequest.key);
+  expect(retry.postDataJSON()).toEqual(firstRequest.body);
   await expect(
     page.getByText("Sentence checked", { exact: true }).locator(".."),
   ).toContainText(draft);
