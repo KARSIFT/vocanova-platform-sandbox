@@ -1,10 +1,13 @@
 export default function SettingsLoading() {
   return (
-    <div
+    <section
       aria-busy="true"
-      aria-label="Loading settings"
+      aria-labelledby="settings-loading-status"
       className="animate-pulse p-[var(--spacing-lg)]"
     >
+      <p id="settings-loading-status" role="status" className="sr-only">
+        Loading settings
+      </p>
       <div className="mb-[var(--spacing-md)] flex items-center justify-between">
         <div className="h-7 w-1/4 rounded bg-neutral-200" />
         <div className="h-5 w-1/6 rounded bg-neutral-200" />
@@ -36,6 +39,6 @@ export default function SettingsLoading() {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

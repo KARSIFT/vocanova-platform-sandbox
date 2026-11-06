@@ -907,6 +907,25 @@ const server = createServer(async (req, res) => {
     });
     return;
   }
+  // Malformed successful reads exercise actual Next render boundaries. The
+  // allowlist is local to this synthetic server and never changes real API data.
+  const renderFailureReads = {
+    home: ["/api/v1/user-words", null],
+    discover: ["/api/v1/knowledge-map", { bands: [], selectedBand: null }],
+    reviews: ["/api/v1/daily-lessons/current", null],
+    words: ["/api/v1/user-words", { items: { length: 1 }, totalCount: 1 }],
+    stories: ["/api/v1/stories", { items: null }],
+    writing: ["/api/v1/journey-situations", { items: null }],
+    progress: ["/api/v1/progress", null],
+    sentences: ["/api/v1/learner-sentences", { items: null }],
+    settings: ["/api/v1/settings", null],
+  };
+  const renderFailure = renderFailureReads[cookies.e2e_render_failure];
+  if (req.method === "GET" && renderFailure && url.pathname === renderFailure[0]) {
+    logLine(req, 200, { reason: "fixture-malformed-render-data" });
+    jsonResponse(res, 200, renderFailure[1]);
+    return;
+  }
   const requestedDelayMs = Number(cookies.e2e_response_delay_ms ?? 0);
   if (Number.isFinite(requestedDelayMs) && requestedDelayMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, requestedDelayMs));
@@ -1215,6 +1234,7 @@ const server = createServer(async (req, res) => {
     const user = {
       ...buildCurrentUser(state, getFixtureUser(cookies)),
       hasPassword: cookies.e2e_has_password !== "false",
+      ...(cookies.e2e_render_failure === "account" ? { email: { invalid: true } } : {}),
       ...(cookies.e2e_email_verified === "false"
         ? { emailVerifiedAt: undefined }
         : {}),
@@ -1605,6 +1625,9 @@ const server = createServer(async (req, res) => {
     const state = getSessionState(cookies);
     logLine(req, 200, { reviewedCount: state.reviewedCount });
     const progress = buildProgress(state);
+    if (cookies.e2e_progress_history_fixture === "empty") {
+      progress.completionHistory = [];
+    }
     if (cookies.e2e_progress_history_fixture === "sparse") {
       progress.completionHistory = [
         { localDate: "2026-09-12", completed: false },
@@ -1664,6 +1687,11 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/v1/journey-situations") {
     // Optional Journey context: lets browser tests prove the map and other
     // entry points never wait for, or depend on, this list.
+    if (cookies.e2e_journey_situations === "empty") {
+      logLine(req, 200, { fixture: "empty-journey-situations" });
+      jsonResponse(res, 200, { ...buildJourneySituations(false), items: [] });
+      return;
+    }
     if (cookies.e2e_journey_situations === "unavailable") {
       logLine(req, 503);
       jsonResponse(res, 503, { detail: "Situations unavailable" });
@@ -1734,6 +1762,12 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/api/v1/settings") {
+    // Hold only the page data read; auth/layout reads must still release the
+    // real loading shell. This bounded cookie is local to the mock server.
+    const settingsDelayMs = Number(cookies.e2e_settings_delay_ms ?? 0);
+    if (Number.isInteger(settingsDelayMs) && settingsDelayMs > 0 && settingsDelayMs <= 5000) {
+      await new Promise((resolve) => setTimeout(resolve, settingsDelayMs));
+    }
     const state = getSessionState(cookies);
     logLine(req, 200);
     jsonResponse(res, 200, buildSettings(state));

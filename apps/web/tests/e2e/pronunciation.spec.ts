@@ -1,6 +1,7 @@
 import { openOptionalWriting } from "./optional-writing";
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+import { pressTab } from "./keyboard-navigation.js";
 
 interface SpeechCapture {
   calls: { text: string; lang: string; rate: number }[];
@@ -969,11 +970,11 @@ test("discovery automatically speaks each word, supports mute and explicit repla
   await expect(soundOn).toHaveAttribute("aria-pressed", "true");
   // Start from the new-word heading and use native keyboard navigation. Audio
   // preferences must not send focus back to the title or replay this word.
-  await page.keyboard.press("Tab");
+  await pressTab(page);
   await expect(
     page.getByRole("button", { name: "Listen to be", exact: true }),
   ).toBeFocused();
-  await page.keyboard.press("Tab");
+  await pressTab(page);
   await expect(soundOn).toBeFocused();
   const wordUrl = page.url();
   await page.keyboard.press("Space");

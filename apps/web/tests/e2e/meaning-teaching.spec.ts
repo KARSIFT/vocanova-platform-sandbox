@@ -135,6 +135,12 @@ for (const theme of ["light", "dark"] as const) {
     });
     await page.goto("/discover/daily-conversation/sounds-good");
     const main = page.getByRole("main");
+    const refreshed = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/discover/daily-conversation/sounds-good" &&
+        url.searchParams.has("_rsc") &&
+        response.request().headers()["rsc"] === "1";
+    });
     await main.getByRole("button", { name: /^Save sounds good:/ }).click();
     await expect(
       main.getByRole("button", {
@@ -142,6 +148,16 @@ for (const theme of ["light", "dark"] as const) {
         exact: true,
       }),
     ).toBeVisible();
+    // This authored-catalog fixture returns saved=false without
+    // userWordId, so it has no newly mounted writing marker. Wait for this
+    // exact refresh body and a render opportunity before document navigation;
+    // the local save label alone precedes the RSC refresh.
+    const refreshedResponse = await refreshed;
+    expect(refreshedResponse.status()).toBe(200);
+    expect(await refreshedResponse.finished()).toBeNull();
+    await page.evaluate(() => new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }));
     for (const route of ["/vocabulary/sounds-good", "/words"]) {
       await page.goto(route);
       if (route === "/words")

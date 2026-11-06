@@ -24,6 +24,7 @@
 import type { AxeResults } from "axe-core";
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
+import { pressTab } from "./keyboard-navigation.js";
 
 export type AxeViolation = AxeResults["violations"][number];
 
@@ -190,45 +191,59 @@ export async function assertKeyboardReachable(
   // screen that has many same-shaped controls (e.g. a bank of
   // review-target radios) even though every one of them is
   // genuinely, individually reachable by Tab.
-  await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-    document.body.focus();
+  const anchor = await page.evaluate(() => {
+    const tabindex = document.body.getAttribute("tabindex");
+    // An unfocusable body's focus() does not reliably reset Firefox's
+    // sequential focus starting point after a control near the page end.
+    // -1 makes this programmatic anchor focusable without adding a Tab stop.
+    document.body.setAttribute("tabindex", "-1");
+    document.body.focus({ preventScroll: true });
     (window as unknown as { __e2eSeenFocusable?: Set<Element> }).__e2eSeenFocusable =
       new Set();
+    return { tabindex, focused: document.activeElement === document.body };
   });
 
-  const seenTags: string[] = [];
-  for (let i = 0; i < maxTabs; i++) {
-    await page.keyboard.press("Tab");
-    const tag = await page.evaluate(() => {
-      const el = document.activeElement;
-      if (!el || el === document.body) {
-        return "";
-      }
-      const seen = (window as unknown as { __e2eSeenFocusable: Set<Element> })
-        .__e2eSeenFocusable;
-      if (seen.has(el)) {
-        return "";
-      }
-      seen.add(el);
-      const text = (el.textContent ?? "").trim().slice(0, 24);
-      return `${el.tagName.toLowerCase()}${text ? `:${text}` : ""}`;
-    });
-    if (tag) {
-      seenTags.push(tag);
+  try {
+    if (!anchor.focused) {
+      throw new Error("Could not establish the body as the keyboard traversal starting point.");
     }
-    if (seenTags.length >= minTabStops) {
-      return;
+    const seenTags: string[] = [];
+    for (let i = 0; i < maxTabs; i++) {
+      await pressTab(page);
+      const tag = await page.evaluate(() => {
+        const el = document.activeElement;
+        if (!el || el === document.body) {
+          return "";
+        }
+        const seen = (window as unknown as { __e2eSeenFocusable: Set<Element> })
+          .__e2eSeenFocusable;
+        if (seen.has(el)) {
+          return "";
+        }
+        seen.add(el);
+        const text = (el.textContent ?? "").trim().slice(0, 24);
+        return `${el.tagName.toLowerCase()}${text ? `:${text}` : ""}`;
+      });
+      if (tag) {
+        seenTags.push(tag);
+      }
+      if (seenTags.length >= minTabStops) {
+        return;
+      }
     }
-  }
 
-  if (seenTags.length < minTabStops) {
-    throw new Error(
-      `Tabbing through the page reached only ${seenTags.length} Tab stops; expected at least ${minTabStops}. ` +
-        `Seen: ${seenTags.join(", ")}`,
-    );
+    if (seenTags.length < minTabStops) {
+      throw new Error(
+        `Tabbing through the page reached only ${seenTags.length} Tab stops; expected at least ${minTabStops}. ` +
+          `Seen: ${seenTags.join(", ")}`,
+      );
+    }
+  } finally {
+    await page.evaluate((tabindex) => {
+      if (tabindex === null) document.body.removeAttribute("tabindex");
+      else document.body.setAttribute("tabindex", tabindex);
+      delete (window as unknown as { __e2eSeenFocusable?: Set<Element> }).__e2eSeenFocusable;
+    }, anchor.tabindex);
   }
 }
 

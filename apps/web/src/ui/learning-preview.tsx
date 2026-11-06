@@ -11,7 +11,7 @@ export function LearningPreview() {
       aria-label="Learning example"
       className="mx-auto w-full max-w-[31rem] overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_24px_60px_-30px_rgb(30_41_59_/_0.35)] sm:p-6"
     >
-      <div className="flex items-center justify-between gap-3 border-b border-neutral-200 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 pb-3">
         <p className="text-sm font-semibold text-primary-700">
           Try a learning example
         </p>

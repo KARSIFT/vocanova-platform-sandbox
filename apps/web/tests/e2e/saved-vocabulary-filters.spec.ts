@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
+import { pressTab } from "./keyboard-navigation.js";
 
 const main = (page: Page) => page.getByRole("main");
 const filters = (page: Page) =>
@@ -53,7 +54,7 @@ for (const theme of ["light", "dark"] as const) {
     await due.focus();
     await page.keyboard.press("Space");
     await expect(due).toBeChecked();
-    await page.keyboard.press("Tab");
+    await pressTab(page);
     await expect(
       filters(page).getByRole("button", { name: "Apply filters", exact: true }),
     ).toBeFocused();

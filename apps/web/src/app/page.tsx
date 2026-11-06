@@ -23,7 +23,7 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-[var(--vn-canvas)] text-neutral-900">
       <div className="mx-auto flex min-h-screen w-full max-w-[76rem] flex-col px-[var(--spacing-md)] sm:px-[var(--spacing-xl)]">
-        <header className="flex min-h-20 items-center justify-between border-b border-neutral-200">
+        <header className="flex min-h-20 flex-wrap items-center justify-between gap-3 border-b border-neutral-200 py-3">
           <Link
             href="/"
             aria-label="VocaNova home"
@@ -79,7 +79,7 @@ export default function Page() {
           aria-labelledby="how-it-works-heading"
           className="border-t border-neutral-200 py-12 lg:py-16"
         >
-          <div className="grid gap-8 lg:grid-cols-[minmax(15rem,0.7fr)_minmax(0,1.3fr)] lg:gap-16">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(15rem,0.7fr)_minmax(0,1.3fr)] lg:gap-16">
             <div className="max-w-[24rem]">
               <p className="text-sm font-semibold text-primary-700">
                 A daily learning loop
@@ -91,11 +91,11 @@ export default function Page() {
                 A little practice, with a clear purpose.
               </h2>
             </div>
-            <ol className="grid gap-3 sm:grid-cols-3">
+            <ol className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
               {benefits.map(([label, copy], index) => (
                 <li
                   key={label}
-                  className="flex gap-4 rounded-[1.25rem] border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:block"
+                  className="flex min-w-0 flex-wrap gap-4 rounded-[1.25rem] border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:block"
                 >
                   <span
                     aria-hidden="true"

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test, type Download, type Page } from "@playwright/test";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
+import { pressTab } from "./keyboard-navigation.js";
 
 function properties(content: string) {
   return content
@@ -96,7 +97,7 @@ for (const theme of ["light", "dark"] as const) {
       });
       // Native time inputs can expose several keyboard segments before the button.
       for (let tabs = 0; tabs < 5; tabs += 1) {
-        await page.keyboard.press("Tab");
+        await pressTab(page);
         if (
           await button.evaluate((element) => element === document.activeElement)
         )

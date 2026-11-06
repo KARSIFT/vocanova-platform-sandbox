@@ -114,7 +114,7 @@ export default async function WritingPage({
             open={!selected}
             className="mt-5 rounded-xl border border-neutral-200 p-4"
           >
-            <summary className="min-h-11 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
+            <summary className="min-h-11 scroll-my-24 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
               {selected
                 ? `Change meaning: ${selected.wordText}`
                 : "Choose a meaning"}

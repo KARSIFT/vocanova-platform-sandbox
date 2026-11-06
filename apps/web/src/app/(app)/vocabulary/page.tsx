@@ -286,7 +286,7 @@ export default async function VocabularyPage({
                 {data.items.map((item) => (
                   <li
                     key={item.meaningId}
-                    className="flex flex-col rounded-2xl border border-neutral-200 bg-white p-5"
+                    className="flex min-w-0 flex-col rounded-2xl border border-neutral-200 bg-white p-5 [overflow-wrap:anywhere]"
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <Link
@@ -313,7 +313,7 @@ export default async function VocabularyPage({
                         Already known · your assessment
                       </p>
                     )}
-                    <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                       <span className="text-sm text-neutral-600">
                         {item.due
                           ? "Due for review"

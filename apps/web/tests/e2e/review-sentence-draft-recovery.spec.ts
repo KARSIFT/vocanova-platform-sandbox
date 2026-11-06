@@ -14,6 +14,10 @@ test("optional writing after a lesson restores its unfinished draft on a same-us
   ]);
   await page.goto("/vocabulary/pour");
   await page.getByRole("button", { name: /^Save pour:/ }).click();
+  await expect(page.getByRole("button", { name: "Remove pour from saved words", exact: true })).toBeVisible();
+  // Saving also refreshes the server-rendered meaning. Its writing disclosure
+  // confirms saved=true and userWordId have committed before leaving the page.
+  await expect(page.getByRole("main").locator("summary").filter({ hasText: /^Optional writing$/ })).toHaveCount(1);
   await page.goto("/reviews");
   await startReviewLesson(page);
   await answerReviewWord(page, "to make liquid flow into a container");

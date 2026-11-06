@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ context, baseURL }) => {
   if (!baseURL) throw new Error("Missing app URL");
@@ -20,6 +20,22 @@ async function openEditor(page: Page) {
   return editor;
 }
 
+async function saveKnowledgeAndFinishRefresh(page: Page, submit: Locator) {
+  const path = new URL(page.url()).pathname;
+  // The success message is local state; an open editor has no changing
+  // server-rendered marker. Finish this exact refresh stream before another
+  // edit/reload can abort it. The subsequent reload still verifies persistence.
+  const refreshed = page.waitForResponse(response =>
+    new URL(response.url()).pathname === path
+    && response.request().method() === "GET"
+    && response.request().headers()["rsc"] === "1",
+  );
+  await submit.click();
+  const response = await refreshed;
+  expect(response.status()).toBe(200);
+  expect(await response.finished(), "The knowledge refresh must complete before leaving").toBeNull();
+}
+
 for (const theme of ["light", "dark"] as const) {
   test(`personal knowledge and notes persist separately from saved practice in ${theme} mode`, async ({
     page,
@@ -38,9 +54,9 @@ for (const theme of ["light", "dark"] as const) {
       .getByRole("checkbox", { name: "I already know this meaning" })
       .check();
     await editor.getByRole("textbox", { name: "My note" }).fill(note);
-    await editor
-      .getByRole("button", { name: "Save my changes", exact: true })
-      .click();
+    await saveKnowledgeAndFinishRefresh(page,
+      editor.getByRole("button", { name: "Save my changes", exact: true }),
+    );
     await expect(editor.getByRole("status")).toHaveText(
       "Your knowledge and note are saved.",
     );
@@ -95,6 +111,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("button", { name: "Remove pour from saved words" }),
     ).toBeVisible();
+    await expect(page.getByRole("main").locator("summary").filter({ hasText: /^Optional writing$/ })).toHaveCount(1);
 
     await page.goto("/progress");
     overview = page.getByRole("region", { name: "Your saved words" });
@@ -133,9 +150,9 @@ for (const theme of ["light", "dark"] as const) {
     );
     await editor.getByRole("checkbox").uncheck();
     await editor.getByRole("textbox", { name: "My note" }).fill("");
-    await editor
-      .getByRole("button", { name: "Save my changes", exact: true })
-      .click();
+    await saveKnowledgeAndFinishRefresh(page,
+      editor.getByRole("button", { name: "Save my changes", exact: true }),
+    );
     await expect(editor.getByRole("status")).toHaveText(
       "Your knowledge and note are saved.",
     );
@@ -204,9 +221,9 @@ test("a lost knowledge response retries the exact update before allowing a newer
     original.note,
   );
   expect(requests).toHaveLength(1);
-  await editor
-    .getByRole("button", { name: "Retry saving changes", exact: true })
-    .click();
+  await saveKnowledgeAndFinishRefresh(page,
+    editor.getByRole("button", { name: "Retry saving changes", exact: true }),
+  );
   await expect(editor.getByRole("status")).toHaveText(
     "Your knowledge and note are saved.",
   );
@@ -220,9 +237,9 @@ test("a lost knowledge response retries the exact update before allowing a newer
   await editor.getByRole("textbox", { name: "My note" }).fill(newerNote);
   await expect(editor.getByRole("status")).toHaveCount(0);
   expect(requests).toHaveLength(2);
-  await editor
-    .getByRole("button", { name: "Save my changes", exact: true })
-    .click();
+  await saveKnowledgeAndFinishRefresh(page,
+    editor.getByRole("button", { name: "Save my changes", exact: true }),
+  );
   await expect(editor.getByRole("status")).toHaveText(
     "Your knowledge and note are saved.",
   );
@@ -249,9 +266,9 @@ test("failed initial knowledge loading cannot replace an existing private note",
   const existingNote = "Pour slowly so the cup does not overflow.";
   await editor.getByRole("checkbox").check();
   await editor.getByRole("textbox", { name: "My note" }).fill(existingNote);
-  await editor
-    .getByRole("button", { name: "Save my changes", exact: true })
-    .click();
+  await saveKnowledgeAndFinishRefresh(page,
+    editor.getByRole("button", { name: "Save my changes", exact: true }),
+  );
   await expect(editor.getByRole("status")).toHaveText(
     "Your knowledge and note are saved.",
   );

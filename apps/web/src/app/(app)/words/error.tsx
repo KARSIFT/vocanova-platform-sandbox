@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/ui/link";
+import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
 
 interface SavedWordsErrorProps {
   error: Error & { digest?: string };
@@ -8,6 +9,7 @@ interface SavedWordsErrorProps {
 }
 
 export default function SavedWordsError({ reset }: SavedWordsErrorProps) {
+  const { retry, isRetrying } = useRouteErrorRetry(reset);
   return (
     <div className="p-[var(--spacing-lg)]">
       <h1 className="text-xl font-semibold text-neutral-900">
@@ -19,10 +21,12 @@ export default function SavedWordsError({ reset }: SavedWordsErrorProps) {
       <div className="mt-[var(--spacing-lg)] flex flex-wrap gap-[var(--spacing-md)]">
         <button
           type="button"
-          onClick={reset}
+          onClick={retry}
+          disabled={isRetrying}
+          aria-busy={isRetrying}
           className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
-          Try again
+          {isRetrying ? "Trying again..." : "Try again"}
         </button>
         <Link
           href="/discover"

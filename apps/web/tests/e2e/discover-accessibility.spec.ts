@@ -66,8 +66,12 @@ test.describe("Discover accessibility (VOC-031-T07b)", () => {
       { name: "vocanova_csrf", value: "journey-saved-state", url: testInfo.project.use.baseURL! },
     ]);
     await page.goto("/discover/ordering-at-a-cafe/pour");
+    const writing = page.getByRole("main").locator("summary").filter({ hasText: /^Optional writing$/ });
+    await expect(writing).toHaveCount(0);
     await page.getByRole("button", { name: /^Save pour:/ }).click();
     await expect(page.getByRole("button", { name: "Remove pour from saved words" })).toBeVisible();
+    // Unlike the local Saved label, this new server-gated UI confirms refresh.
+    await expect(writing).toHaveCount(1);
     await page.goto("/discover/ordering-at-a-cafe");
 
     await expect(

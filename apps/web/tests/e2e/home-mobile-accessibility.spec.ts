@@ -16,6 +16,7 @@ import {
   formatViolations,
   scanForAxeViolations,
 } from "./axe-helper.js";
+import { pressTab } from "./keyboard-navigation.js";
 
 test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
   test("keeps a logout failure readable and retryable below the header", async ({
@@ -280,7 +281,7 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
       );
       expect(documentWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
 
-      await page.keyboard.press("Tab");
+      await pressTab(page);
 
       await expect(skipLink).toBeFocused();
       await expect(skipLink).toBeVisible();
@@ -310,11 +311,11 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     );
     expect(documentWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
 
-    await page.keyboard.press("Tab");
+    await pressTab(page);
     await expect(
       page.getByRole("link", { name: "Skip to main content" }),
     ).toBeFocused();
-    await page.keyboard.press("Tab");
+    await pressTab(page);
     // Desktop includes the three primary destinations between the brand and
     // account controls; mobile keeps those destinations in the bottom bar.
     for (let step = 0; step < 6; step += 1) {
@@ -324,7 +325,7 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
         )
       )
         break;
-      await page.keyboard.press("Tab");
+      await pressTab(page);
     }
     await expect(settingsLink).toBeFocused();
     await page.keyboard.press("Enter");

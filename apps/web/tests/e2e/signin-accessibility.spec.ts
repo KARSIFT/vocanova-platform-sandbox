@@ -23,7 +23,9 @@ test.describe("Sign-in accessibility (VOC-073-T00)", () => {
       .getByRole("link", { name: "VocaNova home" })
       .boundingBox();
     expect(brand).not.toBeNull();
-    expect(brand!.height).toBeGreaterThanOrEqual(44);
+    // Firefox can serialize the min-h-11 (44px) brand as 43.999996185px.
+    // Permit only 0.001 CSS px of geometry precision, not a smaller target.
+    expect(brand!.height + 0.001).toBeGreaterThanOrEqual(44);
 
     await expect(
       page.getByRole("heading", { name: "Sign in to Vocanova", level: 1 }),

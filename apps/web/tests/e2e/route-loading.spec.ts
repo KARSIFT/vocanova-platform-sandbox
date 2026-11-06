@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { formatViolations, scanForAxeViolations } from "./axe-helper.js";
+
 test.beforeEach(async ({ context, baseURL }) => {
   await context.addCookies([
     { name: "vocanova_session", value: crypto.randomUUID(), url: baseURL! },
@@ -331,4 +333,67 @@ test("a streamed practice-only authentication failure still redirects Home to si
   await expect(
     page.getByRole("region", { name: "Review words", exact: true }),
   ).toHaveCount(0);
+});
+
+test.describe("loading accessibility", () => {
+  const routes = [
+    { path: "/home", loading: "Loading home", heading: "Today" },
+    { path: "/progress", loading: "Loading progress", heading: "Progress" },
+    { path: "/settings", loading: "Loading settings", heading: "Settings" },
+    // Profile inherits Settings' route boundary; it reproduced the Firefox bug.
+    {
+      path: "/settings/profile",
+      loading: "Loading settings",
+      heading: "Profile",
+    },
+    {
+      path: "/settings/account",
+      loading: "Loading account settings",
+      heading: "Account",
+    },
+  ];
+
+  for (const theme of ["light", "dark"] as const) {
+    for (const route of routes) {
+      test(`${route.path} exposes accessible loading feedback (${theme})`, async ({
+        page,
+        context,
+        baseURL,
+      }) => {
+        await page.emulateMedia({ colorScheme: theme });
+        await context.addCookies([
+          // Hold the real SSR data reads, not a replacement loading document.
+          // A fresh document also avoids the client router's prefetched cache.
+          { ...DELAY_COOKIE, value: "6000", url: baseURL! },
+        ]);
+        await page.goto(route.path, { waitUntil: "commit" });
+        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+        // getByLabel deliberately also matches the original invalid generic
+        // div, so the regression fails on axe's actual ARIA violation.
+        const pending = page.getByLabel(route.loading, { exact: true });
+        await expect(pending).toBeVisible();
+        await expect(pending).toHaveAttribute("aria-busy", "true");
+        const { criticalOrSerious } = await scanForAxeViolations(page);
+        // Prove the scan happened during loading rather than after it settled.
+        await expect(pending).toBeVisible();
+        await expect(pending).toHaveAttribute("aria-busy", "true");
+        expect(
+          criticalOrSerious,
+          formatViolations(criticalOrSerious).join("\n"),
+        ).toEqual([]);
+        await expect(
+          page.getByRole("region", { name: route.loading, exact: true }),
+        ).toBeVisible();
+        await expect(pending.getByRole("status")).toHaveText(route.loading);
+        await expect(
+          page.getByRole("heading", {
+            level: 1,
+            name: route.heading,
+            exact: true,
+          }),
+        ).toBeVisible({ timeout: 20_000 });
+        await expect(pending).toHaveCount(0);
+      });
+    }
+  }
 });

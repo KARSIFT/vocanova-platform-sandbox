@@ -71,9 +71,14 @@ test.describe("Theme preference", () => {
   }) => {
     await useDarkTheme(page);
 
-    for (const route of ["/", "/signin", "/home"]) {
+    for (const [route, heading] of [
+      ["/", /Learn the words you will actually use\./],
+      ["/signin", "Sign in to Vocanova"],
+      ["/home", "Today"],
+    ] as const) {
       await page.goto(route);
       await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+      await expect(page.getByRole("heading", { level: 1, name: heading, exact: true })).toBeVisible();
 
       const { criticalOrSerious } = await scanForAxeViolations(page);
       expect(
@@ -87,20 +92,29 @@ test.describe("Theme preference", () => {
 
   test("keeps dark theme accessible across authenticated account and practice surfaces", async ({
     page,
+    context,
+    baseURL,
   }) => {
+    await context.addCookies([
+      { name: "vocanova_session", value: crypto.randomUUID(), url: baseURL! },
+      { name: "vocanova_csrf", value: crypto.randomUUID(), url: baseURL! },
+    ]);
     await useDarkTheme(page);
 
-    for (const route of [
-      "/settings",
-      "/settings/profile",
-      "/settings/account",
-      "/words",
-      "/reviews",
-      "/review",
-    ]) {
+    for (const [route, heading] of [
+      ["/settings", "Settings"],
+      ["/settings/profile", "Profile"],
+      ["/settings/account", "Account"],
+      ["/words", "Saved vocabulary"],
+      ["/reviews", /^(Keep your words fresh|You’re ready for new words)$/],
+      ["/review", /^(Keep your words fresh|You’re ready for new words)$/],
+    ] as const) {
       await page.goto(route);
       await expect.poll(() => new URL(page.url()).pathname).toBe(route);
       await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+      // Scan the finished destination; held loading states have their own
+      // explicit accessibility regression in route-loading.spec.ts.
+      await expect(page.getByRole("heading", { level: 1, name: heading, exact: true })).toBeVisible();
 
       const { criticalOrSerious } = await scanForAxeViolations(page);
       expect(

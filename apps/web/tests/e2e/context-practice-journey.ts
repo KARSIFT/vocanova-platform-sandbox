@@ -4,6 +4,7 @@ import {
   type Page,
   type Request,
 } from "@playwright/test";
+import { pressTab } from "./keyboard-navigation.js";
 
 const SITUATION_PATH = "/discover/daily-conversation";
 const PRACTICE_NAME = "Choose the word for the situation";
@@ -87,7 +88,7 @@ async function tabTo(page: Page, target: Locator): Promise<void> {
     ) {
       return;
     }
-    await page.keyboard.press("Tab");
+    await pressTab(page);
   }
   await expect(target).toBeFocused();
 }
@@ -175,10 +176,10 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
       for (const explanation of example.explanations) {
         await expect(practice).not.toContainText(explanation);
       }
-      await page.keyboard.press("Tab");
+      await pressTab(page);
       await expect(choices.first()).toBeFocused();
       if (example.choices[0] !== example.wrong) {
-        await page.keyboard.press("Tab");
+        await pressTab(page);
       }
       await expect(
         practice.getByRole("button", { name: example.wrong, exact: true }),
@@ -202,7 +203,7 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
       ).toHaveCount(0);
 
       // Answer buttons are now disabled: the next native Tab must reach retry.
-      await page.keyboard.press("Tab");
+      await pressTab(page);
       await expect(
         practice.getByRole("button", { name: "Try again" }),
       ).toBeFocused();
@@ -212,7 +213,7 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
         await expect(practice).not.toContainText(explanation);
       }
       if (example.choices[0] !== example.correct) {
-        await page.keyboard.press("Tab");
+        await pressTab(page);
       }
       await expect(
         practice.getByRole("button", { name: example.correct, exact: true }),
@@ -224,7 +225,7 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
           feedback.getByText(explanation, { exact: true }),
         ).toBeVisible();
       }
-      await page.keyboard.press("Tab");
+      await pressTab(page);
       await expect(
         practice.getByRole("button", {
           name:
@@ -260,9 +261,9 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
     await expect(practice).toContainText("Example 1 of 3");
     await expect(practice.getByRole("status")).toBeEmpty();
     // Prompt -> first choice -> second choice -> Exit to words.
-    await page.keyboard.press("Tab");
-    await page.keyboard.press("Tab");
-    await page.keyboard.press("Tab");
+    await pressTab(page);
+    await pressTab(page);
+    await pressTab(page);
     await expect(
       practice.getByRole("button", { name: "Exit to words" }),
     ).toBeFocused();
@@ -271,15 +272,15 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
     await expect(start).toBeVisible();
     await expect(savedProgress).toHaveText(originalSavedProgress);
 
-    await page.keyboard.press("Shift+Tab");
+    await pressTab(page, { backwards: true });
     await expect(start).toBeFocused();
     await page.keyboard.press("Enter");
-    await page.keyboard.press("Tab");
+    await pressTab(page);
     await expect(
       practice.getByRole("button", { name: "invite", exact: true }),
     ).toBeFocused();
     await page.keyboard.press("Enter");
-    await page.keyboard.press("Tab");
+    await pressTab(page);
     await expect(
       practice.getByRole("button", { name: "Next example" }),
     ).toBeFocused();

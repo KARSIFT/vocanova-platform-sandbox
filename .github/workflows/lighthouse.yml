@@ -4,10 +4,9 @@ name: lighthouse
 # repository. Runs the `lighthouse` npm package (the same
 # engine `@lhci/cli` wraps) against a fixed local production
 # build of @vocanova/web at the three supported layouts
-# (360px, 430px, 1280x720) for the four screens the T09
-# acceptance criterion names (Home, Discover, Reviews,
-# Progress), asserting the DOC-08 quality-standards
-# thresholds:
+# (360px, 430px, 1280x720). The original four-screen core
+# matrix remains available locally; CI audits all 28 entry
+# surfaces, asserting the same DOC-08 quality thresholds:
 #
 #   Performance    >= 85
 #   Accessibility  >= 95
@@ -29,8 +28,8 @@ name: lighthouse
 # note, VOC-031-DEP-04); the lighthouse run reuses the
 # Chromium binary the Playwright install already pulled in,
 # so the per-job cost is dominated by `next build` (3-5 min)
-# + the 12 Lighthouse audits (~4-8 min) + a possible
-# artifact upload, well inside the 30-minute timeout budget.
+# + the 84 Lighthouse audits and their report upload.
+# The existing 30-minute job budget covers this expanded matrix.
 
 on:
   pull_request:
@@ -172,6 +171,7 @@ jobs:
         env:
           CI: "1"
           LIGHTHOUSE_URL_PREFIX: "http://127.0.0.1:3000"
+          LIGHTHOUSE_SCOPE: "full"
         run: |
           export LIGHTHOUSE_CHROME_PATH="$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux*/chrome | head -1)"
           pnpm --filter @vocanova/web test:lighthouse
@@ -188,13 +188,11 @@ jobs:
       # actions/upload-artifact v4, pinned to the immutable
       # commit documented at
       # https://github.com/actions/upload-artifact/releases/tag/v4
-      - name: Upload Lighthouse reports on failure
+      - name: Upload Lighthouse audit evidence
         # The per-audit JSON reports are written to
-        # apps/web/lighthouse-reports/. Uploading only on
-        # failure keeps the artifact size reasonable and
-        # matches the pattern the accessibility workflow
-        # uses for Playwright reports.
-        if: failure()
+        # apps/web/lighthouse-reports/. Preserve passing and
+        # failing results so the complete CI matrix is reviewable.
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: lighthouse-reports

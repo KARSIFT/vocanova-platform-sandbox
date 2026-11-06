@@ -68,7 +68,12 @@ export default function Link({
             event.preventDefault();
           },
         });
-        if (!cancelled) markNavigationStart(href);
+        if (!cancelled) {
+          // Navigation already requests this destination; do not start a
+          // redundant prefetch when its earlier focus/hover timer expires.
+          cancelIntent();
+          markNavigationStart(href);
+        }
       }}
       onPointerEnter={(event) => {
         onPointerEnter?.(event);

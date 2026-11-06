@@ -66,7 +66,15 @@ for (const route of ["/home", "/discover", "/progress"] as const) {
     const { paths, writes } = recordPrefetches(page);
     await page.goto(route);
     await settle(page);
-    await page.mouse.wheel(0, 2000);
+    // This checks viewport-triggered prefetch, not wheel gesture support.
+    // Mobile WebKit has no mouse wheel; keep its real viewport observers active.
+    const scroll = await page.evaluate(async () => {
+      const expected = Math.min(scrollY + 2000, Math.max(0, document.documentElement.scrollHeight - innerHeight));
+      window.scrollBy({ top: 2000, behavior: "instant" });
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      return { expected, actual: scrollY };
+    });
+    expect(scroll.actual).toBeCloseTo(scroll.expected, 0);
     await settle(page);
     // Two requests (route tree and segment) per destination, at most seven.
     expect(paths.length).toBeLessThanOrEqual(14);
@@ -249,4 +257,66 @@ test("a search submission is acknowledged immediately", async ({ page }) => {
   await expect(
     page.getByRole("link", { name: "invite", exact: true }),
   ).toBeVisible({ timeout: 15_000 });
+});
+
+
+test("actual navigation cancels its pending focus prefetch", async ({ page }, testInfo) => {
+  await signIn(page);
+  await page.goto("/help");
+  await page.locator("summary").filter({ hasText: "How do I set a daily reminder?" }).press("Enter");
+  await settle(page);
+  await page.context().addCookies([
+    { name: "e2e_response_delay_ms", value: "1500", url: page.url() },
+  ]);
+  const prefetches: string[] = [];
+  const writes: string[] = [];
+  let focusStartedAt = 0;
+  let navigationStartedAfterFocusMs = -1;
+  let prefetchesAtNavigationStart: number | undefined;
+  page.on("request", (request) => {
+    if (request.method() !== "GET" && request.method() !== "HEAD") writes.push(request.method());
+    if (new URL(request.url()).pathname !== "/settings") return;
+    if (request.headers()["next-router-prefetch"]) {
+      prefetches.push(request.headers()["next-router-segment-prefetch"] ?? "segments");
+    } else if (request.headers().rsc === "1" && prefetchesAtNavigationStart === undefined) {
+      navigationStartedAfterFocusMs = Date.now() - focusStartedAt;
+      prefetchesAtNavigationStart = prefetches.length;
+    }
+  });
+  const actualNavigation = page.waitForRequest(request =>
+    new URL(request.url()).pathname === "/settings"
+      && request.headers().rsc === "1"
+      && !request.headers()["next-router-prefetch"],
+  );
+  const actualResponse = page.waitForResponse(response =>
+    new URL(response.url()).pathname === "/settings"
+      && response.request().headers().rsc === "1"
+      && !response.request().headers()["next-router-prefetch"],
+  );
+  const link = page.getByRole("link", { name: "Set up a calendar reminder", exact: true });
+  focusStartedAt = Date.now();
+  await link.focus();
+  await page.keyboard.press("Enter");
+  await actualNavigation;
+  // Verify an actual pending navigation, then observe its entire deliberately
+  // held response. Wall-clock latency is diagnostic only, not a pass threshold.
+  await expect(page.getByRole("heading", { name: "Settings", level: 1, exact: true })).toHaveCount(0);
+  const response = await actualResponse;
+  expect(response.status()).toBe(200);
+  expect(await response.finished()).toBeNull();
+  const duringNavigation = prefetches.length;
+  await expect(page).toHaveURL(/\/settings#calendar-reminder-heading$/);
+  await expect(page.getByRole("heading", { name: "Settings", level: 1, exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Download calendar reminder", exact: true })).toBeEnabled();
+  await settle(page);
+  await testInfo.attach("navigation-prefetch-counts", {
+    body: JSON.stringify({ navigationStartedAfterFocusMs, prefetchesAtNavigationStart, duringNavigation, total: prefetches.length, kinds: prefetches, writes }),
+    contentType: "application/json",
+  });
+  // No destination prefetch was in flight before this navigation began.
+  // Any later tagged request therefore duplicates the actual navigation.
+  expect(prefetchesAtNavigationStart).toBe(0);
+  expect(duringNavigation).toBe(0);
+  expect(prefetches).toEqual([]);
+  expect(writes).toEqual([]);
 });

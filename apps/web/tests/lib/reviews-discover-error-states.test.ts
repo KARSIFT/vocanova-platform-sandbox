@@ -12,7 +12,8 @@ import { describe, it } from "node:test";
  * These checks cover the error-state render path (VOC-1179 acceptance:
  * "an error state (retry affordance, not a raw error dump)") by asserting
  * the segment `error.tsx` boundaries exist, expose a retry affordance via
- * `reset()`, and never surface the raw `error` object to the learner.
+ * refresh plus `reset()`, and never surface the raw error to the learner.
+ * Actual failed-render recovery is covered by frontend-error-recovery.spec.ts.
  */
 
 const webRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -22,11 +23,19 @@ async function readSource(relativePath: string): Promise<string> {
 }
 
 describe("reviews and discover error-state render paths (VOC-1179)", () => {
+  it("refreshes failed server data together with resetting the client boundary", async () => {
+    const source = await readSource("src/ui/use-route-error-retry.ts");
+    assert.match(source, /startTransition\(\(\) => \{\s*router\.refresh\(\);\s*reset\(\);/);
+  });
+
   it("gives the Reviews screen a segment error boundary with a retry affordance", async () => {
     const source = await readSource("src/app/(app)/reviews/error.tsx");
     assert.match(source, /"use client"/);
     assert.match(source, /reset:\s*\(\)\s*=>\s*void/);
-    assert.match(source, /onClick=\{reset\}/);
+    assert.match(source, /useRouteErrorRetry\(reset\)/);
+    assert.match(source, /onClick=\{retry\}/);
+    assert.match(source, /disabled=\{isRetrying\}/);
+    assert.match(source, /aria-busy=\{isRetrying\}/);
     assert.match(source, /Try again/);
     // The raw error/digest must never be interpolated into the UI copy.
     assert.doesNotMatch(source, /\{error\.message\}/);
@@ -37,7 +46,10 @@ describe("reviews and discover error-state render paths (VOC-1179)", () => {
     const source = await readSource("src/app/(app)/discover/error.tsx");
     assert.match(source, /"use client"/);
     assert.match(source, /reset:\s*\(\)\s*=>\s*void/);
-    assert.match(source, /onClick=\{reset\}/);
+    assert.match(source, /useRouteErrorRetry\(reset\)/);
+    assert.match(source, /onClick=\{retry\}/);
+    assert.match(source, /disabled=\{isRetrying\}/);
+    assert.match(source, /aria-busy=\{isRetrying\}/);
     assert.match(source, /Try again/);
     assert.doesNotMatch(source, /\{error\.message\}/);
     assert.doesNotMatch(source, /\{error\.digest\}/);

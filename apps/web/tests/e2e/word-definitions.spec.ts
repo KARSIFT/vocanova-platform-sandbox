@@ -18,6 +18,9 @@ for (const fixture of ["duplicate", "distinct", "blank", "absent"]) {
     await expect(
       page.getByRole("button", { name: "Remove pour from saved words" }),
     ).toBeVisible();
+    // Wait for the server-gated saved meaning UI, not only the local button
+    // label, before navigating away from its in-flight route refresh.
+    await expect(page.getByRole("main").locator("summary").filter({ hasText: /^Optional writing$/ })).toHaveCount(1);
 
     for (const route of [
       "/discover/ordering-at-a-cafe/pour",
@@ -121,6 +124,7 @@ for (const theme of ["light", "dark"] as const) {
             name: "Remove sounds good from saved words",
           }),
         ).toBeVisible();
+        await expect(main.locator("summary").filter({ hasText: /^Optional writing$/ })).toHaveCount(1);
         await page.goto("/words");
         await main
           .getByRole("link", {

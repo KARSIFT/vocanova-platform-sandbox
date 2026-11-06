@@ -79,10 +79,14 @@ test("an empty review queue points to saving words, and a newly saved word is re
 
   // Newly saved words are due straight away (backend contract).
   await page.goto("/vocabulary/invite");
+  const writing = page.getByRole("main").locator("summary").filter({ hasText: /^Optional writing$/ });
+  await expect(writing).toHaveCount(0);
   await page.getByRole("button", { name: /^Save invite:/ }).click();
   await expect(
     page.getByRole("button", { name: "Remove invite from saved words", exact: true }),
   ).toBeVisible();
+  // Wait for the refreshed saved meaning before a separate Home navigation.
+  await expect(writing).toHaveCount(1);
   await page.goto("/home");
   await expect(next.getByRole("button", { name: "Start review", exact: true })).toBeVisible();
   await expect(next.getByText("1 word is ready to remember.", { exact: true })).toBeVisible();

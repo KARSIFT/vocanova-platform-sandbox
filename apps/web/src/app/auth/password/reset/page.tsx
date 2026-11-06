@@ -37,7 +37,7 @@ export default async function PasswordResetPage({
               ? "Set a password for your VocaNova account."
               : passwordUnavailable
                 ? "Use one of the available sign-in methods, then try again later."
-                : "We&apos;ll send instructions to your verified email. This also lets magic-link and Google users add a password."}
+                : "We'll send instructions to your verified email. This also lets magic-link and Google users add a password."}
           </p>
         </div>
         {hasToken ? (

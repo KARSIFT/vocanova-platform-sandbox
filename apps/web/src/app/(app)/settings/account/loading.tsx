@@ -1,10 +1,13 @@
 export default function SettingsAccountLoading() {
   return (
-    <div
+    <section
       aria-busy="true"
-      aria-label="Loading account settings"
+      aria-labelledby="account-loading-status"
       className="animate-pulse p-[var(--spacing-lg)]"
     >
+      <p id="account-loading-status" role="status" className="sr-only">
+        Loading account settings
+      </p>
       <div className="mb-[var(--spacing-md)] flex items-center justify-between">
         <div className="h-7 w-1/4 rounded bg-neutral-200" />
         <div className="h-5 w-1/6 rounded bg-neutral-200" />
@@ -22,6 +25,6 @@ export default function SettingsAccountLoading() {
           <div className="mt-[var(--spacing-md)] h-[var(--spacing-2xl)] w-1/2 rounded bg-neutral-200" />
         </div>
       </div>
-    </div>
+    </section>
   );
 }

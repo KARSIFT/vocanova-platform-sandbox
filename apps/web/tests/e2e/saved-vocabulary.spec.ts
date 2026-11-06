@@ -44,6 +44,12 @@ test.describe("Saved vocabulary library", () => {
     await expect(
       page.getByRole("button", { name: "Remove pour from saved words" }),
     ).toBeVisible();
+    // The local Saved label precedes the route refresh. This disclosure is
+    // server-gated by saved=true and userWordId, so its mount confirms that
+    // refresh committed before the independent library navigation starts.
+    await expect(
+      page.getByRole("main").locator("summary").filter({ hasText: /^Optional writing$/ }),
+    ).toHaveCount(1);
 
     await page.goto("/words");
     await expect(

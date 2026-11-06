@@ -119,7 +119,7 @@ export function PracticeJourney({
         // Home's secondary activity: the same durable path, without competing
         // with the review action for attention.
         <>
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h3 className="font-semibold text-neutral-900">
                 Today’s practice
@@ -139,7 +139,7 @@ export function PracticeJourney({
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <ol
               aria-label="Practice path"
-              className="flex items-center gap-1.5"
+              className="flex flex-wrap items-center gap-1.5"
             >
               {nodes.map((number) => {
                 const done = number < lesson;
@@ -212,7 +212,7 @@ export function PracticeJourney({
               <li
                 key={number}
                 aria-current={active ? "step" : undefined}
-                className={`relative flex items-center gap-4 ${number % 2 ? "pr-7" : "pl-7"}`}
+                className={`relative flex flex-wrap items-center gap-4 ${number % 2 ? "pr-7" : "pl-7"}`}
               >
                 <span
                   aria-hidden="true"
@@ -220,7 +220,7 @@ export function PracticeJourney({
                 >
                   {done ? "✓" : active ? "▶" : number}
                 </span>
-                <div className="min-w-0 py-2">
+                <div className="min-w-0 flex-1 basis-[10rem] py-2">
                   <p
                     className={`font-bold ${active ? "text-neutral-900" : "text-neutral-600"}`}
                   >

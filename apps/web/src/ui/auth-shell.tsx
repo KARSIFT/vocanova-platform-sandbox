@@ -45,7 +45,9 @@ export function AuthShell({
           </p>
         </div>
       </aside>
-      <section className={`auth-panel${wide ? " auth-panel-wide" : ""}`}>
+      <section
+        className={`auth-panel min-w-0${wide ? " auth-panel-wide" : ""}`}
+      >
         <Link
           href="/"
           aria-label="VocaNova home"
@@ -53,7 +55,9 @@ export function AuthShell({
         >
           <BrandMark />
         </Link>
-        <div className="auth-form">{children}</div>
+        <div className="auth-form min-w-0 [overflow-wrap:anywhere]">
+          {children}
+        </div>
       </section>
     </main>
   );

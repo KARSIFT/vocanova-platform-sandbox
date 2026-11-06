@@ -1,5 +1,29 @@
 # Vocanova release readiness
 
+## Frontend coverage continuation — 6 November 2026
+
+The [43-route control ledger](frontend-coverage-matrix-2026-11-06.md) records
+browser controls, visual inspection, error recovery, pending mutations, and
+cross-engine findings. It preserves historical failures and focused recoveries
+instead of adding overlapping runs into a unique passing count. The earlier
+84-entry Lighthouse pass predates the final calendar/navigation refinements.
+Late local WebKit runs encountered severe host load and pre-document transport
+stalls; those failures require fresh verification and are not performance data.
+
+Integrated acceptance requires the consolidated PR's isolated Chromium,
+Firefox and WebKit suites, the full 28-surface × three-width Lighthouse matrix,
+normal required checks and review, then the automatic staging provider/export
+acceptance. Keep the PR draft/held until all relevant checks are resolved.
+Check the actual PR and deployment runs for outcomes rather than treating this
+readiness list as evidence that they executed.
+
+Live verification/reset email delivery remains unverified: staging disables
+those methods. The provider/export gate uses the reserved synthetic identity
+and a workflow-specific sentence; missing approved artwork is an explicit CDN
+skip. Physical phones, native picker/IME interaction and spoken screen-reader
+testing remain separate evidence. Production promotion remains a separate
+manual workflow.
+
 ## Full panel/performance audit — 6 November 2026 (local evidence)
 
 The [full audit report](full-panel-performance-audit-2026-11-06.md) records
