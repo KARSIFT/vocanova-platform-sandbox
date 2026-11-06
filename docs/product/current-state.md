@@ -1,5 +1,16 @@
 # Vocanova current product state
 
+## Full panel and performance audit — 6 November 2026 (local)
+
+The product-wide audit adds Help, data-export and mobile account coverage, fixes
+the seeded saved-vocabulary test's two-page assumption, and optimizes only the
+knowledge-map aggregate summary. Original item/revision/restore behavior remains
+unchanged. Four SQL alternatives were compared; the selected active-row join
+reduces the full service read from 3.82 seconds to 66 ms in the local 5,000-history
+fixture, with essentially unchanged Go allocations. This is not a production
+latency claim or deployment. See [the audit and acceptance limits](full-panel-performance-audit-2026-11-06.md)
+for browser coverage, memory observations, alternative results and fresh checks.
+
 ## Meaning pictures — every meaning active — 1 November 2026
 
 All 10,051 canonical meanings now have a reviewed picture, and both staging and

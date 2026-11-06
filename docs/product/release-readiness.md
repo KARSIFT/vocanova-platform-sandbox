@@ -1,5 +1,19 @@
 # Vocanova release readiness
 
+## Full panel/performance audit — 6 November 2026 (local evidence)
+
+The [full audit report](full-panel-performance-audit-2026-11-06.md) records
+product-wide synthetic browser coverage, twelve passing Lighthouse audits,
+fresh seeded-database API checks, memory observations, and four compared SQL
+alternatives. The selected summary-only optimization preserves learning and
+revision semantics and reduces the mature-history service read in local tests
+from 3.82 seconds to 66 ms with essentially unchanged allocations.
+
+This is local evidence, not a production release. Installed Chrome and Go 1.27.3
+were used where pinned downloads were unavailable; hosted checks on the pinned
+versions remain required. Live providers, physical devices and production
+acceptance retain their separate requirements below.
+
 ## Meaning pictures: full-coverage activation — 1 November 2026
 
 **Complete on staging and production (0.4.15).** Every one of the 10,051

@@ -123,7 +123,14 @@ func TestSavedCollectionFiltersPostgreSQLMigratedCanonicalSeed(t *testing.T) {
 		id, wordID       uuid.UUID
 		text, definition string
 	}
-	rows, err := db.QueryContext(t.Context(), "SELECT m.id,cw.id,cw.text,m.short_definition FROM word_meanings m JOIN canonical_words cw ON cw.id=m.word_id WHERE m.status='active' AND cw.status='active' ORDER BY m.id")
+	// Bound this shared-database fixture to authored words and the first catalog band. Other packages
+	// create active temporary meanings and must be able to delete them independently.
+	rows, err := db.QueryContext(t.Context(), `SELECT m.id,cw.id,cw.text,m.short_definition
+ FROM word_meanings m JOIN canonical_words cw ON cw.id=m.word_id
+ WHERE m.status='active' AND cw.status='active'
+ AND (EXISTS (SELECT 1 FROM knowledge_catalog_entries kc WHERE kc.word_id=cw.id AND kc.rank<=100)
+      OR EXISTS (SELECT 1 FROM word_meanings seeded JOIN journey_words jw ON jw.meaning_id=seeded.id WHERE seeded.word_id=cw.id))
+ ORDER BY m.id`)
 	require.NoError(t, err)
 	var targets []target
 	distinctWords := make(map[uuid.UUID]bool)
@@ -135,7 +142,7 @@ func TestSavedCollectionFiltersPostgreSQLMigratedCanonicalSeed(t *testing.T) {
 	}
 	require.NoError(t, rows.Err())
 	require.NoError(t, rows.Close())
-	require.Greater(t, len(targets), 50, "this integration requires the migrated, seeded starter catalog")
+	require.Greater(t, len(distinctWords), 100, "this integration requires more than two pages of distinct migrated, seeded canonical words")
 	for i, item := range targets {
 		_, err = db.ExecContext(t.Context(), "INSERT INTO user_words(id,user_id,meaning_id,status,source,added_at,created_at,updated_at) VALUES($1,$2,$3,'new','manual',CURRENT_TIMESTAMP-($4::int*interval '1 minute'),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", uuid.New(), owner, item.id, i)
 		require.NoError(t, err)
@@ -148,18 +155,43 @@ func TestSavedCollectionFiltersPostgreSQLMigratedCanonicalSeed(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, first.Items, 50)
 	require.Equal(t, len(distinctWords), first.TotalCount)
-	request.AfterCursor = first.NextCursor
-	second, err := repo.ListSavedWords(t.Context(), request)
-	require.NoError(t, err)
-	require.Len(t, second.Items, len(distinctWords)-50)
-	require.Equal(t, len(distinctWords), second.TotalCount)
-	query := strings.ToLower(targets[0].text)
+	items := first.Items
+	seenCursors := make(map[string]bool)
+	for next := first.NextCursor; next != ""; {
+		require.False(t, seenCursors[next], "pagination must advance to a new cursor")
+		seenCursors[next] = true
+		require.LessOrEqual(t, len(seenCursors), (len(distinctWords)+request.Limit-1)/request.Limit, "pagination must terminate within the catalog page count")
+		request.AfterCursor = next
+		page, err := repo.ListSavedWords(t.Context(), request)
+		require.NoError(t, err)
+		require.NotEmpty(t, page.Items, "a next cursor must lead to more words")
+		require.LessOrEqual(t, len(page.Items), request.Limit)
+		require.Equal(t, len(distinctWords), page.TotalCount)
+		items = append(items, page.Items...)
+		require.LessOrEqual(t, len(items), len(distinctWords), "pages must not exceed the canonical catalog")
+		next = page.NextCursor
+	}
+	// Ordinary saved search counts meanings, while due-only pagination above
+	// chooses one representative per canonical word. Exercise that distinction.
+	meaningsPerWord := make(map[uuid.UUID]int)
+	query := ""
+	for _, item := range targets {
+		meaningsPerWord[item.wordID]++
+		if meaningsPerWord[item.wordID] > 1 {
+			query = strings.ToLower(item.text)
+			break
+		}
+	}
+	require.NotEmpty(t, query, "the canonical seed must include a saved word with multiple meanings")
 	expected := 0
+	matchingWords := make(map[uuid.UUID]bool)
 	for _, item := range targets {
 		if strings.Contains(strings.ToLower(item.text), query) || strings.Contains(strings.ToLower(item.definition), query) {
 			expected++
+			matchingWords[item.wordID] = true
 		}
 	}
+	require.Greater(t, expected, len(matchingWords), "ordinary search must discriminate meanings from canonical words")
 	filtered, err := repo.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: owner, Query: query, Limit: 50})
 	require.NoError(t, err)
 	require.Equal(t, expected, filtered.TotalCount)
@@ -167,7 +199,7 @@ func TestSavedCollectionFiltersPostgreSQLMigratedCanonicalSeed(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, foreign.TotalCount)
 	seen := make(map[string]bool)
-	for _, item := range append(first.Items, second.Items...) {
+	for _, item := range items {
 		require.True(t, distinctWords[item.WordID], "every due representative belongs to the seeded canonical catalog")
 		require.False(t, seen[item.WordID.String()], "a canonical word occurs once across due pages")
 		seen[item.WordID.String()] = true

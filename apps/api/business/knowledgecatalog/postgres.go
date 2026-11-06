@@ -22,6 +22,13 @@ const joins = ` FROM knowledge_catalog_entries kc JOIN canonical_words cw ON cw.
  LEFT JOIN user_word_knowledge k ON k.meaning_id=wm.id AND k.user_id=$1
  LEFT JOIN LATERAL (SELECT * FROM user_words WHERE user_id=$1 AND meaning_id=wm.id ORDER BY deleted_at ASC NULLS FIRST,updated_at DESC,id LIMIT 1) uw ON true `
 
+// Summary counts need only the active row. The partial unique index
+// user_words_user_id_meaning_id_active_key guarantees at most one per learner
+// and meaning; removed history remains relevant only to item revisions/restore.
+const summaryJoins = ` FROM knowledge_catalog_entries kc JOIN canonical_words cw ON cw.id=kc.word_id AND cw.status='active' JOIN word_meanings wm ON wm.id=kc.meaning_id AND wm.word_id=cw.id AND wm.status='active'
+ LEFT JOIN user_word_knowledge k ON k.meaning_id=wm.id AND k.user_id=$1
+ LEFT JOIN user_words uw ON uw.user_id=$1 AND uw.meaning_id=wm.id AND uw.deleted_at IS NULL `
+
 var selected = `SELECT kc.rank,wm.id,cw.id,cw.text,replace(cw.normalized_text,' ','-'),wm.part_of_speech,wm.short_definition,
  COALESCE((SELECT example_text FROM word_examples WHERE meaning_id=wm.id AND status='active' ORDER BY example_order,id LIMIT 1),''),
  COALESCE(k.self_reported_known,false),COALESCE(uw.deleted_at IS NULL AND uw.id IS NOT NULL AND uw.status NOT IN ('ignored','archived'),false),
@@ -60,7 +67,7 @@ func (r *PostgreSQLRepository) Read(ctx context.Context, user uuid.UUID, band in
 		return nil, err
 	}
 	out := &Map{Attribution: SourceAttribution(), CatalogVersion: CatalogVersion, BandSize: BandSize, Ordering: ordering(), Bands: []Band{}, CurrentBand: CurrentBand{Number: band, Items: []Item{}}}
-	rows, err := tx.QueryContext(ctx, `SELECT (kc.rank-1)/100+1,count(*),count(*) FILTER(WHERE COALESCE(k.self_reported_known,false)),count(*) FILTER(WHERE NOT COALESCE(k.self_reported_known,false) AND uw.id IS NOT NULL AND uw.deleted_at IS NULL AND uw.status NOT IN ('ignored','archived'))`+joins+` GROUP BY (kc.rank-1)/100 ORDER BY (kc.rank-1)/100`, user)
+	rows, err := tx.QueryContext(ctx, `SELECT (kc.rank-1)/100+1,count(*),count(*) FILTER(WHERE COALESCE(k.self_reported_known,false)),count(*) FILTER(WHERE NOT COALESCE(k.self_reported_known,false) AND uw.id IS NOT NULL AND uw.deleted_at IS NULL AND uw.status NOT IN ('ignored','archived'))`+summaryJoins+` GROUP BY (kc.rank-1)/100 ORDER BY (kc.rank-1)/100`, user)
 	if err != nil {
 		return nil, err
 	}
