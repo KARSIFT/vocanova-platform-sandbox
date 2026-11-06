@@ -122,8 +122,7 @@ test.describe("Password authentication", () => {
   test("handles wrong and unavailable password login, then establishes a cookie session on success", async ({
     page,
     context,
-  }, testInfo) => {
-    desktopOnly(testInfo);
+  }) => {
     await page.goto("/signin?returnTo=%2Freviews%3Fmode%3Ddue");
     await page.getByLabel("Email address").fill("wrong-password@example.test");
     await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);

@@ -32,11 +32,6 @@ test.describe("Settings successive saves", () => {
     page,
     context,
   }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== "home-desktop-1280",
-      "This functional regression runs once at the representative desktop viewport.",
-    );
-
     const { cookies } = await authenticateForSettings(testInfo);
     await context.addCookies(cookies);
     await page.goto("/settings");

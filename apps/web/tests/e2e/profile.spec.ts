@@ -35,7 +35,6 @@ test.describe("Profile and password security", () => {
     page,
     context,
   }, testInfo) => {
-    desktopOnly(testInfo);
     const { baseURL, cookies } = await authenticatedCookies(testInfo);
     await context.addCookies([
       ...cookies,

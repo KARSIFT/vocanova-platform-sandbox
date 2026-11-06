@@ -178,7 +178,7 @@ for (const theme of ["light", "dark"] as const) {
     });
 
     for (const source of ["/home", "/practice"] as const) {
-      test(`${source} Open practice fallback independently opens its confirmed session without starting again`, async ({ page, context }) => {
+      test(`${source} Open practice fallback independently opens its confirmed session without starting again`, async ({ page, context, browserName }) => {
         await visit(page, source, source === "/home" ? "Today" : "Today’s practice");
         let release!: () => void;
         let arrived!: () => void;
@@ -211,9 +211,13 @@ for (const theme of ["light", "dark"] as const) {
           await fallback.focus();
           await expect(fallback).toBeFocused();
           const opened = context.waitForEvent("page", { timeout: 5000 });
-          // WebKit's test browser does not open tabs for middle-click, but
-          // native Shift-click opens a separate window in all three engines.
-          await fallback.click({ modifiers: ["Shift"] });
+          // Chromium/Firefox expose a native middle-click tab reliably. In
+          // Linux headless Chromium a Shift-click window can load its document
+          // without being exposed as a Playwright page. WebKit's test browser
+          // does not open middle-click tabs, so use its native Shift window.
+          await fallback.click(browserName === "webkit"
+            ? { modifiers: ["Shift"] }
+            : { button: "middle" });
           fallbackPage = await opened;
           await expect(fallbackPage).toHaveURL(new URL(href, test.info().project.use.baseURL!).toString());
           await expect(fallbackPage.getByRole("heading", { name: "invite", level: 1, exact: true })).toBeVisible();

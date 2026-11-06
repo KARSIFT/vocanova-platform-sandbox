@@ -801,3 +801,42 @@ passed, including the continuous-feedback lifecycle, calendar fragment arrival
 and public Help transition. The earlier focused Chrome batch passed **48/48**
 write/persistence, pronunciation, Home-picture and fallback checks. These remain
 bounded corrective runs; they do not replace final full-suite CI acceptance.
+
+### Final CI synchronization and skipped-phone evidence
+
+On `e9d39485`, isolated Firefox completed **2,035 passed / 41 skipped**, with
+no failed or flaky cases. Chromium completed **2,033 passed / 1 failed /
+1 flaky / 41 skipped**. The full WebKit result and subsequent exact-head
+acceptance are recorded in the consolidated PR rather than inferred from
+focused runs.
+
+Both failed Chromium traces show the fallback link loading the exact confirmed
+practice document in an independent frame while the original RSC navigation
+remains held. Linux headless Chromium did not expose that Shift-click window
+as a Playwright page. The test now uses native middle-click tabs in Chromium
+and Firefox, retaining WebKit's supported Shift-click window. The independently
+opened page must still show the confirmed session, usable controls and exactly
+one start mutation. All **12 fallback cases per engine** passed locally.
+
+The flaky account-request assertion sampled its intercepted-request count
+immediately after the pending UI appeared. Both forms set pending state before
+asynchronous CSRF preparation and dispatch. Polling for the same exact count
+removes that timing assumption while preserving held responses, disabled
+controls, security headers and failure/expiry assertions. All **18 account
+resilience cases per engine** passed locally; independent review found no
+assertion reduction.
+
+A separate audit accounted for all 41 viewport-scoped skips. Three desktop
+sequences now also run at both phone widths: unverified-email messaging,
+password login through 401/503/429 and success, and reversion after a completed
+settings save. Their original assertions are unchanged. Supplemental execution
+first passed **36/36** cases across both phone widths, both themes and all three
+engines; the promoted regular tests then passed **9/9 per engine** across the
+three widths. The inventory remains **2,076 cases / 104 files**, with expected
+skips reduced to **35 per engine**. Local Chromium evidence uses installed
+Chrome; pinned Linux Chromium acceptance remains a separate CI requirement.
+
+These corrections change tests only. E2E typechecking, web lint, formatting and
+diff checks passed. Final exact-head CI and staging acceptance remain required;
+historical failures and bounded local passes are not combined into a fictitious
+single green run.

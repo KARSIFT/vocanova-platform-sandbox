@@ -43,7 +43,8 @@ for (const theme of ["light", "dark"] as const) {
         await expect(page.getByRole("button", { name: "Sending confirmation link...", exact: true })).toBeDisabled();
         await expect(address).toBeDisabled();
         await expect(page.getByRole("status").filter({ hasText: "We sent a confirmation link" })).toHaveCount(0);
-        expect(requests).toBe(1);
+        // Pending UI precedes asynchronous CSRF preparation and request dispatch.
+        await expect.poll(() => requests).toBe(1);
       } finally {
         release();
       }
@@ -98,7 +99,8 @@ for (const theme of ["light", "dark"] as const) {
         await expect(page.getByRole("button", { name: "Deactivating...", exact: true })).toBeDisabled();
         await expect(phrase).toBeDisabled();
         await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
-        expect(requests).toBe(1);
+        // Pending UI precedes asynchronous CSRF preparation and request dispatch.
+        await expect.poll(() => requests).toBe(1);
         await expect(page).toHaveURL(/\/settings\/account$/);
       } finally {
         release();
