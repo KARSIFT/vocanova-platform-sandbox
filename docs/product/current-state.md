@@ -19,6 +19,14 @@ long-text wrapping on eight surfaces. The existing navigation indicator now
 lives in the shared root layout so public Help also acknowledges delayed
 transitions into the app.
 
+Linux WebKit also exposed a session-recovery race: a successful `/me` response
+could restore the CSRF cookie before `document.cookie` reflected it. Recovery
+now yields one browser task only when the immediate refreshed-cookie read is
+missing, then reads once more. Existing-token reads remain immediate, concurrent
+recovery stays shared, and a missing token still prevents the write. The focused
+Linux verification passed 22 cases without retries, including seven observed
+uses of the new fallback; full integrated acceptance remains separate.
+
 The ledger preserves the Chromium, Firefox and WebKit failures and corrective
 runs separately. Earlier 84-page Lighthouse checks passed on the recorded
 build; they predate the final refinements. Severe host load affected the late

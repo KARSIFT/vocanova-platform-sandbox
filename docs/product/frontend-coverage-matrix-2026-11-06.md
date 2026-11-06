@@ -852,3 +852,38 @@ These corrections change tests only. E2E typechecking, web lint, formatting and
 diff checks passed. Final exact-head CI and staging acceptance remain required;
 historical failures and bounded local passes are not combined into a fictitious
 single green run.
+
+### Linux session-recovery race and bounded correction
+
+The focused Linux run on `9fbf3529` reproduced two initially failing original
+cases that passed on retry, plus a failing instrumented native-expiry case.
+In the latter, `/me` returned 200, completed its body and supplied the CSRF
+Set-Cookie header; the visible page's immediate cookie read still reported the
+token absent less than one millisecond later. No sentence POST occurred. Later
+browser and context reads both found the cookie. Native cookie expiry also
+reproduced the failure, excluding protocol cookie clearing or background-page
+visibility as sufficient explanations.
+
+After successful session recovery, the helper now reads the cookie immediately
+and, only if it remains absent, yields one browser task and reads once more.
+The existing-token fast path is unchanged. Concurrent callers share the same
+recovery through that task; no additional API request or mutation retry is
+introduced, and an absent token still prevents the write. The deferred-cookie
+unit regression failed before the change. All six CSRF tests and all 255
+middleware/helper tests then passed; independent review found no actionable
+security or request-sharing issue.
+
+Linux diagnostic run `42258021667` on `45c34ddf` passed **10/10 original
+regressions and 12/12 controlled cases**, with retries disabled. Seven controlled
+cases exercised the fallback: the immediate post-response read was absent and
+the next-task read found the token, with observed examples about two milliseconds
+apart. The other five used the immediate refreshed-cookie path. This is bounded
+recovery evidence, not a general interaction-speed measurement. Temporary
+diagnostic workflow/source files were removed after preserving their artifacts.
+
+The unchanged full sentence-feedback spec passed **24/24 in local Chrome and
+24/24 in Mac WebKit**. Local Firefox initially passed 23/24: a separate 401
+native redirect failed although the correct session-expired UI appeared; its
+five bounded isolated repeats passed without source or assertion changes.
+The original failure remains recorded. Final isolated CI, full Lighthouse,
+review and real staging acceptance are still required on the delivered head.

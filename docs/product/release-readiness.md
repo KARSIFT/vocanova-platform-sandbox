@@ -13,6 +13,14 @@ The first isolated full run exposed Linux-font wrapping and synchronization
 issues; its exact failed/partial outcomes and corrective evidence are in the
 ledger. The resulting source and test changes require a fresh complete run.
 
+The final Linux diagnosis reproduced a restored-CSRF-cookie visibility race.
+The bounded recovery correction passed ten original regressions and twelve
+instrumented cases with retries disabled; seven cases exercised the additional
+browser task. Temporary diagnostic code was removed after retaining its
+evidence. The regular inventory is 2,076 cases across 104 files, with 35 expected
+viewport-specific skips per engine. Firefox and WebKit each run all three
+viewport projects in isolated CI jobs so the complete workload fits its budget.
+
 Integrated acceptance requires the consolidated PR's isolated Chromium,
 Firefox and WebKit suites, the full 28-surface × three-width Lighthouse matrix,
 normal required checks and review, then the automatic staging provider/export
