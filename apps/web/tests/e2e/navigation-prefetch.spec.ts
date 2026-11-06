@@ -156,6 +156,28 @@ test("a slow navigation is acknowledged immediately and clears when it arrives",
   await expect(progress).not.toHaveAttribute("data-active", "true");
 });
 
+test("public Help acknowledges a delayed app navigation before the app shell arrives", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/help");
+  await page.locator("summary").filter({ hasText: "How do I set a daily reminder?" }).press("Enter");
+  await page.context().addCookies([
+    { name: "e2e_response_delay_ms", value: "1500", url: page.url() },
+  ]);
+  const navigation = page.waitForRequest(request =>
+    new URL(request.url()).pathname === "/settings"
+      && request.headers().rsc === "1" && !request.headers()["next-router-prefetch"],
+  );
+  await page.getByRole("link", { name: "Set up a calendar reminder", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await navigation;
+  const progress = page.locator(".navigation-progress");
+  await expect(progress).toHaveAttribute("data-active", "true", { timeout: 500 });
+  await expect(progress).toHaveCSS("opacity", "1", { timeout: 500 });
+  await expect(page.getByRole("heading", { name: "Settings", level: 1, exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "Download calendar reminder", exact: true })).toBeEnabled();
+  await expect(progress).not.toHaveAttribute("data-active", "true");
+});
+
 test("a prominent link shows its destination's loading state at once", async ({
   page,
 }) => {
@@ -298,17 +320,19 @@ test("actual navigation cancels its pending focus prefetch", async ({ page }, te
   await link.focus();
   await page.keyboard.press("Enter");
   await actualNavigation;
-  // Verify an actual pending navigation, then observe its entire deliberately
-  // held response. Wall-clock latency is diagnostic only, not a pass threshold.
+  // Verify the pending navigation and its committed destination. A streamed
+  // RSC response can remain open after the usable page has rendered, so its
+  // EOF is not a readiness signal. Latency is diagnostic, not a pass threshold.
   await expect(page.getByRole("heading", { name: "Settings", level: 1, exact: true })).toHaveCount(0);
   const response = await actualResponse;
   expect(response.status()).toBe(200);
-  expect(await response.finished()).toBeNull();
-  const duringNavigation = prefetches.length;
   await expect(page).toHaveURL(/\/settings#calendar-reminder-heading$/);
   await expect(page.getByRole("heading", { name: "Settings", level: 1, exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Download calendar reminder", exact: true })).toBeEnabled();
-  await settle(page);
+  const duringNavigation = prefetches.length;
+  // Observe late intent work beyond the 300ms intent delay without requiring
+  // every framework stream to reach network-idle or EOF.
+  await page.waitForTimeout(500);
   await testInfo.attach("navigation-prefetch-counts", {
     body: JSON.stringify({ navigationStartedAfterFocusMs, prefetchesAtNavigationStart, duringNavigation, total: prefetches.length, kinds: prefetches, writes }),
     contentType: "application/json",

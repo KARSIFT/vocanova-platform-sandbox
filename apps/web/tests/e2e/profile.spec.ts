@@ -71,9 +71,10 @@ test.describe("Profile and password security", () => {
     await expect(displayName).toHaveValue("Profile learner");
     await page.reload();
     await expect(displayName).toHaveValue("Profile learner");
-    await expect(
-      page.getByText("core-loop-fixture@example.test"),
-    ).toBeVisible();
+    // Streaming may retain an inactive copy outside the accessible main.
+    const email = page.getByRole("main").getByText("core-loop-fixture@example.test", { exact: true });
+    await expect(email).toHaveCount(1);
+    await expect(email).toBeVisible();
   });
 
   test("routes an expired profile update back to sign-in without claiming success", async ({

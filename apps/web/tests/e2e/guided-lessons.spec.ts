@@ -56,10 +56,16 @@ test("a larger curriculum groups lessons without locking other situations", asyn
   ).toHaveText("Make a plan with a friend");
 });
 
-test("a guided lesson resumes and completes teaching, recall and context", async ({
+for (const theme of ["light", "dark"] as const)
+test(`a guided lesson resumes, completes and opens its next activities (${theme})`, async ({
   page,
+  context,
+  baseURL,
 }) => {
+  await context.addCookies([{ name: "vocanova_theme", value: theme, url: baseURL! }]);
+  await page.addInitScript(value => localStorage.setItem("vocanova:theme-preference", value), theme);
   await page.goto("/learn/conversation-basics");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
   const opened = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
@@ -138,6 +144,25 @@ test("a guided lesson resumes and completes teaching, recall and context", async
   await expect(
     page.getByRole("heading", { name: "Lesson complete", exact: true }),
   ).toBeVisible();
+  for (const [name, href, heading] of [
+    ["Practise these words", "/practice?lesson=conversation-basics", "Today’s practice"],
+    ["Choose your next lesson", "/courses", "Situation courses"],
+    ["Review saved words", "/review", "You’re ready for new words"],
+  ] as const) {
+    await page.goto("/learn/conversation-basics");
+    await expect(page.getByRole("heading", { name: "Lesson complete", level: 1, exact: true })).toBeVisible();
+    const link = page.getByRole("main").getByRole("link", { name, exact: true });
+    await expect(link).toHaveAttribute("href", href);
+    await link.focus();
+    await expect(link).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new URL(href, baseURL!).toString());
+    await expect(page.getByRole("heading", { name: heading, level: 1, exact: true })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    if (name === "Practise these words") {
+      await expect(page.getByLabel("Practice vocabulary", { exact: true })).toHaveValue("conversation-basics");
+    }
+  }
   await page.goto("/progress");
   const path = page.getByRole("main").locator("summary").filter({ hasText: "Your learning path" });
   await expect(path).toContainText("1 of 1 lessons");

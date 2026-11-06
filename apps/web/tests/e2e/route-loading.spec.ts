@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { formatViolations, scanForAxeViolations } from "./axe-helper.js";
+import { expectNavigationFeedback } from "./navigation-feedback-readiness";
 
 test.beforeEach(async ({ context, baseURL }) => {
   await context.addCookies([
@@ -52,16 +53,12 @@ test.describe("Route loading states", () => {
       ).toBeVisible();
       await delayNextServerRequest(page);
 
-      await page.getByRole("link", { name: /^Choose a practice/ }).focus();
-      await page.keyboard.press("Enter");
-      const status = page
-        .getByRole("status")
-        .filter({ hasText: "Loading practice" });
-      await expect(status).toBeVisible();
-      await expect(status.locator("..")).toHaveAttribute("aria-busy", "true");
-      await expect(
-        page.getByRole("heading", { name: "Today’s practice", level: 1 }),
-      ).toBeVisible({ timeout: 10_000 });
+      await expectNavigationFeedback(page, {
+        loadingStatusId: "practice-loading-status", heading: "Today’s practice",
+      }, async () => {
+        await page.getByRole("link", { name: /^Choose a practice/ }).focus();
+        await page.keyboard.press("Enter");
+      });
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(page.viewportSize()!.width);
@@ -110,17 +107,12 @@ test.describe("Route loading states", () => {
           "/learn/conversation-basics",
         );
         await delayNextServerRequest(page);
-        await link.focus();
-        await page.keyboard.press("Enter");
-        const status = page
-          .getByRole("status")
-          .filter({ hasText: "Loading lesson" });
-        await expect(status).toBeVisible();
-        await expect(status.locator("..")).toHaveAttribute("aria-busy", "true");
-        await expect(
-          page.getByRole("main").getByRole("heading", { level: 1 }),
-        ).toHaveText(resumed ? "confirm" : "Make a plan with a friend", {
-          timeout: 10_000,
+        await expectNavigationFeedback(page, {
+          loadingStatusId: "lesson-loading-status",
+          heading: resumed ? "confirm" : "Make a plan with a friend",
+        }, async () => {
+          await link.focus();
+          await page.keyboard.press("Enter");
         });
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth),
@@ -143,20 +135,10 @@ test.describe("Route loading states", () => {
 
     await delayNextServerRequest(page);
 
-    const navigation = page
-      .getByRole("navigation", { name: "Primary" })
-      .getByRole("link", { name: "Journey" })
-      .click();
-
-    const status = page.getByRole("status").filter({
-      hasText: "Loading Journey",
-    });
-    await expect(status).toBeVisible();
-    await expect(status.locator("..")).toHaveAttribute("aria-busy", "true");
-    await navigation;
-    await expect(
-      page.getByRole("heading", { name: "Journey", level: 1 }),
-    ).toBeVisible({ timeout: 10_000 });
+    await expectNavigationFeedback(page, {
+      loadingStatusId: "journey-loading-status", heading: "Journey",
+    }, () => page.getByRole("navigation", { name: "Primary" })
+      .getByRole("link", { name: "Journey" }).click());
   });
 
   test("Review shows loading feedback while its data is delayed", async ({
@@ -207,16 +189,9 @@ test.describe("Route loading states", () => {
 
     await delayNextServerRequest(page);
 
-    const navigation = page.getByRole("link", { name: "Saved words" }).click();
-    const status = page.getByRole("status").filter({
-      hasText: "Loading saved vocabulary",
-    });
-    await expect(status).toBeVisible();
-    await expect(status.locator("..")).toHaveAttribute("aria-busy", "true");
-    await navigation;
-    await expect(
-      page.getByRole("heading", { name: "Saved vocabulary", level: 1 }),
-    ).toBeVisible({ timeout: 10_000 });
+    await expectNavigationFeedback(page, {
+      loadingStatusId: "saved-words-loading-status", heading: "Saved vocabulary",
+    }, () => page.getByRole("link", { name: "Saved words" }).click());
   });
 });
 

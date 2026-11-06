@@ -9,6 +9,9 @@ instead of adding overlapping runs into a unique passing count. The earlier
 84-entry Lighthouse pass predates the final calendar/navigation refinements.
 Late local WebKit runs encountered severe host load and pre-document transport
 stalls; those failures require fresh verification and are not performance data.
+The first isolated full run exposed Linux-font wrapping and synchronization
+issues; its exact failed/partial outcomes and corrective evidence are in the
+ledger. The resulting source and test changes require a fresh complete run.
 
 Integrated acceptance requires the consolidated PR's isolated Chromium,
 Firefox and WebKit suites, the full 28-surface × three-width Lighthouse matrix,

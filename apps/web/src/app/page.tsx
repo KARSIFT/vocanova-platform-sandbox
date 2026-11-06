@@ -86,7 +86,7 @@ export default function Page() {
               </p>
               <h2
                 id="how-it-works-heading"
-                className="mt-3 text-3xl font-bold leading-tight tracking-[-0.03em]"
+                className="mt-3 text-3xl font-bold leading-tight tracking-[-0.03em] [overflow-wrap:anywhere]"
               >
                 A little practice, with a clear purpose.
               </h2>

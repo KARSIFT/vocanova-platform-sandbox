@@ -78,6 +78,22 @@ for (const theme of ["light", "dark"] as const) {
       }
     });
 
+    test("healthy Writing links open the selected situation, saved vocabulary and Practice", async ({ page }) => {
+      for (const [name, href, heading] of [
+        ["Explore this situation", "/discover/daily-conversation", "Daily Conversation"],
+        ["Your saved vocabulary", "/words", "Saved vocabulary"],
+        ["Back to Practice", "/practice", "Today’s practice"],
+      ] as const) {
+        await themedGoto(page, "/writing?situation=daily-conversation");
+        const main = page.getByRole("main");
+        await expect(main.getByRole("heading", { name: "Topic writing", level: 1, exact: true })).toBeVisible();
+        await expect(main.getByRole("heading", { name: "Daily Conversation", level: 2, exact: true })).toBeVisible();
+        await expect(main.getByText("A plan with a friend has changed.", { exact: false })).toBeVisible();
+        await activate(page, main.getByRole("link", { name, exact: true }), href, heading, 1);
+        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      }
+    });
+
     test("Home latest-word links open saved vocabulary and reveal optional writing directly", async ({ page }) => {
       const { wordPath } = await saveInvite(page);
       await themedGoto(page, "/home");

@@ -13,7 +13,10 @@ test.beforeEach(async ({ context, baseURL }) => {
 // header with only a sliver below it, and how much shows depends on font
 // metrics. Focus must bring its whole target clear of the header.
 async function expectChooserRevealedByFocus(page: Page) {
-  const chooser = page.getByText("Change meaning: invite", { exact: true });
+  // Scope to the active page, excluding inactive streamed copies.
+  const chooser = page.getByRole("main").getByText("Change meaning: invite", { exact: true });
+  await expect(chooser).toHaveCount(1);
+  await expect(chooser).toBeVisible();
   await chooser.focus();
   const [header, box] = await Promise.all([
     page.getByRole("banner").boundingBox(),

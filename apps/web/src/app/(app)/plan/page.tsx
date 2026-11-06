@@ -58,7 +58,7 @@ export default async function LearningPlanPage() {
       </Link>
       <header className="mb-6 mt-3">
         <Eyebrow>A plan you can make your own</Eyebrow>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 [overflow-wrap:anywhere]">
           Your learning plan
         </h1>
         <p className="mt-3 max-w-[40rem] text-lg text-neutral-700">

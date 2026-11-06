@@ -59,7 +59,7 @@ export default async function SettingsAccountPage() {
         </p>
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-900">
           Current address:{" "}
-          <span className="font-medium">
+          <span className="font-medium [overflow-wrap:anywhere]">
             {currentEmail ? currentEmail : "Not available"}
           </span>
         </p>

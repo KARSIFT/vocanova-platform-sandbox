@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+import { expectNavigationFeedback } from "./navigation-feedback-readiness";
 
 async function expectReminderReached(page: Page) {
   await expect(page.getByRole("button", { name: "Download calendar reminder", exact: true })).toBeEnabled();
@@ -23,7 +24,7 @@ for (const theme of ["light", "dark"] as const) {
       { path: "/plan", label: "Set a calendar reminder", hash: "practice-reminder" },
       { path: "/help", label: "Set up a calendar reminder", hash: "calendar-reminder-heading" },
     ]) {
-      test(`${entry.path} reaches the reminder after a streamed loading shell`, async ({ page, context, baseURL }) => {
+      test(`${entry.path} reaches the reminder with continuous navigation feedback`, async ({ page, context, baseURL }) => {
         await page.goto(entry.path);
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         if (entry.path === "/help") {
@@ -33,9 +34,12 @@ for (const theme of ["light", "dark"] as const) {
         // real loading shell before the calendar fragment target is mounted.
         await context.addCookies([{ name: "e2e_settings_delay_ms", value: "3000", url: baseURL! }]);
         const link = page.getByRole("link", { name: entry.label, exact: true });
-        await link.focus();
-        await page.keyboard.press("Enter");
-        await expect(page.getByLabel("Loading settings", { exact: true })).toBeVisible();
+        await expectNavigationFeedback(page, {
+          loadingStatusId: "settings-loading-status", heading: "Settings",
+        }, async () => {
+          await link.focus();
+          await page.keyboard.press("Enter");
+        });
         await expect(page).toHaveURL(`${baseURL}/settings#${entry.hash}`);
         await expectReminderReached(page);
       });

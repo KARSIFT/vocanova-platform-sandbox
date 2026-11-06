@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type BrowserContext } from "@playwright/test";
 import { scanForAxeViolations } from "./axe-helper";
 async function waitForPictureVisibility(frame: Locator, visible: boolean) {
   await frame.locator(":scope > div").evaluate((element, expected) =>
@@ -13,6 +13,24 @@ async function waitForPictureVisibility(frame: Locator, visible: boolean) {
       });
       observer.observe(element);
     }), visible);
+}
+
+// Home image cases require saved state, not another UI-save assertion. Prepare
+// it through the mock mutation so an unrelated open RSC refresh cannot race the
+// next document navigation (the authored catalog itself is stateless).
+async function prepareSavedInvite(context: BrowserContext) {
+  const api = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
+  const canonical = await context.request.get(`${api}/api/v1/canonical-words/invite`);
+  expect(canonical.status()).toBe(200);
+  const { word } = await canonical.json();
+  const meaningId = word.meanings[0].id;
+  const csrf = (await context.cookies()).find(cookie => cookie.name === "vocanova_csrf")!.value;
+  const saved = await context.request.post(`${api}/api/v1/user-words`, {
+    headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+    data: { meaningId, source: "journey" },
+  });
+  expect(saved.status()).toBe(200);
+  expect(await saved.json()).toMatchObject({ meaningId, saved: true });
 }
 
 test.beforeEach(async ({ context, baseURL }) => {
@@ -188,20 +206,7 @@ test("changed canonical meaning hides obsolete local artwork without an empty bo
 
 
 test("Home streams the saved-word picture without delaying Review", async ({ page, context, baseURL }) => {
-  await page.goto("/vocabulary/invite");
-  // The teaching catalog fixture always returns saved:false/no userWordId,
-  // so it cannot expose the normal server-gated writing disclosure. Wait for
-  // this exact refresh stream instead, before changing fixtures or navigating.
-  const refreshed = page.waitForResponse(response =>
-    new URL(response.url()).pathname === "/vocabulary/invite"
-    && response.request().method() === "GET"
-    && response.request().headers()["rsc"] === "1",
-  );
-  await page.getByRole("button", { name: /^Save invite:/ }).click();
-  await expect(page.getByRole("button", { name: "Remove invite from saved words", exact: true })).toBeVisible();
-  const refresh = await refreshed;
-  expect(refresh.status()).toBe(200);
-  expect(await refresh.finished()).toBeNull();
+  await prepareSavedInvite(context);
   await context.addCookies([
     { name: "e2e_review_fixture_count", value: "2", url: baseURL! },
     { name: "e2e_meaning_image", value: "ready", url: baseURL! },
@@ -223,18 +228,7 @@ test("Home streams the saved-word picture without delaying Review", async ({ pag
 
 for (const mode of ["stale", "unavailable"] as const) {
   test(`Home retains its reviewed local fallback when image metadata is ${mode}`, async ({ page,context,baseURL })=>{
-    await page.goto("/vocabulary/invite");
-    // This authored teaching fixture does not render saved-state writing UI.
-    const refreshed = page.waitForResponse(response =>
-      new URL(response.url()).pathname === "/vocabulary/invite"
-      && response.request().method() === "GET"
-      && response.request().headers()["rsc"] === "1",
-    );
-    await page.getByRole("button",{name:/^Save invite:/}).click();
-    await expect(page.getByRole("button",{name:"Remove invite from saved words",exact:true})).toBeVisible();
-    const refresh = await refreshed;
-    expect(refresh.status()).toBe(200);
-    expect(await refresh.finished()).toBeNull();
+    await prepareSavedInvite(context);
     await context.addCookies([
       {name:"e2e_review_fixture_count",value:"2",url:baseURL!},
       {name:"e2e_meaning_image",value:mode==="stale"?"stale":"ready",url:baseURL!},

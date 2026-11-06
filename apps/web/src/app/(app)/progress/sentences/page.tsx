@@ -43,7 +43,7 @@ export default async function SentenceHistoryPage({
         Back to Progress
       </Link>
       <Eyebrow>Your writing practice</Eyebrow>
-      <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
+      <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900 [overflow-wrap:anywhere]">
         Sentence history
       </h1>
       <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">

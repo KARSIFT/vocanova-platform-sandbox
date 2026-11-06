@@ -14,7 +14,10 @@ the streamed target mounts. WebKit checks additionally exposed native-select
 overflow and calendar focus visibility: scoped CSS preserves range text and
 keeps the focused date/time control clear of fixed navigation. Actual link
 navigation now cancels its pending intent-prefetch timer to avoid requesting
-the same destination again.
+the same destination again. A final Linux-font check additionally repairs
+long-text wrapping on eight surfaces. The existing navigation indicator now
+lives in the shared root layout so public Help also acknowledges delayed
+transitions into the app.
 
 The ledger preserves the Chromium, Firefox and WebKit failures and corrective
 runs separately. Earlier 84-page Lighthouse checks passed on the recorded

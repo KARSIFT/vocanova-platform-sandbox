@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 import { ThemeBootstrap, ThemeProvider } from "./_components/theme-preference";
+import { NavigationProgress } from "@/ui/navigation-feedback";
 
 export const metadata: Metadata = {
   title: "Vocanova",
@@ -20,7 +21,10 @@ export default function RootLayout({
         <ThemeBootstrap />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <NavigationProgress />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

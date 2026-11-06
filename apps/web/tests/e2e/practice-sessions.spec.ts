@@ -680,6 +680,16 @@ test("personal path mixes teaching, listening, gap fill and accessible sentence 
   expect(session.currentStep?.kind).toBe("sentence_build");
   await expect(main(page).getByTestId("meaning-picture")).toHaveCount(0);
   const available = main(page).getByRole("group", { name: "Available words" });
+  await available.getByRole("button", { name: "We", exact: true }).click();
+  await available.getByRole("button", { name: "our", exact: true }).click();
+  const startOver = main(page).getByRole("button", { name: "Start over", exact: true });
+  await startOver.focus();
+  await page.keyboard.press("Enter");
+  await expect(main(page).getByRole("group", { name: "Your sentence" }).getByRole("button")).toHaveCount(0);
+  await expect(startOver).toBeDisabled();
+  await expect(main(page).getByRole("button", { name: "Check answer", exact: true })).toBeDisabled();
+  await expect(available.getByRole("button", { name: "We", exact: true })).toBeEnabled();
+  await expect(available.getByRole("button", { name: "our", exact: true })).toBeEnabled();
   for (const token of ["We", "our", "invite", "friends."])
     await available.getByRole("button", { name: token, exact: true }).click();
   const sentence = main(page).getByRole("group", { name: "Your sentence" });

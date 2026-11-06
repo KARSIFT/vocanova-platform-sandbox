@@ -47,7 +47,8 @@ jobs:
     runs-on: ubuntu-latest
     # The expanded three-width suite includes held loading/error states and
     # enlarged-text captures. Keep per-test deadlines and assertions unchanged.
-    timeout-minutes: 45
+    # Keep time for failure artifacts after a bounded full-suite timeout.
+    timeout-minutes: 75
     steps:
       # actions/checkout v7.0.1, pinned to the immutable commit
       # documented at
@@ -122,6 +123,7 @@ jobs:
         run: bash infra/scripts/install-playwright-chromium.sh
 
       - name: Run accessibility suite
+        timeout-minutes: 65
         env:
           CI: "1"
         run: pnpm --filter @vocanova/web test:e2e
@@ -150,7 +152,9 @@ jobs:
     runs-on: ubuntu-latest
     # Each engine gets an isolated runner and the entire three-width suite.
     # Keep individual test deadlines and the base CI retry policy unchanged.
-    timeout-minutes: 60
+    # WebKit's complete suite exceeded an hour on an isolated runner. Bound the
+    # suite separately so traces can still upload if that bound is reached.
+    timeout-minutes: 100
     strategy:
       fail-fast: false
       matrix:
@@ -183,6 +187,7 @@ jobs:
         run: pnpm --filter @vocanova/web exec playwright install --with-deps "${{ matrix.browser }}"
 
       - name: Run complete browser suite
+        timeout-minutes: 90
         env:
           CI: "1"
           VOCANOVA_TEST_BROWSER: ${{ matrix.browser }}

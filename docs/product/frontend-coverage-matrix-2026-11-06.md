@@ -694,7 +694,7 @@ measurement.
 The final local red attempt was interrupted under continuing host overload;
 it is not an aggregate red/green result. Integrated source checks passed web
 lint, web and E2E typechecks, formatting and **252 web helper tests**. The latest
-production build also completed. The complete inventory is **1,926 cases in
+production build also completed. The inventory at that checkpoint was **1,926 cases in
 101 files** across three widths; intended skips are never counted as passes.
 
 Final broad acceptance runs on isolated CI workers: the original Chromium
@@ -705,3 +705,99 @@ stays held until relevant checks and review are resolved. Actual PR and staging
 execution records establish the final outcomes; this ledger does not imply
 those jobs have passed before they execute. The reserved-account staging
 provider/export/CDN gate and the external limitations above remain separate.
+
+
+### Final control-activation sweep
+
+A separate source-to-test review found controls whose earlier evidence checked
+visibility or an `href` without activating them. The final expansion adds actual
+control activation for healthy Writing exits, normal library/list/search links,
+email-change recovery, continued reviews, pending-navigation practice fallbacks,
+and conditional empty/exhausted/completed-state links. Completed lesson links
+must preserve their lesson or saved-meaning context; resumed reviews must retain
+the exact original session URL without another start mutation.
+
+The draft-discard case proves failed intent had a stored request identity, then
+requires an empty editor, cleared error and storage, and no restored draft or
+extra submission after reload. The sentence-builder reset clears all tokens,
+re-enables the available words and disables submission before reconstructing and
+submitting the expected sentence. Five previously unactivated disclosures now
+open and close from the keyboard and expose their actual content, including
+source attribution at three placements and submitted vocabulary filters.
+
+Three opt-in mock branches make otherwise unavailable server states observable:
+a rejected vocabulary cursor, small pages over existing canonical meanings,
+and a shortened situation list with more results. A read-only practice response
+models one unsupported known meaning. These are explicit transport fixtures,
+not claims about real catalog completeness. Two old review-retry controls were
+excluded after confirming their component has no live importer or render path.
+
+The first 18 added Writing/draft/completion executions passed in Chrome,
+Firefox and WebKit. The next Chrome navigation batch passed 103 of 114; eleven
+failures exposed test expectations that incorrectly included an unsaved third
+lesson word or ignored the review page's canonical session URL. After those
+expectations were corrected, all twelve affected executions passed. The 21
+Chrome disclosure/reset executions also passed. These separate runs are not a
+single full-suite pass. The expanded inventory is **2,076 cases in 104 files**.
+Independent review strengthened pagination to require changed/restored visible
+rows and practice fallback activation to open its exact confirmed session in a
+separate page while the automatic navigation remains blocked. Final broad
+acceptance still comes from the held PR's complete engine checks on its final
+revision.
+
+The integrated source before this test-only expansion passed all **84** hosted
+Lighthouse reports: performance **100**, accessibility **100**, best-practices
+**96–100**, total blocking time **0**, and maximum layout shift **0.006**.
+These controlled fixture scores do not establish production latency. The finite
+control sweep does not close the provider, physical-device, native-picker,
+screen-reader speech or untested state-combination limits recorded above.
+
+
+### First isolated run and resulting corrections
+
+The first isolated full run on `ecd37731` was not green. Firefox completed all
+1,926 cases with **1,869 passed, 16 failed and 41 skipped**. Chromium reached
+its 45-minute job limit after **1,588 passed, 26 failed, four flaky and 29
+skipped**, leaving 279 unreported cases. WebKit reached its hour limit after
+**1,543 passed, ten failed, seven flaky and 26 skipped**, leaving 340 unreported
+cases. Partial log outcomes are not completed-suite totals.
+
+Loading the actual Linux fallback font locally reproduced the enlarged-text
+failures exactly on eight 360px surfaces. The resulting changes wrap Home's
+status row, the Profile heading/return row, long headings and the Account email.
+Fresh compiled verification passed **48 diagnostic contexts** with 360px
+viewport/document widths, no horizontal control overflow and no page errors.
+All eight before/after comparison sheets were inspected. The font is a private
+diagnostic input; no external font or font-size reduction was added to the app.
+
+Several synchronization tests incorrectly waited for complete RSC transport
+EOF. Confirmed writes and a usable editor now establish the action result;
+fresh authenticated documents verify persisted knowledge. Pronunciation and
+Home-picture tests prepare their saved prerequisite through actual mock API
+writes. This avoids making unrelated save-refresh completion part of those
+cases. Active-main scoping excludes retained inactive streaming copies while
+preserving uniqueness and visibility assertions.
+
+A bounded WebKit probe also reproduced absent route skeletons with one actual
+navigation and no prefetch. Public Help had no global progress indicator during
+that wait because the indicator lived inside the destination app layout. A new
+regression failed before the change; the existing single indicator now lives
+in the shared root layout. Client-navigation tests require continuous painted
+feedback through the global indicator or a real busy loading region until the
+healthy destination is visible, including the indicator-to-page handoff. The
+separate thirty held-loading accessibility checks remain intact.
+
+The public-Help regression passed all three widths in Chrome after rebuilding.
+An earlier sentence-retry CI failure did not reproduce in six instrumented
+WebKit attempts: every retry restored its CSRF cookie and submitted the same
+request identity. No speculative application fix was made for that observation.
+Final isolated acceptance remains required, including that case. Total suite
+budgets now leave time for failure artifacts; individual deadlines, assertions
+and the CI retry policy remain unchanged.
+
+
+After the shared indicator rebuild, **51/51 WebKit navigation/loading cases**
+passed, including the continuous-feedback lifecycle, calendar fragment arrival
+and public Help transition. The earlier focused Chrome batch passed **48/48**
+write/persistence, pronunciation, Home-picture and fallback checks. These remain
+bounded corrective runs; they do not replace final full-suite CI acceptance.

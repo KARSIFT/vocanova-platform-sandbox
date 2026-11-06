@@ -23,7 +23,7 @@ export default async function ListsPage() {
       </Link>
       <header className="my-4">
         <Eyebrow>Words for your life</Eyebrow>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 [overflow-wrap:anywhere]">
           Personal lists
         </h1>
         <p className="mt-2 text-neutral-700">

@@ -20,20 +20,38 @@ async function openEditor(page: Page) {
   return editor;
 }
 
-async function saveKnowledgeAndFinishRefresh(page: Page, submit: Locator) {
-  const path = new URL(page.url()).pathname;
-  // The success message is local state; an open editor has no changing
-  // server-rendered marker. Finish this exact refresh stream before another
-  // edit/reload can abort it. The subsequent reload still verifies persistence.
-  const refreshed = page.waitForResponse(response =>
-    new URL(response.url()).pathname === path
-    && response.request().method() === "GET"
-    && response.request().headers()["rsc"] === "1",
+async function saveKnowledgeAndConfirm(page: Page, submit: Locator) {
+  const editor = editorFor(page);
+  const expected = {
+    selfReportedKnown: await editor.getByRole("checkbox").isChecked(),
+    note: await editor.getByRole("textbox", { name: "My note" }).inputValue(),
+  };
+  // Confirm the actual write and usable editor. RSC transport EOF can remain
+  // pending after its UI has rendered; it does not prove a React commit.
+  const updated = page.waitForResponse(response =>
+    new URL(response.url()).pathname.startsWith("/api/v1/meaning-knowledge/")
+    && response.request().method() === "PUT",
   );
   await submit.click();
-  const response = await refreshed;
+  const response = await updated;
   expect(response.status()).toBe(200);
-  expect(await response.finished(), "The knowledge refresh must complete before leaving").toBeNull();
+  expect(response.request().postDataJSON()).toEqual(expected);
+  expect(await response.json()).toMatchObject(expected);
+  await expect(editor.getByRole("status")).toHaveText("Your knowledge and note are saved.");
+  await expect(editor.getByRole("textbox", { name: "My note" })).toBeEnabled();
+}
+
+async function reopenForPersistedRead(page: Page) {
+  // Verify persistence in a fresh document in the same authenticated context.
+  // Its navigation cannot be superseded by the old document's router.refresh.
+  const url = page.url();
+  const heading = await page.getByRole("main").getByRole("heading", { level: 1 }).innerText();
+  const fresh = await page.context().newPage();
+  await fresh.goto(url);
+  await expect(fresh).toHaveURL(url);
+  await expect(fresh.getByRole("main").getByRole("heading", { name: heading, level: 1, exact: true })).toBeVisible();
+  await page.close();
+  return fresh;
 }
 
 for (const theme of ["light", "dark"] as const) {
@@ -54,13 +72,13 @@ for (const theme of ["light", "dark"] as const) {
       .getByRole("checkbox", { name: "I already know this meaning" })
       .check();
     await editor.getByRole("textbox", { name: "My note" }).fill(note);
-    await saveKnowledgeAndFinishRefresh(page,
+    await saveKnowledgeAndConfirm(page,
       editor.getByRole("button", { name: "Save my changes", exact: true }),
     );
     await expect(editor.getByRole("status")).toHaveText(
       "Your knowledge and note are saved.",
     );
-    await page.reload();
+    page = await reopenForPersistedRead(page);
     editor = await openEditor(page);
     await expect(editor.getByRole("checkbox")).toBeChecked();
     await expect(editor.getByRole("textbox", { name: "My note" })).toHaveValue(
@@ -150,13 +168,13 @@ for (const theme of ["light", "dark"] as const) {
     );
     await editor.getByRole("checkbox").uncheck();
     await editor.getByRole("textbox", { name: "My note" }).fill("");
-    await saveKnowledgeAndFinishRefresh(page,
+    await saveKnowledgeAndConfirm(page,
       editor.getByRole("button", { name: "Save my changes", exact: true }),
     );
     await expect(editor.getByRole("status")).toHaveText(
       "Your knowledge and note are saved.",
     );
-    await page.reload();
+    page = await reopenForPersistedRead(page);
     editor = await openEditor(page);
     await expect(editor.getByRole("checkbox")).not.toBeChecked();
     await expect(editor.getByRole("textbox", { name: "My note" })).toHaveValue(
@@ -189,7 +207,7 @@ test("a lost knowledge response retries the exact update before allowing a newer
   page,
 }) => {
   await page.goto("/vocabulary/pour");
-  const editor = await openEditor(page);
+  let editor = await openEditor(page);
   const original = {
     selfReportedKnown: true,
     note: "I pour tea every morning.",
@@ -221,7 +239,7 @@ test("a lost knowledge response retries the exact update before allowing a newer
     original.note,
   );
   expect(requests).toHaveLength(1);
-  await saveKnowledgeAndFinishRefresh(page,
+  await saveKnowledgeAndConfirm(page,
     editor.getByRole("button", { name: "Retry saving changes", exact: true }),
   );
   await expect(editor.getByRole("status")).toHaveText(
@@ -237,7 +255,7 @@ test("a lost knowledge response retries the exact update before allowing a newer
   await editor.getByRole("textbox", { name: "My note" }).fill(newerNote);
   await expect(editor.getByRole("status")).toHaveCount(0);
   expect(requests).toHaveLength(2);
-  await saveKnowledgeAndFinishRefresh(page,
+  await saveKnowledgeAndConfirm(page,
     editor.getByRole("button", { name: "Save my changes", exact: true }),
   );
   await expect(editor.getByRole("status")).toHaveText(
@@ -250,8 +268,8 @@ test("a lost knowledge response retries the exact update before allowing a newer
     ...original,
     note: newerNote,
   });
-  await page.reload();
-  await openEditor(page);
+  page = await reopenForPersistedRead(page);
+  editor = await openEditor(page);
   await expect(editor.getByRole("checkbox")).toBeChecked();
   await expect(editor.getByRole("textbox", { name: "My note" })).toHaveValue(
     newerNote,
@@ -262,17 +280,18 @@ test("failed initial knowledge loading cannot replace an existing private note",
   page,
 }) => {
   await page.goto("/vocabulary/pour");
-  const editor = await openEditor(page);
+  let editor = await openEditor(page);
   const existingNote = "Pour slowly so the cup does not overflow.";
   await editor.getByRole("checkbox").check();
   await editor.getByRole("textbox", { name: "My note" }).fill(existingNote);
-  await saveKnowledgeAndFinishRefresh(page,
+  await saveKnowledgeAndConfirm(page,
     editor.getByRole("button", { name: "Save my changes", exact: true }),
   );
   await expect(editor.getByRole("status")).toHaveText(
     "Your knowledge and note are saved.",
   );
-  await page.reload();
+  page = await reopenForPersistedRead(page);
+  editor = editorFor(page);
   let reads = 0;
   let writes = 0;
   await page.route("**/api/v1/meaning-knowledge/*", async (route) => {

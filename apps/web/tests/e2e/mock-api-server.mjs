@@ -1701,10 +1701,16 @@ const server = createServer(async (req, res) => {
       await new Promise((resolve) => setTimeout(resolve, SLOW_SITUATIONS_MS));
     }
     logLine(req, 200);
+    const situations = buildJourneySituations(cookies.e2e_daily_conversation === "true");
     jsonResponse(
       res,
       200,
-      buildJourneySituations(cookies.e2e_daily_conversation === "true"),
+      {
+        ...situations,
+        ...(cookies.e2e_journey_situations === "has-more"
+          ? { items: situations.items.slice(0, 1), hasMore: true, nextCursor: "1" }
+          : {}),
+      },
     );
     return;
   }

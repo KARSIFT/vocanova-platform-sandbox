@@ -36,7 +36,7 @@ export default async function ProfilePage() {
   const displayName = user.displayName ?? "";
   return (
     <PageContainer>
-      <div className="mb-[var(--spacing-md)] flex items-center justify-between">
+      <div className="mb-[var(--spacing-md)] flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-neutral-900">Profile</h1>
         <Link
           href="/settings"
