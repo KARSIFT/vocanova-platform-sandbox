@@ -326,3 +326,87 @@ func TestCloudflareModerationProviderMaxRetriesZeroAttemptsOnce(t *testing.T) {
 	assert.Nil(t, result)
 	assert.Equal(t, int32(1), atomic.LoadInt32(&calls))
 }
+
+func TestCloudflareProvidersAcceptObjectAndJSONStringResponses(t *testing.T) {
+	const detail = "Use \"menu\" naturally; preserve the backslash \\ and newline.\nClear meaning."
+	for _, providerName := range []string{"moderation", "feedback"} {
+		for _, shape := range []string{"object", "json_string"} {
+			t.Run(providerName+"/"+shape, func(t *testing.T) {
+				payload := map[string]any{"outcome": "allowed", "reason": detail}
+				if providerName == "feedback" {
+					payload = map[string]any{"status": "correct", "target_word_used_correctly": true, "explanation": detail}
+				}
+				var response any = payload
+				if shape == "json_string" {
+					encoded, err := json.Marshal(payload)
+					require.NoError(t, err)
+					response = string(encoded)
+				}
+				server := newCloudflareResponseServer(t, response)
+				config := CloudflareConfig{AccountID: "synthetic", BaseURL: server.URL}
+				if providerName == "moderation" {
+					result, err := NewCloudflareModerationProvider(config).Classify(t.Context(), moderationInput("I read the menu."))
+					require.NoError(t, err)
+					require.NotNil(t, result)
+					assert.Equal(t, SafetyAllowed, result.Outcome)
+					assert.Equal(t, detail, result.Reason)
+				} else {
+					result, err := NewCloudflareFeedbackProvider(config).GenerateFeedback(t.Context(), newTestTask())
+					require.NoError(t, err)
+					require.NotNil(t, result)
+					assert.Equal(t, LearningStatusCorrect, result.Status)
+					assert.True(t, result.TargetWordUsedCorrectly)
+					assert.Equal(t, detail, result.Explanation)
+				}
+			})
+		}
+	}
+}
+
+func TestCloudflareProvidersRejectInvalidResponseContent(t *testing.T) {
+	cases := []struct {
+		name     string
+		response any
+		wantErr  error
+	}{
+		{name: "null", response: nil, wantErr: ErrProviderInvalidResponse},
+		{name: "empty_string", response: "", wantErr: ErrProviderInvalidResponse},
+		{name: "whitespace_string", response: " \n\t ", wantErr: ErrProviderInvalidResponse},
+		{name: "malformed_json_string", response: `{"outcome":`, wantErr: ErrProviderInvalidResponse},
+		{name: "double_encoded_string", response: `"{\"outcome\":\"allowed\",\"status\":\"correct\"}"`, wantErr: ErrProviderInvalidResponse},
+		{name: "refusal", response: "I cannot fulfill this request.", wantErr: ErrProviderRefusal},
+	}
+	for _, providerName := range []string{"moderation", "feedback"} {
+		for _, tc := range cases {
+			t.Run(providerName+"/"+tc.name, func(t *testing.T) {
+				server := newCloudflareResponseServer(t, tc.response)
+				config := CloudflareConfig{AccountID: "synthetic", BaseURL: server.URL}
+				if providerName == "moderation" {
+					result, err := NewCloudflareModerationProvider(config).Classify(t.Context(), moderationInput("I read the menu."))
+					assert.ErrorIs(t, err, tc.wantErr)
+					assert.Nil(t, result)
+				} else {
+					result, err := NewCloudflareFeedbackProvider(config).GenerateFeedback(t.Context(), newTestTask())
+					assert.ErrorIs(t, err, tc.wantErr)
+					assert.Nil(t, result)
+				}
+			})
+		}
+	}
+}
+
+func newCloudflareResponseServer(t *testing.T, response any) *httptest.Server {
+	t.Helper()
+	body, err := json.Marshal(map[string]any{
+		"success": true,
+		"errors":  []any{},
+		"result":  map[string]any{"response": response},
+	})
+	require.NoError(t, err)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(server.Close)
+	return server
+}

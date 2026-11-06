@@ -734,6 +734,7 @@ jobs:
             sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/infra/secrets/api.env
             sed -i \
               -e '/^AI_PROVIDER=/d' \
+              -e '/^AI_PROVIDER_BASE_URL=/d' \
               -e '/^AI_PROVIDER_API_KEY=/d' \
               -e '/^AI_PROVIDER_ACCOUNT_ID=/d' \
               -e '/^AI_PROVIDER_MODEL=/d' \
@@ -743,6 +744,7 @@ jobs:
               /opt/vocanova/infra/secrets/api.env
             {
               echo "AI_PROVIDER=cloudflare"
+              echo "AI_PROVIDER_BASE_URL=https://api.cloudflare.com/client/v4"
               echo "AI_PROVIDER_API_KEY=${CLOUDFLARE_API_TOKEN}"
               echo "AI_PROVIDER_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}"
               echo "AI_PROVIDER_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast"
