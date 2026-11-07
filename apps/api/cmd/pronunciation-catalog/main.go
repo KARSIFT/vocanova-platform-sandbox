@@ -48,12 +48,10 @@ func run(args []string) error {
 	}
 	budget := pronunciation.CatalogBudget{MaxGenerations: *attempts, MaxCharacters: *characters, MaxAudioSeconds: *seconds}
 	if *generate {
-		var err error
-		job, err = uuid.Parse(*jobID)
-		if err != nil || job == uuid.Nil {
+		if job == uuid.Nil {
 			return fmt.Errorf("--generate requires a stable --job UUID")
 		}
-		if err = budget.Validate(); err != nil {
+		if err := budget.Validate(); err != nil {
 			return err
 		}
 		if os.Getenv("PRONUNCIATION_PROVIDER") != "openai" || strings.TrimSpace(os.Getenv("PRONUNCIATION_API_KEY")) == "" || !speechEnabled() {

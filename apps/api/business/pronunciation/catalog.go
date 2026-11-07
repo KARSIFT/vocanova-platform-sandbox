@@ -90,30 +90,46 @@ func (o *CatalogOperator) utterances(ctx context.Context) ([]Utterance, error) {
 	return result, rows.Err()
 }
 func (o *CatalogOperator) Audit(ctx context.Context) (CatalogReport, error) {
+	report, _, err := o.auditSnapshot(ctx, false)
+	return report, err
+}
+
+// auditSnapshot optionally retains identities already hashed for this report.
+// Ordinary metadata audits need no retained key set; validation reuses one view
+// of canonical content rather than rereading it before streaming cached clips.
+func (o *CatalogOperator) auditSnapshot(ctx context.Context, retainKeys bool) (CatalogReport, map[string]struct{}, error) {
 	r := CatalogReport{Identity: o.identity()}
 	us, err := o.utterances(ctx)
 	if err != nil {
-		return r, err
+		return r, nil, err
 	}
 	rows, err := o.db.QueryContext(ctx, `SELECT cache_key,status FROM pronunciation_audio_cache`)
 	if err != nil {
-		return r, err
+		return r, nil, err
 	}
 	defer rows.Close()
 	statuses := map[string]string{}
 	for rows.Next() {
 		var k, s string
 		if err = rows.Scan(&k, &s); err != nil {
-			return r, err
+			return r, nil, err
 		}
 		statuses[k] = s
 	}
 	if err = rows.Err(); err != nil {
-		return r, err
+		return r, nil, err
+	}
+	var keys map[string]struct{}
+	if retainKeys {
+		keys = make(map[string]struct{}, len(us))
 	}
 	for _, u := range us {
 		r.Total++
-		switch statuses[utteranceCacheKey(r.Identity, u)] {
+		key := utteranceCacheKey(r.Identity, u)
+		if retainKeys {
+			keys[key] = struct{}{}
+		}
+		switch statuses[key] {
 		case "ready":
 			r.Ready++
 		case "pending":
@@ -124,7 +140,7 @@ func (o *CatalogOperator) Audit(ctx context.Context) (CatalogReport, error) {
 			r.Missing++
 		}
 	}
-	return r, nil
+	return r, keys, nil
 }
 func (o *CatalogOperator) Generate(ctx context.Context, job uuid.UUID, b CatalogBudget) (CatalogReport, error) {
 	r := CatalogReport{JobID: job.String(), Identity: o.identity()}
@@ -362,19 +378,11 @@ func (o *CatalogOperator) JobReport(ctx context.Context, job uuid.UUID) (Catalog
 // AuditValidated streams one bounded MP3 at a time. It does not retain catalog
 // blobs, mutate invalid cache rows, invoke a provider, or claim correct speech.
 func (o *CatalogOperator) AuditValidated(ctx context.Context) (CatalogReport, error) {
-	r, err := o.Audit(ctx)
+	r, keys, err := o.auditSnapshot(ctx, true)
 	if err != nil {
 		return r, err
 	}
 	r.Validation = &CatalogValidation{}
-	us, err := o.utterances(ctx)
-	if err != nil {
-		return r, err
-	}
-	keys := make(map[string]bool, len(us))
-	for _, u := range us {
-		keys[utteranceCacheKey(r.Identity, u)] = true
-	}
 	rows, err := o.db.QueryContext(ctx, `SELECT cache_key,audio FROM pronunciation_audio_cache WHERE status='ready' ORDER BY cache_key`)
 	if err != nil {
 		return r, err
@@ -386,7 +394,7 @@ func (o *CatalogOperator) AuditValidated(ctx context.Context) (CatalogReport, er
 		if err = rows.Scan(&key, &data); err != nil {
 			return r, err
 		}
-		if !keys[key] {
+		if _, current := keys[key]; !current {
 			continue
 		}
 		r.Validation.Checked++

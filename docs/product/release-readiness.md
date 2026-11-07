@@ -15,43 +15,54 @@ metadata/cache evidence, not a listening assessment or a full CDN-object scan.
 The follow-up includes a controlled resumable catalog-audio operator; no complete
 backfill or follow-up production deployment is established at this checkpoint.
 
-Local integrated acceptance on the final frontend bundle passed **370 cases,
-five layout-specific skips, zero failures/retries** across 360px, 430px and
-desktop. The skips are phone-only thumb reach/range chooser/mobile Home and
-desktop-only atlas arrow-key checks on other layouts. Coverage includes pending
-same-range browser Back and exact retry identity, completion Back, active range
-entry, Previous/picker/range bounds, reload, details revision changes, light/dark
-contrast, action alignment, and affected Home/Practice/Progress/Settings states.
-A prior integrated run exposed dark-picker contrast and a real native-history
-synchronization defect; both have passing regressions in this final run.
+Local acceptance on the reviewed frontend bundle passed **370 cases, five
+layout-specific skips, zero failures/retries** across 360px, 430px and desktop.
+The skips cover phone-only controls on desktop and desktop-only atlas arrow-key
+checks on mobile. Coverage includes same-range pending Back and exact retry
+identity, completion recovery, direct range entry, Previous/picker/range bounds,
+cross-range Back/Forward, reload, revision changes, light/dark contrast, aligned
+actions and affected Home/Practice/Progress/Settings states. Earlier runs exposed
+dark-picker contrast and native-history synchronization defects; the final run
+contains their passing regressions.
 
-Web build, lint, web/E2E typechecks and **271 helper/middleware tests** passed.
-API-client passed61/61. Local foundation passed324/335 with11 failures matching
-the recorded macOS harness baseline; nine new inventory failures were fixed by
-registering the exact operator migration/two tables. The focused inventory suite
-passed13/13. Fresh Linux foundation acceptance remains required.
+Manual browser verification also exposed raw HTTP error text in lazy details.
+A failing regression preceded the fix and now covers masked 404/500 problem
+responses, wrong-sense rejection and successful retry. Revision mismatches offer
+Reload only, with actual document-reload recovery; ordinary failures retain Retry.
+
+Web build, lint, web/E2E typechecks, **271 helper/middleware tests** and **61
+API-client tests** passed. Local foundation passed **324/335** with 11 failures
+matching the documented macOS harness baseline. Nine new inventory failures were
+fixed by registering the exact operator migration/two tables; the focused
+inventory suite passed 13/13. Fresh Linux foundation acceptance remains required.
 The affected API/operator race suite against migrated, seeded PostgreSQL passed
-**535 tests/subtests, zero failures/skips** on installed Go 1.27.3; pinned-toolchain
-CI is still required. Independent review of the operator is clean after fixing
+**535 tests/subtests, zero failures/skips** on installed Go 1.27.3. Hosted pinned
+tools are still required. Independent operator review is clean after fixes for
 kill-switch parsing, stored job identity and canonical publication locking.
-The default read-only streamed audio audit distinguishes ready cache metadata
-from decoded/signal-valid clips. Final manual verification also caught raw
-HTTP error text in lazy details; a valid failing regression now covers masked
-404/500 problem responses, exact sense rejection and successful retry. The rebuilt
-final affected browser run again passed370/5skips, with no failures/retries.
-All 16 existing production clips passed that
-gate, which does not establish pronunciation quality. No paid generation or
-production data changes have occurred at this checkpoint.
 
-Manual ChatGPT-browser local checks operated word picking, Previous, range
-jumping and same-range browser Back/reload, plus the simplified mobile Home and
-Settings reading order. These synthetic checks do not establish provider/media
-availability. A separate ordinary deployment-host curl sample across ten catalog
-ranks passed10/10 HTTP200, exact SHA-256 and960×640 dimensions; normal browser
-rendering and delivered-byte hash also passed for mixture. Python urllib still
-returned403 on those URLs; the client-path difference has no established cause.
-This is sampled delivery evidence, not every object. Full hosted browser/performance/API gates, release verification,
-a bounded live audio pilot/backfill and production retests remain outstanding.
+A 20-iteration warm local comparison over 10,051 meanings and no cached clips
+retained identical validated-audit reports while reducing queries **4→3**,
+catalog rows **20,102→10,051** and cumulative allocated bytes
+**90,586,661→45,513,037** per audit. Metadata-only behavior remains unchanged.
+This excludes decoding and is not production latency or peak-memory evidence.
+
+The streamed read-only audio audit distinguishes ready metadata from decoded,
+signal-valid clips. All 16 existing production clips passed that gate; correct
+words/stress require separate listening assessment. No operator generation or
+bulk backfill has occurred at this checkpoint. Ordinary browser playback may
+populate individual cache entries.
+
+Manual ChatGPT-browser local checks operated picking, Previous, range jumps,
+Back/reload, compact mobile Home links, keyboard focus, Settings reading order,
+Practice and Progress. Synthetic fixtures do not establish provider availability.
+Ten sampled production images across catalog ranks returned HTTP 200 through
+ordinary host curl, matched SHA-256 and 960×640 dimensions. Normal browser
+rendering and delivered-byte hash also passed for mixture. Python urllib returned
+403 for those URLs; the client-path difference has no established cause. This
+is sampled delivery evidence, not a full object scan.
+
+Hosted browser/performance/API gates, release verification, a bounded live audio
+pilot/backfill and final production retests remain outstanding at this checkpoint.
 
 ## Manual production audit — 7 November 2026 (released)
 

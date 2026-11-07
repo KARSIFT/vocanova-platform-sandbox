@@ -98,13 +98,15 @@ export function DiscoveryWordDetails({
               Reload word
             </button>
           )}
-          <button
-            type="button"
-            className={styles.secondary}
-            onClick={() => void load()}
-          >
-            Retry word details
-          </button>
+          {!revisionChanged && (
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => void load()}
+            >
+              Retry word details
+            </button>
+          )}
         </div>
       )}
       {word && (

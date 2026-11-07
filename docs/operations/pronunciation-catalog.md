@@ -33,6 +33,14 @@ validation of all 16 cached clips passed the complete decode/signal gate: durati
 1.008–3.552 seconds, peak 0.2580–0.4530 and RMS 0.02299–0.07064. No cache repair
 was needed; this still does not establish correct words or stress.
 
+The validated audit reuses its canonical identity snapshot instead of querying
+and hashing all meanings twice. A 20-iteration warm local comparison over 10,051
+meanings and no cached clips retained identical reports, reduced total queries
+from four to three per audit, catalog rows from 20,102 to 10,051 and Go cumulative
+allocated bytes from 90,586,661 to 45,513,037 per audit. Metadata-only auditing
+retained two queries and effectively unchanged allocations. This excludes audio
+decoding and establishes neither production latency nor peak memory.
+
 ## Explicit bounded generation
 
 After reviewing the audit, costs and a small pilot, an operator can explicitly

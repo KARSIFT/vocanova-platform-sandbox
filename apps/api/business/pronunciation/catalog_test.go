@@ -262,6 +262,12 @@ func TestCatalogPostgreSQLReviewedExampleChangesInvalidateWordAudio(t *testing.T
 			require.NoError(t, err)
 			require.Zero(t, report.Ready)
 			require.Equal(t, 1, report.Missing)
+			validated, err := svc.AuditValidated(t.Context())
+			require.NoError(t, err)
+			require.Equal(t, report.Total, validated.Total)
+			require.Equal(t, report.Ready, validated.Ready)
+			require.Equal(t, report.Missing, validated.Missing)
+			require.Zero(t, validated.Validation.Checked, "obsolete-context clips must not enter current validation coverage")
 			var stored int
 			require.NoError(t, db.QueryRow(`SELECT count(*) FROM pronunciation_audio_cache WHERE status='ready'`).Scan(&stored))
 			if during {

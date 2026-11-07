@@ -70,6 +70,16 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("heading", { name: "Map word 1201", exact: true }),
     ).toBeFocused();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/discovery\?band=12&word=1150&active=1$/);
+    await expect(
+      page.getByRole("heading", { name: "Map word 1150", exact: true }),
+    ).toBeVisible();
+    await page.goForward();
+    await expect(page).toHaveURL(/\/discovery\?band=13&word=1201&active=1$/);
+    await expect(
+      page.getByRole("heading", { name: "Map word 1201", exact: true }),
+    ).toBeVisible();
     await page
       .getByRole("button", { name: "Previous word", exact: true })
       .click();
@@ -394,7 +404,7 @@ test("details reject a newer revision of the same meaning until the card is refr
     { name: "vocanova_csrf", value: "revision-details", url: baseURL! },
   ]);
   const cardRevision = "a".repeat(64);
-  let detailsRevision = "b".repeat(64);
+  const detailsRevision = "b".repeat(64);
   // A real conflict recovery reads current map data; add a catalog revision to
   // this response without changing the shared synthetic fixture.
   await page.route("**/api/v1/knowledge-map?band=1", async (route) => {
@@ -442,15 +452,27 @@ test("details reject a newer revision of the same meaning until the card is refr
   await page
     .getByText("Word details & other meanings", { exact: true })
     .click();
+  const reload = page.getByRole("button", { name: "Reload word", exact: true });
+  await expect(reload).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Retry word details", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     page.getByText("Teaching from the requested revision.", { exact: true }),
   ).toHaveCount(0);
-  detailsRevision = cardRevision;
+  // This fixture has no SSR meaning revision. The real document reload must
+  // replace the stale client card; this proves recovery navigation and a new
+  // details read, not that a production catalog revision changed on the server.
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: "domcontentloaded" }),
+    reload.click(),
+  ]);
+  await expect(
+    page.getByRole("heading", { name: "the", exact: true }),
+  ).toBeVisible();
+  await expect(reload).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Retry word details", exact: true })
+    .getByText("Word details & other meanings", { exact: true })
     .click();
   await expect(
     page.getByText("Teaching from the requested revision.", { exact: true }),
