@@ -5,6 +5,39 @@ The learner should recognise the same product from the public introduction throu
 sign-in, daily practice, and account settings. Real words and situations give the
 interface its character; progress and next actions give it structure.
 
+## Discovery usability direction — 7 November 2026
+
+The owner's annotated production review requires less explanatory clutter and
+more direct control. This supersedes the older range-selection interaction below:
+
+- Range squares enter the selected discovery word directly. Range and word
+  pickers, plus Previous word, keep navigation available inside discovery.
+  Navigating does not record knowledge or schedule reviews. After a confirmed
+  choice, continue after the selected word and wrap earlier unseen words only
+  when no later unseen word remains in that range.
+- Word progress is a navigation affordance, with a readable keyboard/touch
+  picker instead of a hundred undersized buttons. Explicit selection must work
+  for completed ranges too. Pending or uncertain choices disable in-page word/range
+  controls and restore the pending card during same-range history movement until
+  its original meaning/request is resolved. Leaving the route is still possible;
+  this is not a global browser-navigation lock.
+- The active card leads with the word, pronunciation, relevant image and
+  definition. Other meanings/examples are optional details. Catalog attribution
+  stays reachable on Journey rather than occupying every discovery card.
+- Use short labels and familiar, consistently sized icons. Put longer help in
+  optional disclosures; keep visible error, privacy and save-state guidance.
+  Status indicators must look different from actions.
+- Mobile Settings prioritizes learning preferences. Home's latest word includes
+  pronunciation, and empty states describe actual progress rather than claiming
+  completion. The shared Settings control uses a centred recognizable cog.
+
+The reference is Duolingo's published
+[core-tab design refinement](https://blog.duolingo.com/core-tabs-redesign/):
+consistent hierarchy and spacing, less forced containment, and simplification
+that preserves clarity. Its [learning-path rationale](https://blog.duolingo.com/new-duolingo-home-screen-design/)
+also informs clear next steps and reachable navigation. These are design
+principles, not a request to copy artwork, characters or course progression.
+
 ## Visual direction
 
 Keep the established blue identity with a restrained palette: white surfaces

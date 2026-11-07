@@ -281,7 +281,7 @@ test("meaning-specific timeout aborts the request without a guessed fallback or 
     (state) => states.push(state),
     "read-past",
   );
-  t.mock.timers.tick(8001);
+  t.mock.timers.tick(16001);
   assert.equal(states.at(-1)!.status, "unavailable");
   assert.equal(f.requests[0]!.signal.aborted, true);
   f.requests[0]!.resolve(audioResponse);
@@ -872,4 +872,72 @@ test("natural audio never interrupts speech outside the shared player", () => {
   assert.equal(f.deviceCalls.length, 0);
   assert.equal(f.releases.length, 0);
   assert.equal(states.at(-1)!.status, "error");
+});
+
+
+test("meaning audio has separate request and playback startup deadlines", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const f = neuralFixture();
+  const states: PronunciationState[] = [];
+  const create = f.environment.createMedia;
+  f.environment.createMedia = (response) => {
+    const clip = create(response);
+    clip.media.play = () => new Promise<void>(() => {});
+    return clip;
+  };
+  f.controller.play(Symbol(), "read", false, (state) => states.push(state), "read-past", "revision");
+  t.mock.timers.tick(12000);
+  assert.equal(states.at(-1)!.status, "starting");
+  assert.equal(f.requests[0]!.signal.aborted, false);
+  f.requests[0]!.resolve({ ...audioResponse, meaningId: "read-past", meaningRevision: "revision" });
+  await settleSpeech();
+  assert.equal(f.clips.length, 1);
+  t.mock.timers.tick(7999);
+  assert.equal(states.at(-1)!.status, "starting");
+  t.mock.timers.tick(1);
+  assert.equal(states.at(-1)!.status, "unavailable");
+  assert.equal(f.clips[0]!.disposed, 1);
+  assert.deepEqual(f.deviceCalls, []);
+});
+
+test("stopping a slow meaning request prevents its late clip", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const f = neuralFixture();
+  const owner = Symbol();
+  f.controller.play(owner, "read", false, () => {}, "read-past");
+  t.mock.timers.tick(9000);
+  f.controller.stop(owner);
+  assert.equal(f.requests[0]!.signal.aborted, true);
+  f.requests[0]!.resolve({ ...audioResponse, meaningId: "read-past" });
+  await settleSpeech();
+  assert.equal(f.clips.length, 0);
+});
+
+test("meaning failures give safe actionable status messages", async () => {
+  for (const [status, expected] of [[429, /busy or.*limit.*later/i], [404, /refresh/i], [401, /sign in/i], [503, /later/i]] as const) {
+    const f = neuralFixture();
+    const states: PronunciationState[] = [];
+    f.controller.play(Symbol(), "read", false, (state) => states.push(state), "read-past");
+    f.requests[0]!.reject(Object.assign(new Error("private provider detail"), { status }));
+    await settleSpeech();
+    assert.match(states.at(-1)!.message!, expected);
+    assert.doesNotMatch(states.at(-1)!.message!, /private/);
+    assert.deepEqual(f.deviceCalls, []);
+  }
+});
+
+
+test("a confirmed slow meaning response plays successfully before its request deadline", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const f = neuralFixture();
+  const owner = Symbol();
+  const states: PronunciationState[] = [];
+  f.controller.play(owner, "read", false, (state) => states.push(state), "read-past", "revision");
+  t.mock.timers.tick(14000);
+  f.requests[0]!.resolve({ ...audioResponse, meaningId: "read-past", meaningRevision: "revision" });
+  await settleSpeech();
+  assert.deepEqual(states.at(-1), { status: "playing", source: "neural" });
+  t.mock.timers.tick(16000);
+  assert.equal(states.at(-1)!.status, "playing");
+  f.controller.release(owner);
 });

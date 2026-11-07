@@ -168,10 +168,21 @@ test("typed recall saves normalized, wrong and assisted answers without review c
   // Self-study must not save words, award mastery or advance the review target.
   await page.goto("/progress");
   await expect(
-    main(page).getByText("0 saved · 0 ready for review", {
+    main(page).getByRole("heading", {
+      name: "Start building your vocabulary",
       exact: true,
     }),
   ).toBeVisible();
+  const knowledge = await page.request.get(`${apiURL}/api/v1/knowledge-summary`);
+  expect(knowledge.status()).toBe(200);
+  expect(await knowledge.json()).toMatchObject({
+    saved: 0,
+    due: 0,
+    selfReportedKnown: 0,
+    learning: 0,
+    reviewing: 0,
+    mastered: 0,
+  });
   const mission = await page.request.get(`${apiURL}/api/v1/daily-mission`);
   expect(mission.status()).toBe(200);
   expect((await mission.json()).reviewsCompleted).toBe(0);
@@ -516,7 +527,7 @@ for (const theme of ["light", "dark"] as const) {
       .click();
     await expect(
       main(page).getByText(
-        "Pronunciation for this meaning is unavailable. Try Listen again.",
+        "Pronunciation for this meaning is unavailable. Try again later.",
         { exact: true },
       ),
     ).toBeVisible();
@@ -599,7 +610,7 @@ test("unsupported listening keeps its ungraded session and offers another mode",
     .click();
   await expect(
     main(page).getByText(
-      "Pronunciation for this meaning is unavailable. Try Listen again.",
+      "Pronunciation for this meaning is unavailable. Try again later.",
       {
         exact: true,
       },
@@ -753,7 +764,7 @@ test("journey audio unavailable continues with honest assisted credit", async ({
     .getByRole("button", { name: "Play audio", exact: true })
     .click();
   await expect(
-    main(page).getByText("Pronunciation for this meaning is unavailable. Try Listen again.", {
+    main(page).getByText("Pronunciation for this meaning is unavailable. Try again later.", {
       exact: true,
     }),
   ).toBeVisible();

@@ -92,6 +92,9 @@ RUN go build \
     -o /out/api \
     ./cmd/api
 
+# Explicit operator tool; the API remains the only entrypoint.
+RUN go build -trimpath -ldflags="-s -w" -o /out/pronunciation-catalog ./cmd/pronunciation-catalog
+
 # -----------------------------------------------------------------------------
 # Stage 2: minimal runtime image.
 #
@@ -137,6 +140,7 @@ RUN addgroup -g 10001 vocanova \
 # runtime image this package produces; everything else is
 # system-installed by the apk line above.
 COPY --from=build --chown=vocanova:vocanova /out/api /usr/local/bin/api
+COPY --from=build --chown=vocanova:vocanova /out/pronunciation-catalog /usr/local/bin/pronunciation-catalog
 
 # PORT default matches apps/api/app/api/production.go's
 # LoadProductionConfig default (8080). The container does

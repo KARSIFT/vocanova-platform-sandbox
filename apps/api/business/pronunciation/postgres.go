@@ -35,36 +35,10 @@ func (r *postgresRepository) ResolveUtterance(ctx context.Context, user uuid.UUI
 		if err = rows.Scan(&u.MeaningID, &word, &u.PartOfSpeech, &u.Definition, &example); err != nil {
 			return Utterance{}, err
 		}
-		u.Text = text
-		u.Locale = "en-US"
-		u.WordText = word
-		u.Kind = "word"
-		// Both accepted spellings name the same reviewed CV noun. Normalize only
-		// spoken word text, keeping canonical identity and all example text intact.
-		if word == "resume" && u.PartOfSpeech == "noun" && (text == "resume" || text == "résumé") {
-			u.Text = "résumé"
+		u, accepted := canonicalUtterance(u, word, text, example)
+		if !accepted {
+			continue
 		}
-		curatedContext, curated := meaninguses.ReviewedContext(u.MeaningID, word, u.Definition)
-		reviewedPractice := practice.SupportsMeaning(u.MeaningID, word, u.Definition)
-		reviewedMeaning := reviewedPractice || meaninguses.SupportsMeaning(u.MeaningID, word, u.Definition)
-		if text != word && !(word == "resume" && u.PartOfSpeech == "noun" && text == "résumé") {
-			if curated {
-				if text != curatedContext {
-					continue
-				}
-			} else if !reviewedMeaning {
-				continue
-			}
-			u.Kind = "example"
-		}
-		// Exact reviewed contexts disambiguate heteronyms, including present/past
-		// read. A random database example cannot replace this authored guidance.
-		if curated {
-			u.Context = boundedReference(curatedContext, 750)
-		} else if reviewedPractice {
-			u.Context = boundedReference(example, 750)
-		}
-
 		found = append(found, u)
 	}
 	if err = rows.Err(); err != nil {
@@ -171,4 +145,39 @@ func boundedReference(text string, limit int) string {
 		return string(runes[:limit])
 	}
 	return text
+}
+
+// canonicalUtterance is shared by authenticated playback and operator catalog jobs.
+func canonicalUtterance(u Utterance, word, text, example string) (Utterance, bool) {
+	u.Text = text
+	u.Locale = "en-US"
+	u.WordText = word
+	u.Kind = "word"
+	// Both accepted spellings name the same reviewed CV noun. Normalize only
+	// spoken word text, keeping canonical identity and all example text intact.
+	if word == "resume" && u.PartOfSpeech == "noun" && (text == "resume" || text == "résumé") {
+		u.Text = "résumé"
+	}
+	curatedContext, curated := meaninguses.ReviewedContext(u.MeaningID, word, u.Definition)
+	reviewedPractice := practice.SupportsMeaning(u.MeaningID, word, u.Definition)
+	reviewedMeaning := reviewedPractice || meaninguses.SupportsMeaning(u.MeaningID, word, u.Definition)
+	if text != word && !(word == "resume" && u.PartOfSpeech == "noun" && text == "résumé") {
+		if curated {
+			if text != curatedContext {
+				return Utterance{}, false
+			}
+		} else if !reviewedMeaning {
+			return Utterance{}, false
+		}
+		u.Kind = "example"
+	}
+	// Exact reviewed contexts disambiguate heteronyms, including present/past
+	// read. A random database example cannot replace this authored guidance.
+	if curated {
+		u.Context = boundedReference(curatedContext, 750)
+	} else if reviewedPractice {
+		u.Context = boundedReference(example, 750)
+	}
+
+	return u, true
 }

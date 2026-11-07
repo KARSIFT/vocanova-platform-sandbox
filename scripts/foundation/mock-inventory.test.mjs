@@ -292,6 +292,7 @@ test("learning route sources and exact migration table inventories remain bounde
     "20261017100001_knowledge_catalog.sql",
     "20261018130000_pronunciation_audio.sql",
     "20261020170000_meaning_image_assets.sql",
+    "20261107140000_pronunciation_catalog_jobs.sql",
   ]) {
     assert.equal(isRegisteredMigrationFile(migration), true, migration);
     const source = readFileSync(

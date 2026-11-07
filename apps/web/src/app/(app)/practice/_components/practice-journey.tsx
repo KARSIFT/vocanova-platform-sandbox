@@ -139,7 +139,7 @@ export function PracticeJourney({
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <ol
               aria-label="Practice path"
-              className="flex flex-wrap items-center gap-1.5"
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm"
             >
               {nodes.map((number) => {
                 const done = number < lesson;
@@ -148,8 +148,16 @@ export function PracticeJourney({
                   <li
                     key={number}
                     aria-current={active ? "step" : undefined}
-                    className={`inline-flex min-h-8 items-center rounded-full px-2.5 text-xs font-semibold ${done ? "bg-primary-50 text-primary-800" : active ? "bg-primary-700 text-white" : "border border-neutral-200 text-neutral-600"}`}
+                    className={`inline-flex items-center gap-1.5 ${active ? "font-semibold text-neutral-900" : "text-neutral-600"}`}
                   >
+                    <span
+                      aria-hidden="true"
+                      className={
+                        done || active ? "text-primary-700" : "text-neutral-400"
+                      }
+                    >
+                      {done ? "✓" : active ? "●" : "○"}
+                    </span>
                     <span className="sr-only">
                       {done
                         ? "Completed: "
@@ -203,7 +211,7 @@ export function PracticeJourney({
       {compact ? null : (
         <ol
           aria-label="Practice path"
-          className="mx-auto mt-4 max-w-[24rem] space-y-3"
+          className="mt-4 divide-y divide-neutral-200"
         >
           {nodes.map((number) => {
             const done = number < lesson;
@@ -212,15 +220,15 @@ export function PracticeJourney({
               <li
                 key={number}
                 aria-current={active ? "step" : undefined}
-                className={`relative flex flex-wrap items-center gap-4 ${number % 2 ? "pr-7" : "pl-7"}`}
+                className="flex items-start gap-3 py-3"
               >
                 <span
                   aria-hidden="true"
-                  className={`flex size-14 shrink-0 items-center justify-center rounded-full border-b-4 text-xl font-bold ${done ? "border-primary-300 bg-primary-100 text-primary-800" : active ? "border-primary-900 bg-primary-700 text-white ring-4 ring-primary-100" : "border-neutral-300 bg-neutral-100 text-neutral-500"}`}
+                  className={`mt-0.5 flex size-6 shrink-0 items-center justify-center text-lg ${done || active ? "text-primary-700" : "text-neutral-400"}`}
                 >
-                  {done ? "✓" : active ? "▶" : number}
+                  {done ? "✓" : active ? "●" : "○"}
                 </span>
-                <div className="min-w-0 flex-1 basis-[10rem] py-2">
+                <div className="min-w-0 flex-1">
                   <p
                     className={`font-bold ${active ? "text-neutral-900" : "text-neutral-600"}`}
                   >

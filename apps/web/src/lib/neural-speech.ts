@@ -40,12 +40,26 @@ export interface NeuralSpeechEnvironment {
   otherSpeechActive?(): boolean;
 }
 
+/** Only use status codes, never provider/server error text, in learner messages. */
+function meaningFailureMessage(error: unknown): string {
+  const status =
+    error instanceof Error && "status" in error ? error.status : undefined;
+  if (status === 401 || status === 403)
+    return "Sign in again to play pronunciation.";
+  if (status === 404)
+    return "This meaning may have changed. Refresh the page to try pronunciation.";
+  if (status === 429)
+    return "Pronunciation is busy or its daily limit has been reached. Try again later.";
+  return "Pronunciation for this meaning is unavailable. Try again later.";
+}
+
 /** Coordinates one owned request/clip/device utterance across every audio control. */
 export function createPronunciationController(
   device: DevicePlayer,
   getEnvironment: () => NeuralSpeechEnvironment | null,
   getPreferences: () => SpeechPreferences,
   timeoutMs = 8000,
+  meaningRequestTimeoutMs = 16000,
 ) {
   type Request = {
     owner: symbol;
@@ -55,7 +69,7 @@ export function createPronunciationController(
     notify: (state: PronunciationState) => void;
     phase: "request" | "audio" | "device";
     blocked: boolean;
-    fallback?: () => void;
+    fallback?: (error?: unknown) => void;
     abort: AbortController;
     timer?: ReturnType<typeof setTimeout>;
     clip?: { media: PronunciationMedia; dispose(): void };
@@ -124,7 +138,7 @@ export function createPronunciationController(
         status: "error",
         message: "Tap Listen to play pronunciation.",
       });
-    } else request.fallback?.();
+    } else request.fallback?.(error);
   }
 
   return {
@@ -200,7 +214,7 @@ export function createPronunciationController(
         abort: new AbortController(),
       };
       active = request;
-      function fallback() {
+      function fallback(error?: unknown) {
         if (active !== request || request.phase === "device") return;
         clearTimeout(request.timer);
         request.phase = "device";
@@ -214,8 +228,7 @@ export function createPronunciationController(
           active = null;
           notify({
             status: "unavailable",
-            message:
-              "Pronunciation for this meaning is unavailable. Try Listen again.",
+            message: meaningFailureMessage(error),
           });
           return;
         }
@@ -239,7 +252,12 @@ export function createPronunciationController(
       }
       const neural = environment;
       notify({ status: "starting" });
-      request.timer = setTimeout(fallback, timeoutMs);
+      // Generation allows 12 seconds plus 2 seconds to persist its result.
+      // Do not spend the playback-start budget while waiting for that response.
+      request.timer = setTimeout(
+        fallback,
+        meaningId ? meaningRequestTimeoutMs : timeoutMs,
+      );
       void (async () => {
         try {
           const response = await neural.request(
@@ -253,6 +271,8 @@ export function createPronunciationController(
             throw new Error("Pronunciation meaning did not match");
           if (meaningRevision && response.meaningRevision !== meaningRevision)
             throw new Error("Pronunciation meaning revision did not match");
+          clearTimeout(request.timer);
+          request.timer = setTimeout(fallback, timeoutMs);
           const clip = neural.createMedia(response);
           request.clip = clip;
           request.phase = "audio";

@@ -164,7 +164,7 @@ for (const theme of ["light", "dark"] as const) {
       }),
     ).toContainText("No microphone needed.");
     await expect(
-      main.getByRole("link", { name: "Open sentence history", exact: true }),
+      main.getByRole("link", { name: "Sentence history", exact: true }),
     ).toHaveAttribute("href", "/progress/sentences");
     await expect(
       page.getByRole("navigation", { name: "Primary" }).getByRole("link"),
@@ -253,7 +253,7 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeEnabled();
     await expect(
       main.getByRole("link", {
-        name: "Explore situation lessons",
+        name: "Situation lessons",
         exact: true,
       }),
     ).toHaveAttribute("href", "/courses");
@@ -264,7 +264,7 @@ for (const theme of ["light", "dark"] as const) {
       main.getByRole("link", { name: "Find a word to hear", exact: true }),
     ).toHaveAttribute("href", "/vocabulary");
     await expect(
-      main.getByRole("link", { name: "Open sentence history", exact: true }),
+      main.getByRole("link", { name: "Sentence history", exact: true }),
     ).toBeVisible();
     await expect(
       main.locator("[aria-disabled='true'], button:disabled"),
@@ -364,7 +364,7 @@ test("Practice distinguishes unavailable lessons from an empty catalog without h
     main.getByRole("link", { name: "Find a word to hear", exact: true }),
   ).toBeVisible();
   await expect(
-    main.getByRole("link", { name: "Open sentence history", exact: true }),
+    main.getByRole("link", { name: "Sentence history", exact: true }),
   ).toBeVisible();
 });
 

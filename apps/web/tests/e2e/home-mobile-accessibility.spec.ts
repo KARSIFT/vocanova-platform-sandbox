@@ -370,7 +370,7 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
       requireText: [
         "text=Reviewed today",
         "text=day streak",
-        "text=Review complete",
+        "text=No reviews due",
       ],
     });
     await expect(

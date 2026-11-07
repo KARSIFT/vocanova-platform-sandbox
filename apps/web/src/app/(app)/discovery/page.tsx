@@ -18,18 +18,20 @@ export default async function DiscoveryPage({
 }) {
   const query = await searchParams;
   let band = validBand(query.band);
+  const active = query.active === "1";
   const requestedRank = typeof query.word === "string" ? Number(query.word) : 0;
   const returnQuery = new URLSearchParams();
   if (typeof query.band === "string") returnQuery.set("band", query.band);
   if (typeof query.word === "string") returnQuery.set("word", query.word);
+  if (active) returnQuery.set("active", "1");
   const returnTo = `/discovery${returnQuery.size ? `?${returnQuery}` : ""}`;
   let data: KnowledgeMapData | null = null;
   try {
     const client = await createServerApiClient();
     const current = (await client.getKnowledgeMap(band)).data;
-    const explicitWord = current.currentBand.items.find(
-      (word) => word.rank === requestedRank,
-    );
+    const explicitWord =
+      current.currentBand.items.find((word) => word.rank === requestedRank) ??
+      (active ? current.currentBand.items[0] : undefined);
     // A deliberate word link can revisit an assessment. Guided discovery
     // instead continues to unseen words, using the existing range metadata.
     const target = explicitWord ? null : nextDiscoveryTarget(current);
@@ -44,6 +46,7 @@ export default async function DiscoveryPage({
   }
   const initialRank =
     data?.currentBand.items.find((word) => word.rank === requestedRank)?.rank ??
+    (active ? data?.currentBand.items[0]?.rank : undefined) ??
     data?.currentBand.items.find(
       (word) => !word.selfReportedKnown && !word.saved,
     )?.rank;
@@ -88,6 +91,7 @@ export default async function DiscoveryPage({
       key={`${data.catalogVersion}:${band}:${initialRank}`}
       initialData={data}
       initialRank={initialRank}
+      initiallyActive={active}
     />
   );
 }

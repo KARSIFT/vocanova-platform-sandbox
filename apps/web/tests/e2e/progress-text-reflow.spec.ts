@@ -3,11 +3,18 @@ import { expect, test } from "@playwright/test";
 
 for (const theme of ["light", "dark"] as const) {
   test(`progress stages and activity text stay inside their own cards at enlarged text (${theme})`, async ({ page, context, baseURL }) => {
+    const csrf = randomUUID();
     await context.addCookies([
       { name: "vocanova_session", value: randomUUID(), url: baseURL! },
-      { name: "vocanova_csrf", value: randomUUID(), url: baseURL! },
+      { name: "vocanova_csrf", value: csrf, url: baseURL! },
     ]);
     await page.addInitScript((value) => localStorage.setItem("vocanova:theme-preference", value), theme);
+    // Populate real stage data; an empty collection now has a compact invitation.
+    const saved = await context.request.post(`http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}/api/v1/user-words`, {
+      headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+      data: { meaningId: "mean-pour", source: "journey" },
+    });
+    expect(saved.ok()).toBe(true);
     await page.goto("/progress");
     await expect(page.getByRole("heading", { name: "Progress", exact: true })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);

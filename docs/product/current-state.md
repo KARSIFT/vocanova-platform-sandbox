@@ -1,11 +1,28 @@
 # Vocanova current product state
 
-## Manual production audit — 7 November 2026 (fixes awaiting release)
+## Discovery usability follow-up — 7 November 2026 (in progress)
 
-The verified baseline is production **0.4.19 / `5437a2b7`**, promoted by
-workflow `42288146468`. Web/API release identity, health and database checks
-passed. This supersedes the earlier deployment-status notes below; the new
-manual-audit corrections described here are still local and are not deployed.
+The owner's annotated production review identified decorative word progress,
+indirect range navigation, missing Previous word, misaligned start/sound controls,
+a malformed settings cog, repeated source/help text and unreliable pronunciation.
+The follow-up is integrated on one delivery branch. Discovery now provides word/range
+pickers and Previous, direct atlas entry, aligned controls and lazy teaching
+details. Choices continue after the selected word before wrapping earlier gaps
+in its range. Home, Practice, Progress and Settings have simpler presentation, and the
+shared Settings icon is balanced. Its acceptance plan is
+[discovery usability](../superpowers/plans/2026-11-07-discovery-usability.md).
+No follow-up deployment or complete catalog-audio coverage is established yet.
+
+## Manual production audit — 7 November 2026 (released)
+
+Production **0.4.20 / `d5e4eb0c`** was promoted by workflow `42309231189`
+after PR #1511 passed the normal merge queue and strict staging acceptance
+`42308466317`. Web/API identity and database health passed. Final browser CI
+`42302749309` passed 6,204 cases with 105 intentional skips, zero failures/flakies;
+all 84 Lighthouse reports scored performance/accessibility 100. Actual
+ChatGPT-browser production retests observed the nine corrections below, including
+legacy search pagination, immediate profile initials and saved-writing Back/draft
+retention. The intermittent loading interruption's cause remains unattributed.
 
 Manual ChatGPT-browser work exercised real Google sign-in, discovery and search,
 saved words and notes, review scheduling, practice modes, guided lessons,
@@ -36,8 +53,7 @@ mount: the host had the intended URI-only/no-referrer logging configuration,
 but the running container still saw the older file. Staging now validates the
 desired configuration, recreates only nginx when the mounted file differs,
 and verifies convergence before reload. Matching deployments retain normal
-convergence. The brief shared-proxy replacement on detected drift still needs
-normal staging and production acceptance; this is not an established cause of
+convergence. The drift-only shared-proxy replacement passed staging and production acceptance; this is not an established cause of
 the separately observed browser connection interruption.
 
 Local PostgreSQL comparison retained search counts and sort memory, with mixed

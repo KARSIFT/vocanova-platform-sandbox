@@ -59,8 +59,8 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
       </div>
       {summary ? (
         <p className={styles.rangeCounts}>
-          In this range: {summary.knownCount} already known,{" "}
-          {summary.learningCount} learning, {summary.unseenCount} new.
+          {summary.knownCount} known · {summary.learningCount} learning ·{" "}
+          {summary.unseenCount} new
         </p>
       ) : null}
       {/* One mark per word in rank order; the counts above carry the meaning. */}
@@ -136,10 +136,7 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
       <h2 id="atlas-title" className="section-title">
         Your word map
       </h2>
-      <p className={styles.atlasLede}>
-        Each square holds 100 words, most common first. Squares fill as you mark
-        words you know or are learning.
-      </p>
+      <p className={styles.atlasLede}>Choose a square to explore 100 words.</p>
       <ul className={styles.legend} aria-label="Map progress">
         <li>
           <span className={styles.knownDot} aria-hidden="true" />
@@ -167,7 +164,7 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
                   key={item.number}
                   prefetch={false}
                   prefetchOnIntent={false}
-                  href={journeyRangeHref(item.number)}
+                  href={`/discovery?band=${item.number}&word=${item.startRank}&active=1`}
                   className={styles.atlasCell}
                   aria-current={item.number === band ? "true" : undefined}
                   aria-label={`Words ${item.startRank} to ${item.endRank}, ${item.knownCount} already know, ${item.learningCount} learning, ${item.unseenCount} new`}
@@ -198,7 +195,8 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
             </div>
           ))}
         </div>
-        <form action="/discover#range-words" className={styles.rangeForm}>
+        <form action="/discovery" className={styles.rangeForm}>
+          <input type="hidden" name="active" value="1" />
           <label htmlFor="range-choice">Go to a range</label>
           <div>
             <select id="range-choice" name="band" defaultValue={band}>
