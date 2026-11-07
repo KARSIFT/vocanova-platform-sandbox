@@ -217,27 +217,19 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
     new Set(map.currentBand.items.map((item) => item.meaningId)).size,
   ).toBe(100);
 
-  // Never pause an existing saved review merely to exercise assessment. A new
-  // known word is intentional synthetic-account state; reruns can safely
-  // reapply Known once this bounded range has no unseen unsaved words left.
-  const chosen =
-    map.currentBand.items.find(
-      (item) =>
-        item.saved === false &&
-        item.due === false &&
-        item.selfReportedKnown === false,
-    ) ??
-    map.currentBand.items.find(
-      (item) =>
-        item.saved === false &&
-        item.due === false &&
-        item.selfReportedKnown === true,
-    );
-  expect(
-    Boolean(chosen),
-    "The synthetic account needs an unsaved word in the last range; do not reset its saved history.",
-  ).toBe(true);
-  if (!chosen) throw new Error("No safe synthetic map word available.");
+  // Use the highest unfinished range so reruns can keep assessing unseen
+  // words as the synthetic account fills the map.
+  const unfinished = map.bands.filter((band) => band.unseenCount > 0);
+  const selected = unfinished.at(-1);
+  const goHome = async () => {
+    await page
+      .getByRole("navigation", { name: "Primary", exact: true })
+      .getByRole("link", { name: "Home", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Today", exact: true }),
+    ).toBeVisible();
+  };
   expect(Number.isSafeInteger(beforeMission.reviewsCompleted)).toBe(true);
   expect(Number.isSafeInteger(beforeProgress.confidencePointsBalance)).toBe(
     true,
@@ -257,35 +249,73 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
     await ranges.evaluateAll((links) =>
       links.map((link) => link.getAttribute("href")),
     ),
-  ).toEqual(
-    map.bands.map(
-      (band) =>
-        `/discovery?band=${band.number}&word=${band.startRank}&active=1`,
-    ),
+  ).toEqual(map.bands.map((band) => `/discovery?band=${band.number}&active=1`));
+
+  const bandNumber = selected?.number ?? map.currentBand.number;
+  const rangeQuery = `/api/v1/knowledge-map?band=${bandNumber}`;
+  const rangePath = `/discover?band=${bandNumber}#range-words`;
+  const expectJourneyRange = () =>
+    expect(page).toHaveURL(
+      (url) => `${url.pathname}${url.search}${url.hash}` === rangePath,
+    );
+  await ranges.nth(bandNumber - 1).click();
+  if (!selected) {
+    await expect(
+      page.getByRole("heading", {
+        name: "You’ve explored the whole map",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Already know", exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole("link", { name: "View map", exact: true }).click();
+    await expectJourneyRange();
+    await goHome();
+    return;
+  }
+
+  const selectedMap =
+    bandNumber === map.currentBand.number
+      ? map
+      : await readStagingState<KnowledgeMap>(page, apiOrigin, rangeQuery);
+  expect(selectedMap.currentBand.number).toBe(bandNumber);
+  const unseen = selectedMap.currentBand.items.filter(
+    (item) => !item.saved && !item.selfReportedKnown,
   );
-  // Atlas squares now enter the actual first word of the selected range.
-  // This remains an explicit revisit even when the range was fully assessed.
-  await ranges.last().click();
-  await expect(page).toHaveURL(/\/discovery\?band=100&word=9901&active=1$/);
-  const firstInLastRange = map.currentBand.items[0]!;
-  await expect(
-    page.getByRole("heading", {
-      name: firstInLastRange.wordText,
-      level: 1,
-      exact: true,
-    }),
-  ).toBeFocused();
-  await expect(
-    page
-      .getByRole("article", { name: firstInLastRange.wordText, exact: true })
-      .getByText(firstInLastRange.shortDefinition, { exact: true }),
-  ).toBeVisible();
+  expect(unseen).toHaveLength(selected.unseenCount);
+  const first = unseen[0]!;
+  const chosen = unseen[1] ?? first;
+  expect(chosen.due).toBe(false);
+  const expectDiscoveryWord = async (
+    item: KnowledgeMapItem,
+    revisit = false,
+  ) => {
+    await expect(page).toHaveURL(
+      new RegExp(
+        `/discovery\\?band=${bandNumber}&word=${item.rank}&active=1${revisit ? "&revisit=1" : ""}$`,
+      ),
+    );
+    await expect(
+      page.getByRole("heading", { name: item.wordText, level: 1, exact: true }),
+    ).toBeFocused();
+    await expect(
+      page
+        .getByRole("article", { name: item.wordText, exact: true })
+        .getByText(item.shortDefinition, { exact: true }),
+    ).toBeVisible();
+  };
+  await expectDiscoveryWord(first);
   await expect(
     page.getByRole("button", { name: "Start discovering", exact: true }),
   ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Go to range", exact: true }),
+  ).toHaveCount(0);
+
   // Journey's ordinary preview is checked after the decision and reload.
   const range = page.getByRole("region", {
-    name: "Words 9,901–10,000",
+    name: `Words ${selected.startRank.toLocaleString("en-US")}–${selected.endRank.toLocaleString("en-US")}`,
     exact: true,
   });
   // The range keeps its word tiles behind the "Words in this range" disclosure.
@@ -300,8 +330,14 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
       await wordsSummary.click();
     await expect(wordList).toHaveAttribute("open", "");
   };
-  const tile = () =>
-    wordList.locator(`a[href="/discovery?band=100&word=${chosen.rank}"]`);
+  const tile = wordList
+    .getByRole("link")
+    .filter({
+      has: page.getByText(chosen.wordText, { exact: true }),
+    })
+    .filter({
+      has: page.getByText(chosen.rank.toLocaleString("en-US"), { exact: true }),
+    });
   // Jump through the actual discovery picker without adding a Start step.
   await page
     .getByRole("button", { name: "Choose a word", exact: true })
@@ -310,24 +346,18 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
     .getByRole("combobox", { name: "Word in this range", exact: true })
     .selectOption(String(chosen.rank));
   await page.getByRole("button", { name: "Go to word", exact: true }).click();
-  await expect(page).toHaveURL(
-    new RegExp(`/discovery\\?band=100&word=${chosen.rank}&active=1$`),
-  );
-  await expect(
-    page.getByRole("heading", { name: chosen.wordText, level: 1, exact: true }),
-  ).toBeFocused();
-  await expect(
-    page
-      .getByRole("article", { name: chosen.wordText, exact: true })
-      .getByText(chosen.shortDefinition, { exact: true }),
-  ).toBeVisible();
+  await expectDiscoveryWord(chosen, true);
 
-  // Pass through to the real API; block an incorrectly configured frontend
-  // before this new assessment can write to any origin except staging.
+  // Allow the one intended assessment through to the real staging API.
   let forbiddenWrite = false;
+  let decisionPosts = 0;
   const guard = async (route: Route) => {
-    if (new URL(route.request().url()).origin !== apiOrigin) {
+    const request = route.request();
+    if (request.method() === "POST") decisionPosts += 1;
+    if (new URL(request.url()).origin !== apiOrigin) {
       forbiddenWrite = true;
+      await route.abort("blockedbyclient");
+    } else if (request.method() === "POST" && decisionPosts > 1) {
       await route.abort("blockedbyclient");
     } else await route.continue();
   };
@@ -365,7 +395,7 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
     const acknowledgedMap = await readStagingState<KnowledgeMap>(
       page,
       apiOrigin,
-      "/api/v1/knowledge-map?band=100",
+      rangeQuery,
     );
     const currentUnseen =
       acknowledgedMap.currentBand.items.find(
@@ -375,85 +405,79 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
       acknowledgedMap.currentBand.items.find(
         (item) => !item.selfReportedKnown && !item.saved,
       );
-    const nextBand = currentUnseen
-      ? acknowledgedMap.currentBand.number
-      : acknowledgedMap.bands.find((band) => band.unseenCount > 0)?.number;
-    if (nextBand === undefined) {
-      await expect(
-        page.getByRole("heading", {
-          name: "You’ve explored the whole map",
-          exact: true,
-        }),
-      ).toBeVisible();
-      await page.getByRole("link", { name: "View map", exact: true }).click();
-    } else {
-      const nextMap =
-        nextBand === acknowledgedMap.currentBand.number
-          ? acknowledgedMap
-          : await readStagingState<KnowledgeMap>(
-              page,
-              apiOrigin,
-              `/api/v1/knowledge-map?band=${nextBand}`,
-            );
-      const next =
-        nextBand === acknowledgedMap.currentBand.number
-          ? currentUnseen
-          : nextMap.currentBand.items.find(
-              (item) => !item.selfReportedKnown && !item.saved,
-            );
-      expect(
-        next,
-        "A range reported as unseen must contain a new word.",
-      ).toBeDefined();
-      if (!next) throw new Error("The real next unseen word is missing.");
-      await expect(
-        page.getByRole("heading", {
-          name: next.wordText,
-          level: 1,
-          exact: true,
-        }),
-      ).toBeFocused();
-      await expect(page).toHaveURL(
-        new RegExp(`/discovery\\?band=${nextBand}&word=${next.rank}&active=1$`),
+    if (currentUnseen) {
+      await expectDiscoveryWord(currentUnseen);
+      // A direct link to the newly assessed word must also skip it after reload.
+      await page.goto(
+        `/discovery?band=${bandNumber}&word=${chosen.rank}&active=1`,
       );
-      // The session's exit returns to the range now on screen.
+      await expectDiscoveryWord(currentUnseen);
       const back = page.getByRole("link", {
         name: "Back to Journey",
         exact: true,
       });
-      await expect(back).toHaveAttribute(
-        "href",
-        `/discover?band=${nextBand}#range-words`,
-      );
+      await expect(back).toHaveAttribute("href", rangePath);
       await back.click();
-      await expect(page).toHaveURL(
-        new RegExp(`/discover\\?band=${nextBand}#range-words$`),
+    } else {
+      const earlierUnseen = acknowledgedMap.bands.filter(
+        (band) => band.number < bandNumber && band.unseenCount > 0,
       );
-      if (nextBand !== 100) {
-        // Reopen the Journey preview; an atlas square would enter discovery.
-        await page.goto("/discover?band=100#range-words");
-        await expect(page).toHaveURL(/\/discover\?band=100#range-words$/);
+      await expect(
+        page.getByRole("heading", {
+          name: earlierUnseen.length
+            ? "You’ve finished this range"
+            : "You’ve explored the whole map",
+          exact: true,
+        }),
+      ).toBeVisible();
+      if (earlierUnseen.length) {
+        const earlier = page.getByRole("link", {
+          name: "Continue with earlier words",
+          exact: true,
+        });
+        await expect(earlier).toBeVisible();
+        expect(
+          earlierUnseen.map(
+            (band) => `/discovery?band=${band.number}&active=1`,
+          ),
+        ).toContain(await earlier.getAttribute("href"));
       }
+      await page.getByRole("link", { name: "View map", exact: true }).click();
     }
+    await expectJourneyRange();
     await openRangeWords();
-    await expect(
-      tile().getByText("Already know", { exact: true }),
-    ).toBeVisible();
+    const revisitPath = `/discovery?band=${bandNumber}&word=${chosen.rank}&revisit=1`;
+    await expect(tile).toHaveAttribute("href", revisitPath);
+    await expect(tile.getByText("Already know", { exact: true })).toBeVisible();
     await page.reload();
     await openRangeWords();
     await expect(
-      tile().getByText(chosen.wordText, { exact: true }),
+      tile.getByText(chosen.wordText, { exact: true }),
     ).toBeVisible();
+    await expect(tile.getByText("Already know", { exact: true })).toBeVisible();
+
+    // A deliberate choice from the list can revisit the assessed word.
+    await tile.click();
+    await expect(page).toHaveURL(
+      (url) => `${url.pathname}${url.search}` === revisitPath,
+    );
+    await page
+      .getByRole("button", { name: "Start discovering", exact: true })
+      .click();
+    await expectDiscoveryWord(chosen, true);
     await expect(
-      tile().getByText("Already know", { exact: true }),
+      page
+        .getByRole("article", { name: chosen.wordText, exact: true })
+        .getByText("Already know", { exact: true }),
     ).toBeVisible();
+    await page
+      .getByRole("link", { name: "Back to Journey", exact: true })
+      .click();
+    await expectJourneyRange();
+    expect(decisionPosts, "Revisiting a word must not reassess it.").toBe(1);
 
     const [persisted, afterMission, afterProgress] = await Promise.all([
-      readStagingState<KnowledgeMap>(
-        page,
-        apiOrigin,
-        "/api/v1/knowledge-map?band=100",
-      ),
+      readStagingState<KnowledgeMap>(page, apiOrigin, rangeQuery),
       readStagingState<DailyMission>(page, apiOrigin, "/api/v1/daily-mission"),
       readStagingState<Progress>(page, apiOrigin, "/api/v1/progress"),
     ]);
@@ -464,12 +488,10 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
     expect(saved?.saved).toBe(false);
     expect(saved?.due).toBe(false);
     expect(saved?.revision).toBe(result.revision);
-    expect(persisted.bands[99]!.knownCount).toBe(
-      map.bands[99]!.knownCount + (chosen.selfReportedKnown ? 0 : 1),
-    );
-    expect(persisted.bands[99]!.learningCount).toBe(
-      map.bands[99]!.learningCount,
-    );
+    const persistedBand = persisted.bands[bandNumber - 1]!;
+    expect(persistedBand.knownCount).toBe(selected.knownCount + 1);
+    expect(persistedBand.learningCount).toBe(selected.learningCount);
+    expect(persistedBand.unseenCount).toBe(selected.unseenCount - 1);
     expect(
       afterMission.localDate,
       "A date change prevents a stable assessment-credit comparison.",
@@ -488,13 +510,7 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
   } finally {
     await page.unroute(decisionPattern, guard);
   }
-  await page
-    .getByRole("navigation", { name: "Primary", exact: true })
-    .getByRole("link", { name: "Home", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Today", exact: true }),
-  ).toBeVisible();
+  await goHome();
 }
 
 async function readReviewedTodayProgress(

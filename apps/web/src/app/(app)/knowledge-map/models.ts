@@ -103,12 +103,33 @@ export function applyWordState(
 export function nextDiscoveryTarget(
   data: KnowledgeMapData,
 ): { band: number; rank?: number } | null {
-  const word = data.currentBand.items.find(
-    (item) => !item.selfReportedKnown && !item.saved,
-  );
+  const word = discoveryWordInRange(data);
   if (word) return { band: data.currentBand.number, rank: word.rank };
-  const band = data.bands.find((item) => item.unseenCount > 0);
+  const band = data.bands.find(
+    (item) => item.number > data.currentBand.number && item.unseenCount > 0,
+  );
   return band ? { band: band.number } : null;
+}
+
+export function earlierDiscoveryBand(data: KnowledgeMapData) {
+  return data.bands.findLast(
+    (item) => item.number < data.currentBand.number && item.unseenCount > 0,
+  );
+}
+
+export function isUnseen(word: MapWord) {
+  return !word.selfReportedKnown && !word.saved;
+}
+
+export function discoveryWordInRange(
+  data: KnowledgeMapData,
+  requestedRank = 0,
+) {
+  const items = data.currentBand.items;
+  return (
+    items.find((word) => word.rank >= requestedRank && isUnseen(word)) ??
+    items.find(isUnseen)
+  );
 }
 
 export function wordState(word: MapWord): "known" | "learning" | "unseen" {

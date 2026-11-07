@@ -79,7 +79,11 @@ export async function handleDailyDiscovery({
     state.mapDecisions.get(rank) ??
     (rank <= completeThrough * 100
       ? { decision: "known", revision: 0 }
-      : undefined);
+      : cookies.e2e_knowledge_map === "gapped-ranges" &&
+          ((rank >= 1101 && rank <= 1302 && rank !== 1200) ||
+            (rank >= 9901 && rank <= 9998))
+        ? { decision: rank === 1302 ? "learn" : "known", revision: 0 }
+        : undefined);
   const count = (band, decision) => {
     let total = 0;
     for (let rank = (band - 1) * 100 + 1; rank <= band * 100; rank++) {

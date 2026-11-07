@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import Link from "@/ui/link";
 import {
+  earlierDiscoveryBand,
   journeyRangeHref,
   nextDiscoveryTarget,
   wordState,
@@ -8,6 +9,7 @@ import {
   type KnowledgeMapData,
 } from "./models";
 import { AtlasKeys } from "./atlas-keys";
+import { JourneyRangeSelect } from "./journey-range-select";
 import styles from "./workspace.module.css";
 
 type Band = KnowledgeMapData["bands"][number];
@@ -29,6 +31,7 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
   const band = data.currentBand.number;
   const summary = data.bands.find((item) => item.number === band);
   const next = nextDiscoveryTarget(data);
+  const targetBand = next?.band ?? earlierDiscoveryBand(data)?.number;
   const nextInRange =
     next?.band === band
       ? data.currentBand.items.find((item) => item.rank === next.rank)
@@ -73,7 +76,7 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
           />
         ))}
       </div>
-      {next ? (
+      {targetBand !== undefined ? (
         <div className={styles.nextUp}>
           <p className={styles.nextUpLabel}>
             {nextInRange ? (
@@ -83,13 +86,15 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
                   {nextInRange.wordText}
                 </span>
               </>
-            ) : (
+            ) : next ? (
               "Every word here is assessed. Continue in the next open range."
+            ) : (
+              "New words are available in an earlier range."
             )}
           </p>
           <Link
             className="vn-btn vn-btn-primary"
-            href={`/discovery?band=${next.band}${next.rank === undefined ? "" : `&word=${next.rank}`}`}
+            href={`/discovery?band=${targetBand}${next?.rank === undefined ? "" : `&word=${next.rank}`}`}
           >
             Discover words
           </Link>
@@ -105,7 +110,7 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
               key={word.meaningId}
               prefetch={false}
               prefetchOnIntent={false}
-              href={`/discovery?band=${band}&word=${word.rank}`}
+              href={`/discovery?band=${band}&word=${word.rank}&revisit=1`}
               className={styles.word}
               data-state={wordState(word)}
             >
@@ -164,7 +169,7 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
                   key={item.number}
                   prefetch={false}
                   prefetchOnIntent={false}
-                  href={`/discovery?band=${item.number}&word=${item.startRank}&active=1`}
+                  href={`/discovery?band=${item.number}&active=1`}
                   className={styles.atlasCell}
                   aria-current={item.number === band ? "true" : undefined}
                   aria-label={`Words ${item.startRank} to ${item.endRank}, ${item.knownCount} already know, ${item.learningCount} learning, ${item.unseenCount} new`}
@@ -181,17 +186,17 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
         <form action="/discovery" className={styles.rangeForm}>
           <input type="hidden" name="active" value="1" />
           <label htmlFor="range-choice">Go to a range</label>
+          <span id="range-choice-navigation" className="sr-only">
+            Selecting a range opens Discovery.
+          </span>
           <div>
-            <select id="range-choice" name="band" defaultValue={band}>
+            <JourneyRangeSelect band={band}>
               {data.bands.map((item) => (
                 <option key={item.number} value={item.number}>
                   {`${item.startRank.toLocaleString()}–${item.endRank.toLocaleString()}`}
                 </option>
               ))}
-            </select>
-            <button type="submit" className="vn-btn vn-btn-secondary">
-              Show
-            </button>
+            </JourneyRangeSelect>
           </div>
         </form>
         <div className={styles.atlas} aria-hidden="true">
