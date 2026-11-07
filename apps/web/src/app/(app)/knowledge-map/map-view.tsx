@@ -9,6 +9,7 @@ import {
   type KnowledgeMapData,
 } from "./models";
 import { AtlasKeys } from "./atlas-keys";
+import { JourneyRangeAnchor } from "./journey-range-anchor";
 import { JourneyRangeSelect } from "./journey-range-select";
 import styles from "./workspace.module.css";
 
@@ -43,6 +44,7 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
       aria-labelledby="range-title"
       className={styles.rangeCard}
     >
+      <JourneyRangeAnchor key={band} />
       <div className={styles.rangeHead}>
         <h2 id="range-title" className={styles.rangeTitle}>
           Words {summary ? rangeLabel(summary) : ""}
