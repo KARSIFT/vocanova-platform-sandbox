@@ -279,11 +279,14 @@ const allowedMigrationFiles = new Set([
   "20261018170000_review_attempt_daily_eligibility_index.sql",
   "20261020170000_meaning_image_assets.sql",
   "20261107140000_pronunciation_catalog_jobs.sql",
+  "20261108120000_pronunciation_signal_recovery.sql",
 ]);
 export function isRegisteredMigrationFile(name) {
   return allowedMigrationFiles.has(name);
 }
 const featureMigrationTables = new Map([
+  // Recovery alters the existing jobs ledger; introducing tables is not approved.
+  ["20261108120000_pronunciation_signal_recovery.sql", []],
   [
     "20261004100000_word_lists.sql",
     ["user_word_lists", "user_word_list_members", "word_list_actions"],

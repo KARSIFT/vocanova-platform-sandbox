@@ -293,6 +293,7 @@ test("learning route sources and exact migration table inventories remain bounde
     "20261018130000_pronunciation_audio.sql",
     "20261020170000_meaning_image_assets.sql",
     "20261107140000_pronunciation_catalog_jobs.sql",
+    "20261108120000_pronunciation_signal_recovery.sql",
   ]) {
     assert.equal(isRegisteredMigrationFile(migration), true, migration);
     const source = readFileSync(
@@ -327,17 +328,21 @@ test("learning route sources and exact migration table inventories remain bounde
       ]),
       false,
     );
-    assert.equal(
-      isRegisteredFeatureMigrationTables(migration, tables.slice(1)),
-      false,
-    );
-    assert.equal(
-      isRegisteredFeatureMigrationTables(migration, [
-        ...tables.slice(1),
-        tables[1],
-      ]),
-      false,
-    );
+    // ALTER-only migrations have no table to omit; every injected CREATE TABLE
+    // above must still fail their exact empty inventory.
+    if (tables.length > 0) {
+      assert.equal(
+        isRegisteredFeatureMigrationTables(migration, tables.slice(1)),
+        false,
+      );
+      assert.equal(
+        isRegisteredFeatureMigrationTables(migration, [
+          ...tables.slice(1),
+          tables[1],
+        ]),
+        false,
+      );
+    }
   }
   for (const migration of [
     "20261004100001_word_lists.sql",

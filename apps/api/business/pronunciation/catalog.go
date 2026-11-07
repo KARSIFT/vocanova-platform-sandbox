@@ -44,20 +44,21 @@ type CatalogValidation struct {
 	Invalid int `json:"invalid"`
 }
 type CatalogReport struct {
-	Validation      *CatalogValidation `json:"validation,omitempty"`
-	CatalogIdentity *ProviderIdentity  `json:"catalogIdentity,omitempty"`
-	Budget          *CatalogBudget     `json:"budget,omitempty"`
-	Receipts        []CatalogReceipt   `json:"receipts,omitempty"`
-	JobID           string             `json:"jobId,omitempty"`
-	Identity        ProviderIdentity   `json:"identity"`
-	Total           int                `json:"total"`
-	Ready           int                `json:"ready"`
-	Missing         int                `json:"missing"`
-	Pending         int                `json:"pending"`
-	Failed          int                `json:"failed"`
-	Attempted       int                `json:"attempted"`
-	Characters      int                `json:"characters"`
-	AudioSeconds    float64            `json:"audioSeconds"`
+	RecoveryOfAttempt string             `json:"recoveryOfAttempt,omitempty"`
+	Validation        *CatalogValidation `json:"validation,omitempty"`
+	CatalogIdentity   *ProviderIdentity  `json:"catalogIdentity,omitempty"`
+	Budget            *CatalogBudget     `json:"budget,omitempty"`
+	Receipts          []CatalogReceipt   `json:"receipts,omitempty"`
+	JobID             string             `json:"jobId,omitempty"`
+	Identity          ProviderIdentity   `json:"identity"`
+	Total             int                `json:"total"`
+	Ready             int                `json:"ready"`
+	Missing           int                `json:"missing"`
+	Pending           int                `json:"pending"`
+	Failed            int                `json:"failed"`
+	Attempted         int                `json:"attempted"`
+	Characters        int                `json:"characters"`
+	AudioSeconds      float64            `json:"audioSeconds"`
 }
 type CatalogOperator struct {
 	db       *sql.DB
@@ -177,11 +178,11 @@ func (o *CatalogOperator) Generate(ctx context.Context, job uuid.UUID, b Catalog
 		return r, err
 	}
 	var saved CatalogBudget
-	var savedIdentity string
-	if err = o.db.QueryRowContext(ctx, `SELECT provider_identity,max_generations,max_characters,max_audio_seconds FROM pronunciation_catalog_jobs WHERE id=$1`, job).Scan(&savedIdentity, &saved.MaxGenerations, &saved.MaxCharacters, &saved.MaxAudioSeconds); err != nil {
+	var savedIdentity, recoveryOf string
+	if err = o.db.QueryRowContext(ctx, `SELECT provider_identity,max_generations,max_characters,max_audio_seconds,COALESCE(recovery_of_attempt::text,'') FROM pronunciation_catalog_jobs WHERE id=$1`, job).Scan(&savedIdentity, &saved.MaxGenerations, &saved.MaxCharacters, &saved.MaxAudioSeconds, &recoveryOf); err != nil {
 		return r, err
 	}
-	if saved != b || savedIdentity != string(identity) {
+	if saved != b || savedIdentity != string(identity) || recoveryOf != "" {
 		return r, fmt.Errorf("existing job identity and budgets cannot change")
 	}
 	us, err := o.utterances(ctx)
@@ -267,7 +268,7 @@ func (o *CatalogOperator) claim(ctx context.Context, job uuid.UUID, u Utterance,
 	// Enforce immutable job budgets again under a row lock, so even a lost
 	// operator session cannot make two reservers overspend the same job.
 	var budget CatalogBudget
-	if err = tx.QueryRowContext(ctx, `SELECT max_generations,max_characters,max_audio_seconds FROM pronunciation_catalog_jobs WHERE id=$1 FOR UPDATE`, job).Scan(&budget.MaxGenerations, &budget.MaxCharacters, &budget.MaxAudioSeconds); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT max_generations,max_characters,max_audio_seconds FROM pronunciation_catalog_jobs WHERE id=$1 AND recovery_of_attempt IS NULL FOR UPDATE`, job).Scan(&budget.MaxGenerations, &budget.MaxCharacters, &budget.MaxAudioSeconds); err != nil {
 		return generation, false, err
 	}
 	var spent CatalogReport
@@ -351,7 +352,7 @@ func (o *CatalogOperator) JobReport(ctx context.Context, job uuid.UUID) (Catalog
 	currentIdentity := r.Identity
 	r.CatalogIdentity = &currentIdentity
 	var storedIdentity string
-	if err = o.db.QueryRowContext(ctx, `SELECT provider_identity,max_generations,max_characters,max_audio_seconds FROM pronunciation_catalog_jobs WHERE id=$1`, job).Scan(&storedIdentity, &r.Budget.MaxGenerations, &r.Budget.MaxCharacters, &r.Budget.MaxAudioSeconds); err != nil {
+	if err = o.db.QueryRowContext(ctx, `SELECT provider_identity,max_generations,max_characters,max_audio_seconds,COALESCE(recovery_of_attempt::text,'') FROM pronunciation_catalog_jobs WHERE id=$1`, job).Scan(&storedIdentity, &r.Budget.MaxGenerations, &r.Budget.MaxCharacters, &r.Budget.MaxAudioSeconds, &r.RecoveryOfAttempt); err != nil {
 		return r, err
 	}
 	if err = json.Unmarshal([]byte(storedIdentity), &r.Identity); err != nil {

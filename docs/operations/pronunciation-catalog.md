@@ -97,6 +97,57 @@ a separate budget; deployment never creates jobs automatically.
 - Public generation's 20-call/1,000-character daily budget is untouched. Operator
   job receipts account for this separately authorized work.
 
+## Explicit recovery of one rejected clip
+
+Ordinary generation skips a failed cache entry for the rest of its UTC day. The
+original job never retries a key it already attempted, including after midnight.
+Without targeted recovery, a later UTC day and a new explicitly budgeted job are
+required; ordinary jobs still scan catalog order rather than target one meaning.
+Continue other unattempted words by resuming their original job and budgets.
+
+After inspecting a specific completed operator failure with positive observed
+decoded duration, an operator may explicitly authorize **one** targeted recovery
+during that same UTC day:
+
+```sh
+pronunciation-catalog --generate --job NEW-OPERATOR-UUID \
+  --recover-failed-attempt ORIGINAL-FAILED-ATTEMPT-UUID \
+  --max-generations 1 --max-characters 250 --max-audio-seconds 60
+```
+
+Both IDs must be canonical, non-nil UUIDs. Use a fresh job UUID, distinct from the
+original attempt and its job. This requires the deployed recovery migration and
+operator binary; it is never run by deployment. The same dedicated speech key,
+provider and AI-enabled guards apply. No credentials belong in arguments.
+
+Recovery binds its immutable budget and original attempt durably. The original
+must be a completed failed attempt from an ordinary job, with positive observed
+decoded duration and matching provider/canonical identity. Its current cache must
+still be failed, contain no audio, identify that exact generation, have no
+active lease, and retain an attempted day matching both the original attempt and
+the current UTC date. Prior-day failures use the ordinary new-job policy instead. A failed HTTP request or an unobserved/undecodable response is not
+made eligible merely by requesting recovery. Positive decoded duration does not
+prove a particular defect, correct speech or a successful clip; review the
+sanitized evidence before authorizing another paid request.
+
+The original receipt and consumed budget remain unchanged. A new reserved attempt
+and the recovery linkage are persisted before the provider call. One original
+attempt can have only one recovery, even across different new job UUIDs. Recovery
+attempts cannot themselves be recovered. Repeating the same recovery invocation
+is rejected; changing its target or budgets is also rejected. The
+ordinary generation mode rejects recovery jobs. Job reports include the optional
+`recoveryOfAttempt` identity so the relationship remains inspectable after a lost
+terminal response. Inspect it without generation using
+`pronunciation-catalog --job RECOVERY-JOB-UUID`.
+
+The operator lock, shared cache-key lock, generation ownership, canonical checks,
+12-second provider timeout and existing audio validation still apply. Failed or
+interrupted recovery consumes its allowance; there is no automatic retry/refund.
+Ready clips are not replaced. Public daily generation limits remain unchanged.
+Never delete a failed row, edit its attempted day or reset a receipt to force a
+retry. Inspect the job report and current audit after recovery; an exhausted or
+still-failed recovery is an explicit remaining coverage gap.
+
 ## Costs, pilot and rollout
 
 The official [model pricing](https://developers.openai.com/api/docs/models/gpt-4o-mini-tts)
