@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { WordDetail } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
-import { handleApiError } from "@/lib/session";
+import { handleApiError, isSessionExpiredError } from "@/lib/session";
 import { getAdditionalDefinition } from "@/lib/word-definition";
 import styles from "../knowledge-map/workspace.module.css";
 
@@ -60,7 +60,9 @@ export function DiscoveryWordDetails({
     } catch (failure) {
       if (!controller.signal.aborted)
         setError(
-          handleApiError(failure, "Word details could not load. Try again."),
+          isSessionExpiredError(failure)
+            ? handleApiError(failure, "")
+            : "Word details could not load. Try again.",
         );
     } finally {
       if (!controller.signal.aborted) {

@@ -35,14 +35,22 @@ The affected API/operator race suite against migrated, seeded PostgreSQL passed
 CI is still required. Independent review of the operator is clean after fixing
 kill-switch parsing, stored job identity and canonical publication locking.
 The default read-only streamed audio audit distinguishes ready cache metadata
-from decoded/signal-valid clips. All 16 existing production clips passed that
+from decoded/signal-valid clips. Final manual verification also caught raw
+HTTP error text in lazy details; a valid failing regression now covers masked
+404/500 problem responses, exact sense rejection and successful retry. The rebuilt
+final affected browser run again passed370/5skips, with no failures/retries.
+All 16 existing production clips passed that
 gate, which does not establish pronunciation quality. No paid generation or
 production data changes have occurred at this checkpoint.
 
 Manual ChatGPT-browser local checks operated word picking, Previous, range
 jumping and same-range browser Back/reload, plus the simplified mobile Home and
 Settings reading order. These synthetic checks do not establish provider/media
-availability. Full hosted browser/performance/API gates, release verification,
+availability. A separate ordinary deployment-host curl sample across ten catalog
+ranks passed10/10 HTTP200, exact SHA-256 and960×640 dimensions; normal browser
+rendering and delivered-byte hash also passed for mixture. Python urllib still
+returned403 on those URLs; the client-path difference has no established cause.
+This is sampled delivery evidence, not every object. Full hosted browser/performance/API gates, release verification,
 a bounded live audio pilot/backfill and production retests remain outstanding.
 
 ## Manual production audit — 7 November 2026 (released)

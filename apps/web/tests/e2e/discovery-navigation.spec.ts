@@ -151,8 +151,17 @@ test("word details load only on demand, bind the displayed sense and retry hones
   ]);
   const reads: string[] = [];
   let wrongSense = true;
+  let failureStatus = 404;
   await page.route("**/api/v1/canonical-words/*", async (route) => {
     reads.push(new URL(route.request().url()).pathname);
+    if (failureStatus) {
+      await route.fulfill({
+        status: failureStatus,
+        contentType: "application/problem+json",
+        json: { detail: "Raw provider upstream failure" },
+      });
+      return;
+    }
     await route.fulfill({
       json: {
         word: {
@@ -200,6 +209,18 @@ test("word details load only on demand, bind the displayed sense and retry hones
     has: page.getByText("Word details & other meanings", { exact: true }),
   });
   await details.locator("summary").press("Enter");
+  for (const nextFailureStatus of [500, 0]) {
+    await expect(details.getByRole("alert")).toContainText(
+      "Word details could not load. Try again.",
+    );
+    await expect(details.getByRole("alert")).not.toContainText(
+      /HTTP|Raw provider|upstream/,
+    );
+    failureStatus = nextFailureStatus;
+    await page
+      .getByRole("button", { name: "Retry word details", exact: true })
+      .click();
+  }
   await expect(
     page.getByRole("button", { name: "Retry word details", exact: true }),
   ).toBeVisible();
@@ -221,10 +242,7 @@ test("word details load only on demand, bind the displayed sense and retry hones
   ).toBeVisible();
   await details.locator("summary").press("Enter");
   await details.locator("summary").press("Enter");
-  expect(reads).toEqual([
-    "/api/v1/canonical-words/map-word-1",
-    "/api/v1/canonical-words/map-word-1",
-  ]);
+  expect(reads).toEqual(Array(4).fill("/api/v1/canonical-words/map-word-1"));
   await page
     .getByRole("button", { name: "Choose a word", exact: true })
     .click();
