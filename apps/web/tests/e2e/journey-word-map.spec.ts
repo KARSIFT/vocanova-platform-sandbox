@@ -137,7 +137,10 @@ test("every way to choose a range is at least 44px", async ({
   );
   for (const control of controls) {
     const box = (await control.boundingBox())!;
-    expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
+    // Firefox can report a CSS 44px edge as 43.99998474121094px.
+    // Ignore hundredth-pixel representation noise while retaining the 44px target.
+    const shortestEdge = Math.round(Math.min(box.width, box.height) * 100) / 100;
+    expect(shortestEdge).toBeGreaterThanOrEqual(44);
   }
 });
 
