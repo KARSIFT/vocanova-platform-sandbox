@@ -5,6 +5,7 @@ import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer } from "@/ui/surface";
 import { PracticeEntry } from "./_components/practice-entry";
+import { LearnIcon } from "../_components/learn-icons";
 
 export const metadata: Metadata = {
   title: "Practice — Vocanova",
@@ -126,27 +127,27 @@ export default async function PracticePage({
       {/* One list of the other ways to practise, instead of scattered rows. */}
       <nav aria-label="Practice activities" className="mt-6">
         <h2 className="section-title">More ways to practise</h2>
-        <ul className="mt-2 divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white">
+        <ul className="mt-2 space-y-2">
           {[
             {
               href: "/discovery",
               label: "Discover words",
-              text: "Hear a new word and choose Learn or Already know.",
+              icon: "discover" as const,
             },
             {
               href: "/stories",
               label: "Short stories",
-              text: "Read your words inside a short conversation.",
+              icon: "stories" as const,
             },
             {
               href: "/courses",
-              label: "Explore situation lessons",
-              text: "Guided lessons for a place, such as a cafe or an airport.",
+              label: "Situation lessons",
+              icon: "situations" as const,
             },
             {
               href: "/progress/sentences",
-              label: "Open sentence history",
-              text: "Your sentences and their feedback.",
+              label: "Sentence history",
+              icon: "history" as const,
             },
             {
               href: firstWord
@@ -155,16 +156,15 @@ export default async function PracticePage({
               label: firstWord
                 ? `Listen to ${firstWord.wordText}`
                 : "Find a word to hear",
-              text: firstWord
-                ? "Hear your latest word again."
-                : "Search any word and hear it.",
+              icon: "listen" as const,
             },
           ].map((item) => (
-            <li key={item.label} className="px-4 py-2">
-              <Link href={item.href} className={linkStyle}>
-                {item.label}
+            <li key={item.label}>
+              <Link href={item.href} className="learn-nav-link">
+                <LearnIcon name={item.icon} />
+                <span className="min-w-0 flex-1">{item.label}</span>
+                <LearnIcon name="arrow" />
               </Link>
-              <p className="pb-1 text-sm text-neutral-600">{item.text}</p>
             </li>
           ))}
         </ul>

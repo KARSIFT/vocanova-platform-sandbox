@@ -199,10 +199,7 @@ export default async function JourneyPage({
     <PageContainer className={styles.journey}>
       <header className={styles.journeyHead}>
         <h1 className="page-title">Journey</h1>
-        <p className="page-lede">
-          Learn the 10,000 most useful English words, 100 at a time, and the
-          words that belong to real places.
-        </p>
+        <p className="page-lede">Your words, one step at a time.</p>
       </header>
       {/* Phones read range, map, then places; wide screens keep the map
           beside the range and places. */}

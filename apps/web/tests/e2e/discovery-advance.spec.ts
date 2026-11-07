@@ -29,7 +29,7 @@ test("each choice in a range is one confirmed request, and the saved state match
 
   await page.getByRole("button", { name: "Already know", exact: true }).click();
   await expect(page.getByRole("heading", { name: "be", exact: true })).toBeFocused();
-  await expect(page).toHaveURL(/\/discovery\?band=1&word=2$/);
+  await expect(page).toHaveURL(/\/discovery\?band=1&word=2&active=1$/);
   await page.getByRole("button", { name: "Learn", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Map word 3", exact: true })).toBeFocused();
   // The decided word shows its confirmed state; the next one is still new.
@@ -46,7 +46,7 @@ test("each choice in a range is one confirmed request, and the saved state match
   await expect(page.getByText("1 already know", { exact: true })).toBeVisible();
   await expect(page.getByText("1 learning", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("In this range: 1 already known, 1 learning, 98 new.", {
+    page.getByText("1 known · 1 learning · 98 new", {
       exact: true,
     }),
   ).toBeVisible();

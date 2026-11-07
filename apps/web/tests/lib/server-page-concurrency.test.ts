@@ -371,3 +371,33 @@ describe("writing topic and meaning validation", () => {
     );
   });
 });
+
+
+describe("adjacent overview empty states", () => {
+  it("Home offers discovery without claiming an unperformed review", async () => {
+    mockFetch();
+    const rendered = await HomePage();
+    assert.ok(text(rendered).includes("Discover new words"));
+    assert.ok(!text(rendered).includes("Review complete"));
+    assert.ok(elements(rendered).some(element => element.props.href === "/discovery"));
+  });
+  const emptyKnowledge = {
+    saved: 0, selfReportedKnown: 0, new: 0, learning: 0, reviewing: 0,
+    mastered: 0, ignored: 0, archived: 0, due: 0,
+  };
+  it("Progress offers a next step instead of empty review stages", async () => {
+    mockFetch({}, false, { [api("knowledge-summary")]: emptyKnowledge });
+    const rendered = await ProgressPage();
+    assert.ok(text(rendered).includes("Start building your vocabulary"));
+    assert.ok(elements(rendered).some(element => element.props.href === "/discovery"));
+    assert.ok(!elements(rendered).some(element => element.props["aria-label"] === "Review stages"));
+  });
+  for (const record of ["saved", "selfReportedKnown", "ignored", "archived"] as const) {
+    it(`Progress retains recorded ${record} rather than presenting an empty account`, async () => {
+      mockFetch({}, false, { [api("knowledge-summary")]: { ...emptyKnowledge, [record]: 1 } });
+      const rendered = await ProgressPage();
+      assert.ok(!text(rendered).includes("Start building your vocabulary"));
+      assert.ok(elements(rendered).some(element => element.props["aria-label"] === "Review stages"));
+    });
+  }
+});

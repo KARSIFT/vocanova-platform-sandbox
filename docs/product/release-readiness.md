@@ -1,13 +1,63 @@
 # Vocanova release readiness
 
-## Manual production audit — 7 November 2026
+## Discovery usability follow-up — 7 November 2026 (in progress)
 
-Production baseline **0.4.19 / `5437a2b7`** was successfully promoted by
-workflow `42288146468`, with matching web/API identities and healthy database.
-The subsequent manual-audit fixes remain local, awaiting one consolidated PR,
-fresh CI/review, staging acceptance and a separate production promotion. Earlier
-deployment-status entries below are historical. No whole-product completion or
-full manual coverage claim follows from this audit.
+The owner's annotated review adds explicit acceptance for direct map-to-word
+entry, word/range navigation and Previous word, aligned discovery controls,
+recognizable settings, on-demand teaching details, and less copy on adjacent
+screens. The implementation and verification plan is
+[discovery usability](../superpowers/plans/2026-11-07-discovery-usability.md).
+
+A read-only production catalog audit found 10,051 active English meanings with
+nonempty definitions and current approved images. Only 14 matched the current
+word-pronunciation cache identity; 10,037 required audio generation. This is
+metadata/cache evidence, not a listening assessment or a full CDN-object scan.
+The follow-up includes a controlled resumable catalog-audio operator; no complete
+backfill or follow-up production deployment is established at this checkpoint.
+
+Local integrated acceptance on the final frontend bundle passed **370 cases,
+five layout-specific skips, zero failures/retries** across 360px, 430px and
+desktop. The skips are phone-only thumb reach/range chooser/mobile Home and
+desktop-only atlas arrow-key checks on other layouts. Coverage includes pending
+same-range browser Back and exact retry identity, completion Back, active range
+entry, Previous/picker/range bounds, reload, details revision changes, light/dark
+contrast, action alignment, and affected Home/Practice/Progress/Settings states.
+A prior integrated run exposed dark-picker contrast and a real native-history
+synchronization defect; both have passing regressions in this final run.
+
+Web build, lint, web/E2E typechecks and **271 helper/middleware tests** passed.
+API-client passed61/61. Local foundation passed324/335 with11 failures matching
+the recorded macOS harness baseline; nine new inventory failures were fixed by
+registering the exact operator migration/two tables. The focused inventory suite
+passed13/13. Fresh Linux foundation acceptance remains required.
+The affected API/operator race suite against migrated, seeded PostgreSQL passed
+**535 tests/subtests, zero failures/skips** on installed Go 1.27.3; pinned-toolchain
+CI is still required. Independent review of the operator is clean after fixing
+kill-switch parsing, stored job identity and canonical publication locking.
+The default read-only streamed audio audit distinguishes ready cache metadata
+from decoded/signal-valid clips. All 16 existing production clips passed that
+gate, which does not establish pronunciation quality. No paid generation or
+production data changes have occurred at this checkpoint.
+
+Manual ChatGPT-browser local checks operated word picking, Previous, range
+jumping and same-range browser Back/reload, plus the simplified mobile Home and
+Settings reading order. These synthetic checks do not establish provider/media
+availability. Full hosted browser/performance/API gates, release verification,
+a bounded live audio pilot/backfill and production retests remain outstanding.
+
+## Manual production audit — 7 November 2026 (released)
+
+Production **0.4.20 / `d5e4eb0c`** was promoted successfully by workflow
+`42309231189`, after strict staging `42308466317`. Web/API identities and
+database health passed. Final PR #1511 browser acceptance `42302749309` passed
+6,204 cases with 105 intentional skips, zero failures/flakies; final Lighthouse
+`42302749167` scored performance/accessibility 100 in all 84 reports, TBT/CLS zero.
+The final hosted web foundation passed 335/335, API-client 61/61 and web 261/261;
+pinned API, PostgreSQL reliability, authentication and Docker gates passed.
+Actual ChatGPT-browser production retests observed all nine fixes, including
+legacy pagination and restored profile/appearance preferences. The earlier
+loading-stall cause remains unattributed. These results do not establish whole
+product completion or exhaustive manual coverage.
 
 Initial hosted acceptance passed Linux foundation **324/324**, API-client
 **61/61**, web **261/261**, and the web/API, PostgreSQL reliability,
@@ -25,14 +75,15 @@ reports. Its retry failed dependency setup before auditing. Browser workflows
 now use the explicit supported Ubuntu 24.04 runner to control image drift;
 Ubuntu 26.04 is also supported, so this is not an unsupported-OS diagnosis.
 All jobs, tests, limits and thresholds remain. Fresh final-head results in
-[PR #1511](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1511) must
-establish acceptance; the original failures are not waived.
+[PR #1511](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1511)
+established the acceptance recorded above; the original failures remain historical evidence.
 
 A separately reproduced stale single-file nginx mount is corrected through
 staging's validated convergence path: only differing mounted content triggers
 nginx-only recreation, with equality checked before reload. Matching content
-does not force recreation. This requires normal live deployment verification
-and can briefly replace the shared proxy when drift is found.
+does not force recreation. Staging detected drift and converged successfully; host/mounted hashes and active
+URI-only/no-referrer logging matched afterward. Both environments stayed healthy.
+The guarded path can briefly replace the shared proxy when drift is found.
 
 Fresh local evidence for the corrections:
 

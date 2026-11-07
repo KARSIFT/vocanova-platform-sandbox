@@ -84,10 +84,10 @@ for (const theme of ["light", "dark"] as const) {
           region.getByRole("link", { name: "Discover words", exact: true }),
         ).toHaveAttribute("href", "/discovery");
         await expect(
-          region.getByText(
-            "No words are due. Discover something new whenever you like.",
-            { exact: true },
-          ),
+          region.getByText("No reviews due", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          region.getByRole("heading", { name: "Discover new words", exact: true }),
         ).toBeVisible();
         await expect(
           page

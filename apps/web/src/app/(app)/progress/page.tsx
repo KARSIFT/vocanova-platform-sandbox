@@ -4,6 +4,7 @@ import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer, Surface } from "@/ui/surface";
 import { getCompletionDayView } from "./completion-day-view";
+import { LearnIcon } from "../_components/learn-icons";
 import { Achievements } from "../_components/achievements";
 
 // A count the server did not report is shown as unknown, never as zero.
@@ -110,10 +111,7 @@ export default async function ProgressPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="page-title">Progress</h1>
-          <p className="page-lede">
-            What you have learned, the days you practised and the milestones you
-            reached, as recorded.
-          </p>
+          <p className="page-lede">Your words and daily practice.</p>
         </div>
         <Link href="/words" className="vn-chip-link">
           Saved words
@@ -130,43 +128,66 @@ export default async function ProgressPage() {
               Open your word map
             </Link>
           </div>
-          {/* Two separate records: words saved for review, and words the
-              learner said they already know. Neither is a proficiency score. */}
-          <dl className="progress-totals">
-            <div>
-              <dt>Saved to learn</dt>
-              <dd>{formatCount(knowledge.saved)}</dd>
-            </div>
-            <div>
-              <dt>Marked already known</dt>
-              <dd>{formatCount(knowledge.selfReportedKnown)}</dd>
-            </div>
-          </dl>
-          <StageBar stages={stages} />
-          <ol aria-label="Review stages" className="stage-flow">
-            {stages.map(({ label, count, swatch }) => (
-              <li key={label}>
-                <span className="stage-flow-label">
-                  <span
-                    aria-hidden="true"
-                    className={`size-2.5 rounded-full ${swatch}`}
-                  />
-                  {label}
-                </span>
-                <span className="stage-flow-count">{count}</span>
-              </li>
-            ))}
-          </ol>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-200 pt-3">
-            <p className="text-sm text-neutral-600">
-              {knowledge.saved} saved · {knowledge.due} ready for review
-            </p>
-            {knowledge.due > 0 && (
-              <Link href="/review" className="vn-text-link">
-                Start review
+          {knowledge.saved === 0 &&
+          knowledge.selfReportedKnown === 0 &&
+          knowledge.ignored === 0 &&
+          knowledge.archived === 0 ? (
+            <div className="py-5">
+              <h3 className="font-semibold text-neutral-900">
+                Start building your vocabulary
+              </h3>
+              <p className="mt-1 text-sm text-neutral-600">
+                Save a word to learn, or mark one you already know.
+              </p>
+              <Link
+                href="/discovery"
+                className="vn-btn vn-btn-secondary mt-4 inline-flex items-center gap-2"
+              >
+                <LearnIcon name="discover" />
+                Discover words
               </Link>
-            )}
-          </div>
+            </div>
+          ) : (
+            <>
+              {/* Two separate records: words saved for review, and words the
+              learner said they already know. Neither is a proficiency score. */}
+              <dl className="progress-totals">
+                <div>
+                  <dt>Saved to learn</dt>
+                  <dd>{formatCount(knowledge.saved)}</dd>
+                </div>
+                <div>
+                  <dt>Marked already known</dt>
+                  <dd>{formatCount(knowledge.selfReportedKnown)}</dd>
+                </div>
+              </dl>
+              <StageBar stages={stages} />
+              <ol aria-label="Review stages" className="stage-flow">
+                {stages.map(({ label, count, swatch }) => (
+                  <li key={label}>
+                    <span className="stage-flow-label">
+                      <span
+                        aria-hidden="true"
+                        className={`size-2.5 rounded-full ${swatch}`}
+                      />
+                      {label}
+                    </span>
+                    <span className="stage-flow-count">{count}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-200 pt-3">
+                <p className="text-sm text-neutral-600">
+                  {knowledge.saved} saved · {knowledge.due} ready for review
+                </p>
+                {knowledge.due > 0 && (
+                  <Link href="/review" className="vn-text-link">
+                    Start review
+                  </Link>
+                )}
+              </div>
+            </>
+          )}
           <details className="mt-1">
             <summary className={summaryStyle}>About these stages</summary>
             <p className="mt-2 text-sm text-neutral-600">

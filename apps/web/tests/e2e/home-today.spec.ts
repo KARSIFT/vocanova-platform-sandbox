@@ -28,6 +28,11 @@ for (const due of [0, 3] as const) {
           : next.getByRole("link", { name: "Discover words", exact: true }),
       ).toBeInViewport();
 
+      if (due === 0) {
+        await expect(next.getByRole("heading", { name: "Discover new words", exact: true })).toBeVisible();
+        await expect(next.getByText("Review complete", { exact: true })).toHaveCount(0);
+      }
+
       const goal = main.getByRole("region", { name: "Today’s goal", exact: true });
       await expect(goal.getByText("In progress", { exact: true })).toBeVisible();
       for (const [label, value] of [
@@ -71,7 +76,12 @@ test("an empty review queue points to saving words, and a newly saved word is re
     "No words are due right now. Save new words in Discover, then check back here for review.",
     { exact: true },
   );
+  await expect(note).toBeHidden();
+  const aboutReviews = goal.locator("summary").filter({ hasText: "About reviews" });
+  await aboutReviews.focus();
+  await page.keyboard.press("Enter");
   await expect(note).toBeVisible();
+  await expect(aboutReviews).toBeFocused();
   const next = page.getByRole("region", { name: "Review words", exact: true });
   await expect(
     next.getByRole("link", { name: "Discover words", exact: true }),
@@ -90,6 +100,7 @@ test("an empty review queue points to saving words, and a newly saved word is re
   await page.goto("/home");
   await expect(next.getByRole("button", { name: "Start review", exact: true })).toBeVisible();
   await expect(next.getByText("1 word is ready to remember.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Your latest word", exact: true }).getByRole("button", { name: "Listen to invite", exact: true })).toBeVisible();
   await expect(note).toHaveCount(0);
 });
 

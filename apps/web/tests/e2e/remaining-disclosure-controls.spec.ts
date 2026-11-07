@@ -75,9 +75,14 @@ for (const theme of ["light", "dark"] as const) {
       await checkLayout(page);
     });
 
-    test("word sources disclose attribution on Journey, discovery and an active review", async ({ page }) => {
+    test("word sources remain reachable from discovery and disclose on Journey and review", async ({ page }) => {
       for (const path of ["/discover", "/discovery", "/reviews"]) {
         await page.goto(path);
+        if (path === "/discovery") {
+          await expect(page.getByText("Word sources", { exact: true })).toHaveCount(0);
+          await page.getByRole("banner").getByRole("link", { name: "Back to Journey", exact: true }).click();
+          await expect(page).toHaveURL(/\/discover\?band=1#range-words$/);
+        }
         if (path === "/reviews") {
           await startReviewLesson(page);
           await expect(page.getByRole("radio").first()).toBeVisible();

@@ -19,7 +19,7 @@ import {
   hasSentenceFeedbackDrafts,
 } from "./sentence-feedback-drafts";
 import { isPrimaryNavItemActive } from "./bottom-nav-state";
-import { HomeIcon, JourneyIcon, ProgressIcon } from "./nav-icons";
+import { HomeIcon, JourneyIcon, ProgressIcon, SettingsIcon } from "./nav-icons";
 import { getSessionExit, SESSION_LOCATION_CHANGED } from "./session-route";
 
 const DESKTOP_NAV_ITEMS = [
@@ -242,22 +242,7 @@ export function AppHeader() {
               }
               className="header-icon-button"
             >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="h-5 w-5 fill-none stroke-current stroke-[1.8]"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m19.4 15 .05.05 1.1 1.1-2.05 3.55-1.5-.5a7.6 7.6 0 0 1-1.7 1l-.3 1.55h-4.1l-.3-1.55a7.6 7.6 0 0 1-1.7-1l-1.5.5-2.05-3.55 1.1-1.1.05-.05a7.1 7.1 0 0 1 0-2l-.05-.05-1.1-1.1L7.35 8.3l1.5.5a7.6 7.6 0 0 1 1.7-1l.3-1.55h4.1l.3 1.55a7.6 7.6 0 0 1 1.7 1l1.5-.5 2.05 3.55-1.1 1.1-.05.05a7.1 7.1 0 0 1 0 2Z"
-                />
-              </svg>
+              <SettingsIcon />
             </Link>
             <button
               type="button"

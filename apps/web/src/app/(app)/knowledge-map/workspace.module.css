@@ -509,7 +509,7 @@
 .startActions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: stretch;
   gap: 0.75rem;
 }
 .card {
@@ -682,4 +682,109 @@
 }
 :global([data-theme="dark"]) .stateChip[data-state="learning"] {
   color: #ddd6fe;
+}
+
+/* Navigation changes the displayed word only, never its learning state. */
+.startActions .audio {
+  display: inline-flex;
+  align-items: stretch;
+  margin: 0;
+}
+.startActions .audio button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.discoveryNavigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.discoveryRange {
+  flex: 1;
+  min-width: min(100%, 16rem);
+}
+.discoveryRange label,
+.wordPicker label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  color: var(--color-neutral-700);
+}
+.discoveryRange > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.discoveryRange select,
+.wordPicker select {
+  min-width: 0;
+  min-height: 48px;
+  padding: 0.5rem;
+  border: 1px solid var(--color-neutral-300);
+  border-radius: 0.75rem;
+  color: var(--color-neutral-900);
+  background: var(--color-white);
+  font-size: 1rem;
+}
+.discoveryRange select {
+  flex: 1;
+}
+.progressPicker {
+  display: block;
+  width: 100%;
+  min-height: 64px;
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-neutral-300);
+  border-radius: 0.75rem;
+  background: var(--color-white);
+  cursor: pointer;
+}
+.pickerLabel {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-neutral-900);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+.progressPicker:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.wordPicker {
+  padding: 0.75rem 0;
+}
+.wordPicker select {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+.wordDetails {
+  margin-top: 1rem;
+  border-top: 1px solid var(--color-neutral-200);
+  color: var(--color-neutral-700);
+}
+.wordDetails summary {
+  min-height: 48px;
+  align-content: center;
+  cursor: pointer;
+  font-weight: 650;
+  color: var(--color-neutral-900);
+}
+.meanings {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.meanings li {
+  margin: 1rem 0;
+  padding-left: 0.25rem;
+}
+.meanings p + p {
+  margin-top: 0.5rem;
+}
+.meaningDefinition {
+  font-weight: 650;
+  color: var(--color-neutral-900);
 }

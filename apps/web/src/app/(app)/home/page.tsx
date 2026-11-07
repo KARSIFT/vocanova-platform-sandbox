@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer } from "@/ui/surface";
 import { MeaningPicture } from "@/ui/meaning-picture";
+import { ListenButton } from "@/ui/pronunciation";
+import { LearnIcon } from "../_components/learn-icons";
 import { StartDailyLessonButton } from "../reviews/_components/daily-lesson-start";
 import { PracticeJourney } from "../practice/_components/practice-journey";
 import {
@@ -197,18 +199,18 @@ export default async function HomePage() {
             ? "Review in progress"
             : dueReviewWords > 0
               ? "Your next step"
-              : "All caught up"}
+              : "No reviews due"}
         </p>
         <h2 id="todays-mission-heading">
-          {discoveryIsNext ? "Review complete" : "Review words"}
+          {discoveryIsNext ? "Discover new words" : "Review words"}
         </h2>
-        <p className="next-step-copy">
-          {currentLesson
-            ? "Pick up where you left off."
-            : dueReviewWords > 0
-              ? `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`
-              : "No words are due. Discover something new whenever you like."}
-        </p>
+        {!discoveryIsNext && (
+          <p className="next-step-copy">
+            {currentLesson
+              ? "Pick up where you left off."
+              : `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`}
+          </p>
+        )}
         <div className="next-step-actions">
           {currentLesson ? (
             <Link
@@ -269,10 +271,15 @@ export default async function HomePage() {
         !currentLesson &&
         dueReviewWords === 0 &&
         reviewsCompleted < mission.reviewTarget ? (
-          <p className="pb-2 text-sm text-neutral-600">
-            No words are due right now. Save new words in Discover, then check
-            back here for review.
-          </p>
+          <details className="text-sm text-neutral-600">
+            <summary className="min-h-11 cursor-pointer content-center font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+              About reviews
+            </summary>
+            <p className="pb-2">
+              No words are due right now. Save new words in Discover, then check
+              back here for review.
+            </p>
+          </details>
         ) : null}
       </section>
 
@@ -307,15 +314,19 @@ export default async function HomePage() {
             </Link>
           </div>
         )}
-        <nav aria-label="Explore your English" className="flex flex-wrap gap-2">
-          {EXPLORE_LINKS.map(([href, label, prefetch]) => (
+        <nav
+          aria-label="Explore your English"
+          className="grid grid-cols-2 gap-2"
+        >
+          {EXPLORE_LINKS.map(([href, label, prefetch, icon]) => (
             <Link
               key={href}
               href={href}
               prefetch={prefetch}
-              className="vn-chip-link"
+              className="learn-nav-link learn-nav-compact"
             >
-              {label}
+              <LearnIcon name={icon} />
+              <span className="min-w-0 flex-1">{label}</span>
             </Link>
           ))}
         </nav>
@@ -369,6 +380,12 @@ export default async function HomePage() {
                 <span className="pos">{latestWord.partOfSpeech}</span>
               </p>
               <p className="text-neutral-700">{latestWord.shortDefinition}</p>
+              <ListenButton
+                text={latestWord.wordText}
+                meaningId={latestWord.meaningId}
+                meaningRevision={latestRevision}
+                showCaption={false}
+              />
               <div className="latest-word-actions">
                 <Link
                   href={`${wordHref}#sentence-practice`}
@@ -405,9 +422,9 @@ export default async function HomePage() {
 // Practice and stories have instant loading states, which only show at once
 // when prefetched; the others prefetch on intent.
 const EXPLORE_LINKS = [
-  ["/practice", "Practice", "auto"],
-  ["/stories", "Short stories", "auto"],
-  ["/courses", "Situations", false],
-  ["/lists", "Personal lists", false],
-  ["/plan", "Your plan", false],
+  ["/practice", "Practice", "auto", "practice"],
+  ["/stories", "Short stories", "auto", "stories"],
+  ["/courses", "Situations", false, "situations"],
+  ["/lists", "Personal lists", false, "lists"],
+  ["/plan", "Your plan", false, "plan"],
 ] as const;

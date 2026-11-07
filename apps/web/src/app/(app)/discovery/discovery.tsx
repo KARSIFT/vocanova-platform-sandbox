@@ -1,10 +1,20 @@
 "use client";
 
-import { replaceSessionLocation } from "../_components/session-route";
+import {
+  SESSION_LOCATION_CHANGED,
+  replaceSessionLocation,
+} from "../_components/session-route";
 import Link from "@/ui/link";
 import { MeaningPicture } from "@/ui/meaning-picture";
-import { VocabularySources } from "@/ui/vocabulary-sources";
-import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { DiscoveryWordDetails } from "./discovery-word-details";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import {
   ApiResponseError,
   type KnowledgeMapDecision,
@@ -31,17 +41,47 @@ interface PendingDecision {
   key: string;
 }
 
+function subscribeDiscoveryLocation(onChange: () => void) {
+  window.addEventListener(SESSION_LOCATION_CHANGED, onChange);
+  window.addEventListener("popstate", onChange);
+  return () => {
+    window.removeEventListener(SESSION_LOCATION_CHANGED, onChange);
+    window.removeEventListener("popstate", onChange);
+  };
+}
+
+function browserSearchSnapshot() {
+  return window.location.search;
+}
+
 export function Discovery({
   initialData,
   initialRank,
+  initiallyActive = false,
 }: {
   initialData: KnowledgeMapData;
   initialRank: number;
+  initiallyActive?: boolean;
 }) {
   const [data, setData] = useState(initialData);
   const [rank, setRank] = useState(initialRank);
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(initiallyActive);
+  const router = useRouter();
+  const serverParams = useSearchParams();
+  const serverSearch = serverParams.size ? `?${serverParams.toString()}` : "";
+  const currentSearch = useSyncExternalStore(
+    subscribeDiscoveryLocation,
+    browserSearchSnapshot,
+    () => serverSearch,
+  );
+  const [navigating, startNavigation] = useTransition();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedRank, setSelectedRank] = useState(initialRank);
+  const [selectedBand, setSelectedBand] = useState(
+    initialData.currentBand.number,
+  );
   const [muted, setMuted] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState(false);
@@ -61,6 +101,9 @@ export function Discovery({
   const displayedRank = item?.rank;
   const displayedWord = item?.wordText;
   const displayedMeaning = item?.meaningId;
+  const displayedRevision = item?.meaningRevision;
+  const navigationLocked =
+    busy || navigating || conflict || Boolean(pending.current);
   // The likely next word: the first unseen one after this word in the range.
   const upcoming = data.currentBand.items.find(
     (word) =>
@@ -68,6 +111,78 @@ export function Discovery({
       !word.selfReportedKnown &&
       !word.saved,
   );
+
+  const firstRank = bandSummary?.startRank ?? 1;
+  const lastRank = bandSummary?.endRank ?? data.totalWords;
+
+  const historyWord = useRef({ rank, started, blocked: navigationLocked });
+  historyWord.current = { rank, started, blocked: navigationLocked };
+
+  // Owned writes preserve Next's opaque history state. Observe the actual
+  // browser location (as DiscoveryExitLink does), because Next searchParams
+  // need not update for those entries or their Back/Forward navigation.
+  useEffect(() => {
+    const searchParams = new URLSearchParams(currentSearch);
+    const requested = Number(searchParams.get("word"));
+    if (
+      Number(searchParams.get("band")) === band &&
+      Number.isInteger(requested) &&
+      requested >= firstRank &&
+      requested <= lastRank
+    ) {
+      const current = historyWord.current;
+      const active = searchParams.get("active") === "1";
+      if (
+        current.blocked &&
+        (requested !== current.rank || active !== current.started)
+      ) {
+        // Back/Forward bypass disabled controls. Restore the pending word as a
+        // new entry, retaining the attempted destination underneath it so Back
+        // works normally after the original decision has been confirmed.
+        window.history.pushState(
+          window.history.state,
+          "",
+          `/discovery?band=${band}&word=${current.rank}${current.started ? "&active=1" : ""}`,
+        );
+        window.dispatchEvent(new Event(SESSION_LOCATION_CHANGED));
+        return;
+      }
+      setRank(requested);
+      setSelectedRank(requested);
+      setStarted(active);
+      setDone(false);
+    }
+  }, [currentSearch, band, firstRank, lastRank]);
+
+  useEffect(() => {
+    setSelectedBand(band);
+  }, [band]);
+
+  function navigateToWord(nextBand: number, nextRank: number) {
+    if (lock.current || navigationLocked) return;
+    deviceSpeech.stop(speechOwner.current);
+    setError("");
+    setPickerOpen(false);
+    const href = `/discovery?band=${nextBand}&word=${nextRank}&active=1`;
+    if (nextBand === band) {
+      window.history.pushState(window.history.state, "", href);
+      window.dispatchEvent(new Event(SESSION_LOCATION_CHANGED));
+      setStarted(true);
+      setRank(nextRank);
+      setSelectedRank(nextRank);
+      if (nextRank === item?.rank) titleRef.current?.focus();
+    } else startNavigation(() => router.push(href));
+  }
+
+  function previousWord() {
+    if (!item || item.rank <= 1) return;
+    const previousRank = item.rank - 1;
+    const previousBand = data.bands.find(
+      (value) =>
+        previousRank >= value.startRank && previousRank <= value.endRank,
+    );
+    if (previousBand) navigateToWord(previousBand.number, previousRank);
+  }
 
   useEffect(() => {
     if (!error) return;
@@ -83,6 +198,7 @@ export function Discovery({
     } catch {
       /* Device storage may be unavailable. */
     }
+    setAudioReady(true);
     return () => deviceSpeech.release(owner);
   }, []);
 
@@ -90,12 +206,20 @@ export function Discovery({
     if (displayedRank === undefined || done) return;
     // The server may select a later unseen range before Start. Canonicalize
     // its address now so Back preserves that real range without another read.
-    replaceSessionLocation(`/discovery?band=${band}&word=${displayedRank}`);
+    replaceSessionLocation(
+      `/discovery?band=${band}&word=${displayedRank}${started ? "&active=1" : ""}`,
+    );
     if (started) titleRef.current?.focus();
   }, [started, displayedRank, band, done]);
 
   useEffect(() => {
-    if (!started || displayedRank === undefined || !displayedWord || done)
+    if (
+      !audioReady ||
+      !started ||
+      displayedRank === undefined ||
+      !displayedWord ||
+      done
+    )
       return;
     const identity = `${displayedRank}:${displayedMeaning}`;
     if (lastSpoken.current !== identity) {
@@ -107,9 +231,19 @@ export function Discovery({
           false,
           setSpeech,
           displayedMeaning,
+          displayedRevision,
         );
     }
-  }, [started, displayedRank, displayedWord, displayedMeaning, muted, done]);
+  }, [
+    audioReady,
+    started,
+    displayedRank,
+    displayedWord,
+    displayedMeaning,
+    displayedRevision,
+    muted,
+    done,
+  ]);
 
   // Warm the browser cache with the next word's approved picture while the
   // learner reads this one, so the following card appears complete.
@@ -138,6 +272,7 @@ export function Discovery({
         false,
         setSpeech,
         item.meaningId,
+        item.meaningRevision,
       );
   }
 
@@ -153,7 +288,7 @@ export function Discovery({
   }
 
   async function decide(decision?: "learn" | "known") {
-    if (lock.current || conflict || !item) return;
+    if (lock.current || navigating || conflict || !item) return;
     if (!pending.current) {
       if (!decision) return;
       pending.current = {
@@ -312,28 +447,121 @@ export function Discovery({
           {data.totalWords.toLocaleString()}
         </span>
       </div>
-      {/* This range at a glance: one mark per word, the current one outlined. */}
-      <div
-        className={`${styles.strip} ${styles.discoveryStrip}`}
-        aria-hidden="true"
-      >
-        {data.currentBand.items.map((word) => (
-          <span
-            key={word.meaningId}
-            data-state={wordState(word)}
-            data-next={word.rank === item.rank ? "true" : undefined}
-          />
-        ))}
+      <div className={styles.discoveryNavigation}>
+        <button
+          type="button"
+          className={styles.secondary}
+          onClick={previousWord}
+          disabled={navigationLocked || item.rank <= 1}
+        >
+          Previous word
+        </button>
+        <form
+          className={styles.discoveryRange}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const target = data.bands.find(
+              (value) => value.number === selectedBand,
+            );
+            if (target) navigateToWord(target.number, target.startRank);
+          }}
+        >
+          <label htmlFor="discovery-range">Word range</label>
+          <div>
+            <select
+              id="discovery-range"
+              value={selectedBand}
+              disabled={navigationLocked}
+              onChange={(event) => setSelectedBand(Number(event.target.value))}
+            >
+              {data.bands.map((value) => (
+                <option key={value.number} value={value.number}>
+                  {value.startRank.toLocaleString()}–
+                  {value.endRank.toLocaleString()}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className={styles.secondary}
+              disabled={navigationLocked}
+            >
+              Go to range
+            </button>
+          </div>
+        </form>
       </div>
+      <button
+        type="button"
+        className={styles.progressPicker}
+        aria-label="Choose a word"
+        aria-expanded={pickerOpen}
+        aria-controls="discovery-word-picker"
+        disabled={navigationLocked}
+        onClick={() => {
+          setSelectedRank(item.rank);
+          setPickerOpen(!pickerOpen);
+        }}
+      >
+        <span className={styles.pickerLabel}>
+          Choose a word <span aria-hidden="true">⌄</span>
+        </span>
+        <span
+          className={`${styles.strip} ${styles.discoveryStrip}`}
+          aria-hidden="true"
+        >
+          {data.currentBand.items.map((word) => (
+            <span
+              key={word.meaningId}
+              data-state={wordState(word)}
+              data-next={word.rank === item.rank ? "true" : undefined}
+            />
+          ))}
+        </span>
+      </button>
+      <div
+        id="discovery-word-picker"
+        hidden={!pickerOpen}
+        className={styles.wordPicker}
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            navigateToWord(band, selectedRank);
+          }}
+        >
+          <label htmlFor="discovery-rank">Word in this range</label>
+          <select
+            id="discovery-rank"
+            value={selectedRank}
+            disabled={navigationLocked}
+            onChange={(event) => setSelectedRank(Number(event.target.value))}
+          >
+            {data.currentBand.items.map((word) => (
+              <option key={word.meaningId} value={word.rank}>
+                {word.rank.toLocaleString()}. {word.wordText} —{" "}
+                {wordStateLabel(word)}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            className={styles.secondary}
+            disabled={navigationLocked}
+          >
+            Go to word
+          </button>
+        </form>
+      </div>
+      {navigating && (
+        <p role="status" className={styles.status}>
+          Loading word…
+        </p>
+      )}
       {!started ? (
         <section className={styles.start}>
           <h1 className={styles.title}>Discover your next words</h1>
-          <p>
-            Hear a word, read its meaning, then choose Learn or Already know.
-            {bandSummary
-              ? ` ${bandSummary.unseenCount} new ${bandSummary.unseenCount === 1 ? "word is" : "words are"} waiting in this range.`
-              : ""}
-          </p>
+          <p>Listen, then choose Learn or Already know.</p>
           <div className={styles.startActions}>
             <button type="button" className={styles.primary} onClick={start}>
               Start discovering
@@ -375,6 +603,7 @@ export function Discovery({
                     false,
                     setSpeech,
                     item.meaningId,
+                    item.meaningRevision,
                   )
                 }
                 aria-label={`Listen to ${item.wordText}`}
@@ -405,7 +634,7 @@ export function Discovery({
             <button
               type="button"
               className={styles.primary}
-              disabled={busy || conflict || Boolean(pending.current)}
+              disabled={navigationLocked}
               onClick={() => void decide("learn")}
             >
               Learn
@@ -413,7 +642,7 @@ export function Discovery({
             <button
               type="button"
               className={styles.secondary}
-              disabled={busy || conflict || Boolean(pending.current)}
+              disabled={navigationLocked}
               onClick={() => void decide("known")}
             >
               Already know
@@ -456,7 +685,14 @@ export function Discovery({
           )}
         </>
       )}
-      <VocabularySources attribution={data.attribution} />
+      {started && (
+        <DiscoveryWordDetails
+          key={`${item.meaningId}:${item.meaningRevision ?? ""}`}
+          wordSlug={item.wordSlug}
+          meaningId={item.meaningId}
+          meaningRevision={item.meaningRevision}
+        />
+      )}
     </div>
   );
 }

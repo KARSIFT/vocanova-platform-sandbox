@@ -65,9 +65,9 @@ for (const theme of ["light", "dark"] as const) {
       await expect(range).toBeFocused();
       await page.keyboard.press("Enter");
     }
-    await expect(page).toHaveURL(/\/discover\?band=50#range-words$/);
-    await expect(page.getByRole("heading", { name: "Words 4,901–5,000", exact: true })).toBeVisible();
-    if (page.viewportSize()!.width < 640) await expect(chooser).toHaveValue("50");
+    await expect(page).toHaveURL(/\/discovery\?band=50&word=4901&active=1$/);
+    await expect(page.getByRole("heading", { name: "Map word 4901", exact: true })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Word range", exact: true })).toHaveValue("50");
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth))
       .toBeLessThanOrEqual(page.viewportSize()!.width);
   });

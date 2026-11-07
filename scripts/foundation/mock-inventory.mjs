@@ -278,6 +278,7 @@ const allowedMigrationFiles = new Set([
   "20261018150000_pronunciation_generation_budget.sql",
   "20261018170000_review_attempt_daily_eligibility_index.sql",
   "20261020170000_meaning_image_assets.sql",
+  "20261107140000_pronunciation_catalog_jobs.sql",
 ]);
 export function isRegisteredMigrationFile(name) {
   return allowedMigrationFiles.has(name);
@@ -298,6 +299,10 @@ const featureMigrationTables = new Map([
     ["pronunciation_audio_cache", "pronunciation_audio_budget"],
   ],
   ["20261020170000_meaning_image_assets.sql", ["meaning_image_assets"]],
+  [
+    "20261107140000_pronunciation_catalog_jobs.sql",
+    ["pronunciation_catalog_jobs", "pronunciation_catalog_attempts"],
+  ],
 ]);
 export function isRegisteredFeatureMigrationTables(name, tables) {
   const expected = featureMigrationTables.get(name);

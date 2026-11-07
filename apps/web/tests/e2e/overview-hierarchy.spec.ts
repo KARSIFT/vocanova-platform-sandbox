@@ -55,6 +55,9 @@ for (const theme of ["light", "dark"] as const) {
       path: testInfo.outputPath(`progress-${theme}.png`),
       fullPage: true,
     });
+    await expect(map.getByRole("heading", { name: "Start building your vocabulary", exact: true })).toBeVisible();
+    await expect(map.getByRole("link", { name: "Discover words", exact: true })).toHaveAttribute("href", "/discovery");
+    await expect(map.getByRole("list", { name: "Review stages" })).toHaveCount(0);
     const stages = map
       .locator("summary")
       .filter({ hasText: "About these stages" });

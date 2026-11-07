@@ -37,3 +37,17 @@ export function ProgressIcon() {
     </svg>
   );
 }
+
+/** A centred eight-tooth cog, matching the shared navigation stroke. */
+export function SettingsIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className={iconClass}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M18.65 9.24 L19.02 10.38 L21.28 10.53 L21.28 13.47 L19.02 13.62 L18.65 14.76 L18.11 15.82 L19.60 17.53 L17.53 19.60 L15.82 18.11 L14.76 18.65 L13.62 19.02 L13.47 21.28 L10.53 21.28 L10.38 19.02 L9.24 18.65 L8.18 18.11 L6.47 19.60 L4.40 17.53 L5.89 15.82 L5.35 14.76 L4.98 13.62 L2.72 13.47 L2.72 10.53 L4.98 10.38 L5.35 9.24 L5.89 8.18 L4.40 6.47 L6.47 4.40 L8.18 5.89 L9.24 5.35 L10.38 4.98 L10.53 2.72 L13.47 2.72 L13.62 4.98 L14.76 5.35 L15.82 5.89 L17.53 4.40 L19.60 6.47 L18.11 8.18Z"
+      />
+      <circle cx="12" cy="12" r="3.1" />
+    </svg>
+  );
+}

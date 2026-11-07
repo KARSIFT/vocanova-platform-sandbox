@@ -37,7 +37,7 @@ test("the old map address opens the same range on Journey", async ({
   ).toBeVisible();
 });
 
-test("range, paging and map links stay on Journey", async ({
+test("range paging stays on Journey while map links open discovery", async ({
   page,
 }, testInfo) => {
   await learner(page);
@@ -53,7 +53,7 @@ test("range, paging and map links stay on Journey", async ({
     for (const link of await ranges.getByRole("link").all())
       await expect(link).toHaveAttribute(
         "href",
-        /^\/discover\?band=\d+#range-words$/,
+        /^\/discovery\?band=\d+&word=\d+&active=1$/,
       );
     await expect(
       ranges.getByRole("link", { name: /^Words 101 to 200,/ }),
@@ -149,13 +149,13 @@ test("the range chooser opens a range on a phone", async ({ page }, testInfo) =>
     .getByRole("combobox", { name: "Go to a range" })
     .selectOption({ label: "Words 2,201–2,300: 0 known, 0 learning" });
   await page.getByRole("button", { name: "Show", exact: true }).click();
-  await expect(page).toHaveURL(/\/discover\?band=23#range-words$/);
+  await expect(page).toHaveURL(/\/discovery\?band=23&word=2201&active=1$/);
   await expect(
-    page.getByRole("heading", { name: "Words 2,201–2,300", level: 2 }),
+    page.getByRole("heading", { name: "Map word 2201", level: 1 }),
   ).toBeVisible();
-  // The range the chooser opened is the one scrolled into view.
+  // The chooser enters the actual word without another Start action.
   await expect(
-    page.getByRole("region", { name: "Words 2,201–2,300" }),
+    page.getByRole("heading", { name: "Map word 2201", level: 1 }),
   ).toBeInViewport();
 });
 
@@ -181,9 +181,9 @@ test("the word map is one Tab stop with arrow-key movement", async ({
     ranges.getByRole("link", { name: /^Words 2201 to 2300,/ }),
   ).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/discover\?band=23#range-words$/);
+  await expect(page).toHaveURL(/\/discovery\?band=23&word=2201&active=1$/);
   await expect(
-    page.getByRole("heading", { name: "Words 2,201–2,300", level: 2 }),
+    page.getByRole("heading", { name: "Map word 2201", level: 1 }),
   ).toBeVisible();
   // Map squares are not prefetched, so the range renders a moment before its
   // streamed metadata and the title is briefly absent. Audit the settled page.

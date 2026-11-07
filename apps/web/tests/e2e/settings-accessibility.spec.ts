@@ -107,7 +107,7 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
   }) => {
     await page.goto("/settings");
     const account = page.getByRole("complementary");
-    const learning = page.getByRole("heading", {
+    const learning = page.getByRole("region", {
       name: "Learning preferences",
     });
     const [accountBox, learningBox] = await Promise.all([
@@ -116,22 +116,22 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
     ]);
     expect(accountBox).not.toBeNull();
     expect(learningBox).not.toBeNull();
-    const accountComesFirst = await account.evaluate((aside) => {
+    const learningComesFirst = await account.evaluate((aside) => {
       const form = document.querySelector(
         'form[aria-label="Practice settings"]',
       )!;
       return Boolean(
-        aside.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING,
+        form.compareDocumentPosition(aside) & Node.DOCUMENT_POSITION_FOLLOWING,
       );
     });
-    expect(accountComesFirst).toBe(true);
+    expect(learningComesFirst).toBe(true);
     if (page.viewportSize()!.width >= 1024) {
-      expect(accountBox!.x + accountBox!.width).toBeLessThanOrEqual(
-        learningBox!.x,
+      expect(learningBox!.x + learningBox!.width).toBeLessThanOrEqual(
+        accountBox!.x,
       );
     } else {
-      expect(accountBox!.y + accountBox!.height).toBeLessThanOrEqual(
-        learningBox!.y,
+      expect(learningBox!.y + learningBox!.height).toBeLessThanOrEqual(
+        accountBox!.y,
       );
     }
   });

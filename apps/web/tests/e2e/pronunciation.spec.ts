@@ -756,7 +756,7 @@ for (const mode of ["unsupported", "no-english"] as const) {
       .getByRole("group", { name: "Pronunciation of pour", exact: true })
       .getByRole("status");
     await expect(status).toHaveText(
-      "Pronunciation for this meaning is unavailable. Try Listen again.",
+      "Pronunciation for this meaning is unavailable. Try again later.",
     );
     await expect(
       main.getByText("Could you pour me a cup of coffee?", { exact: true }),
@@ -786,7 +786,7 @@ test("meaning-specific playback errors allow another explicit attempt without gu
     .toBe(1);
   await page.evaluate(() => window.__pronunciationTest.fail());
   await expect(word.getByRole("status")).toHaveText(
-    "Pronunciation for this meaning is unavailable. Try Listen again.",
+    "Pronunciation for this meaning is unavailable. Try again later.",
   );
   await listen.click();
   await expect(
@@ -829,7 +829,7 @@ test("a mismatched meaning response never plays and an explicit retry stays avai
   });
   await listen.click();
   await expect(word.getByRole("status")).toHaveText(
-    "Pronunciation for this meaning is unavailable. Try Listen again.",
+    "Pronunciation for this meaning is unavailable. Try again later.",
   );
   expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual(
     [],
@@ -1151,4 +1151,19 @@ test("discovery brings an unconfirmed choice and its exact retry into view", asy
   expect(requests).toHaveLength(2);
   expect(requests[0]!.key).toBeTruthy();
   expect(requests[1]).toEqual(requests[0]);
+});
+
+
+test("pronunciation busy or daily limit gives an honest later retry without device substitution", async ({ page }) => {
+  await installSpeech(page);
+  await page.route("**/api/v1/pronunciation", (route) => route.fulfill({
+    status: 429,
+    contentType: "application/json",
+    body: JSON.stringify({ detail: "private backend detail" }),
+  }));
+  await page.goto("/vocabulary/pour");
+  const word = page.getByRole("group", { name: "Pronunciation of pour", exact: true });
+  await word.getByRole("button", { name: "Listen to pour", exact: true }).click();
+  await expect(word.getByRole("status")).toHaveText("Pronunciation is busy or its daily limit has been reached. Try again later.");
+  expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual([]);
 });
