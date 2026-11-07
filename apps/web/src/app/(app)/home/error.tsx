@@ -8,8 +8,8 @@ interface HomeErrorProps {
 }
 
 export default function HomeError(props: HomeErrorProps) {
-  const { reset } = props;
-  const { retry, isRetrying } = useRouteErrorRetry(reset);
+  const { reset, error } = props;
+  const { retry, isRetrying } = useRouteErrorRetry(reset, error);
   return (
     <div className="p-[var(--spacing-lg)]">
       <h1 className="text-xl font-semibold text-neutral-900">
