@@ -96,6 +96,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Validate the policy and, when signup is restricted, the cohort.
+      - name: Validate production signup policy
+        env:
+          PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: ${{ env.PRODUCTION_NEW_USER_SIGNUP_ENABLED != 'true' && secrets.PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST || '' }}
+          PRODUCTION_GOOGLE_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
+        run: bash infra/scripts/validate-production-signup-allowlist.sh
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
@@ -409,13 +416,6 @@ jobs:
               echo "GOOGLE_OAUTH_CLIENT_SECRET=${PRODUCTION_GOOGLE_OAUTH_CLIENT_SECRET}"
             } >> /opt/vocanova/production/secrets/api.env
             chmod 600 /opt/vocanova/production/secrets/api.env
-
-      # Validate the policy and, when signup is restricted, the cohort.
-      - name: Validate production signup policy
-        env:
-          PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: ${{ env.PRODUCTION_NEW_USER_SIGNUP_ENABLED != 'true' && secrets.PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST || '' }}
-          PRODUCTION_GOOGLE_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
-        run: bash infra/scripts/validate-production-signup-allowlist.sh
 
       # BASE_URL/OAUTH_REDIRECT_URI/etc. are not secrets - they're
       # non-sensitive config derived entirely from this workflow's own
