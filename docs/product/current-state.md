@@ -7,7 +7,8 @@ indirect range navigation, missing Previous word, misaligned start/sound control
 a malformed settings cog, repeated source/help text and unreliable pronunciation.
 The follow-up is integrated on one delivery branch. Discovery now provides word/range
 pickers and Previous, direct atlas entry, aligned controls and lazy teaching
-details. Home, Practice, Progress and Settings have simpler presentation, and the
+details. Choices continue after the selected word before wrapping earlier gaps
+in its range. Home, Practice, Progress and Settings have simpler presentation, and the
 shared Settings icon is balanced. Its acceptance plan is
 [discovery usability](../superpowers/plans/2026-11-07-discovery-usability.md).
 No follow-up deployment or complete catalog-audio coverage is established yet.

@@ -12,7 +12,9 @@ more direct control. This supersedes the older range-selection interaction below
 
 - Range squares enter the selected discovery word directly. Range and word
   pickers, plus Previous word, keep navigation available inside discovery.
-  Navigating does not record knowledge or schedule reviews.
+  Navigating does not record knowledge or schedule reviews. After a confirmed
+  choice, continue after the selected word and wrap earlier unseen words only
+  when no later unseen word remains in that range.
 - Word progress is a navigation affordance, with a readable keyboard/touch
   picker instead of a hundred undersized buttons. Explicit selection must work
   for completed ranges too. Pending or uncertain choices disable in-page word/range

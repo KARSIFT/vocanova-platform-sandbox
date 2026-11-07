@@ -139,7 +139,7 @@ test("an uncertain choice locks navigation until its original request is confirm
   ).toBeDisabled();
   await page.getByRole("button", { name: "Retry choice", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "the", exact: true }),
+    page.getByRole("heading", { name: "Map word 3", exact: true }),
   ).toBeVisible();
   expect(attempts).toHaveLength(2);
   expect(attempts[1]).toEqual(attempts[0]);
@@ -332,7 +332,7 @@ test("browser Back cannot detach a held or uncertain choice from its displayed w
   await expect(page).toHaveURL(/\/discovery\?band=1&word=2&active=1$/);
   await page.getByRole("button", { name: "Retry choice", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "the", exact: true }),
+    page.getByRole("heading", { name: "Map word 3", exact: true }),
   ).toBeVisible();
   expect(attempts).toHaveLength(2);
   expect(attempts[1]).toEqual(attempts[0]);
@@ -342,14 +342,14 @@ test("browser Back cannot detach a held or uncertain choice from its displayed w
     .click();
   await page
     .getByRole("combobox", { name: "Word in this range", exact: true })
-    .selectOption("3");
+    .selectOption("4");
   await page.getByRole("button", { name: "Go to word", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Map word 3", exact: true }),
+    page.getByRole("heading", { name: "Map word 4", exact: true }),
   ).toBeVisible();
   await page.goBack();
   await expect(
-    page.getByRole("heading", { name: "the", exact: true }),
+    page.getByRole("heading", { name: "Map word 3", exact: true }),
   ).toBeVisible();
 });
 
@@ -530,5 +530,65 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("heading", { name: "the", exact: true }),
     ).toBeFocused();
+  });
+}
+
+for (const { choice, partial } of [
+  { choice: "Learn", partial: false },
+  { choice: "Already know", partial: false },
+  { choice: "Learn", partial: true },
+] as const) {
+  test(`${choice} continues after a chosen word and wraps only at the end of its range${partial ? " after a partial response" : ""}`, async ({
+    page,
+    baseURL,
+  }) => {
+    await page.context().addCookies([
+      {
+        name: "vocanova_session",
+        value: `chosen-continuation-${randomUUID()}`,
+        url: baseURL!,
+      },
+      { name: "vocanova_csrf", value: "chosen-continuation", url: baseURL! },
+    ]);
+    if (partial)
+      await page.route("**/api/v1/knowledge-map/decisions", async (route) => {
+        await route.fetch(); // The API applies the exact original decision.
+        await route.fulfill({ json: { applied: true } }); // No usable state receipt.
+      });
+    await page.goto("/discovery?band=12&word=1101&active=1");
+    await page
+      .getByRole("button", { name: "Choose a word", exact: true })
+      .click();
+    await page
+      .getByRole("combobox", { name: "Word in this range", exact: true })
+      .selectOption("1150");
+    await page.getByRole("button", { name: "Go to word", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Map word 1150", exact: true }),
+    ).toBeFocused();
+    await page.reload();
+    await expect(
+      page.getByRole("heading", { name: "Map word 1150", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: choice, exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Map word 1151", exact: true }),
+    ).toBeFocused();
+    await expect(page).toHaveURL(/\/discovery\?band=12&word=1151&active=1$/);
+    await page
+      .getByRole("button", { name: "Choose a word", exact: true })
+      .click();
+    await page
+      .getByRole("combobox", { name: "Word in this range", exact: true })
+      .selectOption("1200");
+    await page.getByRole("button", { name: "Go to word", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Map word 1200", exact: true }),
+    ).toBeFocused();
+    await page.getByRole("button", { name: choice, exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Map word 1101", exact: true }),
+    ).toBeFocused();
+    await expect(page).toHaveURL(/\/discovery\?band=12&word=1101&active=1$/);
   });
 }

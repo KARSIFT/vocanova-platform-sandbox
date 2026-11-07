@@ -1590,6 +1590,10 @@ test("legacy saved review feedback omits unsupported manual scheduling", async (
     .getByRole("radio", { name: "definition for review word 1", exact: true })
     .check();
   await page.getByRole("button", { name: "Check answer", exact: true }).click();
+  // Reload after the server-confirmed feedback, preserving the answer under test.
+  await expect(
+    page.getByRole("button", { name: "Continue", exact: true }),
+  ).toBeVisible();
   await page.reload();
   await expect(reviewSchedule(page)).toHaveCount(0);
   await expect(page.getByText(/Level \d of 8/)).toHaveCount(0);

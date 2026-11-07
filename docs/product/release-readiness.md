@@ -15,7 +15,7 @@ metadata/cache evidence, not a listening assessment or a full CDN-object scan.
 The follow-up includes a controlled resumable catalog-audio operator; no complete
 backfill or follow-up production deployment is established at this checkpoint.
 
-Local acceptance on the reviewed frontend bundle passed **370 cases, five
+Local acceptance on the cursor-corrected frontend bundle passed **445 cases, five
 layout-specific skips, zero failures/retries** across 360px, 430px and desktop.
 The skips cover phone-only controls on desktop and desktop-only atlas arrow-key
 checks on mobile. Coverage includes same-range pending Back and exact retry
@@ -24,6 +24,14 @@ cross-range Back/Forward, reload, revision changes, light/dark contrast, aligned
 actions and affected Home/Practice/Progress/Settings states. Earlier runs exposed
 dark-picker contrast and native-history synchronization defects; the final run
 contains their passing regressions.
+
+Manual verification additionally reproduced a cursor inconsistency: selecting
+word 1,150 and choosing Learn returned to 1,101. Discovery now continues to 1,151,
+wrapping to earlier gaps only when no later unseen word remains in that range.
+The original rank stays beside the pending intent, outside its unchanged API
+body/key. Typed receipts and matching fresh-state reads use the same rule;
+external removal/conflict reconciliation and completed-range policy remain.
+Manual Learn/Known retests and new partial-response regressions cover this flow.
 
 Manual browser verification also exposed raw HTTP error text in lazy details.
 A failing regression preceded the fix and now covers masked 404/500 problem
@@ -55,11 +63,15 @@ populate individual cache entries.
 Manual ChatGPT-browser local checks operated picking, Previous, range jumps,
 Back/reload, compact mobile Home links, keyboard focus, Settings reading order,
 Practice and Progress. Synthetic fixtures do not establish provider availability.
-Ten sampled production images across catalog ranks returned HTTP 200 through
-ordinary host curl, matched SHA-256 and 960×640 dimensions. Normal browser
-rendering and delivered-byte hash also passed for mixture. Python urllib returned
-403 for those URLs; the client-path difference has no established cause. This
-is sampled delivery evidence, not a full object scan.
+All **10,051 current image objects** passed a bounded HEAD availability scan:
+HTTP 200, image/webp, positive content length, no missing/duplicate IDs or
+metadata revision/hash mismatches against the retained catalog snapshot. The scan took
+36m15s at 4.62 requests/second and downloaded no bodies; containers stayed healthy.
+Ten sampled bodies separately matched SHA-256 and 960×640 dimensions, and browser
+rendering/delivered-byte hash passed for mixture. HEAD verifies availability and
+headers, not every object's pixel content. Python urllib returned 403 for sampled
+URLs while ordinary curl/browser requests succeeded; the client-path difference
+has no established cause.
 
 Hosted browser/performance/API gates, release verification, a bounded live audio
 pilot/backfill and final production retests remain outstanding at this checkpoint.

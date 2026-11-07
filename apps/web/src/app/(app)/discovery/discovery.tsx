@@ -39,6 +39,18 @@ import styles from "../knowledge-map/workspace.module.css";
 interface PendingDecision {
   body: KnowledgeMapDecision;
   key: string;
+  rank: number;
+}
+
+/** Continue from the chosen word, wrapping only when no later new word remains. */
+function nextUnseenInRange(data: KnowledgeMapData, afterRank: number) {
+  const unseen = (word: KnowledgeMapData["currentBand"]["items"][number]) =>
+    word.rank !== afterRank && !word.selfReportedKnown && !word.saved;
+  return (
+    data.currentBand.items.find(
+      (word) => word.rank > afterRank && unseen(word),
+    ) ?? data.currentBand.items.find(unseen)
+  );
 }
 
 function subscribeDiscoveryLocation(onChange: () => void) {
@@ -104,13 +116,8 @@ export function Discovery({
   const displayedRevision = item?.meaningRevision;
   const navigationLocked =
     busy || navigating || conflict || Boolean(pending.current);
-  // The likely next word: the first unseen one after this word in the range.
-  const upcoming = data.currentBand.items.find(
-    (word) =>
-      word.rank > (displayedRank ?? 0) &&
-      !word.selfReportedKnown &&
-      !word.saved,
-  );
+  // Preload the same candidate a confirmed choice would display, including wrap.
+  const upcoming = nextUnseenInRange(data, displayedRank ?? 0);
 
   const firstRank = bandSummary?.startRank ?? 1;
   const lastRank = bandSummary?.endRank ?? data.totalWords;
@@ -298,6 +305,7 @@ export function Discovery({
           expectedRevision: item.revision,
         },
         key: crypto.randomUUID(),
+        rank: item.rank,
       };
     }
     const request = pending.current;
@@ -320,9 +328,7 @@ export function Discovery({
       const state = confirmedWordState(result, request.body);
       if (state && confirmsChoice(state, request.body.decision)) {
         const local = applyWordState(data, request.body.meaningId, state);
-        const nextInRange = local.currentBand.items.find(
-          (word) => !word.selfReportedKnown && !word.saved,
-        );
+        const nextInRange = nextUnseenInRange(local, request.rank);
         if (nextInRange) {
           pending.current = null;
           setData(local);
@@ -336,14 +342,30 @@ export function Discovery({
       // word. Keep the exact pending intent until that range loads.
       const client = createApiClient();
       const current = (await client.getKnowledgeMap(band)).data;
-      const target = nextDiscoveryTarget(current);
+      const currentDecision = current.currentBand.items.find(
+        (word) => word.meaningId === request.body.meaningId,
+      );
+      // An incomplete receipt can still be confirmed by this fresh read. If
+      // another tab changed/removed the word, retain the existing reconciliation
+      // policy instead of treating our original intent as a confirmed choice.
+      const nextAfterChoice =
+        currentDecision &&
+        confirmsChoice(currentDecision, request.body.decision)
+          ? nextUnseenInRange(current, request.rank)
+          : undefined;
+      const target = nextAfterChoice
+        ? { band: current.currentBand.number, rank: nextAfterChoice.rank }
+        : nextDiscoveryTarget(current);
       const fresh =
         target && target.band !== band
           ? (await client.getKnowledgeMap(target.band)).data
           : current;
       const nextWord = target
         ? fresh.currentBand.items.find(
-            (word) => !word.selfReportedKnown && !word.saved,
+            (word) =>
+              !word.selfReportedKnown &&
+              !word.saved &&
+              (target.rank === undefined || word.rank === target.rank),
           )
         : null;
       if (target && !nextWord)
