@@ -58,7 +58,7 @@ test("range paging stays on Journey while map links open discovery", async ({
     for (const link of await ranges.getByRole("link").all())
       await expect(link).toHaveAttribute(
         "href",
-        /^\/discovery\?band=\d+&word=\d+&active=1$/,
+        /^\/discovery\?band=\d+&active=1$/,
       );
     await expect(
       ranges.getByRole("link", { name: /^Words 101 to 200,/ }),
@@ -126,10 +126,7 @@ test("every way to choose a range is at least 44px", async ({
   await learner(page);
   await page.goto("/discover?band=2");
   const controls = onPhone(testInfo)
-    ? [
-        page.getByRole("combobox", { name: "Go to a range" }),
-        page.getByRole("button", { name: "Show", exact: true }),
-      ]
+    ? [page.getByRole("combobox", { name: "Go to a range" })]
     : await page
         .getByRole("navigation", { name: "Word ranges", exact: true })
         .getByRole("link")
@@ -153,10 +150,14 @@ test("the range chooser opens a range on a phone", async ({ page }, testInfo) =>
   test.skip(!onPhone(testInfo), "Phones choose ranges with the chooser.");
   await learner(page);
   await page.goto("/discover?band=2");
-  await page
-    .getByRole("combobox", { name: "Go to a range" })
-    .selectOption({ label: "2,201–2,300" });
-  await page.getByRole("button", { name: "Show", exact: true }).click();
+  const choice = page.getByRole("combobox", { name: "Go to a range" });
+  await expect(choice).toHaveAccessibleDescription(
+    "Selecting a range opens Discovery.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Show", exact: true }),
+  ).toHaveCount(0);
+  await choice.selectOption({ label: "2,201–2,300" });
   await expect(page).toHaveURL(/\/discovery\?band=23&word=2201&active=1$/);
   await expect(
     page.getByRole("heading", { name: "Map word 2201", level: 1 }),
@@ -165,6 +166,9 @@ test("the range chooser opens a range on a phone", async ({ page }, testInfo) =>
   await expect(
     page.getByRole("heading", { name: "Map word 2201", level: 1 }),
   ).toBeInViewport();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/discover\?band=2$/);
+  await expect(choice).toHaveValue("2");
 });
 
 test("the word map is one Tab stop with arrow-key movement", async ({

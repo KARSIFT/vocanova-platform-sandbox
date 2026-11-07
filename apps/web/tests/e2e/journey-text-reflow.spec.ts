@@ -30,7 +30,7 @@ for (const theme of ["light", "dark"] as const) {
     }
   });
 
-  test(`Journey enlarged range controls retain selection and keyboard submission (${theme})`, async ({ page, context, baseURL }) => {
+  test(`Journey enlarged range controls retain selection and direct navigation (${theme})`, async ({ page, context, baseURL }) => {
     await context.addCookies([
       { name: "vocanova_session", value: randomUUID(), url: baseURL! },
       { name: "vocanova_csrf", value: randomUUID(), url: baseURL! },
@@ -43,22 +43,14 @@ for (const theme of ["light", "dark"] as const) {
     const chooser = page.getByRole("combobox", { name: "Go to a range", exact: true });
     if (page.viewportSize()!.width < 640) {
       await expect(chooser).toBeVisible();
-      // Enlarged text needs the whole row for the selected numeric range;
-      // the Show button must wrap instead of squeezing it to just “Words”.
+      // Enlarged text needs the whole row for the selected numeric range.
       await expect.poll(() => chooser.evaluate((element) => {
         const select = element.getBoundingClientRect();
         const row = element.parentElement!.getBoundingClientRect();
-        const submit = element.parentElement!.querySelector("button")!.getBoundingClientRect();
-        return select.width >= row.width - 1 && submit.top >= select.bottom;
+        return select.width >= row.width - 1;
       })).toBe(true);
       await expect(chooser.locator("option")).toHaveCount(100);
-      await chooser.selectOption("50");
-      await expect(chooser).toHaveValue("50");
-      await expect(chooser.locator("option:checked")).toHaveText("4,901–5,000");
-      const show = page.getByRole("button", { name: "Show", exact: true });
-      await show.focus();
-      await expect(show).toBeFocused();
-      await page.keyboard.press("Enter");
+      await chooser.selectOption({ label: "4,901–5,000" });
     } else {
       const range = page.getByRole("link", { name: "Words 4901 to 5000, 0 already know, 0 learning, 100 new", exact: true });
       await range.focus();

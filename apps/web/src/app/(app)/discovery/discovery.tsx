@@ -7,6 +7,7 @@ import {
 import Link from "@/ui/link";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { useRouter, useSearchParams } from "next/navigation";
+import { DiscoveryFinished } from "./discovery-finished";
 import { DiscoveryWordDetails } from "./discovery-word-details";
 import {
   useEffect,
@@ -28,11 +29,14 @@ import {
   applyWordState,
   confirmedWordState,
   confirmsChoice,
+  discoveryWordInRange,
+  isUnseen,
   journeyRangeHref,
   nextDiscoveryTarget,
   wordState,
   wordStateLabel,
   type KnowledgeMapData,
+  type MapWord,
 } from "../knowledge-map/models";
 import styles from "../knowledge-map/workspace.module.css";
 
@@ -42,15 +46,46 @@ interface PendingDecision {
   rank: number;
 }
 
+// Next can restore any previously visited snapshot of a range on Back or Forward.
+const snapshotVersions = new WeakMap<KnowledgeMapData, number>();
+const rangeVersions = new Map<number, number>();
+
+function rangeVersion(band: number) {
+  return rangeVersions.get(band) ?? 0;
+}
+
+function wordHref(
+  band: number,
+  rank: number,
+  active: boolean,
+  revisit: boolean,
+) {
+  return `/discovery?band=${band}&word=${rank}${active ? "&active=1" : ""}${revisit ? "&revisit=1" : ""}`;
+}
+
 /** Continue from the chosen word, wrapping only when no later new word remains. */
 function nextUnseenInRange(data: KnowledgeMapData, afterRank: number) {
   const unseen = (word: KnowledgeMapData["currentBand"]["items"][number]) =>
-    word.rank !== afterRank && !word.selfReportedKnown && !word.saved;
+    word.rank !== afterRank && isUnseen(word);
   return (
     data.currentBand.items.find(
       (word) => word.rank > afterRank && unseen(word),
     ) ?? data.currentBand.items.find(unseen)
   );
+}
+
+async function loadDiscoveryPosition(
+  client: ReturnType<typeof createApiClient>,
+  current: KnowledgeMapData,
+  word: MapWord | undefined,
+) {
+  if (word) return { data: current, word };
+  const target = nextDiscoveryTarget(current);
+  if (!target) return { data: current, word: undefined };
+  const data = (await client.getKnowledgeMap(target.band)).data;
+  const nextWord = discoveryWordInRange(data);
+  if (!nextWord) throw new Error("The next unseen word could not be confirmed");
+  return { data, word: nextWord };
 }
 
 function subscribeDiscoveryLocation(onChange: () => void) {
@@ -70,14 +105,24 @@ export function Discovery({
   initialData,
   initialRank,
   initiallyActive = false,
+  initiallyRevisiting = false,
 }: {
   initialData: KnowledgeMapData;
   initialRank: number;
   initiallyActive?: boolean;
+  initiallyRevisiting?: boolean;
 }) {
   const [data, setData] = useState(initialData);
   const [rank, setRank] = useState(initialRank);
   const [started, setStarted] = useState(initiallyActive);
+  const [revisit, setRevisit] = useState(initiallyRevisiting);
+  const [restoring] = useState(() => {
+    const version = snapshotVersions.get(initialData);
+    return (
+      version !== undefined &&
+      version !== rangeVersion(initialData.currentBand.number)
+    );
+  });
   const router = useRouter();
   const serverParams = useSearchParams();
   const serverSearch = serverParams.size ? `?${serverParams.toString()}` : "";
@@ -89,9 +134,6 @@ export function Discovery({
   const [navigating, startNavigation] = useTransition();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedRank, setSelectedRank] = useState(initialRank);
-  const [selectedBand, setSelectedBand] = useState(
-    initialData.currentBand.number,
-  );
   const [muted, setMuted] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -105,9 +147,9 @@ export function Discovery({
   const lastSpoken = useRef("");
   const titleRef = useRef<HTMLHeadingElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
-  const item =
-    data.currentBand.items.find((word) => word.rank === rank) ??
-    data.currentBand.items[0];
+  const item = revisit
+    ? data.currentBand.items.find((word) => word.rank === rank)
+    : discoveryWordInRange(data, rank);
   const band = data.currentBand.number;
   const bandSummary = data.bands.find((value) => value.number === band);
   const displayedRank = item?.rank;
@@ -122,14 +164,38 @@ export function Discovery({
   const firstRank = bandSummary?.startRank ?? 1;
   const lastRank = bandSummary?.endRank ?? data.totalWords;
 
-  const historyWord = useRef({ rank, started, blocked: navigationLocked });
-  historyWord.current = { rank, started, blocked: navigationLocked };
+  const historyWord = useRef({
+    data,
+    rank,
+    started,
+    revisit,
+    blocked: navigationLocked,
+  });
+  historyWord.current = {
+    data,
+    rank,
+    started,
+    revisit,
+    blocked: navigationLocked,
+  };
+
+  useEffect(() => {
+    if (restoring) window.location.reload();
+    else
+      snapshotVersions.set(
+        initialData,
+        rangeVersion(initialData.currentBand.number),
+      );
+  }, [initialData, restoring]);
 
   // Owned writes preserve Next's opaque history state. Observe the actual
   // browser location (as DiscoveryExitLink does), because Next searchParams
   // need not update for those entries or their Back/Forward navigation.
   useEffect(() => {
-    const searchParams = new URLSearchParams(currentSearch);
+    if (restoring) return;
+    // Next commits its URL after rendering the new route. Use the live URL
+    // here so a completed range cannot restore the previous route's selection.
+    const searchParams = new URLSearchParams(window.location.search);
     const requested = Number(searchParams.get("word"));
     if (
       Number(searchParams.get("band")) === band &&
@@ -139,9 +205,12 @@ export function Discovery({
     ) {
       const current = historyWord.current;
       const active = searchParams.get("active") === "1";
+      const explicitlySelected = searchParams.get("revisit") === "1";
       if (
         current.blocked &&
-        (requested !== current.rank || active !== current.started)
+        (requested !== current.rank ||
+          active !== current.started ||
+          explicitlySelected !== current.revisit)
       ) {
         // Back/Forward bypass disabled controls. Restore the pending word as a
         // new entry, retaining the attempted destination underneath it so Back
@@ -149,36 +218,63 @@ export function Discovery({
         window.history.pushState(
           window.history.state,
           "",
-          `/discovery?band=${band}&word=${current.rank}${current.started ? "&active=1" : ""}`,
+          wordHref(band, current.rank, current.started, current.revisit),
         );
         window.dispatchEvent(new Event(SESSION_LOCATION_CHANGED));
         return;
       }
-      setRank(requested);
-      setSelectedRank(requested);
+      const word = explicitlySelected
+        ? current.data.currentBand.items.find((item) => item.rank === requested)
+        : discoveryWordInRange(current.data, requested);
+      if (!word) {
+        setDone(true);
+        return;
+      }
+      // Keep canonicalization from overwriting a history selection before its
+      // card has rendered.
+      historyWord.current = {
+        ...current,
+        rank: word.rank,
+        started: active,
+        revisit: explicitlySelected,
+      };
+      setRank(word.rank);
+      setSelectedRank(word.rank);
       setStarted(active);
+      setRevisit(explicitlySelected);
       setDone(false);
+      if (word.rank !== requested)
+        replaceSessionLocation(
+          wordHref(band, word.rank, active, explicitlySelected),
+        );
     }
-  }, [currentSearch, band, firstRank, lastRank]);
-
-  useEffect(() => {
-    setSelectedBand(band);
-  }, [band]);
+  }, [currentSearch, band, firstRank, lastRank, restoring]);
 
   function navigateToWord(nextBand: number, nextRank: number) {
     if (lock.current || navigationLocked) return;
     deviceSpeech.stop(speechOwner.current);
     setError("");
     setPickerOpen(false);
-    const href = `/discovery?band=${nextBand}&word=${nextRank}&active=1`;
-    if (nextBand === band) {
-      window.history.pushState(window.history.state, "", href);
-      window.dispatchEvent(new Event(SESSION_LOCATION_CHANGED));
-      setStarted(true);
-      setRank(nextRank);
-      setSelectedRank(nextRank);
-      if (nextRank === item?.rank) titleRef.current?.focus();
-    } else startNavigation(() => router.push(href));
+    const href = wordHref(nextBand, nextRank, true, true);
+    if (nextBand !== band) {
+      startNavigation(() => router.push(href));
+      return;
+    }
+    window.history.pushState(window.history.state, "", href);
+    window.dispatchEvent(new Event(SESSION_LOCATION_CHANGED));
+    setStarted(true);
+    setRevisit(true);
+    setRank(nextRank);
+    setSelectedRank(nextRank);
+    if (nextRank === item?.rank) titleRef.current?.focus();
+  }
+
+  function navigateToRange(nextBand: number) {
+    if (lock.current || navigationLocked) return;
+    deviceSpeech.stop(speechOwner.current);
+    setError("");
+    setPickerOpen(false);
+    startNavigation(() => router.push(`/discovery?band=${nextBand}&active=1`));
   }
 
   function previousWord() {
@@ -210,14 +306,27 @@ export function Discovery({
   }, []);
 
   useEffect(() => {
-    if (displayedRank === undefined || done) return;
+    if (done) {
+      if (new URLSearchParams(window.location.search).get("revisit") === "1")
+        replaceSessionLocation(wordHref(band, rank, started, false));
+      titleRef.current?.focus();
+      return;
+    }
+    if (displayedRank === undefined || restoring) return;
+    const current = historyWord.current;
+    if (
+      current.rank !== rank ||
+      current.started !== started ||
+      current.revisit !== revisit
+    )
+      return;
     // The server may select a later unseen range before Start. Canonicalize
     // its address now so Back preserves that real range without another read.
-    replaceSessionLocation(
-      `/discovery?band=${band}&word=${displayedRank}${started ? "&active=1" : ""}`,
-    );
+    const href = wordHref(band, displayedRank, started, revisit);
+    if (window.location.search !== href.slice(href.indexOf("?")))
+      replaceSessionLocation(href);
     if (started) titleRef.current?.focus();
-  }, [started, displayedRank, band, done]);
+  }, [started, displayedRank, rank, band, done, restoring, revisit]);
 
   useEffect(() => {
     if (
@@ -225,6 +334,7 @@ export function Discovery({
       !started ||
       displayedRank === undefined ||
       !displayedWord ||
+      restoring ||
       done
     )
       return;
@@ -250,6 +360,7 @@ export function Discovery({
     displayedRevision,
     muted,
     done,
+    restoring,
   ]);
 
   // Warm the browser cache with the next word's approved picture while the
@@ -321,6 +432,7 @@ export function Discovery({
         request.key,
         { headers: { "X-CSRF-Token": csrf } },
       );
+      rangeVersions.set(band, rangeVersion(band) + 1);
       // Use the meaning's state as the server reports it. When it is exactly
       // what this choice produces, continue within the range without
       // re-reading all 100 words; a later word changed elsewhere still
@@ -333,6 +445,7 @@ export function Discovery({
           pending.current = null;
           setData(local);
           setRank(nextInRange.rank);
+          setRevisit(false);
           return;
         }
       }
@@ -353,37 +466,28 @@ export function Discovery({
         confirmsChoice(currentDecision, request.body.decision)
           ? nextUnseenInRange(current, request.rank)
           : undefined;
-      const target = nextAfterChoice
-        ? { band: current.currentBand.number, rank: nextAfterChoice.rank }
-        : nextDiscoveryTarget(current);
-      const fresh =
-        target && target.band !== band
-          ? (await client.getKnowledgeMap(target.band)).data
-          : current;
-      const nextWord = target
-        ? fresh.currentBand.items.find(
-            (word) =>
-              !word.selfReportedKnown &&
-              !word.saved &&
-              (target.rank === undefined || word.rank === target.rank),
-          )
-        : null;
-      if (target && !nextWord)
-        throw new Error("The next unseen word could not be confirmed");
+      const { data: fresh, word: nextWord } = await loadDiscoveryPosition(
+        client,
+        current,
+        nextAfterChoice ?? discoveryWordInRange(current),
+      );
       pending.current = null;
       setData(fresh);
+      setRevisit(false);
       if (!nextWord) setDone(true);
       else setRank(nextWord.rank);
     } catch (failure) {
       if (failure instanceof ApiResponseError && failure.status === 409) {
+        rangeVersions.set(band, rangeVersion(band) + 1);
         pending.current = null;
         setConflict(true);
         try {
-          const fresh = (await createApiClient().getKnowledgeMap(band)).data;
-          setData(fresh);
+          const nextWord = await refreshWord();
           setConflict(false);
           setError(
-            "This word changed elsewhere. Its latest state is shown. Choose again.",
+            nextWord?.rank === request.rank
+              ? "This word changed elsewhere. Its latest state is shown. Choose again."
+              : "This word changed elsewhere. Continue with the next new word.",
           );
         } catch (refreshFailure) {
           setError(
@@ -407,13 +511,30 @@ export function Discovery({
     }
   }
 
+  async function refreshWord() {
+    const client = createApiClient();
+    const current = (await client.getKnowledgeMap(band)).data;
+    const position = await loadDiscoveryPosition(
+      client,
+      current,
+      revisit
+        ? current.currentBand.items.find((word) => word.rank === rank)
+        : discoveryWordInRange(current, rank),
+    );
+    setData(position.data);
+    if (position.word) {
+      setRank(position.word.rank);
+      if (position.word.rank !== rank) setRevisit(false);
+    } else setDone(true);
+    return position.word;
+  }
+
   async function reloadWord() {
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
     try {
-      const fresh = (await createApiClient().getKnowledgeMap(band)).data;
-      setData(fresh);
+      await refreshWord();
       pending.current = null;
       setConflict(false);
       setError("");
@@ -427,6 +548,20 @@ export function Discovery({
     }
   }
 
+  if (restoring)
+    return (
+      <p className={styles.focus} role="status">
+        Loading word…
+      </p>
+    );
+
+  if (done)
+    return (
+      <div className={styles.focus}>
+        <DiscoveryFinished data={data} active={started} headingRef={titleRef} />
+      </div>
+    );
+
   if (!item)
     return (
       <div className={styles.focus}>
@@ -434,25 +569,6 @@ export function Discovery({
         <Link href={journeyRangeHref(band)} className={styles.secondary}>
           Back to Journey
         </Link>
-      </div>
-    );
-
-  if (done)
-    return (
-      <div className={styles.focus}>
-        <h1 className={styles.title}>You’ve explored the whole map</h1>
-        <p className={styles.definition}>
-          Your choices are saved. Keep the words you are learning fresh with a
-          short review.
-        </p>
-        <div className={styles.startActions}>
-          <Link className={styles.primary} href="/reviews">
-            Review words
-          </Link>
-          <Link className={styles.secondary} href={`/discover?band=${band}`}>
-            View map
-          </Link>
-        </div>
       </div>
     );
 
@@ -478,40 +594,26 @@ export function Discovery({
         >
           Previous word
         </button>
-        <form
-          className={styles.discoveryRange}
-          onSubmit={(event) => {
-            event.preventDefault();
-            const target = data.bands.find(
-              (value) => value.number === selectedBand,
-            );
-            if (target) navigateToWord(target.number, target.startRank);
-          }}
-        >
+        <div className={styles.discoveryRange}>
           <label htmlFor="discovery-range">Word range</label>
-          <div>
-            <select
-              id="discovery-range"
-              value={selectedBand}
-              disabled={navigationLocked}
-              onChange={(event) => setSelectedBand(Number(event.target.value))}
-            >
-              {data.bands.map((value) => (
-                <option key={value.number} value={value.number}>
-                  {value.startRank.toLocaleString()}–
-                  {value.endRank.toLocaleString()}
-                </option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className={styles.secondary}
-              disabled={navigationLocked}
-            >
-              Go to range
-            </button>
-          </div>
-        </form>
+          <span id="discovery-range-help" className="sr-only">
+            Selecting a range opens its next new word.
+          </span>
+          <select
+            id="discovery-range"
+            aria-describedby="discovery-range-help"
+            value={band}
+            disabled={navigationLocked}
+            onChange={(event) => navigateToRange(Number(event.target.value))}
+          >
+            {data.bands.map((value) => (
+              <option key={value.number} value={value.number}>
+                {value.startRank.toLocaleString()}–
+                {value.endRank.toLocaleString()}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       <button
         type="button"

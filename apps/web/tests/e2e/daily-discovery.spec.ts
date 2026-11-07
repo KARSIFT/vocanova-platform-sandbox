@@ -839,7 +839,6 @@ test("all 100 ranges are reachable, discovery confirms choices before advancing,
     await choice.selectOption({
       label: "9,901–10,000",
     });
-    await page.getByRole("button", { name: "Show", exact: true }).click();
   } else {
     await expect(
       page
@@ -881,7 +880,25 @@ test("all 100 ranges are reachable, discovery confirms choices before advancing,
   await openRangeWords(page);
   await expect(
     page.getByRole("link", { name: "1 the Already know", exact: true }),
-  ).toBeVisible();
+  ).toHaveAttribute("href", "/discovery?band=1&word=1&revisit=1");
+  await expect(
+    page.getByRole("link", { name: "3 Map word 3 New", exact: true }),
+  ).toHaveAttribute("href", "/discovery?band=1&word=3&revisit=1");
+  const learning = page.getByRole("link", {
+    name: "2 be Learning",
+    exact: true,
+  });
+  await expect(learning).toHaveAttribute(
+    "href",
+    "/discovery?band=1&word=2&revisit=1",
+  );
+  await learning.click();
+  await page
+    .getByRole("button", { name: "Start discovering", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "be", exact: true }),
+  ).toBeFocused();
 });
 
 test("discovery continues to the next unseen range after 100 acknowledged assessments", async ({
@@ -927,9 +944,9 @@ test("discovery continues to the next unseen range after 100 acknowledged assess
     .getByRole("button", { name: "Start discovering", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "the", exact: true }),
+    page.getByRole("heading", { name: "Map word 101", exact: true }),
   ).toBeFocused();
-  await expect(page).toHaveURL(/\/discovery\?band=1&word=1&active=1$/);
+  await expect(page).toHaveURL(/\/discovery\?band=2&word=101&active=1$/);
 });
 
 test("guided discovery skips assessed gaps and retains its decision until the next range loads", async ({
@@ -1026,7 +1043,10 @@ test("an entirely assessed map has no guided word but keeps explicit revisits", 
     name: "1 the Already know",
     exact: true,
   });
-  await expect(revisit).toHaveAttribute("href", "/discovery?band=1&word=1");
+  await expect(revisit).toHaveAttribute(
+    "href",
+    "/discovery?band=1&word=1&revisit=1",
+  );
   await revisit.click();
   await page
     .getByRole("button", { name: "Start discovering", exact: true })
@@ -1034,8 +1054,14 @@ test("an entirely assessed map has no guided word but keeps explicit revisits", 
   await expect(
     page.getByRole("heading", { name: "the", exact: true }),
   ).toBeFocused();
-  await expect(page).toHaveURL(/\/discovery\?band=1&word=1&active=1$/);
-  await page.getByRole("button", { name: "Already know", exact: true }).click();
+  await expect
+    .poll(() => {
+      const params = new URL(page.url()).searchParams;
+      return ["band", "word", "active", "revisit"].map((key) => params.get(key));
+    })
+    .toEqual(["1", "1", "1", "1"]);
+
+  await page.goto("/discovery?band=1&word=1&active=1");
   await expect(
     page.getByRole("heading", {
       name: "You’ve explored the whole map",
@@ -1043,8 +1069,8 @@ test("an entirely assessed map has no guided word but keeps explicit revisits", 
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "View map", exact: true }),
-  ).toHaveAttribute("href", "/discover?band=1");
+    page.getByRole("button", { name: "Already know", exact: true }),
+  ).toHaveCount(0);
   await page.goto("/discovery?band=100");
   await expect(
     page.getByRole("heading", {

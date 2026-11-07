@@ -260,9 +260,6 @@
   font-weight: 650;
 }
 .rangeForm > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
   margin-top: 0.35rem;
 }
 .rangeForm select {
@@ -270,9 +267,8 @@
    * enlarged text. Paint containment keeps the native selected value visible;
    * overflow:hidden on the select instead blanks its selected value. */
   contain: paint;
+  width: 100%;
   min-width: 0;
-  min-height: 48px;
-  flex: 1 1 12rem;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-neutral-300);
   border-radius: 0.85rem;
@@ -713,11 +709,6 @@
   font-size: 0.875rem;
   color: var(--color-neutral-700);
 }
-.discoveryRange > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
 .discoveryRange select,
 .wordPicker select {
   min-width: 0;
@@ -730,7 +721,12 @@
   font-size: 1rem;
 }
 .discoveryRange select {
-  flex: 1;
+  width: 100%;
+}
+.rangeForm select,
+.discoveryRange select {
+  /* WebKit overrides min-height on native selects. Retain the native arrow. */
+  height: max(48px, 3rem);
 }
 .progressPicker {
   display: block;

@@ -3,12 +3,13 @@ import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer } from "@/ui/surface";
 import {
-  journeyRangeHref,
+  discoveryWordInRange,
   nextDiscoveryTarget,
   validBand,
   type KnowledgeMapData,
 } from "../knowledge-map/models";
 import { Discovery } from "./discovery";
+import { DiscoveryFinished } from "./discovery-finished";
 import styles from "../knowledge-map/workspace.module.css";
 
 export default async function DiscoveryPage({
@@ -17,44 +18,44 @@ export default async function DiscoveryPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = await searchParams;
-  let band = validBand(query.band);
+  const band = validBand(query.band);
   const active = query.active === "1";
+  const revisit = query.revisit === "1";
   const requestedRank = typeof query.word === "string" ? Number(query.word) : 0;
   const returnQuery = new URLSearchParams();
   if (typeof query.band === "string") returnQuery.set("band", query.band);
   if (typeof query.word === "string") returnQuery.set("word", query.word);
   if (active) returnQuery.set("active", "1");
+  if (revisit) returnQuery.set("revisit", "1");
   const returnTo = `/discovery${returnQuery.size ? `?${returnQuery}` : ""}`;
   let data: KnowledgeMapData | null = null;
+  let initialRank: number | undefined;
+  let explicitlySelected = false;
+  let changedElsewhere = false;
   try {
     const client = await createServerApiClient();
     const current = (await client.getKnowledgeMap(band)).data;
-    const explicitWord =
-      current.currentBand.items.find((word) => word.rank === requestedRank) ??
-      (active ? current.currentBand.items[0] : undefined);
-    // A deliberate word link can revisit an assessment. Guided discovery
-    // instead continues to unseen words, using the existing range metadata.
+    const explicitWord = revisit
+      ? current.currentBand.items.find((word) => word.rank === requestedRank)
+      : undefined;
     const target = explicitWord ? null : nextDiscoveryTarget(current);
     data =
       target && target.band !== band
         ? (await client.getKnowledgeMap(target.band)).data
         : current;
-    band = data.currentBand.number;
+    const word =
+      explicitWord ??
+      discoveryWordInRange(
+        data,
+        data.currentBand.number === band ? requestedRank : undefined,
+      );
+    initialRank = word?.rank;
+    explicitlySelected = Boolean(explicitWord);
+    changedElsewhere = Boolean(target && !word);
   } catch (error) {
     if (error instanceof ApiResponseError && error.status === 401)
       requireAuthRedirect(error, returnTo);
   }
-  const initialRank =
-    data?.currentBand.items.find((word) => word.rank === requestedRank)?.rank ??
-    (active ? data?.currentBand.items[0]?.rank : undefined) ??
-    data?.currentBand.items.find(
-      (word) => !word.selfReportedKnown && !word.saved,
-    )?.rank;
-  const changedElsewhere = Boolean(
-    data &&
-    initialRank === undefined &&
-    data.bands.some((item) => item.unseenCount > 0),
-  );
   if (!data || !data.currentBand.items.length || changedElsewhere)
     return (
       <PageContainer>
@@ -77,21 +78,16 @@ export default async function DiscoveryPage({
   if (initialRank === undefined)
     return (
       <PageContainer>
-        <h1 className={styles.title}>You’ve explored the whole map</h1>
-        <p className={styles.definition}>
-          Choose a word on the map to revisit it.
-        </p>
-        <Link href={journeyRangeHref(band)} className={styles.primary}>
-          Open your word map
-        </Link>
+        <DiscoveryFinished data={data} active={active} />
       </PageContainer>
     );
   return (
     <Discovery
-      key={`${data.catalogVersion}:${band}:${initialRank}`}
+      key={`${data.catalogVersion}:${returnTo}:${data.currentBand.number}:${initialRank}`}
       initialData={data}
       initialRank={initialRank}
       initiallyActive={active}
+      initiallyRevisiting={explicitlySelected}
     />
   );
 }

@@ -15,7 +15,6 @@ for (const theme of ["light", "dark"] as const) {
         url: baseURL!,
       },
       { name: "vocanova_theme", value: theme, url: baseURL! },
-      { name: "e2e_knowledge_map", value: "first-40-known", url: baseURL! },
     ]);
     const decisions: string[] = [];
     page.on("request", (request) => {
@@ -62,17 +61,22 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("main").getByText("Already know", { exact: true }).first(),
     ).toBeVisible();
-    await page
-      .getByRole("combobox", { name: "Word range", exact: true })
-      .selectOption("13");
-    await page
-      .getByRole("button", { name: "Go to range", exact: true })
-      .click();
+    const ranges = page.getByRole("combobox", {
+      name: "Word range",
+      exact: true,
+    });
+    expect((await ranges.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await ranges.selectOption("13");
+    await expect(
+      page.getByRole("button", { name: "Go to range", exact: true }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole("heading", { name: "Map word 1201", exact: true }),
     ).toBeFocused();
     await page.goBack();
-    await expect(page).toHaveURL(/\/discovery\?band=12&word=1150&active=1$/);
+    await expect(page).toHaveURL(
+      /\/discovery\?band=12&word=1150&active=1&revisit=1$/,
+    );
     await expect(
       page.getByRole("heading", { name: "Map word 1150", exact: true }),
     ).toBeVisible();
@@ -131,7 +135,7 @@ test("an uncertain choice locks navigation until its original request is confirm
   await expect(
     page.getByRole("button", { name: "Retry choice", exact: true }),
   ).toBeVisible();
-  for (const name of ["Previous word", "Choose a word", "Go to range"])
+  for (const name of ["Previous word", "Choose a word"])
     await expect(
       page.getByRole("button", { name, exact: true }),
     ).toBeDisabled();
@@ -491,7 +495,9 @@ test("browser Back cannot detach a held or uncertain choice from its displayed w
   await expect(
     page.getByRole("heading", { name: "be", exact: true }),
   ).toBeVisible();
-  await expect(page).toHaveURL(/\/discovery\?band=1&word=2&active=1$/);
+  await expect(page).toHaveURL(
+    /\/discovery\?band=1&word=2&active=1&revisit=1$/,
+  );
   release();
   await expect(
     page.getByRole("button", { name: "Retry choice", exact: true }),
@@ -500,7 +506,9 @@ test("browser Back cannot detach a held or uncertain choice from its displayed w
   await expect(
     page.getByRole("heading", { name: "be", exact: true }),
   ).toBeVisible();
-  await expect(page).toHaveURL(/\/discovery\?band=1&word=2&active=1$/);
+  await expect(page).toHaveURL(
+    /\/discovery\?band=1&word=2&active=1&revisit=1$/,
+  );
   await page.getByRole("button", { name: "Retry choice", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Map word 3", exact: true }),
@@ -524,7 +532,121 @@ test("browser Back cannot detach a held or uncertain choice from its displayed w
   ).toBeVisible();
 });
 
-test("Back from map completion reopens the explicitly selected assessed word", async ({
+test("a finished range advances to the next unseen word in a later range", async ({
+  page,
+  baseURL,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "vocanova_session",
+      value: `rollover-${randomUUID()}`,
+      url: baseURL!,
+    },
+    { name: "vocanova_csrf", value: "rollover", url: baseURL! },
+    { name: "e2e_knowledge_map", value: "gapped-ranges", url: baseURL! },
+  ]);
+  await page.goto("/discovery?band=12&active=1");
+  await expect(
+    page.getByRole("heading", { name: "Map word 1200", exact: true }),
+  ).toBeFocused();
+  await page.getByRole("button", { name: "Learn", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Map word 1303", exact: true }),
+  ).toBeFocused();
+  await expect(page).toHaveURL(/\/discovery\?band=14&word=1303&active=1$/);
+
+  // Direct links to assessed ranks open the next new word too.
+  await page.goto("/discovery?band=14&word=1301&active=1");
+  await expect(page).toHaveURL(/\/discovery\?band=14&word=1303&active=1$/);
+  await page
+    .getByRole("button", { name: "Previous word", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Map word 1302", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("article").getByText("Learning", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("combobox", { name: "Word range", exact: true })
+    .selectOption("13");
+  await expect(
+    page.getByRole("heading", { name: "Map word 1303", exact: true }),
+  ).toBeFocused();
+  await expect(page).toHaveURL(/\/discovery\?band=14&word=1303&active=1$/);
+  await page
+    .getByRole("button", { name: "Choose a word", exact: true })
+    .click();
+  const words = page.getByRole("combobox", {
+    name: "Word in this range",
+    exact: true,
+  });
+  await words.selectOption("1301");
+  await page.getByRole("button", { name: "Go to word", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Map word 1301", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("article").getByText("Already know", { exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(
+    /\/discovery\?band=14&word=1301&active=1&revisit=1$/,
+  );
+  await page
+    .getByRole("button", { name: "Previous word", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Map word 1300", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("article").getByText("Already know", { exact: true }),
+  ).toBeVisible();
+});
+
+test("browser Forward skips an assessment made after opening another range", async ({
+  page,
+  baseURL,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "vocanova_session",
+      value: `range-history-${randomUUID()}`,
+      url: baseURL!,
+    },
+    { name: "vocanova_csrf", value: "range-history", url: baseURL! },
+  ]);
+  await page.goto("/discovery?band=12&word=1101&active=1");
+  await page
+    .getByRole("combobox", { name: "Word range", exact: true })
+    .selectOption("13");
+  const first = page.getByRole("heading", {
+    name: "Map word 1201",
+    exact: true,
+  });
+  const next = page.getByRole("heading", {
+    name: "Map word 1202",
+    exact: true,
+  });
+  await expect(first).toBeFocused();
+  await page.getByRole("button", { name: "Already know", exact: true }).click();
+  await expect(next).toBeFocused();
+  await page.goBack();
+  await expect(
+    page.getByRole("heading", { name: "Map word 1101", exact: true }),
+  ).toBeVisible();
+  await page.goForward();
+  await expect(next).toBeVisible();
+  await expect(first).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Previous word", exact: true })
+    .click();
+  await expect(first).toBeFocused();
+  await expect(
+    page.getByRole("article").getByText("Already know", { exact: true }),
+  ).toBeVisible();
+});
+
+test("finishing the final range keeps earlier new words an explicit choice", async ({
   page,
   baseURL,
 }) => {
@@ -535,31 +657,84 @@ test("Back from map completion reopens the explicitly selected assessed word", a
       url: baseURL!,
     },
     { name: "vocanova_csrf", value: "complete-history", url: baseURL! },
-    { name: "e2e_knowledge_map", value: "complete", url: baseURL! },
+    { name: "e2e_knowledge_map", value: "gapped-ranges", url: baseURL! },
   ]);
-  await page.goto("/discovery?band=1&word=1&active=1");
+  await page.goto("/discovery?band=100&active=1");
   await page
     .getByRole("button", { name: "Choose a word", exact: true })
     .click();
   await page
     .getByRole("combobox", { name: "Word in this range", exact: true })
-    .selectOption("2");
+    .selectOption("10000");
   await page.getByRole("button", { name: "Go to word", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "be", exact: true }),
+    page.getByRole("heading", { name: "Map word 10000", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Already know", exact: true }).click();
   await expect(
-    page.getByRole("heading", {
-      name: "You’ve explored the whole map",
-      exact: true,
-    }),
+    page.getByRole("heading", { name: "Map word 9999", exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Learn", exact: true }).click();
+  const finished = page.getByRole("heading", {
+    name: "You’ve finished this range",
+    exact: true,
+  });
+  await expect(finished).toBeFocused();
+  await expect(page).toHaveURL(/\/discovery\?band=100&word=9999&active=1$/);
   await page.goBack();
+  await expect(finished).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "the", exact: true }),
+    page.getByRole("button", { name: "Already know", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("link", { name: "Continue with earlier words", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Map word 9801", exact: true }),
   ).toBeFocused();
-  await expect(page).toHaveURL(/\/discovery\?band=1&word=1&active=1$/);
+});
+
+test("browser Back skips an assessment made from a different visit to the same range", async ({
+  page,
+  baseURL,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "vocanova_session",
+      value: `range-revisit-${randomUUID()}`,
+      url: baseURL!,
+    },
+    { name: "vocanova_csrf", value: "range-revisit", url: baseURL! },
+  ]);
+  await page.goto("/discovery?band=13&word=1201&active=1");
+  const first = page.getByRole("heading", {
+    name: "Map word 1201",
+    exact: true,
+  });
+  const next = page.getByRole("heading", {
+    name: "Map word 1202",
+    exact: true,
+  });
+  const other = page.getByRole("heading", {
+    name: "Map word 1101",
+    exact: true,
+  });
+  const ranges = page.getByRole("combobox", {
+    name: "Word range",
+    exact: true,
+  });
+  await expect(first).toBeFocused();
+  await ranges.selectOption("12");
+  await expect(other).toBeFocused();
+  await ranges.selectOption("13");
+  await expect(first).toBeFocused();
+  await page.getByRole("button", { name: "Learn", exact: true }).click();
+  await expect(next).toBeFocused();
+  await page.goBack();
+  await expect(other).toBeVisible();
+  await page.goBack();
+  await expect(next).toBeVisible();
+  await expect(first).toHaveCount(0);
 });
 
 test("details reject a newer revision of the same meaning until the card is refreshed", async ({
