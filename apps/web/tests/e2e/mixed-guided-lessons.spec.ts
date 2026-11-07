@@ -147,7 +147,7 @@ for (const theme of ["light", "dark"])
       );
     await expect(
       page.getByText(
-        "Pronunciation for this meaning is unavailable. Try Listen again.",
+        "Pronunciation for this meaning is unavailable. Try again later.",
         { exact: true },
       ),
     ).toBeVisible();

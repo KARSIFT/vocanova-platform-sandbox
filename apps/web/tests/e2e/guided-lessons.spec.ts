@@ -182,10 +182,17 @@ test(`a guided lesson resumes, completes and opens its next activities (${theme}
   await expect(path.locator("..").getByText("Completed", { exact: true })).toBeVisible();
   await expect(path.locator("..").getByRole("link", { name: "Make a plan with a friend", exact: true })).toHaveAttribute("href", "/learn/conversation-basics");
   await expect(
-    page
-      .getByRole("main")
-      .getByText("0 saved · 0 ready for review", { exact: true }),
+    page.getByRole("main").getByRole("heading", {
+      name: "Start building your vocabulary", exact: true,
+    }),
   ).toBeVisible();
+  // Completing a guided lesson must not implicitly save, mark known, or create
+  // due reviews. The empty Progress design replaces its zero-count display.
+  const knowledge = await page.request.get(
+    `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}/api/v1/knowledge-summary`,
+  );
+  expect(knowledge.status()).toBe(200);
+  expect(await knowledge.json()).toMatchObject({ saved: 0, due: 0, selfReportedKnown: 0 });
 });
 
 test("an applied lesson action can be retried after its response is lost", async ({
