@@ -104,6 +104,45 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
+test("a word revisit returns to Journey with one range fragment", async ({
+  page,
+  baseURL,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "vocanova_session",
+      value: `journey-return-${randomUUID()}`,
+      url: baseURL!,
+    },
+    { name: "e2e_knowledge_map", value: "complete", url: baseURL! },
+  ]);
+  const rangePath = "/discover?band=100#range-words";
+  // A fresh load lets the router learn the Journey address with its fragment.
+  await page.goto(rangePath);
+  const range = page.getByRole("region", { name: "Words 9,901–10,000" });
+  await range.getByText("Words in this range", { exact: true }).click();
+  await range
+    .getByRole("link", {
+      name: "9,901 Map word 9901 Already know",
+      exact: true,
+    })
+    .click();
+  await expect(page).toHaveURL("/discovery?band=100&word=9901&revisit=1");
+  await page
+    .getByRole("button", { name: "Start discovering", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Map word 9901", exact: true }),
+  ).toBeFocused();
+  const exit = page
+    .getByRole("banner")
+    .getByRole("link", { name: "Back to Journey", exact: true });
+  await expect(exit).toHaveAttribute("href", rangePath);
+  await exit.click();
+  await expect(page).toHaveURL(rangePath);
+  await expect(range).toBeInViewport();
+});
+
 test("an uncertain choice locks navigation until its original request is confirmed", async ({
   page,
   baseURL,
