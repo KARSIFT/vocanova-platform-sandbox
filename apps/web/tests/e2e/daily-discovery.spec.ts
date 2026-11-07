@@ -837,7 +837,7 @@ test("all 100 ranges are reachable, discovery confirms choices before advancing,
     const choice = page.getByRole("combobox", { name: "Go to a range" });
     await expect(choice.locator("option")).toHaveCount(100);
     await choice.selectOption({
-      label: "Words 9,901–10,000: 0 known, 0 learning",
+      label: "9,901–10,000",
     });
     await page.getByRole("button", { name: "Show", exact: true }).click();
   } else {

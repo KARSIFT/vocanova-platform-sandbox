@@ -54,7 +54,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(chooser.locator("option")).toHaveCount(100);
       await chooser.selectOption("50");
       await expect(chooser).toHaveValue("50");
-      await expect(chooser.locator("option:checked")).toHaveText("Words 4,901–5,000: 0 known, 0 learning");
+      await expect(chooser.locator("option:checked")).toHaveText("4,901–5,000");
       const show = page.getByRole("button", { name: "Show", exact: true });
       await show.focus();
       await expect(show).toBeFocused();

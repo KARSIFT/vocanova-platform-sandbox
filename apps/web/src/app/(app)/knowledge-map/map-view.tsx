@@ -178,6 +178,22 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
       {/* Phones: the same map as a picture, and a full-size range chooser
           instead of 100 squares too small to tap. */}
       <div className={styles.atlasCompact}>
+        <form action="/discovery" className={styles.rangeForm}>
+          <input type="hidden" name="active" value="1" />
+          <label htmlFor="range-choice">Go to a range</label>
+          <div>
+            <select id="range-choice" name="band" defaultValue={band}>
+              {data.bands.map((item) => (
+                <option key={item.number} value={item.number}>
+                  {`${item.startRank.toLocaleString()}–${item.endRank.toLocaleString()}`}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="vn-btn vn-btn-secondary">
+              Show
+            </button>
+          </div>
+        </form>
         <div className={styles.atlas} aria-hidden="true">
           {rows.map((row, index) => (
             <div key={index} className={styles.atlasRow}>
@@ -195,22 +211,6 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
             </div>
           ))}
         </div>
-        <form action="/discovery" className={styles.rangeForm}>
-          <input type="hidden" name="active" value="1" />
-          <label htmlFor="range-choice">Go to a range</label>
-          <div>
-            <select id="range-choice" name="band" defaultValue={band}>
-              {data.bands.map((item) => (
-                <option key={item.number} value={item.number}>
-                  {`Words ${item.startRank.toLocaleString()}–${item.endRank.toLocaleString()}: ${item.knownCount} known, ${item.learningCount} learning`}
-                </option>
-              ))}
-            </select>
-            <button type="submit" className="vn-btn vn-btn-secondary">
-              Show
-            </button>
-          </div>
-        </form>
       </div>
       <details className={styles.ordering}>
         <summary>Why this order?</summary>
