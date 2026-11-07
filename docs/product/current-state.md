@@ -23,17 +23,17 @@ used Previous across a range boundary, and opened a picked word with its picture
 and definition without recording learning choices. The catalog contains **10,051
 active English meanings with nonempty definitions and current approved images**;
 all 10,051 image objects passed the recorded HEAD availability scan. The final
-operator report now records **10,051 current word clips ready, zero missing,
-pending or failed**. These are stored readiness counts: fresh full-catalog audio
-decoding after the final writes, remaining clip-quality review and final manual
-verification are still pending. HEAD availability does not establish every
-image's visual quality, and audio decoding alone does not establish pronunciation
-quality.
+operator report records **10,051 current word clips ready, zero missing, pending
+or failed**. A fresh production audit after the final repairs decoded and
+signal-validated all 10,051, with zero invalid. HEAD availability does not
+establish every image's visual quality, and audio decoding alone does not
+establish pronunciation quality.
 
 Optional word details stalled for more than 30 seconds during a production
-browser check. The cause remains unestablished; a bounded read with recoverable
-Retry behavior is being implemented and is not part of the deployed acceptance
-above.
+browser check. The cause remains unestablished. A follow-up bounds the optional
+read at eight seconds and exposes the existing Retry; local checks reproduced
+stalled headers and response bodies and verified retry across three browser
+engines. Its deployment and final live retest are separate from 0.4.24.
 
 ## Manual production audit — 7 November 2026 (released)
 

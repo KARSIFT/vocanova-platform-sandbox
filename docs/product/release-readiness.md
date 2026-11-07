@@ -24,10 +24,11 @@ nonempty definitions and current approved images. Only 14 matched the current
 word-pronunciation cache identity; 10,037 required audio generation at that time.
 The controlled resumable operator has since populated the catalog. Its final
 stored report records **10,051 total and ready, zero missing, pending or failed**.
-Historical failed attempts remain in their receipts and are not erased by
-successful linked recovery. Fresh full-catalog decoding after the final writes,
-remaining clip-quality review and final manual verification are still pending;
-stored readiness alone is not complete pronunciation-quality acceptance.
+All seven historical failed attempts have successful linked recoveries and remain
+in the operator receipts. After final writes, a fresh read-only production audit
+on 0.4.24 checked and signal-validated **all 10,051 stored clips**, with zero
+invalid and no generation. Signal validity does not establish spoken word or
+stress accuracy for every clip.
 
 Local acceptance on the cursor-corrected frontend bundle passed **445 cases, five
 layout-specific skips, zero failures/retries** across 360px, 430px and desktop.
@@ -69,10 +70,11 @@ catalog rows **20,102→10,051** and cumulative allocated bytes
 This excludes decoding and is not production latency or peak-memory evidence.
 
 The streamed read-only audio audit distinguishes ready metadata from decoded,
-signal-valid clips. All 16 clips present in the initial production audit passed
-that gate; this historical result does not validate the subsequently generated
-catalog. Correct words/stress require separate listening assessment. The final
-fresh decode and manual checks remain open despite complete stored coverage.
+signal-valid clips. The final production audit supersedes the initial
+16-clip check. Conservative quality reviews confirmed 579 artifact replacements
+by exact readback and retained existing valid clips where the replacement
+evidence was uncertain. Correct words and stress still require separate
+listening assessment.
 
 Manual ChatGPT-browser local checks operated picking, Previous, range jumps,
 Back/reload, compact mobile Home links, keyboard focus, Settings reading order,
@@ -95,12 +97,12 @@ specific successful checks, not exhaustive manual acceptance.
 
 Optional details stalled for more than 30 seconds before its existing failure
 Retry appeared, and a second attempt also stalled. Independent origin inspection
-did not establish a canonical-word timeout or a browser/CDN cause. A bounded
-optional read with recoverable Retry is being implemented; its fresh tests and
-deployment remain separate from the accepted 0.4.24 release. Other interrupted
-in-app navigations are not counted as passes. Remaining acceptance includes
-fresh full-catalog decoding after final writes, clip-quality review and final
-production UI/playback retests.
+did not establish a canonical-word timeout or a browser/CDN cause. The follow-up
+bounds the optional read at eight seconds; local checks verified recovery from
+stalled headers and partial response bodies across Chromium, Firefox and WebKit.
+Its deployment and final production UI/playback retests remain separate from
+the accepted 0.4.24 release. Interrupted in-app navigations are not counted as
+passes.
 
 ## Manual production audit — 7 November 2026 (released)
 
