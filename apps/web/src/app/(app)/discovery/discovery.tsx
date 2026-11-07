@@ -177,7 +177,9 @@ export function Discovery({
   // need not update for those entries or their Back/Forward navigation.
   useEffect(() => {
     if (restoring) return;
-    const searchParams = new URLSearchParams(currentSearch);
+    // Next commits its URL after rendering the new route. Use the live URL
+    // here so a completed range cannot restore the previous route's selection.
+    const searchParams = new URLSearchParams(window.location.search);
     const requested = Number(searchParams.get("word"));
     if (
       Number(searchParams.get("band")) === band &&
