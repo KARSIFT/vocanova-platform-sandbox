@@ -61,9 +61,12 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("main").getByText("Already know", { exact: true }).first(),
     ).toBeVisible();
-    await page
-      .getByRole("combobox", { name: "Word range", exact: true })
-      .selectOption("13");
+    const ranges = page.getByRole("combobox", {
+      name: "Word range",
+      exact: true,
+    });
+    expect((await ranges.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await ranges.selectOption("13");
     await expect(
       page.getByRole("button", { name: "Go to range", exact: true }),
     ).toHaveCount(0);
@@ -689,6 +692,49 @@ test("finishing the final range keeps earlier new words an explicit choice", asy
   await expect(
     page.getByRole("heading", { name: "Map word 9801", exact: true }),
   ).toBeFocused();
+});
+
+test("browser Back skips an assessment made from a different visit to the same range", async ({
+  page,
+  baseURL,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "vocanova_session",
+      value: `range-revisit-${randomUUID()}`,
+      url: baseURL!,
+    },
+    { name: "vocanova_csrf", value: "range-revisit", url: baseURL! },
+  ]);
+  await page.goto("/discovery?band=13&word=1201&active=1");
+  const first = page.getByRole("heading", {
+    name: "Map word 1201",
+    exact: true,
+  });
+  const next = page.getByRole("heading", {
+    name: "Map word 1202",
+    exact: true,
+  });
+  const other = page.getByRole("heading", {
+    name: "Map word 1101",
+    exact: true,
+  });
+  const ranges = page.getByRole("combobox", {
+    name: "Word range",
+    exact: true,
+  });
+  await expect(first).toBeFocused();
+  await ranges.selectOption("12");
+  await expect(other).toBeFocused();
+  await ranges.selectOption("13");
+  await expect(first).toBeFocused();
+  await page.getByRole("button", { name: "Learn", exact: true }).click();
+  await expect(next).toBeFocused();
+  await page.goBack();
+  await expect(other).toBeVisible();
+  await page.goBack();
+  await expect(next).toBeVisible();
+  await expect(first).toHaveCount(0);
 });
 
 test("details reject a newer revision of the same meaning until the card is refreshed", async ({

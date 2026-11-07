@@ -46,8 +46,13 @@ interface PendingDecision {
   rank: number;
 }
 
-// Next can reuse the exact range snapshot on browser Back or Forward.
-const staleSnapshots = new WeakSet<KnowledgeMapData>();
+// Next can restore any previously visited snapshot of a range on Back or Forward.
+const snapshotVersions = new WeakMap<KnowledgeMapData, number>();
+const rangeVersions = new Map<number, number>();
+
+function rangeVersion(band: number) {
+  return rangeVersions.get(band) ?? 0;
+}
 
 function wordHref(
   band: number,
@@ -111,7 +116,13 @@ export function Discovery({
   const [rank, setRank] = useState(initialRank);
   const [started, setStarted] = useState(initiallyActive);
   const [revisit, setRevisit] = useState(initiallyRevisiting);
-  const [restoring] = useState(() => staleSnapshots.has(initialData));
+  const [restoring] = useState(() => {
+    const version = snapshotVersions.get(initialData);
+    return (
+      version !== undefined &&
+      version !== rangeVersion(initialData.currentBand.number)
+    );
+  });
   const router = useRouter();
   const serverParams = useSearchParams();
   const serverSearch = serverParams.size ? `?${serverParams.toString()}` : "";
@@ -170,7 +181,12 @@ export function Discovery({
 
   useEffect(() => {
     if (restoring) window.location.reload();
-  }, [restoring]);
+    else
+      snapshotVersions.set(
+        initialData,
+        rangeVersion(initialData.currentBand.number),
+      );
+  }, [initialData, restoring]);
 
   // Owned writes preserve Next's opaque history state. Observe the actual
   // browser location (as DiscoveryExitLink does), because Next searchParams
@@ -416,7 +432,7 @@ export function Discovery({
         request.key,
         { headers: { "X-CSRF-Token": csrf } },
       );
-      staleSnapshots.add(initialData);
+      rangeVersions.set(band, rangeVersion(band) + 1);
       // Use the meaning's state as the server reports it. When it is exactly
       // what this choice produces, continue within the range without
       // re-reading all 100 words; a later word changed elsewhere still
@@ -462,7 +478,7 @@ export function Discovery({
       else setRank(nextWord.rank);
     } catch (failure) {
       if (failure instanceof ApiResponseError && failure.status === 409) {
-        staleSnapshots.add(initialData);
+        rangeVersions.set(band, rangeVersion(band) + 1);
         pending.current = null;
         setConflict(true);
         try {

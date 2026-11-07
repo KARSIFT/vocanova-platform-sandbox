@@ -269,7 +269,6 @@
   contain: paint;
   width: 100%;
   min-width: 0;
-  min-height: 48px;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-neutral-300);
   border-radius: 0.85rem;
@@ -723,6 +722,11 @@
 }
 .discoveryRange select {
   width: 100%;
+}
+.rangeForm select,
+.discoveryRange select {
+  /* WebKit overrides min-height on native selects. Retain the native arrow. */
+  height: max(48px, 3rem);
 }
 .progressPicker {
   display: block;
