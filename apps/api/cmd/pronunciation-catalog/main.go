@@ -26,11 +26,21 @@ func run(args []string) error {
 	validateAudio := fs.Bool("validate-audio", false, "Read-only streaming decode and signal validation of current ready word clips")
 	generate := fs.Bool("generate", false, "Explicitly generate missing word clips (paid)")
 	jobID := fs.String("job", "", "Stable operator job UUID; reuse to resume")
+	recoverAttempt := fs.String("recover-failed-attempt", "", "Explicitly recover one failed decoded operator attempt under a new one-attempt job")
 	attempts := fs.Int("max-generations", 0, "Maximum attempted calls for entire job, including failures")
 	characters := fs.Int("max-characters", 0, "Maximum spoken input characters for entire job")
 	seconds := fs.Float64("max-audio-seconds", 0, "Stop before another call when observed duration reaches this value")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 {
 		return fmt.Errorf("invalid catalog arguments")
+	}
+	recoveryRequested := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "recover-failed-attempt" {
+			recoveryRequested = true
+		}
+	})
+	if recoveryRequested && !*generate {
+		return fmt.Errorf("--recover-failed-attempt requires explicit --generate and a new --job")
 	}
 	if !*generate && (*attempts != 0 || *characters != 0 || *seconds != 0) {
 		return fmt.Errorf("job budgets require explicit --generate")
@@ -44,6 +54,20 @@ func run(args []string) error {
 		job, err = uuid.Parse(*jobID)
 		if err != nil || job == uuid.Nil {
 			return fmt.Errorf("invalid job UUID")
+		}
+	}
+	var original uuid.UUID
+	if recoveryRequested {
+		var err error
+		original, err = uuid.Parse(*recoverAttempt)
+		if err != nil || original == uuid.Nil || original.String() != *recoverAttempt {
+			return fmt.Errorf("recovery requires a canonical non-nil original attempt UUID")
+		}
+		if job == uuid.Nil || job.String() != *jobID || job == original {
+			return fmt.Errorf("recovery requires a canonical non-nil new job UUID distinct from the original attempt")
+		}
+		if *attempts != 1 {
+			return fmt.Errorf("recovery requires --max-generations exactly 1")
 		}
 	}
 	budget := pronunciation.CatalogBudget{MaxGenerations: *attempts, MaxCharacters: *characters, MaxAudioSeconds: *seconds}
@@ -79,7 +103,11 @@ func run(args []string) error {
 	operator := pronunciation.NewCatalogOperator(db, provider)
 	var report pronunciation.CatalogReport
 	if *generate {
-		report, err = operator.Generate(ctx, job, budget)
+		if recoveryRequested {
+			report, err = operator.RecoverFailed(ctx, job, original, budget)
+		} else {
+			report, err = operator.Generate(ctx, job, budget)
+		}
 		receiptCtx, cancelReceipt := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		if receipt, receiptErr := operator.JobReport(receiptCtx, job); receiptErr == nil {
 			report = receipt
