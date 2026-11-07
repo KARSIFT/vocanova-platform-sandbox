@@ -136,7 +136,7 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
       <h2 id="atlas-title" className="section-title">
         Your word map
       </h2>
-      <p className={styles.atlasLede}>Choose a square to explore 100 words.</p>
+      <p className={styles.atlasLede}>100 words per range.</p>
       <ul className={styles.legend} aria-label="Map progress">
         <li>
           <span className={styles.knownDot} aria-hidden="true" />
