@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createServer } from "node:http";
 import { expect, test } from "@playwright/test";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
 
@@ -272,6 +273,176 @@ test("word details load only on demand, bind the displayed sense and retry hones
       .getByRole("link", { name: "Back to Journey", exact: true }),
   ).toHaveAttribute("href", "/discover?band=1#range-words");
 });
+
+for (const stalledAt of ["headers", "body"] as const) {
+  for (const theme of ["light", "dark"] as const) {
+    test(`word details recover from stalled ${stalledAt} after eight seconds in ${theme}`, async ({
+      page,
+      baseURL,
+      browserName,
+    }) => {
+      await page.context().addCookies([
+        {
+          name: "vocanova_session",
+          value: `timeout-details-${randomUUID()}`,
+          url: baseURL!,
+        },
+        { name: "vocanova_theme", value: theme, url: baseURL! },
+      ]);
+      let reads = 0;
+      let cancelledReads = 0;
+      const server = createServer((_request, response) => {
+        reads++;
+        response.setHeader("Access-Control-Allow-Origin", baseURL!);
+        response.setHeader("Access-Control-Allow-Credentials", "true");
+        response.setHeader("Content-Type", "application/json");
+        if (reads === 1) {
+          response.on("close", () => {
+            if (!response.writableEnded) cancelledReads++;
+          });
+          if (stalledAt === "body") {
+            response.writeHead(200);
+            response.write('{"word":');
+          }
+          return;
+        }
+        response.end(
+          JSON.stringify({
+            word: {
+              id: "map-word-1",
+              text: "the",
+              slug: "map-word-1",
+              wordType: "word",
+              meanings: [
+                {
+                  id: "map-meaning-1",
+                  partOfSpeech: "article",
+                  shortDefinition: "The recovered current meaning.",
+                  saved: false,
+                  selfReportedKnown: false,
+                  due: false,
+                  examples: [
+                    {
+                      id: "recovered-example",
+                      exampleText: "An example after manual retry.",
+                    },
+                  ],
+                  usageNotes: [],
+                },
+              ],
+            },
+          }),
+        );
+      });
+      await new Promise<void>((resolve) =>
+        server.listen(0, "127.0.0.1", resolve),
+      );
+      try {
+        const address = server.address();
+        if (!address || typeof address === "string")
+          throw new Error("Test server did not expose a port");
+        await page.route("**/api/v1/canonical-words/map-word-1", (route) =>
+          route.continue({ url: `http://127.0.0.1:${address.port}/word` }),
+        );
+        await page.addInitScript(() => {
+          const observed = window as typeof window & {
+            __wordDetailsAborts: number;
+          };
+          observed.__wordDetailsAborts = 0;
+          const nativeFetch = window.fetch.bind(window);
+          window.fetch = (input, init) => {
+            const url = new URL(
+              input instanceof Request ? input.url : String(input),
+              window.location.href,
+            );
+            if (url.pathname === "/api/v1/canonical-words/map-word-1") {
+              init?.signal?.addEventListener(
+                "abort",
+                () => {
+                  observed.__wordDetailsAborts++;
+                },
+                { once: true },
+              );
+            }
+            return nativeFetch(input, init);
+          };
+        });
+        await page.clock.install();
+        await page.goto("/discovery?band=1&word=1&active=1");
+        await expect(
+          page.getByRole("heading", { name: "the", exact: true }),
+        ).toBeVisible();
+        expect(reads).toBe(0);
+        const details = page.locator("details").filter({
+          has: page.getByText("Word details & other meanings", { exact: true }),
+        });
+        const receivedHeaders =
+          stalledAt === "body"
+            ? page.waitForResponse(
+                (response) =>
+                  response.url() === `http://127.0.0.1:${address.port}/word` &&
+                  response.status() === 200,
+              )
+            : undefined;
+        await details.locator("summary").press("Enter");
+        await expect.poll(() => reads).toBe(1);
+        if (receivedHeaders) await receivedHeaders;
+        await expect(details.getByRole("status")).toHaveText(
+          "Loading word details…",
+        );
+        await page.clock.fastForward(8_000);
+        await expect(details.getByRole("alert")).toHaveText(
+          /Word details could not load\. Try again\./,
+        );
+        await expect(details.getByRole("status")).toHaveCount(0);
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () =>
+                (window as typeof window & { __wordDetailsAborts: number })
+                  .__wordDetailsAborts,
+            ),
+          )
+          .toBe(1);
+        // Firefox's intercepted fetch rejects on abort without immediately
+        // closing this fixture's socket. Verify the native signal everywhere;
+        // retain the additional observed socket-close check in Chromium.
+        if (browserName === "chromium")
+          await expect.poll(() => cancelledReads).toBe(1);
+        expect(reads).toBe(1);
+        await details
+          .getByRole("button", { name: "Retry word details", exact: true })
+          .press("Enter");
+        await expect(
+          details.getByText("article · This meaning", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          details.getByText("An example after manual retry.", { exact: true }),
+        ).toBeVisible();
+        await expect(details.getByRole("alert")).toHaveCount(0);
+        expect(reads).toBe(2);
+        await page.clock.fastForward(8_000);
+        await expect(
+          details.getByText("The recovered current meaning.", { exact: true }),
+        ).toBeVisible();
+        await expect(details.getByRole("alert")).toHaveCount(0);
+        expect(reads).toBe(2);
+        expect(
+          await page.evaluate(
+            () =>
+              (window as typeof window & { __wordDetailsAborts: number })
+                .__wordDetailsAborts,
+          ),
+        ).toBe(1);
+      } finally {
+        server.closeAllConnections();
+        await new Promise<void>((resolve, reject) =>
+          server.close((error) => (error ? reject(error) : resolve())),
+        );
+      }
+    });
+  }
+}
 
 test("browser Back cannot detach a held or uncertain choice from its displayed word", async ({
   page,

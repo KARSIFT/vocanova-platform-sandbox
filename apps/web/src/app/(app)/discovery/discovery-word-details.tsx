@@ -7,6 +7,8 @@ import { handleApiError, isSessionExpiredError } from "@/lib/session";
 import { getAdditionalDefinition } from "@/lib/word-definition";
 import styles from "../knowledge-map/workspace.module.css";
 
+const WORD_DETAILS_DEADLINE_MS = 8_000;
+
 /** Teaching is optional and read-only; no canonical request until opened. */
 export function DiscoveryWordDetails({
   wordSlug,
@@ -27,13 +29,22 @@ export function DiscoveryWordDetails({
   async function load() {
     if (request.current || word) return;
     const controller = new AbortController();
+    const deadline = new AbortController();
+    const timeout = setTimeout(
+      () => deadline.abort(),
+      WORD_DETAILS_DEADLINE_MS,
+    );
+    const clearDeadline = () => clearTimeout(timeout);
+    controller.signal.addEventListener("abort", clearDeadline, { once: true });
     request.current = controller;
     setLoading(true);
     setError("");
     setRevisionChanged(false);
     try {
       const result = await createApiClient().getCanonicalWord(wordSlug, {
-        signal: controller.signal,
+        // Bound headers and body while keeping timeout recovery distinct from
+        // unmount cancellation, which must not update the abandoned component.
+        signal: AbortSignal.any([controller.signal, deadline.signal]),
       });
       if (controller.signal.aborted) return;
       // A response must contain the exact displayed sense, never substitute a
@@ -65,6 +76,8 @@ export function DiscoveryWordDetails({
             : "Word details could not load. Try again.",
         );
     } finally {
+      clearDeadline();
+      controller.signal.removeEventListener("abort", clearDeadline);
       if (!controller.signal.aborted) {
         setLoading(false);
         request.current = null;
