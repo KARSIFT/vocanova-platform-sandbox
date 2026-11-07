@@ -8,8 +8,11 @@ interface SavedWordsErrorProps {
   reset: () => void;
 }
 
-export default function SavedWordsError({ reset }: SavedWordsErrorProps) {
-  const { retry, isRetrying } = useRouteErrorRetry(reset);
+export default function SavedWordsError({
+  reset,
+  error,
+}: SavedWordsErrorProps) {
+  const { retry, isRetrying } = useRouteErrorRetry(reset, error);
   return (
     <div className="p-[var(--spacing-lg)]">
       <h1 className="text-xl font-semibold text-neutral-900">

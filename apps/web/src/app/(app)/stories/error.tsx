@@ -6,8 +6,14 @@ import {
   primaryAction,
   textLink,
 } from "../practice/_components/practice-styles";
-export default function StoryError({ reset }: { reset: () => void }) {
-  const { retry, isRetrying } = useRouteErrorRetry(reset);
+export default function StoryError({
+  reset,
+  error,
+}: {
+  reset: () => void;
+  error: Error & { digest?: string };
+}) {
+  const { retry, isRetrying } = useRouteErrorRetry(reset, error);
   return (
     <PageContainer className="max-w-[44rem]">
       <Surface>

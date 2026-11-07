@@ -920,6 +920,10 @@ const server = createServer(async (req, res) => {
     sentences: ["/api/v1/learner-sentences", { items: null }],
     settings: ["/api/v1/settings", null],
   };
+  if (req.method === "GET" && url.pathname === "/api/v1/settings" && cookies.e2e_settings_read_failure === "503") {
+    jsonResponse(res, 503, { error: { code: "unavailable", message: "Synthetic settings read failure" } });
+    return;
+  }
   const renderFailure = renderFailureReads[cookies.e2e_render_failure];
   if (req.method === "GET" && renderFailure && url.pathname === renderFailure[0]) {
     logLine(req, 200, { reason: "fixture-malformed-render-data" });

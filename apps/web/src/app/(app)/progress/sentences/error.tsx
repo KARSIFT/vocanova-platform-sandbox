@@ -1,23 +1,15 @@
 "use client";
 
 import Link from "@/ui/link";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
 
 import { PageContainer, Surface } from "@/ui/surface";
 
 export default function SentenceHistoryError({
   reset,
+  error,
 }: Readonly<{ error: Error & { digest?: string }; reset: () => void }>) {
-  const router = useRouter();
-  const [isRetrying, startTransition] = useTransition();
-
-  function handleRetry() {
-    startTransition(() => {
-      router.refresh();
-      reset();
-    });
-  }
+  const { retry: handleRetry, isRetrying } = useRouteErrorRetry(reset, error);
 
   return (
     <PageContainer>

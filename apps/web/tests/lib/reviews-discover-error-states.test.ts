@@ -32,7 +32,7 @@ describe("reviews and discover error-state render paths (VOC-1179)", () => {
     const source = await readSource("src/app/(app)/reviews/error.tsx");
     assert.match(source, /"use client"/);
     assert.match(source, /reset:\s*\(\)\s*=>\s*void/);
-    assert.match(source, /useRouteErrorRetry\(reset\)/);
+    assert.match(source, /useRouteErrorRetry\(reset, error\)/);
     assert.match(source, /onClick=\{retry\}/);
     assert.match(source, /disabled=\{isRetrying\}/);
     assert.match(source, /aria-busy=\{isRetrying\}/);
@@ -46,7 +46,7 @@ describe("reviews and discover error-state render paths (VOC-1179)", () => {
     const source = await readSource("src/app/(app)/discover/error.tsx");
     assert.match(source, /"use client"/);
     assert.match(source, /reset:\s*\(\)\s*=>\s*void/);
-    assert.match(source, /useRouteErrorRetry\(reset\)/);
+    assert.match(source, /useRouteErrorRetry\(reset, error\)/);
     assert.match(source, /onClick=\{retry\}/);
     assert.match(source, /disabled=\{isRetrying\}/);
     assert.match(source, /aria-busy=\{isRetrying\}/);
