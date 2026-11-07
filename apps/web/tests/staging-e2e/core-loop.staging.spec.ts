@@ -258,16 +258,32 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
       links.map((link) => link.getAttribute("href")),
     ),
   ).toEqual(
-    Array.from(
-      { length: 100 },
-      (_, index) => `/discover?band=${index + 1}#range-words`,
+    map.bands.map(
+      (band) =>
+        `/discovery?band=${band.number}&word=${band.startRank}&active=1`,
     ),
   );
+  // Atlas squares now enter the actual first word of the selected range.
+  // This remains an explicit revisit even when the range was fully assessed.
   await ranges.last().click();
-  await expect(page).toHaveURL(/\/discover\?band=100#range-words$/);
+  await expect(page).toHaveURL(/\/discovery\?band=100&word=9901&active=1$/);
+  const firstInLastRange = map.currentBand.items[0]!;
   await expect(
-    page.getByRole("heading", { name: "Words 9,901–10,000", exact: true }),
+    page.getByRole("heading", {
+      name: firstInLastRange.wordText,
+      level: 1,
+      exact: true,
+    }),
+  ).toBeFocused();
+  await expect(
+    page
+      .getByRole("article", { name: firstInLastRange.wordText, exact: true })
+      .getByText(firstInLastRange.shortDefinition, { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start discovering", exact: true }),
+  ).toHaveCount(0);
+  // Journey's ordinary preview is checked after the decision and reload.
   const range = page.getByRole("region", {
     name: "Words 9,901–10,000",
     exact: true,
@@ -286,15 +302,17 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
   };
   const tile = () =>
     wordList.locator(`a[href="/discovery?band=100&word=${chosen.rank}"]`);
-  await openRangeWords();
-  await expect(tile()).toHaveCount(1);
-  await expect(
-    tile().getByText(chosen.wordText, { exact: true }),
-  ).toBeVisible();
-  await tile().click();
+  // Jump through the actual discovery picker without adding a Start step.
   await page
-    .getByRole("button", { name: "Start discovering", exact: true })
+    .getByRole("button", { name: "Choose a word", exact: true })
     .click();
+  await page
+    .getByRole("combobox", { name: "Word in this range", exact: true })
+    .selectOption(String(chosen.rank));
+  await page.getByRole("button", { name: "Go to word", exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/discovery\\?band=100&word=${chosen.rank}&active=1$`),
+  );
   await expect(
     page.getByRole("heading", { name: chosen.wordText, level: 1, exact: true }),
   ).toBeFocused();
@@ -342,16 +360,21 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
     expect(result.decision).toBe("known");
     expect(result.revision).toMatch(/^[a-f0-9]{64}$/);
 
-    // Guided discovery skips assessed gaps. Derive the next unseen word from
-    // fresh real server state, rather than assuming rank + 1 is still new.
+    // Continue after the chosen word, skipping assessed gaps; wrap only when
+    // no later new word remains. Derive this from fresh real server state.
     const acknowledgedMap = await readStagingState<KnowledgeMap>(
       page,
       apiOrigin,
       "/api/v1/knowledge-map?band=100",
     );
-    const currentUnseen = acknowledgedMap.currentBand.items.find(
-      (item) => !item.selfReportedKnown && !item.saved,
-    );
+    const currentUnseen =
+      acknowledgedMap.currentBand.items.find(
+        (item) =>
+          item.rank > chosen.rank && !item.selfReportedKnown && !item.saved,
+      ) ??
+      acknowledgedMap.currentBand.items.find(
+        (item) => !item.selfReportedKnown && !item.saved,
+      );
     const nextBand = currentUnseen
       ? acknowledgedMap.currentBand.number
       : acknowledgedMap.bands.find((band) => band.unseenCount > 0)?.number;
@@ -372,9 +395,12 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
               apiOrigin,
               `/api/v1/knowledge-map?band=${nextBand}`,
             );
-      const next = nextMap.currentBand.items.find(
-        (item) => !item.selfReportedKnown && !item.saved,
-      );
+      const next =
+        nextBand === acknowledgedMap.currentBand.number
+          ? currentUnseen
+          : nextMap.currentBand.items.find(
+              (item) => !item.selfReportedKnown && !item.saved,
+            );
       expect(
         next,
         "A range reported as unseen must contain a new word.",
@@ -388,7 +414,7 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
         }),
       ).toBeFocused();
       await expect(page).toHaveURL(
-        new RegExp(`/discovery\\?band=${nextBand}&word=${next.rank}$`),
+        new RegExp(`/discovery\\?band=${nextBand}&word=${next.rank}&active=1$`),
       );
       // The session's exit returns to the range now on screen.
       const back = page.getByRole("link", {
@@ -404,11 +430,8 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
         new RegExp(`/discover\\?band=${nextBand}#range-words$`),
       );
       if (nextBand !== 100) {
-        await page
-          .getByRole("navigation", { name: "Word ranges", exact: true })
-          .getByRole("link")
-          .last()
-          .click();
+        // Reopen the Journey preview; an atlas square would enter discovery.
+        await page.goto("/discover?band=100#range-words");
         await expect(page).toHaveURL(/\/discover\?band=100#range-words$/);
       }
     }
