@@ -56,6 +56,7 @@ jobs:
           go test ./app/api/... -run ControlledSignupOAuth -count=1 -v | tee "$test_log"
           grep -Eq '^--- PASS: TestControlledSignupOAuth_AllowlistedCallbackSucceeds ' "$test_log"
           grep -Eq '^--- PASS: TestControlledSignupOAuth_UnlistedCallbackDenied ' "$test_log"
+          grep -Eq '^--- PASS: TestControlledSignupOAuth_PublicSignupAdmitsUnlistedCallback ' "$test_log"
           if grep -Eq '^--- SKIP: TestControlledSignupOAuth_' "$test_log"; then
             echo "controlled-signup OAuth callback E2E cases must not skip" >&2
             exit 1

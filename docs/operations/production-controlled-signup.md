@@ -1,7 +1,7 @@
-# Production controlled Google signup (VOC-096)
+# Production Google signup
 
-Operator guide for the persistent production controlled-signup cohort backed by
-repository secret `PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST`. Only
+Production supports public Google signup and a restricted cohort. The restricted
+cohort is backed by repository secret `PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST`. Only
 `.github/workflows/deploy-production.yml` may read this secret;
 `deploy-staging.yml` never references it.
 
@@ -11,14 +11,14 @@ harness (VOC-092).
 
 ## Policy
 
-| Setting                     | Production value                                                                                          | Meaning                                                    |
-| --------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `GOOGLE_OAUTH_ENABLED`      | `true` when both `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` repository secrets are present | Google sign-in is available                                |
-| `NEW_USER_SIGNUP_ENABLED`   | always `false`                                                                                            | No blanket first-time signup                               |
-| `NEW_USER_SIGNUP_ALLOWLIST` | synced from `PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST` on every deploy                                        | Only listed Google identities may create a production account |
+| Setting                     | Production value                                                                                          | Meaning                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `GOOGLE_OAUTH_ENABLED`      | `true` when both `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` repository secrets are present | Google sign-in is available                                   |
+| `NEW_USER_SIGNUP_ENABLED`   | Repository Actions variable `PRODUCTION_NEW_USER_SIGNUP_ENABLED`, default `false`                         | `true` opens registration to verified Google accounts         |
+| `NEW_USER_SIGNUP_ALLOWLIST` | Synced from `PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST` in restricted mode                                     | Only listed Google identities can register in restricted mode |
 
 The former `workflow_dispatch` input `new_user_signup_allowlist` was removed.
-Manual production deploys read the repository secret only. Merging to `main`
+Manual production deploys read the repository Actions policy and restricted-mode secret. Merging to `main`
 deploys staging, not production; see [AGENTS.md](../../AGENTS.md).
 
 Personal data rules:
@@ -26,9 +26,21 @@ Personal data rules:
 - Store cohort member addresses only in the GitHub secret.
 - Never commit addresses, never paste them into issues/PRs/evidence, and never
   expect deploy logs to print them. Successful validation logs only
-  `controlled signup ready: true` or `controlled signup ready: false`.
+  the signup mode and readiness.
 - `/healthz` exposes only `controlled_signup_ready` (boolean). It never exposes
   email values or cohort cardinality.
+
+## Open or restrict public signup
+
+Set the repository Actions variable `PRODUCTION_NEW_USER_SIGNUP_ENABLED` to
+`true` to open signup and dispatch the reviewed production workflow. Public
+mode requires configured Google OAuth. In public mode, expect
+`kill_switches.new_signups_enabled: true` and `controlled_signup_ready: false`
+on `/healthz`. Confirm the real provider flow with a verified Google account
+that has never signed in to production.
+
+To return to the restricted cohort, set the variable to `false` and deploy
+again. The restricted cohort secret is required for this mode.
 
 ## Add or remove a cohort member
 
@@ -51,8 +63,8 @@ disabled — see fail-closed behavior below).
 
 Manually dispatch `deploy-production.yml` on the reviewed `main` revision. It:
 
-1. Validates the secret on the runner (`infra/scripts/validate-production-signup-allowlist.sh`).
-2. Writes `NEW_USER_SIGNUP_ALLOWLIST` into production `api.env`.
+1. Validates signup policy and the restricted-mode secret on the runner.
+2. Writes signup mode and, in restricted mode, the allowlist into production `api.env`.
 3. Redeploys the API container and runs the production smoke suite.
 
 The same manual dispatch applies a secret-only change without a code merge
@@ -62,9 +74,9 @@ The same manual dispatch applies a secret-only change without a code merge
 
 In the successful run log, confirm:
 
-- Step **Validate production controlled-signup allowlist** succeeded.
+- Step **Validate production signup policy** succeeded.
 - Step **Write production application configuration** logged
-  `controlled signup ready: true` (when OAuth is enabled).
+  `public signup enabled: true` or `controlled signup ready: true` for the selected mode.
 - Step **Run production smoke-test suite** passed.
 
 Then confirm live readiness without exposing cohort metadata:
@@ -77,10 +89,11 @@ curl -fsS https://api-production.vocanova.site/healthz \
 Expect `controlled_signup_ready: true` when OAuth is enabled and at least one
 non-reserved allowlisted identity exists.
 
-Optional harness (does not complete Google login):
+Run the harness with the expected signup mode. This example checks public signup.
 
 ```bash
-EXPECT_OAUTH_ENABLED=true bash infra/scripts/verify-production-oauth-start.sh
+EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=true \
+  bash infra/scripts/verify-production-oauth-start.sh
 ```
 
 ## Repository-managed OAuth callback E2E harness (VOC-092)
@@ -93,27 +106,25 @@ signup policy and does not touch production hosts, secrets, or databases.
 
 The live production synthetic `synthetic.production.oauth-expected-state` and
 `verify-production-oauth-start.sh` assert OAuth start, canonical callback, and
-`controlled_signup_ready: true` on `/healthz` when OAuth is expected enabled.
+the configured signup mode and matching `controlled_signup_ready` on `/healthz`.
 
 ## Prove cohort preservation across deploys
 
 After changing the secret, record two consecutive manually dispatched
 `deploy-production` successes on `main` without editing the secret again. Each
-run must pass **Validate production controlled-signup allowlist** and log
+run must pass **Validate production signup policy** and log
 `controlled signup ready: true`. That pair proves repeated deploys preserve
 the secret-backed cohort (VOC-096-AC-00 / AC-01).
 
 ## Fail-closed behavior
 
-When Google OAuth credentials are present and the allowlist secret is missing,
+In restricted mode, when Google OAuth credentials are present and the allowlist secret is missing,
 empty, multiline, or malformed, the deploy fails before writing `api.env`. This
 is intentional: OAuth-enabled production with an empty controlled cohort blocks
 every first-time Google signup.
 
-If production must intentionally have no controlled cohort, keep the current secret
-until a separately reviewed repository change has disabled the OAuth capability.
-Do not bypass the validator, delete credentials as an ad hoc switch, or edit the
-host environment manually.
+Public mode requires working Google OAuth credentials and bypasses cohort
+validation. Apply signup policy through the deployment workflow.
 
 ## Human sign-in verification (no credentials in evidence)
 
@@ -129,12 +140,12 @@ OAuth-start synthetic does not replace this audit.
 Use the checklist after the secret change has deployed (or during the quarterly
 audit):
 
-| Check                              | How to verify                                                                            | Expected result                                                                                                                             |
-| ---------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Allowlisted first-time Google user | Sign in at `https://production.vocanova.site/signin` with an identity present in the secret | Reaches production home/onboarding without HTTP 503                                                                                         |
-| Unlisted Google user               | Attempt first-time sign-in with an identity **not** in the secret                        | Google may authenticate, but the API callback returns HTTP 503 with the stable "new sign-ups are disabled" body (`auth.ErrSignupsDisabled`) |
-| Scheduled readiness                | Confirm latest `scheduled-synthetics` run                                                | Job `synthetic.production.oauth-expected-state` succeeded                                                                                   |
-| Cohort persistence                 | Two consecutive manual deploy successes after secret edit                                  | Both validate allowlist and log `controlled signup ready: true`                                                                             |
+| Check                              | How to verify                                                                               | Expected result                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Allowlisted first-time Google user | Sign in at `https://production.vocanova.site/signin` with an identity present in the secret | Reaches production home/onboarding without HTTP 503                                   |
+| Unlisted Google user               | Attempt first-time sign-in with an identity outside the cohort                              | Public mode reaches onboarding. Restricted mode returns the signup-disabled response. |
+| Scheduled readiness                | Confirm latest `scheduled-synthetics` run                                                   | Job `synthetic.production.oauth-expected-state` succeeded                             |
+| Cohort persistence                 | Two consecutive manual deploy successes after secret edit                                   | Both validate allowlist and log `controlled signup ready: true`                       |
 
 Record only pass/fail and run URLs in evidence. Never paste email addresses,
 OAuth codes, session cookies, or callback query strings.

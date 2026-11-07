@@ -2,14 +2,14 @@
 set -euo pipefail
 
 # VOC-086-T03 — scheduled production OAuth-start initiation check.
-# VOC-096-T01 — when OAuth is expected enabled, also asserts
-# /healthz.controlled_signup_ready is true (non-sensitive readiness).
+# When OAuth is expected enabled, also checks the configured signup policy
+# against the public and controlled signup flags in /healthz.
 #
 # POSTs /api/v1/auth/oauth/google/start without following Google or
 # completing OAuth. When EXPECT_OAUTH_ENABLED=true, requires HTTP 200,
 # an accounts.google.com authorization URL, redirect_uri exactly
-# matching the canonical production callback, and controlled_signup_ready
-# on /healthz. When false, requires coherent 503 disabled behavior
+# matching the canonical production callback, and the expected public or
+# controlled signup state on /healthz. When false, requires coherent 503 disabled behavior
 # (not a fake 200).
 #
 # Mirrors verify-staging-oauth-start.sh (VOC-084-T02) for production hosts.
@@ -19,14 +19,16 @@ set -euo pipefail
 #   verify-production-oauth-start.sh <api_base_url> <web_redirect_uri>
 #
 # Environment:
-#   EXPECT_OAUTH_ENABLED   (default: false)
-#   PRODUCTION_API_HOST    (default: api-production.vocanova.site)
+#   EXPECT_OAUTH_ENABLED        (default: false)
+#   EXPECT_NEW_SIGNUPS_ENABLED   (default: false)
+#   PRODUCTION_API_HOST          (default: api-production.vocanova.site)
 #
 # Requires: curl, python3
 
 API_BASE_URL="${1:-https://api-production.vocanova.site}"
 WEB_REDIRECT_URI="${2:-https://production.vocanova.site/home}"
 EXPECT_OAUTH_ENABLED="${EXPECT_OAUTH_ENABLED:-false}"
+EXPECT_NEW_SIGNUPS_ENABLED="${EXPECT_NEW_SIGNUPS_ENABLED:-false}"
 API_HOST="${PRODUCTION_API_HOST:-api-production.vocanova.site}"
 
 CANONICAL_CALLBACK="https://api-production.vocanova.site/api/v1/auth/oauth/google/callback"
@@ -43,7 +45,15 @@ record_pass() {
   echo "PASS: $*"
 }
 
-echo "VOC-086 production OAuth-start verification (EXPECT_OAUTH_ENABLED=$EXPECT_OAUTH_ENABLED)"
+case "$EXPECT_NEW_SIGNUPS_ENABLED" in
+  true|false) ;;
+  *)
+    echo "FAIL: invalid production signup policy expectation" >&2
+    exit 1
+    ;;
+esac
+
+echo "VOC-086 production OAuth-start verification (EXPECT_OAUTH_ENABLED=$EXPECT_OAUTH_ENABLED, EXPECT_NEW_SIGNUPS_ENABLED=$EXPECT_NEW_SIGNUPS_ENABLED)"
 
 response_file="$(mktemp)"
 trap 'rm -f "$response_file"' EXIT
@@ -113,7 +123,7 @@ PY
     record_fail "/healthz returned HTTP $healthz_status (expected 200 while OAuth is enabled)"
   else
     record_pass "/healthz returned HTTP 200"
-    if python3 - "$healthz_file" <<'PY'
+    if python3 - "$healthz_file" "$EXPECT_NEW_SIGNUPS_ENABLED" <<'PY'
 import json
 import re
 import sys
@@ -122,19 +132,24 @@ with open(sys.argv[1], encoding="utf-8") as fh:
     body = fh.read()
 
 payload = json.loads(body)
-ready = payload.get("controlled_signup_ready")
-if ready is not True:
-    raise SystemExit(
-        f"controlled_signup_ready is not true: {ready!r}"
-    )
+expect_public = sys.argv[2] == "true"
+kill_switches = payload.get("kill_switches")
+if not isinstance(kill_switches, dict) or kill_switches.get("new_signups_enabled") is not expect_public:
+    raise SystemExit("kill_switches.new_signups_enabled does not match the expected signup policy")
+if payload.get("controlled_signup_ready") is not (not expect_public):
+    raise SystemExit("controlled_signup_ready does not match the expected signup policy")
 
 if re.search(r'"[^"]*@[^"]+"', body):
     raise SystemExit("healthz response must not expose email-like strings")
 PY
     then
-      record_pass "controlled_signup_ready is true without exposing cohort metadata"
+      if [ "$EXPECT_NEW_SIGNUPS_ENABLED" = "true" ]; then
+        record_pass "public signup is enabled and controlled signup is inactive"
+      else
+        record_pass "controlled_signup_ready is true without exposing cohort metadata"
+      fi
     else
-      record_fail "/healthz did not report controlled_signup_ready=true without email metadata"
+      record_fail "/healthz did not report the expected signup policy without email metadata"
     fi
   fi
   rm -f "$healthz_file"
