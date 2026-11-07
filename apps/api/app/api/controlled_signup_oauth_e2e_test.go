@@ -90,7 +90,7 @@ type controlledSignupOAuthHarness struct {
 	fakeGoogle *controlledSignupFakeGoogle
 }
 
-func newControlledSignupOAuthHarness(t *testing.T, identity auth.OAuthIdentity, allowlist map[string]struct{}) *controlledSignupOAuthHarness {
+func newControlledSignupOAuthHarness(t *testing.T, identity auth.OAuthIdentity, newSignupsEnabled bool, allowlist map[string]struct{}) *controlledSignupOAuthHarness {
 	t.Helper()
 
 	fake := &controlledSignupFakeGoogle{identity: identity}
@@ -149,7 +149,7 @@ func newControlledSignupOAuthHarness(t *testing.T, identity auth.OAuthIdentity, 
 	svc.SetKillSwitches(&auth.KillSwitches{
 		MagicLinkEnabled:       true,
 		OAuthEnabled:           true,
-		NewSignupsEnabled:      false,
+		NewSignupsEnabled:      newSignupsEnabled,
 		SignupAllowlist:        allowlist,
 		ReservedSyntheticEmail: reservedSyntheticSmokeTestEmail,
 	})
@@ -277,7 +277,7 @@ func TestControlledSignupOAuth_AllowlistedCallbackSucceeds(t *testing.T) {
 		DisplayName:   "Allowlisted Callback E2E",
 		AvatarURL:     "https://test.local/avatar.png",
 	}
-	h := newControlledSignupOAuthHarness(t, identity, map[string]struct{}{
+	h := newControlledSignupOAuthHarness(t, identity, false, map[string]struct{}{
 		controlledSignupAllowlistedEmail: {},
 	})
 
@@ -321,7 +321,7 @@ func TestControlledSignupOAuth_UnlistedCallbackDenied(t *testing.T) {
 		EmailVerified: true,
 		DisplayName:   "Unlisted Callback E2E",
 	}
-	h := newControlledSignupOAuthHarness(t, identity, map[string]struct{}{
+	h := newControlledSignupOAuthHarness(t, identity, false, map[string]struct{}{
 		controlledSignupAllowlistedEmail: {},
 	})
 
@@ -344,4 +344,29 @@ func TestControlledSignupOAuth_UnlistedCallbackDenied(t *testing.T) {
 	assert.Zero(t, h.fakeGoogle.invalidCalls, "GoogleOAuthProvider must use the expected token and userinfo request shapes")
 
 	t.Log("controlled-signup OAuth unlisted callback denied with HTTP 503 and no persisted user")
+}
+
+func TestControlledSignupOAuth_PublicSignupAdmitsUnlistedCallback(t *testing.T) {
+	identity := auth.OAuthIdentity{
+		Subject:       controlledSignupE2EGoogleSubject + "-public",
+		Email:         controlledSignupUnlistedEmail,
+		EmailVerified: true,
+		DisplayName:   "Public Signup Callback E2E",
+	}
+	h := newControlledSignupOAuthHarness(t, identity, true, nil)
+	require.Zero(t, countUsersByEmail(t, h.db, identity.Email))
+
+	result := h.runOAuthFlow(t)
+	require.Equal(t, http.StatusFound, result.callbackStatus)
+	assert.Equal(t, controlledSignupE2EAppReturnURL, result.location)
+	require.NotNil(t, result.sessionCookie)
+
+	user, err := h.svc.ValidateSession(t.Context(), result.sessionCookie.Value)
+	require.NoError(t, err)
+	assert.Equal(t, identity.Email, user.Email)
+	assert.NotNil(t, user.EmailVerifiedAt)
+	assert.Equal(t, 1, countUsersByEmail(t, h.db, identity.Email))
+	assert.Equal(t, 1, countExternalIdentitiesByEmail(t, h.db, identity.Email))
+	assert.Equal(t, 1, countSessionsForEmail(t, h.db, identity.Email))
+	assert.Zero(t, h.fakeGoogle.invalidCalls)
 }

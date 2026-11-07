@@ -21,6 +21,8 @@ export const CANONICAL_CHECK_REFS = [
 // must alert when it becomes disabled; they must not redefine a missing or
 // partial credential pair as a healthy disabled state.
 export const EXPECT_OAUTH_ENABLED_TRUE = 'EXPECT_OAUTH_ENABLED: "true"';
+export const EXPECT_PRODUCTION_SIGNUP_POLICY =
+  "EXPECT_NEW_SIGNUPS_ENABLED: ${{ vars.PRODUCTION_NEW_USER_SIGNUP_ENABLED || 'false' }}";
 
 export const STAGING_CORE_JOURNEY_CHECK_REF =
   "staging-authenticated-core-journey";
@@ -342,6 +344,18 @@ export function validateScheduledSyntheticsWorkflow({
     }
   }
 
+  for (const jobId of [
+    "production-oauth-expected-state",
+    ...PRODUCTION_SMOKE_PROFILE_JOBS,
+  ]) {
+    const jobBlock = extractTopLevelJobBlock(workflowSource, jobId);
+    if (jobBlock && !jobBlock.includes(EXPECT_PRODUCTION_SIGNUP_POLICY)) {
+      errors.push(
+        `${jobId} must set EXPECT_NEW_SIGNUPS_ENABLED from PRODUCTION_NEW_USER_SIGNUP_ENABLED`,
+      );
+    }
+  }
+
   for (const jobId of PRODUCTION_SMOKE_PROFILE_JOBS) {
     const jobBlock = extractTopLevelJobBlock(workflowSource, jobId);
     if (!jobBlock) {
@@ -349,9 +363,6 @@ export function validateScheduledSyntheticsWorkflow({
     }
     if (!jobBlock.includes('EXPECT_MAGIC_LINK_ENABLED: "false"')) {
       errors.push(`${jobId} must set EXPECT_MAGIC_LINK_ENABLED: "false"`);
-    }
-    if (!jobBlock.includes('EXPECT_NEW_SIGNUPS_ENABLED: "false"')) {
-      errors.push(`${jobId} must set EXPECT_NEW_SIGNUPS_ENABLED: "false"`);
     }
     if (!jobBlock.includes('EXPECT_AI_ENABLED: "true"')) {
       errors.push(`${jobId} must set EXPECT_AI_ENABLED: "true"`);

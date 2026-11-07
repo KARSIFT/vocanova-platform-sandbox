@@ -80,7 +80,7 @@ jobs:
       - name: Run production OAuth expected-state check
         env:
           EXPECT_OAUTH_ENABLED: "true"
-          # verify-production-oauth-start.sh also asserts /healthz.controlled_signup_ready (VOC-096-T01)
+          EXPECT_NEW_SIGNUPS_ENABLED: ${{ vars.PRODUCTION_NEW_USER_SIGNUP_ENABLED || 'false' }}
         run: |
           set -euo pipefail
           chmod +x infra/scripts/run-scheduled-synthetic.sh
@@ -124,7 +124,7 @@ jobs:
         env:
           EXPECT_MAGIC_LINK_ENABLED: "false"
           EXPECT_OAUTH_ENABLED: "true"
-          EXPECT_NEW_SIGNUPS_ENABLED: "false"
+          EXPECT_NEW_SIGNUPS_ENABLED: ${{ vars.PRODUCTION_NEW_USER_SIGNUP_ENABLED || 'false' }}
           EXPECT_AI_ENABLED: "true"
           SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie_header }}
         run: |
@@ -271,7 +271,7 @@ jobs:
         env:
           EXPECT_MAGIC_LINK_ENABLED: "false"
           EXPECT_OAUTH_ENABLED: "true"
-          EXPECT_NEW_SIGNUPS_ENABLED: "false"
+          EXPECT_NEW_SIGNUPS_ENABLED: ${{ vars.PRODUCTION_NEW_USER_SIGNUP_ENABLED || 'false' }}
           EXPECT_AI_ENABLED: "true"
           SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie_header }}
         run: |

@@ -12,6 +12,7 @@ import { redactSecrets } from "../../infra/monitoring/kuma-sync/redact.mjs";
 import {
   CANONICAL_CHECK_REFS,
   EXPECT_OAUTH_ENABLED_TRUE,
+  EXPECT_PRODUCTION_SIGNUP_POLICY,
   SCHEDULED_SYNTHETICS_WORKFLOW,
   extractTopLevelJobBlock,
   loadSyntheticsRegistry,
@@ -131,12 +132,24 @@ test("VOC-086-TEST-12: synthetic checks reuse mint secrets and mask sessions", (
   }
 
   for (const jobId of [
+    "production-oauth-expected-state",
+    "production-journey-content",
+    "production-authenticated-route-content-sweep",
+  ]) {
+    assert.ok(
+      extractTopLevelJobBlock(workflowSource, jobId).includes(
+        EXPECT_PRODUCTION_SIGNUP_POLICY,
+      ),
+      jobId + " must monitor the production signup policy",
+    );
+  }
+
+  for (const jobId of [
     "production-journey-content",
     "production-authenticated-route-content-sweep",
   ]) {
     const jobBlock = extractTopLevelJobBlock(workflowSource, jobId);
     assert.match(jobBlock, /EXPECT_MAGIC_LINK_ENABLED: "false"/);
-    assert.match(jobBlock, /EXPECT_NEW_SIGNUPS_ENABLED: "false"/);
     assert.match(jobBlock, /EXPECT_AI_ENABLED: "true"/);
     assert.match(jobBlock, /SYNTHETIC_COOKIE_ENVIRONMENT: production/);
     assert.match(

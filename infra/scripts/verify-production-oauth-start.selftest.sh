@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # VOC-086-T03 — disposable harness for verify-production-oauth-start.sh.
-# VOC-096-T01 — covers controlled_signup_ready pass/fail paths.
+# Covers both public and controlled production signup policies.
 #
 # Runs the checker against a local fake API on 127.0.0.1. No access to the
 # real production host is required.
@@ -26,6 +26,7 @@ from urllib.parse import quote
 
 scenario = os.environ.get("FAKE_SCENARIO", "disabled")
 healthz_ready = os.environ.get("FAKE_HEALTHZ_READY", "")
+public_signup = json.loads(os.environ.get("FAKE_PUBLIC_SIGNUP", "false"))
 canonical = "${canonical_callback}"
 web_redirect = "${web_redirect}"
 
@@ -53,7 +54,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "controlled_signup_ready": healthz_controlled_signup_ready(),
                 "kill_switches": {
                     "oauth_enabled": scenario == "enabled",
-                    "new_signups_enabled": False,
+                    "new_signups_enabled": public_signup,
                 },
             }
         ).encode()
@@ -120,7 +121,7 @@ http.server.HTTPServer(("127.0.0.1", int(sys.argv[1])), Handler).serve_forever()
 PYEOF
 
 start_server() {
-  FAKE_SCENARIO="$1" FAKE_HEALTHZ_READY="${2:-}" python3 "$fake_server" "$port" &
+  FAKE_SCENARIO="$1" FAKE_HEALTHZ_READY="${2:-}" FAKE_PUBLIC_SIGNUP="${3:-false}" python3 "$fake_server" "$port" &
   server_pid=$!
   for _ in $(seq 1 50); do
     status="$(curl -sS --max-time 1 -o /dev/null -w "%{http_code}" \
@@ -170,49 +171,91 @@ check() {
 echo "== case 1: disabled OAuth returns 503 =="
 start_server disabled
 check "disabled OAuth start is refused with 503" pass \
-  env EXPECT_OAUTH_ENABLED=false PRODUCTION_API_HOST=127.0.0.1 \
+  env EXPECT_OAUTH_ENABLED=false EXPECT_NEW_SIGNUPS_ENABLED=false PRODUCTION_API_HOST=127.0.0.1 \
   bash "$verify_script" "$api_base" "$web_redirect"
 stop_server
 
 echo "== case 2: enabled OAuth returns Google URL with canonical callback =="
 start_server enabled
 check "enabled OAuth start validates accounts.google.com and redirect_uri" pass \
-  env EXPECT_OAUTH_ENABLED=true PRODUCTION_API_HOST=127.0.0.1 \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=false PRODUCTION_API_HOST=127.0.0.1 \
   bash "$verify_script" "$api_base" "$web_redirect"
 stop_server
 
 echo "== case 3: wrong callback must fail when enabled =="
 start_server wrong_callback
 check "wrong redirect_uri fails the enabled check" fail \
-  env EXPECT_OAUTH_ENABLED=true PRODUCTION_API_HOST=127.0.0.1 \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=false PRODUCTION_API_HOST=127.0.0.1 \
   bash "$verify_script" "$api_base" "$web_redirect"
 stop_server
 
 echo "== case 4: fake 200 while disabled must fail =="
 start_server enabled
 check "enabled expectation against disabled server fails" fail \
-  env EXPECT_OAUTH_ENABLED=false PRODUCTION_API_HOST=127.0.0.1 \
+  env EXPECT_OAUTH_ENABLED=false EXPECT_NEW_SIGNUPS_ENABLED=false PRODUCTION_API_HOST=127.0.0.1 \
   bash "$verify_script" "$api_base" "$web_redirect"
 stop_server
 
 echo "== case 5: lookalike Google hostname must fail =="
 start_server lookalike_host
 check "Google lookalike hostname fails the enabled check" fail \
-  env EXPECT_OAUTH_ENABLED=true PRODUCTION_API_HOST=127.0.0.1 \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=false PRODUCTION_API_HOST=127.0.0.1 \
   bash "$verify_script" "$api_base" "$web_redirect"
 stop_server
 
 echo "== case 6: enabled OAuth with controlled_signup_ready=false must fail =="
 start_server enabled false
 check "controlled_signup_ready=false fails the enabled readiness check" fail \
-  env EXPECT_OAUTH_ENABLED=true PRODUCTION_API_HOST=127.0.0.1 \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=false PRODUCTION_API_HOST=127.0.0.1 \
   bash "$verify_script" "$api_base" "$web_redirect"
 stop_server
 
 echo "== case 7: enabled OAuth with controlled_signup_ready=true must pass =="
 start_server enabled true
 check "controlled_signup_ready=true passes the enabled readiness check" pass \
-  env EXPECT_OAUTH_ENABLED=true PRODUCTION_API_HOST=127.0.0.1 \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=false PRODUCTION_API_HOST=127.0.0.1 \
+  bash "$verify_script" "$api_base" "$web_redirect"
+stop_server
+
+echo "== case 8: public signup must pass when expected =="
+start_server enabled false true
+check "public signup passes with controlled signup inactive" pass \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=true PRODUCTION_API_HOST=127.0.0.1 \
+  bash "$verify_script" "$api_base" "$web_redirect"
+stop_server
+
+echo "== case 9: controlled signup must fail when public signup is expected =="
+start_server enabled true false
+check "controlled signup fails the public expectation" fail \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=true PRODUCTION_API_HOST=127.0.0.1 \
+  bash "$verify_script" "$api_base" "$web_redirect"
+stop_server
+
+echo "== case 10: public signup must fail when controlled signup is expected =="
+start_server enabled false true
+check "public signup fails the controlled expectation" fail \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=false PRODUCTION_API_HOST=127.0.0.1 \
+  bash "$verify_script" "$api_base" "$web_redirect"
+stop_server
+
+echo "== case 11: contradictory public readiness must fail =="
+start_server enabled true true
+check "public signup rejects active controlled readiness" fail \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=true PRODUCTION_API_HOST=127.0.0.1 \
+  bash "$verify_script" "$api_base" "$web_redirect"
+stop_server
+
+echo "== case 12: health signup state must be a JSON boolean =="
+start_server enabled false '"true"'
+check "public signup rejects a string health flag" fail \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=true PRODUCTION_API_HOST=127.0.0.1 \
+  bash "$verify_script" "$api_base" "$web_redirect"
+stop_server
+
+echo "== case 13: invalid policy expectations must fail =="
+start_server enabled true false
+check "invalid signup policy expectation fails" fail \
+  env EXPECT_OAUTH_ENABLED=true EXPECT_NEW_SIGNUPS_ENABLED=typo PRODUCTION_API_HOST=127.0.0.1 \
   bash "$verify_script" "$api_base" "$web_redirect"
 stop_server
 
