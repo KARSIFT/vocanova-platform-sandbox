@@ -5,13 +5,35 @@
 The owner's annotated production review identified decorative word progress,
 indirect range navigation, missing Previous word, misaligned start/sound controls,
 a malformed settings cog, repeated source/help text and unreliable pronunciation.
-The follow-up is integrated on one delivery branch. Discovery now provides word/range
+The follow-up is deployed in production **0.4.24 / `82d15e24`**. Discovery now provides word/range
 pickers and Previous, direct atlas entry, aligned controls and lazy teaching
 details. Choices continue after the selected word before wrapping earlier gaps
 in its range. Home, Practice, Progress and Settings have simpler presentation, and the
 shared Settings icon is balanced. Its acceptance plan is
 [discovery usability](../superpowers/plans/2026-11-07-discovery-usability.md).
-No follow-up deployment or complete catalog-audio coverage is established yet.
+Production workflow `42351140131` verified the exact web/API release, public and
+authenticated smoke checks, OAuth initiation and service/database health. Strict
+staging `42350663772` passed the core and maturity journeys plus fresh AI feedback,
+the exact exported submission and CDN delivery, with no skips. Hosted browser
+acceptance passed **6,357 cases with 105 scoped skips**, zero failures or flaky
+retries, across three engines and three widths.
+
+Real production navigation checks entered the selected atlas range directly,
+used Previous across a range boundary, and opened a picked word with its picture
+and definition without recording learning choices. The catalog contains **10,051
+active English meanings with nonempty definitions and current approved images**;
+all 10,051 image objects passed the recorded HEAD availability scan. The final
+operator report records **10,051 current word clips ready, zero missing, pending
+or failed**. A fresh production audit after the final repairs decoded and
+signal-validated all 10,051, with zero invalid. HEAD availability does not
+establish every image's visual quality, and audio decoding alone does not
+establish pronunciation quality.
+
+Optional word details stalled for more than 30 seconds during a production
+browser check. The cause remains unestablished. A follow-up bounds the optional
+read at eight seconds and exposes the existing Retry; local checks reproduced
+stalled headers and response bodies and verified retry across three browser
+engines. Its deployment and final live retest are separate from 0.4.24.
 
 ## Manual production audit — 7 November 2026 (released)
 

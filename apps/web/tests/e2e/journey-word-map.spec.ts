@@ -48,6 +48,11 @@ test("range paging stays on Journey while map links open discovery", async ({
     const choice = page.getByRole("combobox", { name: "Go to a range" });
     await expect(choice.locator("option")).toHaveCount(100);
     await expect(choice).toHaveValue("2");
+    const form = choice.locator("xpath=ancestor::form");
+    await expect(
+      form.locator("xpath=following-sibling::div[@aria-hidden='true']"),
+    ).toHaveCount(1);
+    await expect(choice.locator("option:checked")).toHaveText("101–200");
   } else {
     await expect(ranges.getByRole("link")).toHaveCount(100);
     for (const link of await ranges.getByRole("link").all())
@@ -150,7 +155,7 @@ test("the range chooser opens a range on a phone", async ({ page }, testInfo) =>
   await page.goto("/discover?band=2");
   await page
     .getByRole("combobox", { name: "Go to a range" })
-    .selectOption({ label: "Words 2,201–2,300: 0 known, 0 learning" });
+    .selectOption({ label: "2,201–2,300" });
   await page.getByRole("button", { name: "Show", exact: true }).click();
   await expect(page).toHaveURL(/\/discovery\?band=23&word=2201&active=1$/);
   await expect(

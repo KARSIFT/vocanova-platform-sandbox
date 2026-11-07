@@ -8,12 +8,27 @@ recognizable settings, on-demand teaching details, and less copy on adjacent
 screens. The implementation and verification plan is
 [discovery usability](../superpowers/plans/2026-11-07-discovery-usability.md).
 
-A read-only production catalog audit found 10,051 active English meanings with
+Production **0.4.24 / `82d15e24c7e860a2b3305c5192ce4ab8d26f0b03`** was
+deployed by workflow `42351140131`. Exact web/API identity, public/authenticated
+smoke checks, OAuth initiation and tier/container/database health passed. Strict
+staging `42350663772` passed core 1/1, maturity 1/1 and fresh AI verdict/exact
+export/CDN 2/2, with zero skips. The final hosted browser run passed **6,357 cases
+with 105 scoped skips**, zero failures, flaky cases or retries across
+Chromium/Firefox/WebKit at 360px, 430px and desktop. All 84 Lighthouse reports
+scored performance/accessibility 100 with TBT zero and CLS at most 0.00551;
+these are controlled fixture measurements. Applicable pinned-toolchain CI,
+review and normal merge-queue checks passed before deployment.
+
+The initial read-only production catalog audit found 10,051 active English meanings with
 nonempty definitions and current approved images. Only 14 matched the current
-word-pronunciation cache identity; 10,037 required audio generation. This is
-metadata/cache evidence, not a listening assessment or a full CDN-object scan.
-The follow-up includes a controlled resumable catalog-audio operator; no complete
-backfill or follow-up production deployment is established at this checkpoint.
+word-pronunciation cache identity; 10,037 required audio generation at that time.
+The controlled resumable operator has since populated the catalog. Its final
+stored report records **10,051 total and ready, zero missing, pending or failed**.
+All seven historical failed attempts have successful linked recoveries and remain
+in the operator receipts. After final writes, a fresh read-only production audit
+on 0.4.24 checked and signal-validated **all 10,051 stored clips**, with zero
+invalid and no generation. Signal validity does not establish spoken word or
+stress accuracy for every clip.
 
 Local acceptance on the cursor-corrected frontend bundle passed **445 cases, five
 layout-specific skips, zero failures/retries** across 360px, 430px and desktop.
@@ -42,10 +57,10 @@ Web build, lint, web/E2E typechecks, **271 helper/middleware tests** and **61
 API-client tests** passed. Local foundation passed **324/335** with 11 failures
 matching the documented macOS harness baseline. Nine new inventory failures were
 fixed by registering the exact operator migration/two tables; the focused
-inventory suite passed 13/13. Fresh Linux foundation acceptance remains required.
+inventory suite passed 13/13. Subsequent hosted Linux foundation acceptance passed.
 The affected API/operator race suite against migrated, seeded PostgreSQL passed
-**535 tests/subtests, zero failures/skips** on installed Go 1.27.3. Hosted pinned
-tools are still required. Independent operator review is clean after fixes for
+**535 tests/subtests, zero failures/skips** on installed Go 1.27.3. Subsequent
+hosted pinned-toolchain checks also passed. Independent operator review is clean after fixes for
 kill-switch parsing, stored job identity and canonical publication locking.
 
 A 20-iteration warm local comparison over 10,051 meanings and no cached clips
@@ -55,10 +70,11 @@ catalog rows **20,102→10,051** and cumulative allocated bytes
 This excludes decoding and is not production latency or peak-memory evidence.
 
 The streamed read-only audio audit distinguishes ready metadata from decoded,
-signal-valid clips. All 16 existing production clips passed that gate; correct
-words/stress require separate listening assessment. No operator generation or
-bulk backfill has occurred at this checkpoint. Ordinary browser playback may
-populate individual cache entries.
+signal-valid clips. The final production audit supersedes the initial
+16-clip check. Conservative quality reviews confirmed 579 artifact replacements
+by exact readback and retained existing valid clips where the replacement
+evidence was uncertain. Correct words and stress still require separate
+listening assessment.
 
 Manual ChatGPT-browser local checks operated picking, Previous, range jumps,
 Back/reload, compact mobile Home links, keyboard focus, Settings reading order,
@@ -73,8 +89,20 @@ headers, not every object's pixel content. Python urllib returned 403 for sample
 URLs while ordinary curl/browser requests succeeded; the client-path difference
 has no established cause.
 
-Hosted browser/performance/API gates, release verification, a bounded live audio
-pilot/backfill and final production retests remain outstanding at this checkpoint.
+Real browser checks on 0.4.24 opened the 1,101–1,200 atlas range directly at
+fantastic, used Previous to reach planning at 1,100, and picked speed at 1,050
+with its picture and definition. No learning mutations were used. Settings
+displayed the exact 0.4.24 release and a 44×44 settings control. These are
+specific successful checks, not exhaustive manual acceptance.
+
+Optional details stalled for more than 30 seconds before its existing failure
+Retry appeared, and a second attempt also stalled. Independent origin inspection
+did not establish a canonical-word timeout or a browser/CDN cause. The follow-up
+bounds the optional read at eight seconds; local checks verified recovery from
+stalled headers and partial response bodies across Chromium, Firefox and WebKit.
+Its deployment and final production UI/playback retests remain separate from
+the accepted 0.4.24 release. Interrupted in-app navigations are not counted as
+passes.
 
 ## Manual production audit — 7 November 2026 (released)
 
