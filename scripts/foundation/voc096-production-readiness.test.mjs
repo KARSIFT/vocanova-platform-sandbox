@@ -8,7 +8,11 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { loadSyntheticsRegistry } from "../../infra/monitoring/scheduled-synthetics.mjs";
+import {
+  EXPECT_PRODUCTION_SIGNUP_POLICY,
+  extractTopLevelJobBlock,
+  loadSyntheticsRegistry,
+} from "../../infra/monitoring/scheduled-synthetics.mjs";
 
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -34,11 +38,18 @@ const scheduledWorkflowPath = path.join(
 
 const EMAIL_LIKE_PATTERN = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
 
-test("VOC-096-TEST-06/09: production OAuth harness asserts controlled_signup_ready and canonical OAuth start", () => {
+test("VOC-096-TEST-06/09: production OAuth harness asserts signup policy and canonical OAuth start", () => {
   const verifyScript = readFileSync(verifyScriptPath, "utf8");
   const scheduledWorkflow = readFileSync(scheduledWorkflowPath, "utf8");
 
-  assert.match(verifyScript, /controlled_signup_ready is not true/);
+  assert.match(
+    verifyScript,
+    /controlled_signup_ready does not match the expected signup policy/,
+  );
+  assert.match(
+    verifyScript,
+    /kill_switches\.new_signups_enabled does not match the expected signup policy/,
+  );
   assert.match(
     verifyScript,
     /healthz response must not expose email-like strings/,
@@ -49,9 +60,11 @@ test("VOC-096-TEST-06/09: production OAuth harness asserts controlled_signup_rea
     /https:\/\/api-production\.vocanova\.site\/api\/v1\/auth\/oauth\/google\/callback/,
   );
   assert.match(verifyScript, /OAuth start returned HTTP 200/);
-  assert.match(
-    scheduledWorkflow,
-    /verify-production-oauth-start\.sh also asserts \/healthz\.controlled_signup_ready \(VOC-096-T01\)/,
+  assert.ok(
+    extractTopLevelJobBlock(
+      scheduledWorkflow,
+      "production-oauth-expected-state",
+    ).includes(EXPECT_PRODUCTION_SIGNUP_POLICY),
   );
 });
 
@@ -73,6 +86,12 @@ test("VOC-096-TEST-07: synthetic inventory declares production controlled-signup
   assert.ok(
     entry.coverage.includes("feature:production-google-oauth"),
     "registry must retain production Google OAuth feature coverage",
+  );
+  assert.ok(
+    entry.coverage.includes(
+      "api:GET /healthz kill_switches.new_signups_enabled",
+    ),
+    "registry must document public signup flag coverage",
   );
   assert.equal(
     entry.harness_script,
@@ -125,6 +144,18 @@ test("VOC-096-TEST-06/09: disposable harness covers readiness pass and fail path
     result.stdout,
     /controlled_signup_ready=true passes the enabled readiness check/,
   );
+  assert.match(
+    result.stdout,
+    /public signup passes with controlled signup inactive/,
+  );
+  assert.match(result.stdout, /controlled signup fails the public expectation/);
+  assert.match(result.stdout, /public signup fails the controlled expectation/);
+  assert.match(
+    result.stdout,
+    /public signup rejects active controlled readiness/,
+  );
+  assert.match(result.stdout, /public signup rejects a string health flag/);
+  assert.match(result.stdout, /invalid signup policy expectation fails/);
   assert.doesNotMatch(
     result.stdout,
     EMAIL_LIKE_PATTERN,

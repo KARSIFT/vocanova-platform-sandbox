@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# VOC-096-T00 — validate the secret-backed production controlled-signup cohort.
+# VOC-096-T00 — validate production signup policy and the restricted cohort.
 #
 # The allowlist is personal data. This script deliberately reports only the
 # ready/not-ready fact and fixed diagnostics; it must never print the value or
@@ -8,12 +8,29 @@
 set -euo pipefail
 
 oauth_enabled="${PRODUCTION_GOOGLE_OAUTH_ENABLED:-false}"
+public_signup="${PRODUCTION_NEW_USER_SIGNUP_ENABLED-false}"
 allowlist="${PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST:-}"
 
 if [[ "$oauth_enabled" != "true" && "$oauth_enabled" != "false" ]]; then
   echo "invalid production OAuth readiness flag" >&2
   exit 1
 fi
+
+case "$public_signup" in
+  true)
+    if [[ "$oauth_enabled" != "true" ]]; then
+      echo "public production signup requires Google OAuth" >&2
+      exit 1
+    fi
+    echo "public signup enabled: true"
+    exit 0
+    ;;
+  false) ;;
+  *)
+    echo "invalid production public signup flag" >&2
+    exit 1
+    ;;
+esac
 
 if [[ "$oauth_enabled" == "false" ]]; then
   echo "controlled signup ready: false"

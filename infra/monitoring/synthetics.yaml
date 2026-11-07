@@ -41,8 +41,10 @@ synthetics:
     coverage:
       - "api:POST /api/v1/auth/oauth/google/start"
       - "api:GET /healthz controlled_signup_ready"
+      - "api:GET /healthz kill_switches.new_signups_enabled"
       - "feature:production-google-oauth"
       - "feature:production-controlled-signup-readiness"
+      - "feature:production-public-signup-policy"
 
   - id: synthetic.production.journey-content
     name: Production journey content and real details

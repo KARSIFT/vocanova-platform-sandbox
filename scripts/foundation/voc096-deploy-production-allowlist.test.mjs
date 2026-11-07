@@ -25,13 +25,14 @@ const validatorPath = path.join(
   "infra/scripts/validate-production-signup-allowlist.sh",
 );
 
-function validate({ oauthEnabled, allowlist }) {
+function validate({ oauthEnabled, allowlist, publicSignup = "false" }) {
   return spawnSync("bash", [validatorPath], {
     cwd: repositoryRoot,
     encoding: "utf8",
     env: {
       PATH: process.env.PATH,
       PRODUCTION_GOOGLE_OAUTH_ENABLED: oauthEnabled,
+      PRODUCTION_NEW_USER_SIGNUP_ENABLED: publicSignup,
       PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: allowlist,
     },
   });
@@ -42,13 +43,13 @@ test("VOC-096-TEST-00/01: every deploy uses the persistent production secret", (
 
   assert.match(
     workflow,
-    /PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: \$\{\{ secrets\.PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST \}\}/,
+    /PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: \$\{\{ env\.PRODUCTION_NEW_USER_SIGNUP_ENABLED != 'true' && secrets\.PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST \|\| '' \}\}/,
   );
   assert.match(
     workflow,
     /echo "NEW_USER_SIGNUP_ALLOWLIST=\$\{PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST\}"/,
   );
-  assert.match(workflow, /Validate production controlled-signup allowlist/);
+  assert.match(workflow, /Validate production signup policy/);
   assert.match(
     workflow,
     /bash infra\/scripts\/validate-production-signup-allowlist\.sh/,
@@ -140,5 +141,47 @@ test("VOC-096-TEST-00: SSH config write refuses empty cohort when OAuth enabled"
     /controlled signup cohort is empty; refusing production configuration with OAuth enabled/,
   );
   assert.match(workflow, /controlled signup ready: true/);
+  assert.ok(
+    workflow.includes(
+      "PRODUCTION_NEW_USER_SIGNUP_ENABLED: ${{ vars.PRODUCTION_NEW_USER_SIGNUP_ENABLED || 'false' }}",
+    ),
+  );
+  assert.ok(
+    workflow.includes(
+      'echo "NEW_USER_SIGNUP_ENABLED=${PRODUCTION_NEW_USER_SIGNUP_ENABLED}"',
+    ),
+  );
+  assert.ok(
+    workflow.includes(
+      "EXPECT_NEW_SIGNUPS_ENABLED: ${{ env.PRODUCTION_NEW_USER_SIGNUP_ENABLED }}",
+    ),
+  );
   assert.match(workflow, /controlled signup ready: false/);
+});
+
+test("public production signup works without a cohort when Google OAuth is enabled", () => {
+  const result = validate({
+    oauthEnabled: "true",
+    allowlist: "",
+    publicSignup: "true",
+  });
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout.trim(), "public signup enabled: true");
+});
+
+test("public production signup fails closed with no Google OAuth or an invalid flag", () => {
+  const unavailable = validate({
+    oauthEnabled: "false",
+    allowlist: "",
+    publicSignup: "true",
+  });
+  assert.notEqual(unavailable.status, 0);
+  assert.match(unavailable.stderr, /requires Google OAuth/);
+  const invalid = validate({
+    oauthEnabled: "true",
+    allowlist: "",
+    publicSignup: "yes",
+  });
+  assert.notEqual(invalid.status, 0);
+  assert.match(invalid.stderr, /invalid production public signup flag/);
 });

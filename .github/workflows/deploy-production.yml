@@ -14,19 +14,8 @@ name: deploy-production
 # monitoring Compose convergence is staging-owned — production reloads shared
 # edge only after its own 10-/20- conf writes.
 #
-# Auto-deploys on every push to main (2026-08-08, founder's explicit, twice-
-# confirmed request - see AGENTS.md's "Release and deployment authority"
-# section): release.yml's own auto_release_enabled path is what actually
-# produces that push (a checked, merged promotion PR), so by the time this
-# fires the code has already passed CI + independent review on every task
-# PR that went into it. workflow_dispatch stays available as a manual
-# override/retry path with the same input defaults a push run resolves to
-# automatically (see each `inputs.X || 'default'` below) - nothing about
-# manual dispatch changed. VOC-096-T00: the production controlled-signup
-# cohort is sourced only from the repository secret
-# PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST on every deploy (push and dispatch);
-# the former workflow_dispatch allowlist input is removed so automatic
-# push deploys cannot silently erase the cohort.
+# Production signup policy comes from the repository Actions variable.
+# The repository secret supplies the cohort when registration is restricted.
 
 on:
   # Production deploys are manual-dispatch only, deliberately decoupled from
@@ -99,6 +88,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
+    env:
+      PRODUCTION_NEW_USER_SIGNUP_ENABLED: ${{ vars.PRODUCTION_NEW_USER_SIGNUP_ENABLED || 'false' }}
     steps:
       - name: Check out reviewed revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -419,12 +410,10 @@ jobs:
             } >> /opt/vocanova/production/secrets/api.env
             chmod 600 /opt/vocanova/production/secrets/api.env
 
-      # VOC-096-T00: validate the persistent controlled-signup secret on the
-      # runner before any configuration write. The validator emits only a
-      # readiness boolean and never the cohort size or email values.
-      - name: Validate production controlled-signup allowlist
+      # Validate the policy and, when signup is restricted, the cohort.
+      - name: Validate production signup policy
         env:
-          PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: ${{ secrets.PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST }}
+          PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: ${{ env.PRODUCTION_NEW_USER_SIGNUP_ENABLED != 'true' && secrets.PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST || '' }}
           PRODUCTION_GOOGLE_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
         run: bash infra/scripts/validate-production-signup-allowlist.sh
 
@@ -433,9 +422,8 @@ jobs:
       # production_web_host/production_api_host inputs - so they're
       # written here from workflow inputs rather than requiring a
       # separate founder pre-population step the way DATABASE_URL and
-      # provider API keys do. Email magic-link and signups stay OFF
-      # (VOC-032-DEP-07's production-tier equivalent) until real
-      # credentials for those exist too; GOOGLE_OAUTH_ENABLED instead
+      # provider API keys do. Email magic-link stays disabled.
+      # GOOGLE_OAUTH_ENABLED
       # tracks whether the Google OAuth sync step above actually found
       # a client ID/secret pair, so OAuth turns on automatically once
       # VOC-038-T03's credentials are adopted, with no separate flag
@@ -449,21 +437,25 @@ jobs:
           PRODUCTION_WEB_HOST: ${{ inputs.production_web_host || 'production.vocanova.site' }}
           PRODUCTION_API_HOST: ${{ inputs.production_api_host || 'api-production.vocanova.site' }}
           PRODUCTION_SENTRY_RELEASE: sha-${{ steps.sha.outputs.short_sha }}
-          PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: ${{ secrets.PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST }}
+          PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: ${{ env.PRODUCTION_NEW_USER_SIGNUP_ENABLED != 'true' && secrets.PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST || '' }}
           PRODUCTION_GOOGLE_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
         with:
           host: ${{ secrets.PRODUCTION_SSH_HOST }}
           username: ${{ secrets.PRODUCTION_SSH_USER }}
           key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
           command_timeout: 2m
-          envs: PRODUCTION_WEB_HOST,PRODUCTION_API_HOST,PRODUCTION_SENTRY_RELEASE,PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST,PRODUCTION_GOOGLE_OAUTH_ENABLED
+          envs: PRODUCTION_WEB_HOST,PRODUCTION_API_HOST,PRODUCTION_SENTRY_RELEASE,PRODUCTION_NEW_USER_SIGNUP_ENABLED,PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST,PRODUCTION_GOOGLE_OAUTH_ENABLED
           script: |
             set -euo pipefail
-            if [ "${PRODUCTION_GOOGLE_OAUTH_ENABLED}" = "true" ] && [ -z "${PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST:-}" ]; then
+            if [ "${PRODUCTION_NEW_USER_SIGNUP_ENABLED}" = "false" ] &&
+              [ "${PRODUCTION_GOOGLE_OAUTH_ENABLED}" = "true" ] &&
+              [ -z "${PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST:-}" ]; then
               echo "controlled signup cohort is empty; refusing production configuration with OAuth enabled" >&2
               exit 1
             fi
-            if [ "${PRODUCTION_GOOGLE_OAUTH_ENABLED}" = "true" ]; then
+            if [ "${PRODUCTION_NEW_USER_SIGNUP_ENABLED}" = "true" ]; then
+              echo "public signup enabled: true"
+            elif [ "${PRODUCTION_GOOGLE_OAUTH_ENABLED}" = "true" ]; then
               echo "controlled signup ready: true"
             else
               echo "controlled signup ready: false"
@@ -509,8 +501,10 @@ jobs:
               echo "SENTRY_RELEASE=${PRODUCTION_SENTRY_RELEASE}"
               echo "EMAIL_MAGIC_LINK_ENABLED=false"
               echo "GOOGLE_OAUTH_ENABLED=${PRODUCTION_GOOGLE_OAUTH_ENABLED}"
-              echo "NEW_USER_SIGNUP_ENABLED=false"
-              echo "NEW_USER_SIGNUP_ALLOWLIST=${PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST}"
+              echo "NEW_USER_SIGNUP_ENABLED=${PRODUCTION_NEW_USER_SIGNUP_ENABLED}"
+              if [ "${PRODUCTION_NEW_USER_SIGNUP_ENABLED}" = "false" ]; then
+                echo "NEW_USER_SIGNUP_ALLOWLIST=${PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST}"
+              fi
             } >> /opt/vocanova/production/secrets/api.env
             chmod 600 /opt/vocanova/production/secrets/api.env
 
@@ -785,7 +779,7 @@ jobs:
       # VOC-038-T02: replaces the manual curl/SSH checks used ad hoc
       # during R2 with a scripted, repeatable suite. Expected
       # kill-switch state mirrors the "Write production application
-      # configuration" step above (email/signups off, AI on).
+      # configuration" step above (email off, AI on, signup policy from env).
       # EXPECT_OAUTH_ENABLED mirrors the same secrets-present condition
       # as GOOGLE_OAUTH_ENABLED there, instead of a hardcoded "false" -
       # found live on VOC-038-T03's first real dispatch after adopting
@@ -802,7 +796,7 @@ jobs:
         env:
           EXPECT_MAGIC_LINK_ENABLED: "false"
           EXPECT_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
-          EXPECT_NEW_SIGNUPS_ENABLED: "false"
+          EXPECT_NEW_SIGNUPS_ENABLED: ${{ env.PRODUCTION_NEW_USER_SIGNUP_ENABLED }}
           EXPECT_AI_ENABLED: "true"
           SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie_header }}
         run: |
