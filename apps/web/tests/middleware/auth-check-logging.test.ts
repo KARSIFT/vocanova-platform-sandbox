@@ -211,6 +211,16 @@ describe("middleware auth-check failure logging", () => {
     assert.deepEqual(loggedLines, []);
   });
 
+  it("retries sign-in itself after an outage even for a public continuation", async () => {
+    stubFetch(() => Promise.resolve(new Response(null, { status: 503 })));
+    const response = await middleware(new NextRequest(
+      "http://localhost:3000/signin?returnTo=%2Fhelp",
+      { headers: { cookie: SESSION_COOKIE_HEADER } },
+    ));
+    assert.equal(response.status, 503);
+    assert.ok((await response.text()).includes('href="/signin?returnTo=%2Fhelp"'));
+  });
+
   it("keeps the sign-in page available to a visitor with a rejected session", async () => {
     stubFetch(() => Promise.resolve(new Response(null, { status: 401 })));
     const response = await middleware(new NextRequest("http://localhost:3000/login", {

@@ -31,9 +31,15 @@ function escapeAttribute(value: string): string {
 export function connectionErrorDocument(
   returnTo: string,
   theme?: string,
+  retrySignIn?: "/login" | "/signin",
 ): string {
   const preference = isThemePreference(theme) ? theme : "system";
-  const destination = escapeAttribute(connectionRetryDestination(returnTo));
+  const continuation = connectionRetryDestination(returnTo);
+  const destination = escapeAttribute(
+    retrySignIn
+      ? `${retrySignIn}?${new URLSearchParams({ returnTo: continuation })}`
+      : continuation,
+  );
   const dark = `color-scheme:dark;--background:${neutral["900"]};--surface:${neutral["800"]};--text:${neutral["50"]};--muted:${neutral["300"]};--border:${neutral["700"]};--link:${brand.primary!["300"]}`;
   return `<!doctype html>
 <html lang="en" data-theme-preference="${preference}">

@@ -84,9 +84,11 @@ function connectionErrorResponse(
   request: NextRequest,
   destination: string,
 ): NextResponse {
+  const { pathname } = request.nextUrl;
   const html = connectionErrorDocument(
     destination,
     request.cookies.get(THEME_COOKIE_NAME)?.value,
+    pathname === "/login" || pathname === "/signin" ? pathname : undefined,
   );
   return new NextResponse(html, {
     status: 503,

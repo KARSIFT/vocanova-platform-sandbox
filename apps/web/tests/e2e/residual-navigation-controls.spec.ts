@@ -40,7 +40,8 @@ for (const theme of ["light", "dark"] as const) {
       await page.addInitScript(value => localStorage.setItem("vocanova:theme-preference", value), theme);
     });
 
-    test("magic-link incomplete and rejected results preserve sign-in returnTo and offer home", async ({ page }) => {
+    test("magic-link incomplete and rejected results preserve sign-in returnTo and offer home", async ({ page, context }) => {
+      await context.clearCookies({ name: "vocanova_session" });
       // The shared mock's consume endpoint always succeeds. Intercept only this
       // frontend failure branch; no real token or email is used or sent.
       await page.route("**/api/v1/auth/magic-links/consume", route => route.fulfill({

@@ -39,7 +39,9 @@ for (const theme of ["light", "dark"] as const) {
   for (const { path: route, heading } of routes) {
     test(`${route} entry reflows with enlarged text and reduced motion (${theme})`, async ({ page, context, baseURL }, testInfo) => {
       await context.addCookies([
-        { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+        ...(route === "/signin"
+          ? []
+          : [{ name: "vocanova_session", value: randomUUID(), url: baseURL! }]),
         { name: "vocanova_csrf", value: randomUUID(), url: baseURL! },
       ]);
       await page.addInitScript((value) => localStorage.setItem("vocanova:theme-preference", value), theme);

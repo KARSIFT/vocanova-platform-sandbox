@@ -105,7 +105,8 @@ for (const theme of ["light", "dark"] as const) {
       await activate(page, page.getByRole("link", { name: "Go to your learning plan", exact: true }), "/plan", "Your learning plan");
     });
 
-    test("password sign-in opens recovery and signup with its intended return", async ({ page }) => {
+    test("password sign-in opens recovery and signup with its intended return", async ({ page, context }) => {
+      await context.clearCookies({ name: "vocanova_session" });
       await visit(page, "/login?returnTo=%2Fwords", "Sign in to Vocanova");
       await activate(page, page.getByRole("link", { name: "Forgot password?", exact: true }), "/auth/password/reset", "Reset or add a password");
       await activate(page, page.getByRole("link", { name: "Back to sign in", exact: true }), "/login", "Sign in to Vocanova");
