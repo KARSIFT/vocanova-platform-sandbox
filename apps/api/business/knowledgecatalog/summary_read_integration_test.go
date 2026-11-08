@@ -1,6 +1,7 @@
 package knowledgecatalog
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -77,11 +78,17 @@ func TestPostgreSQLMapSummaryPreservesHistoryAndUserBoundaries(t *testing.T) {
 		t.Helper()
 		for i, band := range state.Bands {
 			want := counts[i+1]
+			band.WordStates = "" // Verify the existing aggregate contract separately.
 			require.Equal(t, Band{Number: i + 1, StartRank: i*100 + 1, EndRank: (i + 1) * 100, TotalWords: 100, KnownCount: want[0], LearningCount: want[1], UnseenCount: 100 - want[0] - want[1]}, band)
 		}
 	}
 	first := read(user, 1)
 	checkBands(first, map[int][2]int{1: {1, 3}, 2: {1, 1}})
+	require.Equal(t, "klnnnl"+strings.Repeat("n", 93)+"m", first.Bands[0].WordStates)
+	require.Equal(t, "k"+strings.Repeat("n", 98)+"l", first.Bands[1].WordStates)
+	require.Empty(t, first.Bands[2].WordStates)
+	require.True(t, first.CurrentBand.Items[99].Learned)
+	require.False(t, first.CurrentBand.Items[1].Learned)
 	for i, item := range first.CurrentBand.Items {
 		require.Equal(t, i+1, item.Rank)
 		require.Equal(t, i == 0, item.SelfReportedKnown)

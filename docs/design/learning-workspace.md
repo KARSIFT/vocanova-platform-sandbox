@@ -5,6 +5,20 @@ The learner should recognise the same product from the public introduction throu
 sign-in, daily practice, and account settings. Real words and situations give the
 interface its character; progress and next actions give it structure.
 
+## Mobile production feedback — 9 November 2026
+
+- The focused header logo links to Home. The logo uses the blue lettermark alone.
+- The Discovery word strip opens a searchable list with rank and status. Selecting
+  a word opens that exact card, including previously assessed words. The range
+  button opens a matching list and accepts a word number to find its range.
+- Each Journey map square has a 10 × 10 grid in rank order. New, Learning,
+  Learned and Already know have separate colors and text counts. Learned means
+  that a saved word reached the existing mastery stage. The miniature cells show
+  progress. The range links and word lists provide the interactive controls.
+- Discovery details list alternate catalog meanings with their parts of speech.
+  Additional examples and usage notes belong in the disclosure. When there is
+  only one meaning, the disclosure states that.
+
 ## Discovery usability direction — 7 November 2026
 
 The owner's annotated production review requires less explanatory clutter and

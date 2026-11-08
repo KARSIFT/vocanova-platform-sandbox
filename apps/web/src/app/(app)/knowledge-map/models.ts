@@ -7,10 +7,18 @@ import type {
 export type MapWord = KnowledgeMapItem;
 export type KnowledgeMapData = KnowledgeMap;
 
+const WORD_STATES = {
+  known: { code: "k", label: "Already know" },
+  learning: { code: "l", label: "Learning" },
+  learned: { code: "m", label: "Learned" },
+  unseen: { code: "n", label: "New" },
+} as const;
+
 /** One meaning's state exactly as a decision response reported it. */
 export interface ConfirmedWordState {
   selfReportedKnown: boolean;
   saved: boolean;
+  learned?: boolean;
   due?: boolean;
   revision: string;
 }
@@ -38,6 +46,7 @@ export function confirmedWordState(
   return {
     selfReportedKnown: value.selfReportedKnown,
     saved: value.saved,
+    ...(value.learned === true ? { learned: true } : {}),
     due: typeof value.due === "boolean" ? value.due : undefined,
     revision: value.revision,
   };
@@ -64,25 +73,36 @@ export function applyWordState(
   );
   if (!before) return data;
   const from = wordState(before);
-  const to = state.selfReportedKnown
-    ? "known"
-    : state.saved
-      ? "learning"
-      : "unseen";
-  const delta = (value: "known" | "learning" | "unseen") =>
-    (to === value ? 1 : 0) - (from === value ? 1 : 0);
+  const to = wordState(state);
+  const counted = (status: keyof typeof WORD_STATES) =>
+    status === "learned" ? "learning" : status;
+  const delta = (status: ReturnType<typeof counted>) =>
+    Number(counted(to) === status) - Number(counted(from) === status);
   return {
     ...data,
-    bands: data.bands.map((band) =>
-      band.number === data.currentBand.number
-        ? {
-            ...band,
-            knownCount: band.knownCount + delta("known"),
-            learningCount: band.learningCount + delta("learning"),
-            unseenCount: band.unseenCount + delta("unseen"),
-          }
-        : band,
-    ),
+    bands: data.bands.map((band) => {
+      if (band.number !== data.currentBand.number || from === to) return band;
+      const unseenCount = band.unseenCount + delta("unseen");
+      const codes =
+        band.wordStates ??
+        (band.unseenCount === band.totalWords
+          ? "n".repeat(band.totalWords)
+          : undefined);
+      const index = before.rank - band.startRank;
+      const wordStates =
+        codes && unseenCount < band.totalWords
+          ? codes.slice(0, index) +
+            WORD_STATES[to].code +
+            codes.slice(index + 1)
+          : undefined;
+      return {
+        ...band,
+        knownCount: band.knownCount + delta("known"),
+        learningCount: band.learningCount + delta("learning"),
+        unseenCount,
+        wordStates,
+      };
+    }),
     currentBand: {
       ...data.currentBand,
       items: data.currentBand.items.map((item) =>
@@ -91,6 +111,7 @@ export function applyWordState(
               ...item,
               selfReportedKnown: state.selfReportedKnown,
               saved: state.saved,
+              learned: state.learned,
               due: state.due ?? item.due,
               revision: state.revision,
             }
@@ -132,15 +153,15 @@ export function discoveryWordInRange(
   );
 }
 
-export function wordState(word: MapWord): "known" | "learning" | "unseen" {
-  return word.selfReportedKnown ? "known" : word.saved ? "learning" : "unseen";
+export function wordState(
+  word: Pick<MapWord, "selfReportedKnown" | "saved" | "learned">,
+): keyof typeof WORD_STATES {
+  if (word.selfReportedKnown) return "known";
+  if (word.saved) return word.learned ? "learned" : "learning";
+  return "unseen";
 }
 export function wordStateLabel(word: MapWord): string {
-  return word.selfReportedKnown
-    ? "Already know"
-    : word.saved
-      ? "Learning"
-      : "New";
+  return WORD_STATES[wordState(word)].label;
 }
 /** The word map lives on Journey; every range link, retry and return uses it. */
 export function journeyRangeHref(band: number): string {

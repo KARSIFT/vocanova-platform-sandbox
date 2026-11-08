@@ -342,10 +342,10 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
   await page
     .getByRole("button", { name: "Choose a word", exact: true })
     .click();
-  await page
-    .getByRole("combobox", { name: "Word in this range", exact: true })
-    .selectOption(String(chosen.rank));
-  await page.getByRole("button", { name: "Go to word", exact: true }).click();
+  await page.getByRole("dialog", { name: "Choose a word" })
+    .getByRole("button")
+    .filter({ has: page.getByText(chosen.rank.toLocaleString("en-US"), { exact: true }) })
+    .click();
   await expectDiscoveryWord(chosen, true);
 
   // Allow the one intended assessment through to the real staging API.

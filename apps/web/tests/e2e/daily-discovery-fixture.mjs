@@ -75,8 +75,17 @@ export async function handleDailyDiscovery({
           ? 2
           : 1
         : 0;
+  const mixedProgress = cookies.e2e_knowledge_map === "mixed-progress"
+    ? {
+        1: { decision: "known", revision: 0 },
+        3: { decision: "learn", revision: 0 },
+        12: { decision: "learn", learned: true, revision: 0 },
+        105: { decision: "learn", learned: true, revision: 0 },
+      }
+    : {};
   const mapEntry = (rank) =>
     state.mapDecisions.get(rank) ??
+    mixedProgress[rank] ??
     (rank <= completeThrough * 100
       ? { decision: "known", revision: 0 }
       : cookies.e2e_knowledge_map === "gapped-ranges" &&
@@ -84,12 +93,11 @@ export async function handleDailyDiscovery({
             (rank >= 9901 && rank <= 9998))
         ? { decision: rank === 1302 ? "learn" : "known", revision: 0 }
         : undefined);
-  const count = (band, decision) => {
-    let total = 0;
-    for (let rank = (band - 1) * 100 + 1; rank <= band * 100; rank++) {
-      if (mapEntry(rank)?.decision === decision) total++;
-    }
-    return total;
+  const mapCode = (rank) => {
+    const entry = mapEntry(rank);
+    if (entry?.decision === "known") return "k";
+    if (entry?.decision === "learn") return entry.learned ? "m" : "l";
+    return "n";
   };
   const map = (band) => ({
     attribution,
@@ -104,8 +112,11 @@ export async function handleDailyDiscovery({
     },
     bands: Array.from({ length: 100 }, (_, index) => {
       const number = index + 1;
-      const knownCount = count(number, "known");
-      const learningCount = count(number, "learn");
+      const wordStates = Array.from({ length: 100 }, (_, i) =>
+        mapCode(index * 100 + i + 1),
+      ).join("");
+      const knownCount = wordStates.match(/k/g)?.length ?? 0;
+      const learningCount = wordStates.match(/[lm]/g)?.length ?? 0;
       return {
         number,
         startRank: index * 100 + 1,
@@ -114,6 +125,7 @@ export async function handleDailyDiscovery({
         knownCount,
         learningCount,
         unseenCount: 100 - knownCount - learningCount,
+        ...(knownCount || learningCount ? { wordStates } : {}),
       };
     }),
     currentBand: {
@@ -138,7 +150,8 @@ export async function handleDailyDiscovery({
             : {}),
           selfReportedKnown: entry?.decision === "known",
           saved: entry?.decision === "learn",
-          due: entry?.decision === "learn",
+          ...(entry?.learned ? { learned: true } : {}),
+          due: entry?.decision === "learn" && !entry.learned,
           revision: revision(entry?.revision ?? 0),
         };
       }),
@@ -153,7 +166,8 @@ export async function handleDailyDiscovery({
       revision: revision(entry?.revision ?? 0),
       selfReportedKnown: entry?.decision === "known",
       saved: entry?.decision === "learn",
-      due: entry?.decision === "learn",
+      ...(entry?.learned ? { learned: true } : {}),
+      due: entry?.decision === "learn" && !entry.learned,
     };
   };
   if (removal) {

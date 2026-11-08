@@ -12,7 +12,10 @@ test("Home redirects when its daily lesson read sees an expired session", async 
     { name: "e2e_daily_lesson_auth", value: "expired", url: baseURL! },
   ]);
   await page.goto("/home");
-  await expect(page).toHaveURL(/\/login\?returnTo=%2Fhome$/);
+  await expect(page).toHaveURL(
+    /\/login\?returnTo=%2Fhome&reason=session-expired$/,
+  );
+  await expect(page.getByText("Your session expired. Sign in again to continue.")).toBeVisible();
 });
 test.beforeEach(async ({ context, baseURL }) => {
   await context.addCookies([

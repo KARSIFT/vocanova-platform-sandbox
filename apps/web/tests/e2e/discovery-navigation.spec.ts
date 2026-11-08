@@ -1,7 +1,25 @@
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
+
+
+async function chooseWord(page: Page, rank: number) {
+  await page.getByRole("button", { name: "Choose a word", exact: true }).click();
+  await page.getByRole("dialog", { name: "Choose a word" })
+    .getByRole("button")
+    .filter({ has: page.getByText(rank.toLocaleString("en-US"), { exact: true }) })
+    .click();
+}
+
+async function chooseRange(page: Page, band: number) {
+  await page.getByRole("button", { name: "Word range", exact: true }).click();
+  const start = ((band - 1) * 100 + 1).toLocaleString("en-US");
+  const end = (band * 100).toLocaleString("en-US");
+  await page.getByRole("dialog", { name: "Choose a range" })
+    .getByRole("button", { name: `${start}–${end}`, exact: true })
+    .click();
+}
 
 for (const theme of ["light", "dark"] as const) {
   test(`discovery navigation preserves the selected word without learning mutations in ${theme}`, async ({
@@ -34,13 +52,15 @@ for (const theme of ["light", "dark"] as const) {
     await page
       .getByRole("button", { name: "Choose a word", exact: true })
       .click();
-    const words = page.getByRole("combobox", {
-      name: "Word in this range",
-      exact: true,
-    });
-    await expect(words.locator("option")).toHaveCount(100);
-    await words.selectOption("1150");
-    await page.getByRole("button", { name: "Go to word", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Choose a word" });
+    const filter = dialog.getByRole("searchbox", { name: "Filter words" });
+    await expect(filter).toBeFocused();
+    await filter.fill("1150");
+    await expect(dialog.getByRole("listitem")).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Choose a word" })).toBeFocused();
+    await chooseWord(page, 1150);
     await expect(
       page.getByRole("heading", { name: "Map word 1150", exact: true }),
     ).toBeFocused();
@@ -61,12 +81,12 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("main").getByText("Already know", { exact: true }).first(),
     ).toBeVisible();
-    const ranges = page.getByRole("combobox", {
+    const ranges = page.getByRole("button", {
       name: "Word range",
       exact: true,
     });
     expect((await ranges.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    await ranges.selectOption("13");
+    await chooseRange(page, 13);
     await expect(
       page.getByRole("button", { name: "Go to range", exact: true }),
     ).toHaveCount(0);
@@ -103,6 +123,21 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeLessThanOrEqual(page.viewportSize()!.width);
   });
 }
+
+test("the Discovery logo opens Home", async ({ page, baseURL }) => {
+  await page.context().addCookies([
+    {
+      name: "vocanova_session",
+      value: `discovery-home-${randomUUID()}`,
+      url: baseURL!,
+    },
+  ]);
+  await page.goto("/discovery?band=1&word=2");
+  const brand = page.getByRole("banner").getByRole("link", { name: "VocaNova home" });
+  await expect(brand).toHaveAttribute("href", "/home");
+  await brand.press("Enter");
+  await expect(page).toHaveURL("/home");
+});
 
 test("a word revisit returns to Journey with one range fragment", async ({
   page,
@@ -179,7 +214,7 @@ test("an uncertain choice locks navigation until its original request is confirm
       page.getByRole("button", { name, exact: true }),
     ).toBeDisabled();
   await expect(
-    page.getByRole("combobox", { name: "Word range", exact: true }),
+    page.getByRole("button", { name: "Word range", exact: true }),
   ).toBeDisabled();
   await page.getByRole("button", { name: "Retry choice", exact: true }).click();
   await expect(
@@ -227,11 +262,15 @@ test("word details load only on demand, bind the displayed sense and retry hones
             {
               id: wrongSense ? "different-sense" : "map-meaning-1",
               partOfSpeech: "article",
-              shortDefinition: "The currently selected meaning.",
+              shortDefinition: "Used before a person or thing that is already clear.",
               saved: false,
               selfReportedKnown: false,
               due: false,
               examples: [
+                {
+                  id: "ex-card",
+                  exampleText: "The bus to the station is late again.",
+                },
                 {
                   id: "ex-current",
                   exampleText: "An example for this meaning.",
@@ -241,8 +280,18 @@ test("word details load only on demand, bind the displayed sense and retry hones
             },
             {
               id: "other-sense",
-              partOfSpeech: "article",
+              partOfSpeech: "noun",
               shortDefinition: "Another genuine meaning.",
+              saved: false,
+              selfReportedKnown: false,
+              due: false,
+              examples: [],
+              usageNotes: [],
+            },
+            {
+              id: "other-verb-sense",
+              partOfSpeech: "verb",
+              shortDefinition: "A genuine verb meaning.",
               saved: false,
               selfReportedKnown: false,
               due: false,
@@ -292,18 +341,26 @@ test("word details load only on demand, bind the displayed sense and retry hones
     details.getByText("An example for this meaning.", { exact: true }),
   ).toBeVisible();
   await expect(
-    details.getByText("Another genuine meaning.", { exact: true }),
+    details.getByRole("heading", { name: "Other meanings", exact: true }),
   ).toBeVisible();
+  const alternatives = details.getByRole("listitem");
+  await expect(alternatives).toHaveCount(2);
+  await expect(alternatives.nth(0)).toContainText("noun");
+  await expect(alternatives.nth(0)).toContainText("Another genuine meaning.");
+  await expect(alternatives.nth(1)).toContainText("verb");
+  await expect(alternatives.nth(1)).toContainText("A genuine verb meaning.");
+  await expect(
+    details.getByText("Used before a person or thing that is already clear.", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    details.getByText("The bus to the station is late again.", { exact: true }),
+  ).toHaveCount(0);
   await details.locator("summary").press("Enter");
   await details.locator("summary").press("Enter");
   expect(reads).toEqual(Array(4).fill("/api/v1/canonical-words/map-word-1"));
-  await page
-    .getByRole("button", { name: "Choose a word", exact: true })
-    .click();
-  await page
-    .getByRole("combobox", { name: "Word in this range", exact: true })
-    .selectOption("2");
-  await page.getByRole("button", { name: "Go to word", exact: true }).click();
+  await chooseWord(page, 2);
   await expect(
     page.getByRole("heading", { name: "be", exact: true }),
   ).toBeVisible();
@@ -466,8 +523,11 @@ for (const stalledAt of ["headers", "body"] as const) {
         expect(reads).toBe(2);
         await page.clock.fastForward(8_000);
         await expect(
-          details.getByText("The recovered current meaning.", { exact: true }),
+          details.getByText("This is the only meaning in Vocanova.", {
+            exact: true,
+          }),
         ).toBeVisible();
+        await expect(details.getByRole("listitem")).toHaveCount(0);
         await expect(details.getByRole("alert")).toHaveCount(0);
         expect(reads).toBe(2);
         expect(
@@ -500,13 +560,7 @@ test("browser Back cannot detach a held or uncertain choice from its displayed w
     { name: "vocanova_csrf", value: "history-pending", url: baseURL! },
   ]);
   await page.goto("/discovery?band=1&word=1&active=1");
-  await page
-    .getByRole("button", { name: "Choose a word", exact: true })
-    .click();
-  await page
-    .getByRole("combobox", { name: "Word in this range", exact: true })
-    .selectOption("2");
-  await page.getByRole("button", { name: "Go to word", exact: true }).click();
+  await chooseWord(page, 2);
   await expect(
     page.getByRole("heading", { name: "be", exact: true }),
   ).toBeFocused();
@@ -555,13 +609,7 @@ test("browser Back cannot detach a held or uncertain choice from its displayed w
   expect(attempts).toHaveLength(2);
   expect(attempts[1]).toEqual(attempts[0]);
   // Once confirmed, explicit navigation and ordinary Back work again.
-  await page
-    .getByRole("button", { name: "Choose a word", exact: true })
-    .click();
-  await page
-    .getByRole("combobox", { name: "Word in this range", exact: true })
-    .selectOption("4");
-  await page.getByRole("button", { name: "Go to word", exact: true }).click();
+  await chooseWord(page, 4);
   await expect(
     page.getByRole("heading", { name: "Map word 4", exact: true }),
   ).toBeVisible();
@@ -606,22 +654,12 @@ test("a finished range advances to the next unseen word in a later range", async
   await expect(
     page.getByRole("article").getByText("Learning", { exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("combobox", { name: "Word range", exact: true })
-    .selectOption("13");
+  await chooseRange(page, 13);
   await expect(
     page.getByRole("heading", { name: "Map word 1303", exact: true }),
   ).toBeFocused();
   await expect(page).toHaveURL(/\/discovery\?band=14&word=1303&active=1$/);
-  await page
-    .getByRole("button", { name: "Choose a word", exact: true })
-    .click();
-  const words = page.getByRole("combobox", {
-    name: "Word in this range",
-    exact: true,
-  });
-  await words.selectOption("1301");
-  await page.getByRole("button", { name: "Go to word", exact: true }).click();
+  await chooseWord(page, 1301);
   await expect(
     page.getByRole("heading", { name: "Map word 1301", exact: true }),
   ).toBeFocused();
@@ -655,9 +693,7 @@ test("browser Forward skips an assessment made after opening another range", asy
     { name: "vocanova_csrf", value: "range-history", url: baseURL! },
   ]);
   await page.goto("/discovery?band=12&word=1101&active=1");
-  await page
-    .getByRole("combobox", { name: "Word range", exact: true })
-    .selectOption("13");
+  await chooseRange(page, 13);
   const first = page.getByRole("heading", {
     name: "Map word 1201",
     exact: true,
@@ -699,13 +735,7 @@ test("finishing the final range keeps earlier new words an explicit choice", asy
     { name: "e2e_knowledge_map", value: "gapped-ranges", url: baseURL! },
   ]);
   await page.goto("/discovery?band=100&active=1");
-  await page
-    .getByRole("button", { name: "Choose a word", exact: true })
-    .click();
-  await page
-    .getByRole("combobox", { name: "Word in this range", exact: true })
-    .selectOption("10000");
-  await page.getByRole("button", { name: "Go to word", exact: true }).click();
+  await chooseWord(page, 10000);
   await expect(
     page.getByRole("heading", { name: "Map word 10000", exact: true }),
   ).toBeVisible();
@@ -758,14 +788,10 @@ test("browser Back skips an assessment made from a different visit to the same r
     name: "Map word 1101",
     exact: true,
   });
-  const ranges = page.getByRole("combobox", {
-    name: "Word range",
-    exact: true,
-  });
   await expect(first).toBeFocused();
-  await ranges.selectOption("12");
+  await chooseRange(page, 12);
   await expect(other).toBeFocused();
-  await ranges.selectOption("13");
+  await chooseRange(page, 13);
   await expect(first).toBeFocused();
   await page.getByRole("button", { name: "Learn", exact: true }).click();
   await expect(next).toBeFocused();
@@ -817,7 +843,9 @@ test("details reject a newer revision of the same meaning until the card is refr
               id: "map-meaning-1",
               meaningRevision: detailsRevision,
               partOfSpeech: "article",
-              shortDefinition: "Teaching from the requested revision.",
+              shortDefinition:
+                "Used before a person or thing that is already clear.",
+              learnerDefinition: "Teaching from the requested revision.",
               saved: false,
               selfReportedKnown: false,
               due: false,
@@ -941,13 +969,7 @@ for (const { choice, partial } of [
         await route.fulfill({ json: { applied: true } }); // No usable state receipt.
       });
     await page.goto("/discovery?band=12&word=1101&active=1");
-    await page
-      .getByRole("button", { name: "Choose a word", exact: true })
-      .click();
-    await page
-      .getByRole("combobox", { name: "Word in this range", exact: true })
-      .selectOption("1150");
-    await page.getByRole("button", { name: "Go to word", exact: true }).click();
+    await chooseWord(page, 1150);
     await expect(
       page.getByRole("heading", { name: "Map word 1150", exact: true }),
     ).toBeFocused();
@@ -960,13 +982,7 @@ for (const { choice, partial } of [
       page.getByRole("heading", { name: "Map word 1151", exact: true }),
     ).toBeFocused();
     await expect(page).toHaveURL(/\/discovery\?band=12&word=1151&active=1$/);
-    await page
-      .getByRole("button", { name: "Choose a word", exact: true })
-      .click();
-    await page
-      .getByRole("combobox", { name: "Word in this range", exact: true })
-      .selectOption("1200");
-    await page.getByRole("button", { name: "Go to word", exact: true }).click();
+    await chooseWord(page, 1200);
     await expect(
       page.getByRole("heading", { name: "Map word 1200", exact: true }),
     ).toBeFocused();

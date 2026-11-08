@@ -28,8 +28,12 @@ export async function createServerApiClient(): Promise<VocanovaClient> {
 
 export function requireAuthRedirect(error: unknown, returnTo: string): never {
   if (error instanceof ApiResponseError && error.status === 401) {
-    const searchParams = new URLSearchParams();
-    searchParams.set("returnTo", returnTo);
+    // A protected read can fail after the initial identity check passed.
+    // Mark the recovery route so an existing cookie cannot bounce back to it.
+    const searchParams = new URLSearchParams({
+      returnTo,
+      reason: "session-expired",
+    });
     redirect(`/login?${searchParams.toString()}`);
   }
   throw error;

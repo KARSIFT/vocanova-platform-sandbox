@@ -107,7 +107,9 @@ test("Journey resumes the actual saved lesson and recommendation expiry redirect
     { name: "e2e_recommendation_auth", value: "expired", url: baseURL! },
   ]);
   await page.goto("/courses");
-  await expect(page).toHaveURL(/\/login\?returnTo=%2Fcourses$/);
+  await expect(page).toHaveURL(
+    /\/login\?returnTo=%2Fcourses&reason=session-expired$/,
+  );
 });
 
 test("Journey recommendation failure leads to the available situation catalogue", async ({

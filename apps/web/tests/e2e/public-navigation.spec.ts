@@ -2,6 +2,25 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { pressTab } from "./keyboard-navigation.js";
 
+test("a remembered browser can return from the landing page without signing in again", async ({ page, context, baseURL }) => {
+  await context.addCookies([{
+    name: "vocanova_session",
+    value: randomUUID(),
+    url: baseURL!,
+    httpOnly: true,
+    expires: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+  }]);
+
+  await page.goto("/");
+  await page.getByRole("link", { name: "Start learning", exact: true }).click();
+  await expect(page).toHaveURL(`${baseURL}/home`);
+  await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+
+  await page.goto("/signin?returnTo=%2Fprogress");
+  await expect(page).toHaveURL(`${baseURL}/progress`);
+  await expect(page.getByRole("heading", { level: 1, name: "Progress" })).toBeVisible();
+});
+
 for (const theme of ["light", "dark"] as const) {
   test(`invalid deactivation date omits the deadline and sign-in recovery works (${theme})`, async ({ page, baseURL }) => {
     await page.addInitScript(value => localStorage.setItem("vocanova:theme-preference", value), theme);

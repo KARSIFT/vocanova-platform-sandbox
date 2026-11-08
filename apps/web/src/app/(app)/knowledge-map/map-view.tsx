@@ -15,12 +15,45 @@ import styles from "./workspace.module.css";
 
 type Band = KnowledgeMapData["bands"][number];
 
-// Known words fill a square from the bottom, then learning words above them.
-function fill(band: Band): CSSProperties {
+function legacyFill(band: Band): CSSProperties | undefined {
+  if (band.wordStates || band.unseenCount === band.totalWords) return;
   return {
     "--known": `${(band.knownCount / band.totalWords) * 100}%`,
     "--learning": `${(band.learningCount / band.totalWords) * 100}%`,
   } as CSSProperties;
+}
+
+function learnedCount(band: Band) {
+  return band.wordStates?.match(/m/g)?.length ?? 0;
+}
+
+function progressLabel(band: Band, learned = learnedCount(band)) {
+  return `${band.knownCount} already know, ${band.learningCount - learned} learning, ${learned ? `${learned} learned, ` : ""}${band.unseenCount} new`;
+}
+
+/** One path per tracked status keeps 10,000 marks out of the DOM. */
+function AtlasGrid({ band }: { band: Band }) {
+  if (!band.wordStates && band.unseenCount < band.totalWords) return null;
+  const paths = { k: "", l: "", m: "" };
+  for (const [index, code] of Array.from(band.wordStates ?? "").entries()) {
+    if (code !== "k" && code !== "l" && code !== "m") continue;
+    const x = (index % 10) * 10 + 1;
+    const y = Math.floor(index / 10) * 10 + 1;
+    paths[code] += `M${x} ${y}h8v8h-8z`;
+  }
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      className={styles.atlasGrid}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect width="100" height="100" fill="url(#word-atlas-unseen)" />
+      {paths.k ? <path data-state="known" d={paths.k} /> : null}
+      {paths.l ? <path data-state="learning" d={paths.l} /> : null}
+      {paths.m ? <path data-state="learned" d={paths.m} /> : null}
+    </svg>
+  );
 }
 
 function rangeLabel(band: Pick<Band, "startRank" | "endRank">) {
@@ -31,6 +64,7 @@ function rangeLabel(band: Pick<Band, "startRank" | "endRank">) {
 export function RangeCard({ data }: { data: KnowledgeMapData }) {
   const band = data.currentBand.number;
   const summary = data.bands.find((item) => item.number === band);
+  const learned = summary ? learnedCount(summary) : 0;
   const next = nextDiscoveryTarget(data);
   const targetBand = next?.band ?? earlierDiscoveryBand(data)?.number;
   const nextInRange =
@@ -64,8 +98,10 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
       </div>
       {summary ? (
         <p className={styles.rangeCounts}>
-          {summary.knownCount} known · {summary.learningCount} learning ·{" "}
-          {summary.unseenCount} new
+          {summary.knownCount} known · {summary.learningCount - learned}{" "}
+          learning
+          {learned > 0 ? ` · ${learned} learned` : ""} · {summary.unseenCount}{" "}
+          new
         </p>
       ) : null}
       {/* One mark per word in rank order; the counts above carry the meaning. */}
@@ -127,14 +163,12 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
   );
 }
 
-/** All 10,000 words as 100 ranges: rows of 1,000, filled by what you know. */
+/** All 10,000 words as 100 ranges with their states in rank order. */
 export function WordAtlas({ data }: { data: KnowledgeMapData }) {
   const band = data.currentBand.number;
   const known = data.bands.reduce((sum, item) => sum + item.knownCount, 0);
-  const learning = data.bands.reduce(
-    (sum, item) => sum + item.learningCount,
-    0,
-  );
+  const saved = data.bands.reduce((sum, item) => sum + item.learningCount, 0);
+  const learned = data.bands.reduce((sum, item) => sum + learnedCount(item), 0);
   const rows = Array.from({ length: 10 }, (_, row) =>
     data.bands.slice(row * 10, row * 10 + 10),
   );
@@ -143,7 +177,7 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
       <h2 id="atlas-title" className="section-title">
         Your word map
       </h2>
-      <p className={styles.atlasLede}>100 words per range.</p>
+      <p className={styles.atlasLede}>Each square shows 100 words in order.</p>
       <ul className={styles.legend} aria-label="Map progress">
         <li>
           <span className={styles.knownDot} aria-hidden="true" />
@@ -151,13 +185,41 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
         </li>
         <li>
           <span className={styles.learningDot} aria-hidden="true" />
-          {learning.toLocaleString()} learning
+          {(saved - learned).toLocaleString()} learning
+        </li>
+        <li>
+          <span className={styles.learnedDot} aria-hidden="true" />
+          {learned.toLocaleString()} learned
         </li>
         <li>
           <span className={styles.newDot} aria-hidden="true" />
-          {(data.totalWords - known - learning).toLocaleString()} new
+          {(data.totalWords - known - saved).toLocaleString()} new
         </li>
       </ul>
+      <svg
+        className={styles.atlasDefinitions}
+        width="0"
+        height="0"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <defs>
+          <pattern
+            id="word-atlas-unseen"
+            width="10"
+            height="10"
+            patternUnits="userSpaceOnUse"
+          >
+            <rect
+              x="1"
+              y="1"
+              width="8"
+              height="8"
+              className={styles.atlasUnseen}
+            />
+          </pattern>
+        </defs>
+      </svg>
       {/* Wide screens: every square is a link of at least 44px. */}
       <AtlasKeys className={styles.atlasWide}>
         <nav aria-label="Word ranges" className={styles.atlas}>
@@ -174,9 +236,11 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
                   href={`/discovery?band=${item.number}&active=1`}
                   className={styles.atlasCell}
                   aria-current={item.number === band ? "true" : undefined}
-                  aria-label={`Words ${item.startRank} to ${item.endRank}, ${item.knownCount} already know, ${item.learningCount} learning, ${item.unseenCount} new`}
-                  style={fill(item)}
-                />
+                  aria-label={`Words ${item.startRank} to ${item.endRank}, ${progressLabel(item)}`}
+                  style={legacyFill(item)}
+                >
+                  <AtlasGrid band={item} />
+                </Link>
               ))}
             </div>
           ))}
@@ -212,8 +276,10 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
                   key={item.number}
                   className={styles.atlasCell}
                   data-current={item.number === band ? "true" : undefined}
-                  style={fill(item)}
-                />
+                  style={legacyFill(item)}
+                >
+                  <AtlasGrid band={item} />
+                </span>
               ))}
             </div>
           ))}

@@ -8,6 +8,7 @@ import Link from "@/ui/link";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DiscoveryFinished } from "./discovery-finished";
+import { DiscoveryNavigation } from "./discovery-navigation";
 import { DiscoveryWordDetails } from "./discovery-word-details";
 import {
   useEffect,
@@ -132,8 +133,6 @@ export function Discovery({
     () => serverSearch,
   );
   const [navigating, startNavigation] = useTransition();
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [selectedRank, setSelectedRank] = useState(initialRank);
   const [muted, setMuted] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -239,7 +238,6 @@ export function Discovery({
         revisit: explicitlySelected,
       };
       setRank(word.rank);
-      setSelectedRank(word.rank);
       setStarted(active);
       setRevisit(explicitlySelected);
       setDone(false);
@@ -254,7 +252,6 @@ export function Discovery({
     if (lock.current || navigationLocked) return;
     deviceSpeech.stop(speechOwner.current);
     setError("");
-    setPickerOpen(false);
     const href = wordHref(nextBand, nextRank, true, true);
     if (nextBand !== band) {
       startNavigation(() => router.push(href));
@@ -265,7 +262,6 @@ export function Discovery({
     setStarted(true);
     setRevisit(true);
     setRank(nextRank);
-    setSelectedRank(nextRank);
     if (nextRank === item?.rank) titleRef.current?.focus();
   }
 
@@ -273,7 +269,6 @@ export function Discovery({
     if (lock.current || navigationLocked) return;
     deviceSpeech.stop(speechOwner.current);
     setError("");
-    setPickerOpen(false);
     startNavigation(() => router.push(`/discovery?band=${nextBand}&active=1`));
   }
 
@@ -585,98 +580,14 @@ export function Discovery({
           {data.totalWords.toLocaleString()}
         </span>
       </div>
-      <div className={styles.discoveryNavigation}>
-        <button
-          type="button"
-          className={styles.secondary}
-          onClick={previousWord}
-          disabled={navigationLocked || item.rank <= 1}
-        >
-          Previous word
-        </button>
-        <div className={styles.discoveryRange}>
-          <label htmlFor="discovery-range">Word range</label>
-          <span id="discovery-range-help" className="sr-only">
-            Selecting a range opens its next new word.
-          </span>
-          <select
-            id="discovery-range"
-            aria-describedby="discovery-range-help"
-            value={band}
-            disabled={navigationLocked}
-            onChange={(event) => navigateToRange(Number(event.target.value))}
-          >
-            {data.bands.map((value) => (
-              <option key={value.number} value={value.number}>
-                {value.startRank.toLocaleString()}–
-                {value.endRank.toLocaleString()}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <button
-        type="button"
-        className={styles.progressPicker}
-        aria-label="Choose a word"
-        aria-expanded={pickerOpen}
-        aria-controls="discovery-word-picker"
-        disabled={navigationLocked}
-        onClick={() => {
-          setSelectedRank(item.rank);
-          setPickerOpen(!pickerOpen);
-        }}
-      >
-        <span className={styles.pickerLabel}>
-          Choose a word <span aria-hidden="true">⌄</span>
-        </span>
-        <span
-          className={`${styles.strip} ${styles.discoveryStrip}`}
-          aria-hidden="true"
-        >
-          {data.currentBand.items.map((word) => (
-            <span
-              key={word.meaningId}
-              data-state={wordState(word)}
-              data-next={word.rank === item.rank ? "true" : undefined}
-            />
-          ))}
-        </span>
-      </button>
-      <div
-        id="discovery-word-picker"
-        hidden={!pickerOpen}
-        className={styles.wordPicker}
-      >
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            navigateToWord(band, selectedRank);
-          }}
-        >
-          <label htmlFor="discovery-rank">Word in this range</label>
-          <select
-            id="discovery-rank"
-            value={selectedRank}
-            disabled={navigationLocked}
-            onChange={(event) => setSelectedRank(Number(event.target.value))}
-          >
-            {data.currentBand.items.map((word) => (
-              <option key={word.meaningId} value={word.rank}>
-                {word.rank.toLocaleString()}. {word.wordText} —{" "}
-                {wordStateLabel(word)}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            className={styles.secondary}
-            disabled={navigationLocked}
-          >
-            Go to word
-          </button>
-        </form>
-      </div>
+      <DiscoveryNavigation
+        data={data}
+        rank={item.rank}
+        locked={navigationLocked}
+        onPrevious={previousWord}
+        onRange={navigateToRange}
+        onWord={(nextRank) => navigateToWord(band, nextRank)}
+      />
       {navigating && (
         <p role="status" className={styles.status}>
           Loading word…
@@ -815,6 +726,7 @@ export function Discovery({
           wordSlug={item.wordSlug}
           meaningId={item.meaningId}
           meaningRevision={item.meaningRevision}
+          exampleSentence={item.exampleSentence}
         />
       )}
     </div>
