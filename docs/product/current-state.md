@@ -1,5 +1,14 @@
 # Vocanova current product state
 
+## Mobile feedback — 9 November 2026
+
+The mobile delivery replaces the two Discovery selects with searchable lists
+and direct selection, makes the focused logo link to Home, and removes the
+decorative dot. Journey shows server-confirmed progress in 10 × 10 cells per
+range. Discovery details identify each alternative's part of speech and state
+when the catalog has just one meaning. A valid remembered session returns the
+learner to the app when they follow the public sign-in link.
+
 ## Discovery usability follow-up — 7 November 2026 (in progress)
 
 The owner's annotated production review identified decorative word progress,

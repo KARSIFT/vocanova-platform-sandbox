@@ -45,6 +45,9 @@ type Band struct {
 	KnownCount    int `json:"knownCount"`
 	LearningCount int `json:"learningCount"`
 	UnseenCount   int `json:"unseenCount"`
+	// One character per rank: n = new, l = learning, m = learned, k = already know.
+	// A fully new range omits the string. LearningCount includes all saved words.
+	WordStates string `json:"wordStates,omitempty" doc:"Rank-ordered states: n=new, l=learning, m=learned, k=already know. Omitted for a fully new range."`
 }
 type Item struct {
 	MeaningRevision   string              `json:"meaningRevision,omitempty"`
@@ -59,6 +62,7 @@ type Item struct {
 	ExampleSentence   string              `json:"exampleSentence,omitempty"`
 	SelfReportedKnown bool                `json:"selfReportedKnown"`
 	Saved             bool                `json:"saved"`
+	Learned           bool                `json:"learned,omitempty"`
 	Due               bool                `json:"due"`
 	Revision          string              `json:"revision"`
 }
@@ -85,6 +89,7 @@ type DecisionResult struct {
 	Revision          string    `json:"revision"`
 	SelfReportedKnown bool      `json:"selfReportedKnown"`
 	Saved             bool      `json:"saved"`
+	Learned           bool      `json:"learned,omitempty"`
 	Due               bool      `json:"due"`
 }
 type Repository interface {

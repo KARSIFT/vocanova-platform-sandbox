@@ -1,13 +1,19 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { filterForwardedCookieHeader } from "./lib/cookies";
+import {
+  filterForwardedCookieHeader,
+  SESSION_COOKIE_NAME,
+} from "./lib/cookies";
 import { getApiBaseURL } from "./lib/env";
 import { connectionErrorDocument } from "./lib/connection-error";
+import { normalizeReturnTo } from "./lib/return-to";
 import { THEME_COOKIE_NAME } from "./lib/theme-preference";
 
 export const config = {
   matcher: [
+    "/login",
+    "/signin",
     "/onboarding",
     "/home",
     "/plan",
@@ -74,10 +80,15 @@ function logAuthCheckFailure({
   );
 }
 
-function connectionErrorResponse(request: NextRequest): NextResponse {
+function connectionErrorResponse(
+  request: NextRequest,
+  destination: string,
+): NextResponse {
+  const { pathname } = request.nextUrl;
   const html = connectionErrorDocument(
-    `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    destination,
     request.cookies.get(THEME_COOKIE_NAME)?.value,
+    pathname === "/login" || pathname === "/signin" ? pathname : undefined,
   );
   return new NextResponse(html, {
     status: 503,
@@ -93,10 +104,22 @@ function connectionErrorResponse(request: NextRequest): NextResponse {
 }
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
-  const returnTo = new URLSearchParams({
-    returnTo: `${request.nextUrl.pathname}${request.nextUrl.search}`,
-  }).toString();
-  const signInUrl = new URL(`/login?${returnTo}`, request.url);
+  const { pathname, search, searchParams } = request.nextUrl;
+  const isSignIn = pathname === "/login" || pathname === "/signin";
+  if (
+    isSignIn &&
+    (!request.cookies.get(SESSION_COOKIE_NAME)?.value ||
+      searchParams.has("oauth") ||
+      searchParams.has("signedOut") ||
+      searchParams.get("magicOnly") === "1" ||
+      searchParams.get("reason") === "session-expired")
+  ) {
+    return NextResponse.next();
+  }
+
+  const destination = isSignIn
+    ? normalizeReturnTo(searchParams.get("returnTo"))
+    : `${pathname}${search}`;
 
   const apiBaseURL = getApiBaseURL();
   // Only this tier's own credentials reach the API; see lib/cookies.ts.
@@ -120,26 +143,28 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   } catch {
     logAuthCheckFailure({
       category: "fetch_threw",
-      routePath: request.nextUrl.pathname,
+      routePath: pathname,
     });
-    return connectionErrorResponse(request);
+    return connectionErrorResponse(request, destination);
   }
 
   if (meResponse.status === 401) {
     logAuthCheckFailure({
       category: "unauthorized_401",
-      routePath: request.nextUrl.pathname,
+      routePath: pathname,
       status: meResponse.status,
     });
-    return NextResponse.redirect(signInUrl);
+    if (isSignIn) return NextResponse.next();
+    const returnTo = new URLSearchParams({ returnTo: destination });
+    return NextResponse.redirect(new URL(`/login?${returnTo}`, request.url));
   }
   if (!meResponse.ok) {
     logAuthCheckFailure({
       category: "non_ok_response",
-      routePath: request.nextUrl.pathname,
+      routePath: pathname,
       status: meResponse.status,
     });
-    return connectionErrorResponse(request);
+    return connectionErrorResponse(request, destination);
   }
 
   // Parse the additive onboardingStatus field introduced by
@@ -160,13 +185,23 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   } catch {
     logAuthCheckFailure({
       category: "body_read_failed",
-      routePath: request.nextUrl.pathname,
+      routePath: pathname,
       status: meResponse.status,
     });
-    return connectionErrorResponse(request);
+    return connectionErrorResponse(request, destination);
   }
 
-  const isOnboardingRoute = request.nextUrl.pathname === "/onboarding";
+  if (isSignIn) {
+    return NextResponse.redirect(
+      new URL(
+        onboardingStatus === "completed" ? destination : "/onboarding",
+        request.url,
+      ),
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+
+  const isOnboardingRoute = pathname === "/onboarding";
   if (onboardingStatus !== "completed" && !isOnboardingRoute) {
     const onboardingUrl = new URL("/onboarding", request.url);
     return NextResponse.redirect(onboardingUrl);

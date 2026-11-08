@@ -39,7 +39,9 @@ for (const theme of ["light", "dark"] as const) {
   for (const { path: route, heading } of routes) {
     test(`${route} entry reflows with enlarged text and reduced motion (${theme})`, async ({ page, context, baseURL }, testInfo) => {
       await context.addCookies([
-        { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+        ...(route === "/signin"
+          ? []
+          : [{ name: "vocanova_session", value: randomUUID(), url: baseURL! }]),
         { name: "vocanova_csrf", value: randomUUID(), url: baseURL! },
       ]);
       await page.addInitScript((value) => localStorage.setItem("vocanova:theme-preference", value), theme);
@@ -61,6 +63,20 @@ for (const theme of ["light", "dark"] as const) {
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth))
         .toBeLessThanOrEqual(page.viewportSize()!.width);
       await expect(expectedHeading).toBeVisible();
+      if (route === "/discovery") {
+        for (const [trigger, title] of [
+          ["Word range", "Choose a range"],
+          ["Choose a word", "Choose a word"],
+        ]) {
+          await page.getByRole("button", { name: trigger, exact: true }).click();
+          const dialog = page.getByRole("dialog", { name: title, exact: true });
+          await expect(dialog).toBeVisible();
+          await expect.poll(() => dialog.evaluate(element => element.scrollWidth <= element.clientWidth))
+            .toBe(true);
+          await dialog.getByRole("button", { name: "Close picker" }).click();
+          await expect(dialog).toHaveCount(0);
+        }
+      }
       expect(errors).toEqual([]);
     });
   }

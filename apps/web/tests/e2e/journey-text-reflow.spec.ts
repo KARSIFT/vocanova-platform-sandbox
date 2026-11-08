@@ -59,7 +59,7 @@ for (const theme of ["light", "dark"] as const) {
     }
     await expect(page).toHaveURL(/\/discovery\?band=50&word=4901&active=1$/);
     await expect(page.getByRole("heading", { name: "Map word 4901", exact: true })).toBeVisible();
-    await expect(page.getByRole("combobox", { name: "Word range", exact: true })).toHaveValue("50");
+    await expect(page.getByRole("button", { name: "Word range", exact: true })).toContainText("4,901–5,000");
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth))
       .toBeLessThanOrEqual(page.viewportSize()!.width);
   });

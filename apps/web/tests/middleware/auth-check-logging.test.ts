@@ -198,6 +198,75 @@ describe("middleware auth-check failure logging", () => {
     assert.equal(new URL(response.headers.get("location")!).pathname, "/onboarding");
     assert.deepEqual(loggedLines, []);
   });
+
+  it("resumes a verified remembered session at its requested destination", async () => {
+    stubFetch(() => Promise.resolve(Response.json({ onboardingStatus: "completed" })));
+    const response = await middleware(new NextRequest(
+      "http://localhost:3000/login?returnTo=%2Fprogress%3Ffrom%3Dpractice%23saved",
+      { headers: { cookie: SESSION_COOKIE_HEADER } },
+    ));
+    assert.equal(response.status, 307);
+    assert.equal(response.headers.get("location"), "http://localhost:3000/progress?from=practice#saved");
+    assert.match(response.headers.get("cache-control") ?? "", /no-store/);
+    assert.deepEqual(loggedLines, []);
+  });
+
+  it("retries sign-in itself after an outage even for a public continuation", async () => {
+    stubFetch(() => Promise.resolve(new Response(null, { status: 503 })));
+    const response = await middleware(new NextRequest(
+      "http://localhost:3000/signin?returnTo=%2Fhelp",
+      { headers: { cookie: SESSION_COOKIE_HEADER } },
+    ));
+    assert.equal(response.status, 503);
+    assert.ok((await response.text()).includes('href="/signin?returnTo=%2Fhelp"'));
+  });
+
+  it("keeps the sign-in page available to a visitor with a rejected session", async () => {
+    stubFetch(() => Promise.resolve(new Response(null, { status: 401 })));
+    const response = await middleware(new NextRequest("http://localhost:3000/login", {
+      headers: { cookie: SESSION_COOKIE_HEADER },
+    }));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("x-middleware-next"), "1");
+  });
+
+  it("requires unfinished onboarding before resuming the requested app route", async () => {
+    stubFetch(() => Promise.resolve(Response.json({ onboardingStatus: "in_progress" })));
+    const response = await middleware(new NextRequest(
+      "http://localhost:3000/signin?returnTo=%2Fprogress",
+      { headers: { cookie: SESSION_COOKIE_HEADER } },
+    ));
+    assert.equal(response.headers.get("location"), "http://localhost:3000/onboarding");
+  });
+
+  it("does not redirect a remembered session to an external returnTo", async () => {
+    stubFetch(() => Promise.resolve(Response.json({ onboardingStatus: "completed" })));
+    const response = await middleware(new NextRequest(
+      "http://localhost:3000/login?returnTo=%2F%2Foutside.example%2F",
+      { headers: { cookie: SESSION_COOKIE_HEADER } },
+    ));
+    assert.equal(response.headers.get("location"), PROTECTED_ROUTE_URL);
+  });
+
+  it("keeps explicit sign-in feedback and skips identity checks for guests", async () => {
+    let calls = 0;
+    stubFetch(() => {
+      calls += 1;
+      return Promise.resolve(Response.json({ onboardingStatus: "completed" }));
+    });
+    const responses = await Promise.all([
+      middleware(new NextRequest("http://localhost:3000/login")),
+      ...["reason=session-expired", "signedOut=1", "oauth=cancelled", "magicOnly=1"].map((query) =>
+        middleware(new NextRequest(`http://localhost:3000/signin?${query}`, {
+          headers: { cookie: SESSION_COOKIE_HEADER },
+        })),
+      ),
+    ]);
+    assert.equal(calls, 0);
+    for (const response of responses) {
+      assert.equal(response.headers.get("x-middleware-next"), "1");
+    }
+  });
 });
 
 it("outage HTML escapes destinations and uses only recognized theme preferences", async () => {

@@ -120,10 +120,14 @@ export function AppHeader() {
     return (
       <header className="app-header">
         <div className="mx-auto flex min-h-14 max-w-[52rem] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2">
-          <span className="inline-flex items-center gap-2 text-sm font-bold text-neutral-900">
+          <Link
+            href="/home"
+            aria-label="VocaNova home"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-bold text-neutral-900"
+          >
             <BrandSymbol size="sm" />
             VocaNova
-          </span>
+          </Link>
           {pathname === "/discovery" ? (
             <Suspense
               fallback={

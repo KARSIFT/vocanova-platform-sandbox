@@ -8,6 +8,7 @@ import {
   confirmedWordState,
   confirmsChoice,
   nextDiscoveryTarget,
+  wordStateLabel,
 } from "../../src/app/(app)/knowledge-map/models";
 
 const revision = (value: number) => String(value).padStart(64, "0");
@@ -132,4 +133,25 @@ test("applying confirmed states moves exactly one word between disjoint counts",
   assert.equal(nextDiscoveryTarget(data)?.rank, 3);
   // Other ranges are untouched.
   assert.deepEqual(data.bands[1], range().bands[1]);
+});
+
+test("a learned word stays in the saved count and has its own map cell", () => {
+  const data = range();
+  data.bands[0]!.wordStates = `k${"n".repeat(99)}`;
+  const learned = confirmedWordState(
+    {
+      meaningId: "m-2",
+      revision: revision(1),
+      selfReportedKnown: false,
+      saved: true,
+      learned: true,
+      due: false,
+    },
+    learnSecond,
+  )!;
+  const after = applyWordState(data, "m-2", learned);
+  assert.equal(wordStateLabel(after.currentBand.items[1]!), "Learned");
+  assert.equal(after.bands[0]!.wordStates, `km${"n".repeat(98)}`);
+  assert.equal(after.bands[0]!.learningCount, 1);
+  assert.equal(nextDiscoveryTarget(after)?.rank, 3);
 });

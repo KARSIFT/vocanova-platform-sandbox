@@ -235,6 +235,10 @@
           "unseenCount": {
             "format": "int64",
             "type": "integer"
+          },
+          "wordStates": {
+            "description": "Rank-ordered states: n=new, l=learning, m=learned, k=already know. Omitted for a fully new range.",
+            "type": "string"
           }
         },
         "required": [
@@ -989,6 +993,9 @@
           "due": {
             "type": "boolean"
           },
+          "learned": {
+            "type": "boolean"
+          },
           "meaningId": {
             "type": "string"
           },
@@ -1447,6 +1454,9 @@
           },
           "image": {
             "$ref": "#/components/schemas/Image"
+          },
+          "learned": {
+            "type": "boolean"
           },
           "meaningId": {
             "type": "string"

@@ -302,7 +302,7 @@ test("a streamed practice-only authentication failure still redirects Home to si
       .getByRole("region", { name: "Review words", exact: true })
       .getByRole("button", { name: "Start review", exact: true }),
   ).toBeVisible();
-  await expect(page).toHaveURL(/\/login\?returnTo=%2Fhome$/, {
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fhome&reason=session-expired$/, {
     timeout: 10000,
   });
   await expect(

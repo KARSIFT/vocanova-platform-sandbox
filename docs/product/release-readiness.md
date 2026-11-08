@@ -1,5 +1,16 @@
 # Vocanova release readiness
 
+## Mobile feedback acceptance — 9 November 2026
+
+Local acceptance covers exact Discovery selection, keyboard and dismissal
+behavior, server-confirmed map cells and the return to Home. The authenticated
+entry regression reproduced with a valid test cookie before the change. A
+local HTTPS OAuth callback with a test provider also verified persistence
+across a Chrome restart. Live browser retention on the reported device still
+needs confirmation after rollout. Real PostgreSQL verifies the map's compact
+rank-ordered states. Hosted CI, staging and production evidence are tracked
+with the delivery PR.
+
 ## Discovery usability follow-up — 7 November 2026 (in progress)
 
 The owner's annotated review adds explicit acceptance for direct map-to-word

@@ -33,6 +33,7 @@ export interface KnowledgeMapItem {
   exampleSentence?: string;
   selfReportedKnown: boolean;
   saved: boolean;
+  learned?: boolean;
   due: boolean;
   revision: string;
 }
@@ -51,6 +52,8 @@ export interface KnowledgeMap {
     knownCount: number;
     learningCount: number;
     unseenCount: number;
+    /** Rank-ordered n (new), l (learning), m (learned), k (already know). */
+    wordStates?: string;
   }[];
   currentBand: { number: number; items: KnowledgeMapItem[] };
 }
@@ -72,6 +75,7 @@ export interface KnowledgeMapDecisionResult {
   revision: string;
   selfReportedKnown: boolean;
   saved: boolean;
+  learned?: boolean;
   due: boolean;
 }
 

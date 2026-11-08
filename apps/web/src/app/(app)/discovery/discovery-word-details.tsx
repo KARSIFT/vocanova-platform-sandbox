@@ -9,15 +9,61 @@ import styles from "../knowledge-map/workspace.module.css";
 
 const WORD_DETAILS_DEADLINE_MS = 8_000;
 
+function MeaningDetails({
+  meaning,
+  current = false,
+  exampleSentence,
+}: {
+  meaning: WordDetail["meanings"][number];
+  current?: boolean;
+  exampleSentence?: string;
+}) {
+  const explanation = getAdditionalDefinition(
+    meaning.shortDefinition,
+    meaning.learnerDefinition,
+  );
+  const examples = current
+    ? meaning.examples.filter(
+        (example) => example.exampleText !== exampleSentence,
+      )
+    : meaning.examples;
+
+  if (current && !explanation && !examples.length && !meaning.usageNotes.length)
+    return null;
+
+  return (
+    <div className={current ? "my-3 space-y-2" : undefined}>
+      <p className="pos">
+        {meaning.partOfSpeech}
+        {current ? " · This meaning" : ""}
+      </p>
+      {!current && (
+        <p className={styles.meaningDefinition}>{meaning.shortDefinition}</p>
+      )}
+      {explanation && <p>{explanation}</p>}
+      {examples.map((example) => (
+        <p key={example.id} className={styles.example}>
+          {example.exampleText}
+        </p>
+      ))}
+      {meaning.usageNotes.map((note) => (
+        <p key={note.id}>{note.noteText}</p>
+      ))}
+    </div>
+  );
+}
+
 /** Teaching is optional and read-only; no canonical request until opened. */
 export function DiscoveryWordDetails({
   wordSlug,
   meaningId,
   meaningRevision,
+  exampleSentence,
 }: {
   wordSlug: string;
   meaningId: string;
   meaningRevision?: string;
+  exampleSentence?: string;
 }) {
   const [word, setWord] = useState<WordDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,14 +95,11 @@ export function DiscoveryWordDetails({
       if (controller.signal.aborted) return;
       // A response must contain the exact displayed sense, never substitute a
       // similarly spelt word or an unrelated first dictionary meaning.
-      if (
-        result.data.word.slug !== wordSlug ||
-        !result.data.word.meanings.some((meaning) => meaning.id === meaningId)
-      )
-        throw new Error("The current meaning is unavailable");
       const currentMeaning = result.data.word.meanings.find(
         (meaning) => meaning.id === meaningId,
-      )!;
+      );
+      if (result.data.word.slug !== wordSlug || !currentMeaning)
+        throw new Error("The current meaning is unavailable");
       if (
         meaningRevision &&
         currentMeaning.meaningRevision !== meaningRevision
@@ -85,11 +128,11 @@ export function DiscoveryWordDetails({
     }
   }
 
-  const meanings = word
-    ? [...word.meanings].sort(
-        (a, b) => Number(b.id === meaningId) - Number(a.id === meaningId),
-      )
-    : [];
+  const currentMeaning = word?.meanings.find(
+    (meaning) => meaning.id === meaningId,
+  );
+  const otherMeanings =
+    word?.meanings.filter((meaning) => meaning.id !== meaningId) ?? [];
   return (
     <details
       className={styles.wordDetails}
@@ -122,35 +165,28 @@ export function DiscoveryWordDetails({
           )}
         </div>
       )}
-      {word && (
-        <ol className={styles.meanings}>
-          {meanings.map((meaning) => {
-            const additional = getAdditionalDefinition(
-              meaning.shortDefinition,
-              meaning.learnerDefinition,
-            );
-            return (
-              <li key={meaning.id}>
-                <p className="pos">
-                  {meaning.partOfSpeech}
-                  {meaning.id === meaningId ? " · This meaning" : ""}
-                </p>
-                <p className={styles.meaningDefinition}>
-                  {meaning.shortDefinition}
-                </p>
-                {additional && <p>{additional}</p>}
-                {meaning.examples.map((example) => (
-                  <p key={example.id} className={styles.example}>
-                    {example.exampleText}
-                  </p>
+      {currentMeaning && (
+        <>
+          {otherMeanings.length ? (
+            <>
+              <h2 className="font-semibold text-neutral-900">Other meanings</h2>
+              <ol className={styles.meanings}>
+                {otherMeanings.map((meaning) => (
+                  <li key={meaning.id}>
+                    <MeaningDetails meaning={meaning} />
+                  </li>
                 ))}
-                {meaning.usageNotes.map((note) => (
-                  <p key={note.id}>{note.noteText}</p>
-                ))}
-              </li>
-            );
-          })}
-        </ol>
+              </ol>
+            </>
+          ) : (
+            <p>This is the only meaning in Vocanova.</p>
+          )}
+          <MeaningDetails
+            current
+            exampleSentence={exampleSentence}
+            meaning={currentMeaning}
+          />
+        </>
       )}
     </details>
   );

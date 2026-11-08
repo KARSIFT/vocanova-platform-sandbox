@@ -29,9 +29,12 @@ const summaryJoins = ` FROM knowledge_catalog_entries kc JOIN canonical_words cw
  LEFT JOIN user_word_knowledge k ON k.meaning_id=wm.id AND k.user_id=$1
  LEFT JOIN user_words uw ON uw.user_id=$1 AND uw.meaning_id=wm.id AND uw.deleted_at IS NULL `
 
+const savedWord = `uw.deleted_at IS NULL AND uw.id IS NOT NULL AND uw.status NOT IN ('ignored','archived')`
+const learnedWord = `uw.deleted_at IS NULL AND uw.status='mastered'`
+
 var selected = `SELECT kc.rank,wm.id,cw.id,cw.text,replace(cw.normalized_text,' ','-'),wm.part_of_speech,wm.short_definition,
  COALESCE((SELECT example_text FROM word_examples WHERE meaning_id=wm.id AND status='active' ORDER BY example_order,id LIMIT 1),''),
- COALESCE(k.self_reported_known,false),COALESCE(uw.deleted_at IS NULL AND uw.id IS NOT NULL AND uw.status NOT IN ('ignored','archived'),false),
+ COALESCE(k.self_reported_known,false),COALESCE(` + savedWord + `,false),COALESCE(` + learnedWord + `,false),
  COALESCE(` + revieweligibility.Due("uw", "$2", true) + `,false),
  COALESCE(uw.id::text,'')||':'||COALESCE(uw.status,'')||':'||COALESCE(extract(epoch FROM uw.updated_at)::text,'')||':'||COALESCE(extract(epoch FROM uw.deleted_at)::text,'')||':'||COALESCE(extract(epoch FROM uw.next_review_at)::text,'')||':'||COALESCE(uw.review_step::text,'')||':'||COALESCE(uw.total_review_count::text,'')||':'||COALESCE(extract(epoch FROM k.updated_at)::text,'') `
 
@@ -40,7 +43,7 @@ type scanner interface{ Scan(...any) error }
 func scanItem(row scanner) (Item, error) {
 	var item Item
 	var token string
-	err := row.Scan(&item.Rank, &item.MeaningID, &item.WordID, &item.WordText, &item.WordSlug, &item.PartOfSpeech, &item.ShortDefinition, &item.ExampleSentence, &item.SelfReportedKnown, &item.Saved, &item.Due, &token)
+	err := row.Scan(&item.Rank, &item.MeaningID, &item.WordID, &item.WordText, &item.WordSlug, &item.PartOfSpeech, &item.ShortDefinition, &item.ExampleSentence, &item.SelfReportedKnown, &item.Saved, &item.Learned, &item.Due, &token)
 	sum := sha256.Sum256([]byte(item.MeaningID.String() + ":" + fmt.Sprint(item.SelfReportedKnown) + ":" + token))
 	item.Revision = hex.EncodeToString(sum[:])
 	return item, err
@@ -67,19 +70,26 @@ func (r *PostgreSQLRepository) Read(ctx context.Context, user uuid.UUID, band in
 		return nil, err
 	}
 	out := &Map{Attribution: SourceAttribution(), CatalogVersion: CatalogVersion, BandSize: BandSize, Ordering: ordering(), Bands: []Band{}, CurrentBand: CurrentBand{Number: band, Items: []Item{}}}
-	rows, err := tx.QueryContext(ctx, `SELECT (kc.rank-1)/100+1,count(*),count(*) FILTER(WHERE COALESCE(k.self_reported_known,false)),count(*) FILTER(WHERE NOT COALESCE(k.self_reported_known,false) AND uw.id IS NOT NULL AND uw.deleted_at IS NULL AND uw.status NOT IN ('ignored','archived'))`+summaryJoins+` GROUP BY (kc.rank-1)/100 ORDER BY (kc.rank-1)/100`, user)
+	rows, err := tx.QueryContext(ctx, `SELECT (kc.rank-1)/100+1,count(*),
+ count(*) FILTER(WHERE COALESCE(k.self_reported_known,false)),
+ count(*) FILTER(WHERE NOT COALESCE(k.self_reported_known,false) AND `+savedWord+`),
+ string_agg(CASE WHEN k.self_reported_known THEN 'k' WHEN `+learnedWord+` THEN 'm' WHEN `+savedWord+` THEN 'l' ELSE 'n' END,'' ORDER BY kc.rank)`+summaryJoins+`
+ GROUP BY (kc.rank-1)/100 ORDER BY (kc.rank-1)/100`, user)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var b Band
-		if err = rows.Scan(&b.Number, &b.TotalWords, &b.KnownCount, &b.LearningCount); err != nil {
+		if err = rows.Scan(&b.Number, &b.TotalWords, &b.KnownCount, &b.LearningCount, &b.WordStates); err != nil {
 			rows.Close()
 			return nil, err
 		}
 		b.StartRank = (b.Number-1)*100 + 1
 		b.EndRank = b.Number * 100
 		b.UnseenCount = b.TotalWords - b.KnownCount - b.LearningCount
+		if b.UnseenCount == b.TotalWords {
+			b.WordStates = ""
+		}
 		out.TotalWords += b.TotalWords
 		out.Bands = append(out.Bands, b)
 	}
@@ -121,7 +131,7 @@ func readItem(ctx context.Context, tx *sql.Tx, user, meaning uuid.UUID, now time
 	return item, err
 }
 func result(item Item, decision string) *DecisionResult {
-	return &DecisionResult{MeaningID: item.MeaningID, Decision: decision, Revision: item.Revision, SelfReportedKnown: item.SelfReportedKnown, Saved: item.Saved, Due: item.Due}
+	return &DecisionResult{MeaningID: item.MeaningID, Decision: decision, Revision: item.Revision, SelfReportedKnown: item.SelfReportedKnown, Saved: item.Saved, Learned: item.Learned, Due: item.Due}
 }
 func (r *PostgreSQLRepository) Decide(ctx context.Context, req DecisionRequest, now time.Time) (*DecisionResult, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
