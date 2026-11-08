@@ -81,7 +81,7 @@ export function DiscoveryNavigation({
       <div className={styles.controls}>
         <button
           type="button"
-          className={workspace.secondary}
+          className={`${workspace.secondary} ${styles.previous}`}
           onClick={onPrevious}
           disabled={locked || rank <= 1}
         >

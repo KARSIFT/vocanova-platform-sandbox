@@ -63,6 +63,20 @@ for (const theme of ["light", "dark"] as const) {
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth))
         .toBeLessThanOrEqual(page.viewportSize()!.width);
       await expect(expectedHeading).toBeVisible();
+      if (route === "/discovery") {
+        for (const [trigger, title] of [
+          ["Word range", "Choose a range"],
+          ["Choose a word", "Choose a word"],
+        ]) {
+          await page.getByRole("button", { name: trigger, exact: true }).click();
+          const dialog = page.getByRole("dialog", { name: title, exact: true });
+          await expect(dialog).toBeVisible();
+          await expect.poll(() => dialog.evaluate(element => element.scrollWidth <= element.clientWidth))
+            .toBe(true);
+          await dialog.getByRole("button", { name: "Close picker" }).click();
+          await expect(dialog).toHaveCount(0);
+        }
+      }
       expect(errors).toEqual([]);
     });
   }
