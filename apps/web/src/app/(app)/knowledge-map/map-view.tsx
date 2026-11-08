@@ -24,11 +24,23 @@ function legacyFill(band: Band): CSSProperties | undefined {
 }
 
 function learnedCount(band: Band) {
-  return band.wordStates?.match(/m/g)?.length ?? 0;
+  if (band.learningCount === 0) return 0;
+  // Older responses counted all saved words together.
+  if (!band.wordStates) return undefined;
+  return band.wordStates.match(/m/g)?.length ?? 0;
 }
 
-function progressLabel(band: Band, learned = learnedCount(band)) {
-  return `${band.knownCount} already know, ${band.learningCount - learned} learning, ${learned ? `${learned} learned, ` : ""}${band.unseenCount} new`;
+function progressLabel(band: Band, separator: string, knownLabel: string) {
+  const learned = learnedCount(band);
+  const counts = [`${band.knownCount} ${knownLabel}`];
+  if (learned === undefined) {
+    counts.push(`${band.learningCount} saved`);
+  } else {
+    counts.push(`${band.learningCount - learned} learning`);
+    if (learned > 0) counts.push(`${learned} learned`);
+  }
+  counts.push(`${band.unseenCount} new`);
+  return counts.join(separator);
 }
 
 /** One path per tracked status keeps 10,000 marks out of the DOM. */
@@ -64,7 +76,6 @@ function rangeLabel(band: Pick<Band, "startRank" | "endRank">) {
 export function RangeCard({ data }: { data: KnowledgeMapData }) {
   const band = data.currentBand.number;
   const summary = data.bands.find((item) => item.number === band);
-  const learned = summary ? learnedCount(summary) : 0;
   const next = nextDiscoveryTarget(data);
   const targetBand = next?.band ?? earlierDiscoveryBand(data)?.number;
   const nextInRange =
@@ -98,10 +109,7 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
       </div>
       {summary ? (
         <p className={styles.rangeCounts}>
-          {summary.knownCount} known · {summary.learningCount - learned}{" "}
-          learning
-          {learned > 0 ? ` · ${learned} learned` : ""} · {summary.unseenCount}{" "}
-          new
+          {progressLabel(summary, " · ", "known")}
         </p>
       ) : null}
       {/* One mark per word in rank order; the counts above carry the meaning. */}
@@ -168,7 +176,15 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
   const band = data.currentBand.number;
   const known = data.bands.reduce((sum, item) => sum + item.knownCount, 0);
   const saved = data.bands.reduce((sum, item) => sum + item.learningCount, 0);
-  const learned = data.bands.reduce((sum, item) => sum + learnedCount(item), 0);
+  const learnedByBand = data.bands.map(learnedCount);
+  const showMastery = learnedByBand.every((count) => count !== undefined);
+  const learned = learnedByBand.reduce<number>(
+    (sum, count) => sum + (count ?? 0),
+    0,
+  );
+  const hasRankedProgress = data.bands.every(
+    (item) => item.wordStates || item.unseenCount === item.totalWords,
+  );
   const rows = Array.from({ length: 10 }, (_, row) =>
     data.bands.slice(row * 10, row * 10 + 10),
   );
@@ -177,7 +193,11 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
       <h2 id="atlas-title" className="section-title">
         Your word map
       </h2>
-      <p className={styles.atlasLede}>Each square shows 100 words in order.</p>
+      <p className={styles.atlasLede}>
+        {hasRankedProgress
+          ? "Each square shows 100 words in order."
+          : "100 words per range."}
+      </p>
       <ul className={styles.legend} aria-label="Map progress">
         <li>
           <span className={styles.knownDot} aria-hidden="true" />
@@ -185,12 +205,16 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
         </li>
         <li>
           <span className={styles.learningDot} aria-hidden="true" />
-          {(saved - learned).toLocaleString()} learning
+          {showMastery
+            ? `${(saved - learned).toLocaleString()} learning`
+            : `${saved.toLocaleString()} saved`}
         </li>
-        <li>
-          <span className={styles.learnedDot} aria-hidden="true" />
-          {learned.toLocaleString()} learned
-        </li>
+        {showMastery && (
+          <li>
+            <span className={styles.learnedDot} aria-hidden="true" />
+            {learned.toLocaleString()} learned
+          </li>
+        )}
         <li>
           <span className={styles.newDot} aria-hidden="true" />
           {(data.totalWords - known - saved).toLocaleString()} new
@@ -236,7 +260,7 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
                   href={`/discovery?band=${item.number}&active=1`}
                   className={styles.atlasCell}
                   aria-current={item.number === band ? "true" : undefined}
-                  aria-label={`Words ${item.startRank} to ${item.endRank}, ${progressLabel(item)}`}
+                  aria-label={`Words ${item.startRank} to ${item.endRank}, ${progressLabel(item, ", ", "already know")}`}
                   style={legacyFill(item)}
                 >
                   <AtlasGrid band={item} />

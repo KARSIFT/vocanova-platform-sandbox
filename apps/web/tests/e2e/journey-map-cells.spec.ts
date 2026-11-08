@@ -46,3 +46,19 @@ test("the Journey map shows all four states at their ranked positions", async ({
     range.getByRole("link", { name: "12 Map word 12 Learned", exact: true }),
   ).toBeVisible();
 });
+
+test("Journey shows aggregate saved progress when word states are unavailable", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "e2e_knowledge_map", value: "legacy-progress", url: baseURL! },
+  ]);
+  await page.goto("/discover?band=1");
+  const legend = page.getByRole("list", { name: "Map progress" });
+  await expect(legend).toHaveText(/1 already know\s*3 saved\s*9,996 new/);
+  const range = page.getByRole("region", { name: "Words 1–100", exact: true });
+  await expect(range.getByText("1 known · 2 saved · 97 new")).toBeVisible();
+});

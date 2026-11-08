@@ -75,7 +75,8 @@ export async function handleDailyDiscovery({
           ? 2
           : 1
         : 0;
-  const mixedProgress = cookies.e2e_knowledge_map === "mixed-progress"
+  const legacyProgress = cookies.e2e_knowledge_map === "legacy-progress";
+  const mixedProgress = legacyProgress || cookies.e2e_knowledge_map === "mixed-progress"
     ? {
         1: { decision: "known", revision: 0 },
         3: { decision: "learn", revision: 0 },
@@ -125,7 +126,7 @@ export async function handleDailyDiscovery({
         knownCount,
         learningCount,
         unseenCount: 100 - knownCount - learningCount,
-        ...(knownCount || learningCount ? { wordStates } : {}),
+        ...(!legacyProgress && (knownCount || learningCount) ? { wordStates } : {}),
       };
     }),
     currentBand: {
@@ -150,7 +151,7 @@ export async function handleDailyDiscovery({
             : {}),
           selfReportedKnown: entry?.decision === "known",
           saved: entry?.decision === "learn",
-          ...(entry?.learned ? { learned: true } : {}),
+          ...(!legacyProgress && entry?.learned ? { learned: true } : {}),
           due: entry?.decision === "learn" && !entry.learned,
           revision: revision(entry?.revision ?? 0),
         };
@@ -166,7 +167,7 @@ export async function handleDailyDiscovery({
       revision: revision(entry?.revision ?? 0),
       selfReportedKnown: entry?.decision === "known",
       saved: entry?.decision === "learn",
-      ...(entry?.learned ? { learned: true } : {}),
+      ...(!legacyProgress && entry?.learned ? { learned: true } : {}),
       due: entry?.decision === "learn" && !entry.learned,
     };
   };
