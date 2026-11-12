@@ -396,7 +396,7 @@ export function SentenceFeedback({
           type="submit"
           disabled={isLoading || sentence.trim().length === 0}
           aria-busy={isLoading}
-          className={`inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50 ${hasSuccessResult ? "border border-neutral-300 text-primary-700 hover:bg-primary-50" : "bg-primary-600 text-neutral-50 hover:bg-primary-700"}`}
+          className={`inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50 ${hasSuccessResult ? "border border-neutral-300 text-primary-700 hover:bg-primary-50" : "bg-primary-600 text-neutral-50 hover:bg-primary-700"}`}
         >
           {isLoading ? "Checking..." : "Check my sentence"}
         </button>
