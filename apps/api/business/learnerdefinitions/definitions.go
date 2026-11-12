@@ -27,8 +27,12 @@ type entry struct {
 var entries, byRevision = load()
 
 func load() ([]entry, map[string]string) {
+	return parseDefinitions(originalDefinitions)
+}
+
+func parseDefinitions(data []byte) ([]entry, map[string]string) {
 	var rows []entry
-	if err := json.Unmarshal(originalDefinitions, &rows); err != nil {
+	if err := json.Unmarshal(data, &rows); err != nil {
 		panic(fmt.Errorf("invalid learner definitions: %w", err))
 	}
 	lookup := make(map[string]string, len(rows))

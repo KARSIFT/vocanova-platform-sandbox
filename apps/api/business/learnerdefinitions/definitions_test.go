@@ -53,3 +53,33 @@ func TestReviewedDefinitionsBindToFrozenCanonicalSource(t *testing.T) {
 		require.NotEqual(t, entry.ShortDefinition, entry.LearnerDefinition, entry.Word)
 	}
 }
+
+func TestEmbeddedDefinitionGuardsRejectInvalidContent(t *testing.T) {
+	valid := entries[0]
+	encode := func(rows ...entry) []byte {
+		data, err := json.Marshal(rows)
+		require.NoError(t, err)
+		return data
+	}
+	empty := valid
+	empty.LearnerDefinition = " \n "
+	mismatched := valid
+	mismatched.Revision = "not-the-canonical-revision"
+	cases := []struct {
+		name string
+		data []byte
+	}{
+		{"malformed JSON", []byte(`[{`)},
+		{"empty explanation", encode(empty)},
+		{"mismatched revision", encode(mismatched)},
+		{"duplicate revision", encode(valid, valid)},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) { require.Panics(t, func() { parseDefinitions(tc.data) }) })
+	}
+	t.Run("valid data keeps canonical binding", func(t *testing.T) {
+		rows, index := parseDefinitions(encode(valid))
+		require.Equal(t, []entry{valid}, rows)
+		require.Equal(t, map[string]string{valid.Revision: valid.LearnerDefinition}, index)
+	})
+}

@@ -359,6 +359,7 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
           name="displayName"
           type="text"
           autoComplete="nickname"
+          aria-describedby="settings-display-name-limit"
           value={state.displayName}
           onChange={(event) => {
             // Match the API's Unicode code-point cap. Native maxLength
@@ -370,6 +371,12 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
           }}
           className="block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
         />
+        <p
+          id="settings-display-name-limit"
+          className="text-sm text-neutral-700"
+        >
+          Up to 80 characters.
+        </p>
       </fieldset>
 
       {status.type === "error" ? (

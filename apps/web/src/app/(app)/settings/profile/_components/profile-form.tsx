@@ -138,6 +138,7 @@ export function ProfileForm({
           name="displayName"
           type="text"
           autoComplete="nickname"
+          aria-describedby="profile-display-name-limit"
           value={displayName}
           onChange={(event) => {
             if (!isDisplayNameWithinLimit(event.target.value)) return;
@@ -156,6 +157,12 @@ export function ProfileForm({
           }}
           className="mt-[var(--spacing-xs)] block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
         />
+        <p
+          id="profile-display-name-limit"
+          className="mt-[var(--spacing-xs)] text-sm text-neutral-700"
+        >
+          Up to 80 characters.
+        </p>
       </div>
       {state === "error" ? (
         <p

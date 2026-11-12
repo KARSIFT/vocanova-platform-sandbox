@@ -8,6 +8,9 @@ See [the completion delivery](ui-ux-completion-2026-11-12.md),
 web 298 and API-client 61 unit tests, package/web/API builds, lint, app/browser
 TypeScript, formatting and generated OpenAPI comparison passed locally. The
 API validates the same 80/81 supplementary-Unicode boundary used by the UI.
+Cross-client recipient/IP budget tests verify the existing server-side rate
+limits; visible name hints and malformed editorial-loader guard tests address
+repository review feedback.
 The surrounding browser regression suite passed **248 cases with 16 existing
 layout-scoped skips**, zero failures or flaky retries. Those skips are legacy
 desktop-scoped authentication/Profile cases; the new recovery cases run at all

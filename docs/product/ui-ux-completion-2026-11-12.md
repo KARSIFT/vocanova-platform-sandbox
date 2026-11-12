@@ -11,6 +11,10 @@ confirmed that the learner study should be prepared while they arrange learners.
   lock prevent duplicate clicks; resend errors keep recovery available. Generic
   acknowledgements do not reveal account existence or claim guaranteed delivery.
   Signup passwords remain only in React memory and clear when changing address.
+  The UI cooldown applies to the mounted recovery view; existing server-side
+  per-IP and hashed-recipient budgets remain enforced across clients. A focused
+  regression checks the production 10-request/minute window, normalization and
+  renewal without sending mail. The UI timer is not a security boundary.
 - Profile and unsent email-change inputs use the existing validated same-user,
   two-hour tab drafts. Confirmed actions clear resolved drafts; newer edits survive
   earlier responses and uncertain commits. User/account boundaries, successful
@@ -18,6 +22,7 @@ confirmed that the learner study should be prepared while they arrange learners.
   pending sent state or authentication cookie is persisted as a draft.
 - Signup, Profile and Settings use the API's 80 Unicode code-point name limit,
   including supplementary characters, instead of a native UTF-16 unit limit.
+  Visible, screen-reader-linked hints state the limit.
 - Existing lists and their meanings precede optional create/rename/delete controls.
   Native keyboard-accessible disclosures keep management available; uncertain
   mutation errors reopen the relevant disclosure and focus recovery. The existing

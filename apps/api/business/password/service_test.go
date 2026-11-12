@@ -2,6 +2,7 @@ package password
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -54,6 +55,42 @@ func TestServicePoliciesStillPassThroughRateLimits(t *testing.T) {
 	assert.Len(t, limiter.keys, 6, "each policy-denied anonymous action consumes IP and hashed-email budget")
 	for _, key := range limiter.keys {
 		assert.NotContains(t, key, "reserved@example.test")
+	}
+}
+
+func TestEmailRequestsKeepRecipientAndIPBudgetsAcrossClients(t *testing.T) {
+	for _, action := range []string{"signup", "reset"} {
+		for _, boundary := range []string{"recipient", "ip"} {
+			t.Run(action+"/"+boundary, func(t *testing.T) {
+				clk := &clock.Fixed{T: time.Date(2026, 11, 12, 0, 0, 0, 0, time.UTC)}
+				// Match the production window/budget; denied identities still
+				// consume it without requiring a database or sending an email.
+				limiter := auth.NewFixedWindowRateLimiter(clk, time.Minute, 10)
+				svc := NewService(nil, &email.Fake{}, clk, limiter, "https://example.test", "test", time.Hour,
+					func() bool { return true }, func(string) bool { return false }, func(string) bool { return false })
+				request := func(attempt int) error {
+					ip, address := "192.0.2.1", "learner@example.test"
+					if boundary == "recipient" {
+						ip = fmt.Sprintf("192.0.2.%d", attempt+1)
+						if attempt%2 == 1 {
+							address = " LEARNER@EXAMPLE.TEST "
+						}
+					} else {
+						address = fmt.Sprintf("learner-%d@example.test", attempt)
+					}
+					if action == "signup" {
+						return svc.RequestSignup(t.Context(), ip, address, "correct horse battery staple", "Learner")
+					}
+					return svc.RequestReset(t.Context(), ip, address)
+				}
+				for attempt := 0; attempt < 10; attempt++ {
+					require.NoError(t, request(attempt))
+				}
+				require.ErrorIs(t, request(10), auth.ErrRateLimited)
+				clk.T = clk.T.Add(time.Minute)
+				require.NoError(t, request(11))
+			})
+		}
 	}
 }
 

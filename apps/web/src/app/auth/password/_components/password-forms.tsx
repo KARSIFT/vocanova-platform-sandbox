@@ -357,6 +357,7 @@ export function PasswordSignupForm() {
           name="name"
           type="text"
           autoComplete="name"
+          aria-describedby="signup-display-name-limit"
           value={displayName}
           onChange={(event) => {
             if (isDisplayNameWithinLimit(event.target.value)) {
@@ -366,6 +367,12 @@ export function PasswordSignupForm() {
           disabled={state === "loading"}
           className={inputClassName}
         />
+        <p
+          id="signup-display-name-limit"
+          className="mt-[var(--spacing-xs)] text-sm text-neutral-700"
+        >
+          Up to 80 characters.
+        </p>
       </div>
       <PasswordInput
         id="signup-password"

@@ -180,6 +180,10 @@ test("a reverted profile draft survives a committed save with a lost response", 
   await page.goto("/settings/profile");
   const name = page.getByRole("textbox", { name: "Display name", exact: true });
   const original = await name.inputValue();
+  const avatar = page
+    .getByRole("region", { name: "Your profile", exact: true })
+    .locator('[aria-hidden="true"]');
+  const originalInitials = await avatar.innerText();
   await name.fill("Committed before response failed");
   await page.getByRole("button", { name: "Save profile", exact: true }).click();
   await expect.poll(() => committed).toBe(true);
@@ -197,10 +201,16 @@ test("a reverted profile draft survives a committed save with a lost response", 
   await page.reload();
   await expect(name).toHaveValue(original);
   await expect(page.getByRole("status")).toContainText("restored");
+  // The lost response followed a real committed write. Confirm that reload
+  // rendered its avatar before explicitly restoring the learner's draft.
+  await expect(avatar).toHaveText("CB");
   await page.getByRole("button", { name: "Save profile", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(
     "Your profile has been saved",
   );
+  // Save acknowledgement precedes router.refresh. Wait for its observable
+  // server-rendered avatar before starting another document navigation.
+  await expect(avatar).toHaveText(originalInitials);
   await page.reload();
   await expect(name).toHaveValue(original);
   await expect(
@@ -231,6 +241,12 @@ for (const theme of ["light", "dark"] as const) {
       });
     });
     await page.goto("/signup");
+    await expect(
+      page.getByRole("textbox", {
+        name: "Display name (optional)",
+        exact: true,
+      }),
+    ).toHaveAccessibleDescription("Up to 80 characters.");
     await page.clock.install();
     await page.getByLabel("Email address").fill("learner@example.test");
     await page
@@ -365,6 +381,7 @@ for (const theme of ["light", "dark"] as const) {
       name: "Display name",
       exact: true,
     });
+    await expect(name).toHaveAccessibleDescription("Up to 80 characters.");
     const supplementaryName = "𐐀".repeat(80);
     await name.fill(supplementaryName);
     await expect(name).toHaveValue(supplementaryName);
