@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
+import {
+  clearEmailChangeDraft,
+  isPreferencesDraftDocumentActive,
+  readEmailChangeDraft,
+  saveEmailChangeDraft,
+} from "@/lib/preferences-draft";
 
 interface EmailChangeFormProps {
   currentEmail: string;
+  userId?: string;
 }
 
 type EmailPhase =
@@ -16,21 +23,70 @@ type EmailPhase =
   | { type: "pending"; newEmail: string }
   | { type: "error"; message: string };
 
-export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
+export function EmailChangeForm({
+  currentEmail,
+  userId,
+}: EmailChangeFormProps) {
   const [newEmail, setNewEmail] = useState("");
   const [phase, setPhase] = useState<EmailPhase>({ type: "idle" });
+  const [restored, setRestored] = useState(false);
+  const requesting = useRef(false);
+  const mounted = useRef(false);
+  const recoveryScope = useRef<{
+    userId?: string;
+    currentEmail: string;
+  } | null>(null);
+  const emailInput = useRef<HTMLInputElement>(null);
+  const focusEmailOnReturn = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      recoveryScope.current?.userId === userId &&
+      recoveryScope.current?.currentEmail === currentEmail
+    )
+      return;
+    recoveryScope.current = { userId, currentEmail };
+    const draft = readEmailChangeDraft(userId, currentEmail);
+    setNewEmail(draft ?? "");
+    setRestored(draft !== null);
+    setPhase({ type: "idle" });
+  }, [currentEmail, userId]);
+
+  useEffect(() => {
+    if (phase.type === "idle" && focusEmailOnReturn.current) {
+      emailInput.current?.focus();
+      focusEmailOnReturn.current = false;
+    }
+  }, [phase.type]);
 
   async function handleRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (requesting.current || !isPreferencesDraftDocumentActive()) return;
     const trimmed = newEmail.trim();
     if (!trimmed) {
       return;
     }
 
+    requesting.current = true;
+    const scope = recoveryScope.current;
+    saveEmailChangeDraft({ userId, currentEmail, newEmail });
     setPhase({ type: "requesting" });
     const client = createApiClient();
     try {
       const csrfToken = await getOrRefreshCSRFToken();
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
       if (!csrfToken) {
         setPhase({
           type: "error",
@@ -43,27 +99,51 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
         { newEmail: trimmed },
         { headers: { "X-CSRF-Token": csrfToken } },
       );
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
+      clearEmailChangeDraft(userId);
+      setRestored(false);
       setPhase({ type: "pending", newEmail: trimmed });
     } catch (error) {
-      // T06: a 401 mid-email-change-request routes the learner to
-      // re-auth. The newEmail value is preserved in the form's
-      // controlled input so the learner does not need to retype it
-      // after re-authentication.
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
+      // Preserve only the unsent input before a 401 leaves this document.
+      // The confirmation proof and pending/sent phase are never persisted.
+      saveEmailChangeDraft({ userId, currentEmail, newEmail });
       const message = handleApiError(
         error,
         "We couldn't send the confirmation email. Please try again.",
       );
       setPhase({ type: "error", message });
+    } finally {
+      requesting.current = false;
     }
   }
 
   function handleStartOver() {
+    clearEmailChangeDraft(userId);
+    setRestored(false);
+    focusEmailOnReturn.current = true;
     setPhase({ type: "idle" });
     setNewEmail("");
   }
 
   return (
     <div className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]">
+      {restored ? (
+        <p role="status" className="text-sm text-neutral-700">
+          Your unsent email address was restored in this tab. Check it before
+          sending a confirmation link.
+        </p>
+      ) : null}
       {phase.type === "pending" ? (
         <div className="space-y-[var(--spacing-md)]">
           <p
@@ -71,7 +151,7 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
             aria-live="polite"
             className="rounded-md border border-primary-300 bg-primary-50 p-[var(--spacing-md)] text-base text-primary-900"
           >
-            We sent a confirmation link to{" "}
+            If this address can be used, we&apos;ve sent a confirmation link to{" "}
             <span className="font-medium [overflow-wrap:anywhere]">
               {phase.newEmail}
             </span>
@@ -104,13 +184,21 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
           </label>
           <input
             id="new-email"
+            ref={emailInput}
             name="newEmail"
             type="email"
             autoComplete="email"
+            maxLength={320}
             required
             value={newEmail}
             onChange={(event) => {
               setNewEmail(event.target.value);
+              saveEmailChangeDraft({
+                userId,
+                currentEmail,
+                newEmail: event.target.value,
+              });
+              if (!event.target.value.trim()) setRestored(false);
               if (phase.type === "error") {
                 setPhase({ type: "idle" });
               }

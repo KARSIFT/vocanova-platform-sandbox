@@ -38,6 +38,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto(path);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const main = page.getByRole("main");
+    await main.locator("summary").filter({ hasText: /^List settings$/ }).press("Enter");
     const rename = main.getByRole("button", { name: "Rename list", exact: true });
     const name = main.getByLabel("List name", { exact: true });
     await expect(rename).toBeDisabled();

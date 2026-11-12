@@ -45,6 +45,7 @@ test("current delivery registers only the reviewed learning feature boundaries",
     "achievements",
     "pronunciation",
     "meaningmedia",
+    "learnerdefinitions",
   ])
     assert.equal(isRegisteredBusinessModule(module), true, module);
   for (const schema of [

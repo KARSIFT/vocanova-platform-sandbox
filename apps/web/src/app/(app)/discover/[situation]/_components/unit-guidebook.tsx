@@ -1,3 +1,4 @@
+import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import type {
   LessonSummary,
@@ -86,7 +87,12 @@ export function UnitGuidebook({
                 >
                   {word.wordText}
                 </Link>
-                <p className="text-neutral-700">{word.shortDefinition}</p>
+                <p className="text-neutral-700">
+                  {getPrimaryDefinition(
+                    word.shortDefinition,
+                    word.learnerDefinition,
+                  )}
+                </p>
                 {examples[word.meaningId] && (
                   <p className="mt-2 border-l-2 border-secondary-300 pl-3 text-sm text-neutral-800">
                     {examples[word.meaningId]}

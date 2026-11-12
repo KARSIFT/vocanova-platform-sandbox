@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/learnerdefinitions"
 	"net/http"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
@@ -25,6 +26,7 @@ type SearchMeaningDTO struct {
 	WordText          string `json:"wordText" doc:"Canonical word text"`
 	PartOfSpeech      string `json:"partOfSpeech" doc:"Part of speech"`
 	ShortDefinition   string `json:"shortDefinition" doc:"Definition of this meaning"`
+	LearnerDefinition string `json:"learnerDefinition,omitempty" doc:"Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged"`
 	DifficultyLevel   string `json:"difficultyLevel" doc:"Meaning difficulty, falling back to word difficulty or unknown; an editorial band, not a learner proficiency estimate"`
 	SelfReportedKnown bool   `json:"selfReportedKnown" doc:"Requester self-assessment, independent of saved state or review mastery"`
 	Saved             bool   `json:"saved" doc:"Whether the requester has saved this meaning"`
@@ -54,12 +56,16 @@ func registerCanonicalSearch(api huma.API, svc *content.Service) {
 		out.Body.NextCursor = resp.NextCursor
 		out.Body.HasMore = resp.NextCursor != ""
 		for i, item := range resp.Items {
-			id := ""
-			if item.UserWordID != uuid.Nil {
-				id = item.UserWordID.String()
-			}
-			out.Body.Items[i] = SearchMeaningDTO{MeaningID: item.MeaningID.String(), WordID: item.WordID.String(), WordSlug: item.WordSlug, WordText: item.WordText, PartOfSpeech: item.PartOfSpeech, ShortDefinition: item.ShortDefinition, DifficultyLevel: item.DifficultyLevel, Saved: item.Saved, SelfReportedKnown: item.SelfReportedKnown, UserWordID: id, ReviewState: item.ReviewState, Due: item.Due}
+			out.Body.Items[i] = searchMeaningToDTO(item)
 		}
 		return out, nil
 	})
+}
+
+func searchMeaningToDTO(item content.SearchMeaning) SearchMeaningDTO {
+	id := ""
+	if item.UserWordID != uuid.Nil {
+		id = item.UserWordID.String()
+	}
+	return SearchMeaningDTO{MeaningID: item.MeaningID.String(), WordID: item.WordID.String(), WordSlug: item.WordSlug, WordText: item.WordText, PartOfSpeech: item.PartOfSpeech, ShortDefinition: item.ShortDefinition, LearnerDefinition: learnerdefinitions.Resolve(item.MeaningID.String(), item.WordText, item.PartOfSpeech, item.ShortDefinition, ""), DifficultyLevel: item.DifficultyLevel, Saved: item.Saved, SelfReportedKnown: item.SelfReportedKnown, UserWordID: id, ReviewState: item.ReviewState, Due: item.Due}
 }

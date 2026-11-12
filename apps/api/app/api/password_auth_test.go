@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +12,35 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
 	"github.com/stretchr/testify/require"
 )
+
+func TestPasswordSignupNameLimitCountsUnicodeCodePoints(t *testing.T) {
+	api, authSvc, _, mail, clk := testAuthAPI(t)
+	svc := password.NewService(nil, mail, clk, auth.NewFixedWindowRateLimiter(clk, time.Hour, 100), "https://test.example.com", "test", time.Hour, func() bool { return false }, nil, nil)
+	RegisterPasswordAuth(api, svc, authSvc)
+	for _, tc := range []struct {
+		name        string
+		count, want int
+	}{
+		{"at limit", 80, http.StatusServiceUnavailable},
+		{"over limit", 81, http.StatusUnprocessableEntity},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body, err := json.Marshal(map[string]string{
+				"email": "learner@example.com", "password": "a sufficiently long password",
+				"displayName": strings.Repeat("𐐀", tc.count),
+			})
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/password/signups", strings.NewReader(string(body)))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			api.Adapter().ServeHTTP(w, req)
+			// At the limit, schema validation reaches the disabled capability;
+			// over it, validation rejects before any account or email action.
+			require.Equal(t, tc.want, w.Code, w.Body.String())
+			require.Empty(t, w.Result().Cookies())
+		})
+	}
+}
 
 func TestPasswordEndpointsDisabledAndJSONOnly(t *testing.T) {
 	api, authSvc, _, mail, clk := testAuthAPI(t)

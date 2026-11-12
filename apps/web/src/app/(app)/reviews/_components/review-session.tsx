@@ -464,6 +464,11 @@ export function ReviewSession({
                 <p className="mt-[var(--spacing-xs)] text-lg text-primary-900">
                   {currentCard.shortDefinition}
                 </p>
+                {currentCard.learnerDefinition ? (
+                  <p className="mt-2 text-base text-primary-900">
+                    {currentCard.learnerDefinition}
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
@@ -537,6 +542,11 @@ export function ReviewSession({
                 <p className="mt-[var(--spacing-xs)] text-base text-red-800">
                   The correct answer was: {currentCard.shortDefinition}
                 </p>
+                {currentCard.learnerDefinition ? (
+                  <p className="mt-2 text-base text-red-800">
+                    {currentCard.learnerDefinition}
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   onClick={() =>

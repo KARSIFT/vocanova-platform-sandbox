@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/learnerdefinitions"
 	"net/http"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
@@ -32,6 +33,7 @@ type SituationMeaningDTO struct {
 	WordText          string `json:"wordText" doc:"Canonical word text"`
 	PartOfSpeech      string `json:"partOfSpeech" doc:"Part of speech"`
 	ShortDefinition   string `json:"shortDefinition" doc:"Short definition"`
+	LearnerDefinition string `json:"learnerDefinition,omitempty" doc:"Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged"`
 	SelfReportedKnown bool   `json:"selfReportedKnown" doc:"Requester self-assessment, independent of review mastery"`
 	Saved             bool   `json:"saved" doc:"Whether the authenticated requester has saved this meaning"`
 }
@@ -192,6 +194,7 @@ func registerContent(api huma.API, svc *content.Service, usersSvc *users.Service
 				WordText:          m.WordText,
 				PartOfSpeech:      m.PartOfSpeech,
 				ShortDefinition:   m.ShortDefinition,
+				LearnerDefinition: learnerdefinitions.Resolve(m.MeaningID.String(), m.WordText, m.PartOfSpeech, m.ShortDefinition, ""),
 				Saved:             m.Saved,
 				SelfReportedKnown: m.SelfReportedKnown,
 			}
@@ -284,7 +287,7 @@ func wordToDTO(w *content.WordDetail) WordDetailDTO {
 			ID:                m.ID.String(),
 			PartOfSpeech:      m.PartOfSpeech,
 			ShortDefinition:   m.ShortDefinition,
-			LearnerDefinition: m.LearnerDefinition,
+			LearnerDefinition: learnerdefinitions.Resolve(m.ID.String(), w.Text, m.PartOfSpeech, m.ShortDefinition, m.LearnerDefinition),
 			Saved:             m.Saved,
 			SelfReportedKnown: m.SelfReportedKnown,
 			UserWordID:        userWordID,

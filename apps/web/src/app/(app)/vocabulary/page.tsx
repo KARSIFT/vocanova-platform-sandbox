@@ -1,3 +1,4 @@
+import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import Form from "next/form";
 import {
@@ -307,7 +308,10 @@ export default async function VocabularyPage({
                       {item.partOfSpeech}
                     </p>
                     <p className="mt-3 grow text-neutral-900">
-                      {item.shortDefinition}
+                      {getPrimaryDefinition(
+                        item.shortDefinition,
+                        item.learnerDefinition,
+                      )}
                     </p>
                     {item.selfReportedKnown && (
                       <p className="mt-3 text-sm font-semibold text-primary-700">

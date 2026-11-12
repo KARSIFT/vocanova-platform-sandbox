@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/learnerdefinitions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/wordlists"
 	"github.com/danielgtaylor/huma/v2"
 	"net/http"
@@ -73,14 +74,14 @@ func RegisterWordLists(api huma.API, svc *wordlists.Service, authSvc *auth.Servi
 		if e != nil {
 			return nil, mapWordListError(e)
 		}
-		return &WordListOutput{*st}, nil
+		return &WordListOutput{*wordListWithExplanations(st)}, nil
 	})
 	huma.Register(api, huma.Operation{OperationID: "PutWordList", Method: http.MethodPut, Path: "/api/v1/word-lists/{listId}", Summary: "Create or rename your private list with revision protection", Tags: []string{"Word lists"}, Middlewares: write}, func(ctx context.Context, in *PutWordListInput) (*WordListOutput, error) {
 		st, e := svc.Write(ctx, wordlists.WriteRequest{UserID: RequesterUserID(ctx), ListID: parseUUID(in.ListID), Operation: "put", Name: in.Body.Name, ExpectedRevision: in.Body.ExpectedRevision, IdempotencyKey: in.IdempotencyKey})
 		if e != nil {
 			return nil, mapWordListError(e)
 		}
-		return &WordListOutput{*st}, nil
+		return &WordListOutput{*wordListWithExplanations(st)}, nil
 	})
 	huma.Register(api, huma.Operation{OperationID: "DeleteWordList", Method: http.MethodDelete, Path: "/api/v1/word-lists/{listId}", DefaultStatus: 204, Summary: "Delete your list without changing saved words or practice history", Tags: []string{"Word lists"}, Middlewares: write}, func(ctx context.Context, in *DeleteWordListInput) (*struct{}, error) {
 		_, e := svc.Write(ctx, wordlists.WriteRequest{UserID: RequesterUserID(ctx), ListID: parseUUID(in.ListID), Operation: "delete", ExpectedRevision: in.ExpectedRevision, IdempotencyKey: in.IdempotencyKey})
@@ -94,13 +95,25 @@ func RegisterWordLists(api huma.API, svc *wordlists.Service, authSvc *auth.Servi
 		if e != nil {
 			return nil, mapWordListError(e)
 		}
-		return &WordListOutput{*st}, nil
+		return &WordListOutput{*wordListWithExplanations(st)}, nil
 	})
 	huma.Register(api, huma.Operation{OperationID: "DeleteWordListMember", Method: http.MethodDelete, Path: "/api/v1/word-lists/{listId}/members/{meaningId}", Summary: "Remove a meaning without changing SRS or knowledge", Tags: []string{"Word lists"}, Middlewares: write}, func(ctx context.Context, in *DeleteWordListMemberInput) (*WordListOutput, error) {
 		st, e := svc.Write(ctx, wordlists.WriteRequest{UserID: RequesterUserID(ctx), ListID: parseUUID(in.ListID), MeaningID: parseUUID(in.MeaningID), Operation: "remove", ExpectedRevision: in.ExpectedRevision, IdempotencyKey: in.IdempotencyKey})
 		if e != nil {
 			return nil, mapWordListError(e)
 		}
-		return &WordListOutput{*st}, nil
+		return &WordListOutput{*wordListWithExplanations(st)}, nil
 	})
+}
+
+// A projection copy keeps repository-owned membership and mutation receipts intact.
+func wordListWithExplanations(source *wordlists.WordListDetail) *wordlists.WordListDetail {
+	result := *source
+	result.Members = make([]wordlists.WordListMember, len(source.Members))
+	copy(result.Members, source.Members)
+	for i := range result.Members {
+		member := &result.Members[i]
+		member.LearnerDefinition = learnerdefinitions.Resolve(member.MeaningID, member.WordText, member.PartOfSpeech, member.ShortDefinition, member.LearnerDefinition)
+	}
+	return &result
 }

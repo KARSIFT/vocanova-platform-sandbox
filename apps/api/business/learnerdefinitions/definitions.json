@@ -1,0 +1,2058 @@
+[
+  {
+    "meaningId": "a0e6db96-5ebb-51b3-a521-83dd1b14a81d",
+    "revision": "784d2aed960b70ce3c1022099a05551b11acd5792082cbafef12991b22f29ed9",
+    "word": "talk",
+    "partOfSpeech": "verb",
+    "shortDefinition": "exchange thoughts; talk with",
+    "learnerDefinition": "To speak with someone and share thoughts."
+  },
+  {
+    "meaningId": "241b82f0-e225-546f-8ef3-0b7cad30217d",
+    "revision": "f4db4a5d5482a29d46029cfb9da4db30884205b596f9248d9623d1e672dde2d0",
+    "word": "weekend",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a time period usually extending from Friday night through Sunday; more loosely defined as any period of successive days including one and only one Sunday",
+    "learnerDefinition": "The days at the end of the week, usually from Friday evening to Sunday."
+  },
+  {
+    "meaningId": "dd5f8f33-e396-5969-b97d-7884ac41f3c1",
+    "revision": "58bdfbb047f8ccdd982a224da78de610b54d9dbe491e6348b9dc2ced7c2208b9",
+    "word": "excellent",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "very good;of the highest quality",
+    "learnerDefinition": "Very good or of the best quality."
+  },
+  {
+    "meaningId": "b10d1b4a-981c-5f58-bfda-a00baf4f03f0",
+    "revision": "a2c775e44d0ae96e036d0dd09b0257a4306b0651770672ba25a9380cd21475ff",
+    "word": "fake",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "fraudulent; having a misleading appearance",
+    "learnerDefinition": "Made to look real in order to deceive people."
+  },
+  {
+    "meaningId": "a2ee260f-f62d-52f8-ae93-9fb99194cd6b",
+    "revision": "76bd242be45ffa02f430b9076869a001c701bce90fdaecfc3280c0cb4b510af7",
+    "word": "release",
+    "partOfSpeech": "verb",
+    "shortDefinition": "release, as from one's grip",
+    "learnerDefinition": "To let go of something you are holding."
+  },
+  {
+    "meaningId": "f955bfe0-6429-5419-8f36-42b73b295188",
+    "revision": "01f2dee7c5b5041f6375559f5c2965791ae4062af9ccc0b4123d2a7235c6c92a",
+    "word": "ticket",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a commercial document showing that the holder is entitled to something (as to ride on public transportation or to enter a public entertainment)",
+    "learnerDefinition": "A document that lets you travel or enter a place or event."
+  },
+  {
+    "meaningId": "70952471-e2ba-57cd-9d1e-72ef8b14426b",
+    "revision": "109852f47221fc3f5a565498c792aff155640d7472bef2f40fa43536bc9d8263",
+    "word": "prefer",
+    "partOfSpeech": "verb",
+    "shortDefinition": "like better; value more highly",
+    "learnerDefinition": "To like one thing more than another."
+  },
+  {
+    "meaningId": "dfda3792-65b9-5bde-8298-3d09247b18d6",
+    "revision": "ac48a1014178518ce9a863512cbcb4953d9d1eb082e99755f08e1667db931b47",
+    "word": "exist",
+    "partOfSpeech": "verb",
+    "shortDefinition": "have an existence, be extant",
+    "learnerDefinition": "To be real or present in the world."
+  },
+  {
+    "meaningId": "feff3107-17da-5931-b082-acd67137c97d",
+    "revision": "25210c8b5b3269b832d0fc798bc4d3cb882be3294600da815a9a055954b1514e",
+    "word": "manage",
+    "partOfSpeech": "verb",
+    "shortDefinition": "be successful; achieve a goal",
+    "learnerDefinition": "To succeed in doing something."
+  },
+  {
+    "meaningId": "5adfd4b3-c6d6-5af7-aec6-14d3fa6ac821",
+    "revision": "b5355b6170d6551ff4820d1b9397b52d5266d209b4d7e995834eaada23774e2e",
+    "word": "football",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any of various games played with a ball (round or oval) in which two teams try to kick or carry or propel the ball into each other's goal",
+    "learnerDefinition": "A team game in which players kick or carry a ball toward the other team's goal."
+  },
+  {
+    "meaningId": "a203da4d-969f-55a8-b9e5-c00e280e4a57",
+    "revision": "d8034ac7b8c79457f2b2118ac3b477f6f22ccb29b092a0159a5f29cba1fd16cb",
+    "word": "theory",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a well-substantiated explanation of some aspect of the natural world; an organized system of accepted knowledge that applies in a variety of circumstances to explain a specific set of phenomena",
+    "learnerDefinition": "An explanation of how something in nature works, supported by evidence."
+  },
+  {
+    "meaningId": "9b164d4c-3499-5f8e-8dd5-bed13a654189",
+    "revision": "256b15c8fe3cf99a049341ab188d0d99dc3c11129a1ad313414179d99222d212",
+    "word": "page",
+    "partOfSpeech": "noun",
+    "shortDefinition": "one side of one leaf (of a book or magazine or newspaper or letter etc.) or the written or pictorial matter it contains",
+    "learnerDefinition": "One side of a sheet in a book, magazine, newspaper or letter, including what is written on it."
+  },
+  {
+    "meaningId": "69738813-dfca-5d58-9eee-5ff2a6967024",
+    "revision": "97fe7090d3ecfbad8060aa26b7c55778f683655660e18486657fc798a529be91",
+    "word": "ruin",
+    "partOfSpeech": "verb",
+    "shortDefinition": "destroy completely; damage irreparably",
+    "learnerDefinition": "To damage something so badly that it cannot be repaired."
+  },
+  {
+    "meaningId": "1c944c23-a27a-5480-943e-d7cece24e6ae",
+    "revision": "0bde08b9b3969155cbc750621d19bed71a5372281696375c0b7a4162d64364b2",
+    "word": "cancer",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any malignant growth or tumor caused by abnormal and uncontrolled cell division; it may spread to other parts of the body through the lymphatic system or the blood stream",
+    "learnerDefinition": "A disease in which cells grow out of control and may spread to other parts of the body."
+  },
+  {
+    "meaningId": "22b1dc47-eab2-5277-a3eb-30cbfc1ef8c3",
+    "revision": "a2c5bfb79e21a0bdabba4b7efecfa343427c732cf70f0408a1c502db3cda09bb",
+    "word": "priest",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a clergyman in Christian churches who has the authority to perform or administer various religious rites; one of the Holy Orders",
+    "learnerDefinition": "A Christian religious leader who carries out ceremonies and other religious duties."
+  },
+  {
+    "meaningId": "59a17a2c-e5b2-589b-a4ce-de9e4dd222d1",
+    "revision": "64a36801823bdcac5a75c192cb74539f9977e34aed6e3fd9139325a42efb3975",
+    "word": "telephone",
+    "partOfSpeech": "noun",
+    "shortDefinition": "electronic equipment that converts sound into electrical signals that can be transmitted over distances and then converts received signals back into sounds",
+    "learnerDefinition": "A device that lets people speak to each other over a distance."
+  },
+  {
+    "meaningId": "701999a2-6d93-5b6e-8e61-f293e539d028",
+    "revision": "bccc81779089f8742bada1b002c41e74ba930674a8b55fe8d483ce8c0e77d715",
+    "word": "yellow",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "of the color intermediate between green and orange in the color spectrum; of something resembling the color of an egg yolk",
+    "learnerDefinition": "Having the colour of an egg yolk, between green and orange."
+  },
+  {
+    "meaningId": "cd0ce45d-a07c-592d-a5ae-00499d13a76c",
+    "revision": "d20f1dc4d8034a8f9c7d5e2b19de29f2293d94b31bfb8444e0263c2a528fb5cc",
+    "word": "taxi",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a car driven by a person whose job is to take passengers where they want to go in exchange for money",
+    "learnerDefinition": "A car with a driver whom you pay to take you where you want to go."
+  },
+  {
+    "meaningId": "f2731029-3269-50b9-9d81-247e9bc62d30",
+    "revision": "3453a4bf9ab8874005197efc04f63adf10af334b68e67aa5aa575052a4fa656a",
+    "word": "iron",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a heavy ductile magnetic metallic element; is silver-white in pure form but readily rusts; used in construction and tools and armament; plays a role in the transport of oxygen by the blood",
+    "learnerDefinition": "A strong metal used to make tools and buildings. It can rust and is also needed by the body."
+  },
+  {
+    "meaningId": "c76ce876-9fcc-58a7-acb4-1ec9a53e58e9",
+    "revision": "c42ef33bd0947079004c96255b800f972bdb39958eaf2294c903bbac4b22aca5",
+    "word": "metal",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any of several chemical elements that are usually shiny solids that conduct heat or electricity and can be formed into sheets etc.",
+    "learnerDefinition": "A material such as iron or gold that is often hard and shiny and carries heat or electricity."
+  },
+  {
+    "meaningId": "51bf674b-b854-5510-94f0-02410a4b16a2",
+    "revision": "c7ed88453100b3bd378ad6c2247f5a2a90733fcc1aaa798d1131166b4c62ffee",
+    "word": "egg",
+    "partOfSpeech": "noun",
+    "shortDefinition": "animal reproductive body consisting of an ovum or embryo together with nutritive and protective envelopes; especially the thin-shelled reproductive body laid by e.g. female birds",
+    "learnerDefinition": "A structure produced by a female animal that can develop into a young animal, often inside a shell."
+  },
+  {
+    "meaningId": "fe6a60e1-e68d-543c-bbf4-41d3480804bf",
+    "revision": "32b3731dd91cdfc8c265664648f1425796c6da9be949b26e020f6e8f054458ca",
+    "word": "convinced",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "persuaded of; very sure",
+    "learnerDefinition": "Very sure that something is true."
+  },
+  {
+    "meaningId": "042ecc4f-4ccf-5e82-97eb-36064b898cf9",
+    "revision": "3d67c469aaaa76534352f7d99e13552c99875f5bb4b5ee4c696aa458e4cc3132",
+    "word": "drag",
+    "partOfSpeech": "verb",
+    "shortDefinition": "pull, as against a resistance",
+    "learnerDefinition": "To pull something that is heavy or difficult to move."
+  },
+  {
+    "meaningId": "b9843713-ff59-5783-8fc1-6218def99b4b",
+    "revision": "a0f847382063cec3a54e7edc56625ca61cc2e2a22ddd62f3766e12670a781e66",
+    "word": "separate",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "independent; not united or joint",
+    "learnerDefinition": "Not joined or connected together."
+  },
+  {
+    "meaningId": "5087d37d-6059-5f52-954a-eb53698bd605",
+    "revision": "75833b9fd2b32bb6cf4207cd744ef9e32c9be93c2906a1543a257fbc34e3d5e2",
+    "word": "wheel",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a simple machine consisting of a circular frame with spokes (or a solid disc) that can rotate on a shaft or axle (as in vehicles or other machines)",
+    "learnerDefinition": "A round part that turns around a centre and is used in vehicles and machines."
+  },
+  {
+    "meaningId": "4ef1e108-b4c0-5842-a36f-cc8bce079eee",
+    "revision": "895aecbed474b0573bb67632bfc9c0d53997b183dc4a2a9d4498e06a2ccce22f",
+    "word": "spy",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(military) a secret agent hired by a state to obtain information about its enemies or by a business to obtain industrial secrets from competitors",
+    "learnerDefinition": "Someone who secretly collects information about another country or a competing business."
+  },
+  {
+    "meaningId": "8483ae50-9c03-5431-b939-65fce3740bce",
+    "revision": "57ebea306dd10006a880b54f7b157ad9c685d8eb4d7e1e4462801c6e527f5a26",
+    "word": "elevator",
+    "partOfSpeech": "noun",
+    "shortDefinition": "lifting device consisting of a platform or cage that is raised and lowered mechanically in a vertical shaft in order to move people from one floor to another in a building",
+    "learnerDefinition": "A machine that carries people or things up and down between floors of a building."
+  },
+  {
+    "meaningId": "bf5f2bd1-3e7d-5ad8-8d10-197212077f26",
+    "revision": "06613c640488c991a764fd7ca1274235d718ff7a6b6cab72fc18f7a87fa7a326",
+    "word": "wave",
+    "partOfSpeech": "noun",
+    "shortDefinition": "one of a series of ridges that moves across the surface of a liquid (especially across a large body of water)",
+    "learnerDefinition": "A raised line of water that moves across the surface of a sea, lake or other body of water."
+  },
+  {
+    "meaningId": "f9542694-821c-5841-b381-f9f9fb559b3f",
+    "revision": "ebe3b381b2bf3b4babacbe265f1395650d9a64f79ccefd3d8293223de1b8e1e0",
+    "word": "circle",
+    "partOfSpeech": "noun",
+    "shortDefinition": "ellipse in which the two axes are of equal length; a plane curve generated by one point moving at a constant distance from a fixed point",
+    "learnerDefinition": "A flat, round shape whose edge is always the same distance from its centre."
+  },
+  {
+    "meaningId": "b5fdc701-9642-5ef3-828d-61f437ca9dbb",
+    "revision": "418189791fce70d605bf1206f98e6e0ed7df512d9b731d578034479b150617d4",
+    "word": "tail",
+    "partOfSpeech": "noun",
+    "shortDefinition": "the posterior part of the body of a vertebrate especially when elongated and extending beyond the trunk or main part of the body",
+    "learnerDefinition": "The part at the back of many animals' bodies that extends beyond the main body."
+  },
+  {
+    "meaningId": "b031b9fb-ccf0-5727-9146-de434cffddbb",
+    "revision": "b049dbb3662e74936dcdd723050e8ff32534d7577898d7042081279a32a5bf3d",
+    "word": "deny",
+    "partOfSpeech": "verb",
+    "shortDefinition": "declare untrue; contradict",
+    "learnerDefinition": "To say that something is not true."
+  },
+  {
+    "meaningId": "82686fe8-9685-5168-acbe-97e69c351626",
+    "revision": "56b48369d1d9e74af8553fefb137748eaa6ce7cc841b28021320f3ec936bf21b",
+    "word": "shoe",
+    "partOfSpeech": "noun",
+    "shortDefinition": "footwear shaped to fit the foot (below the ankle) with a flexible upper of leather or plastic and a sole and heel of heavier material",
+    "learnerDefinition": "Something worn on the foot that covers it and usually ends below the ankle."
+  },
+  {
+    "meaningId": "032264a3-5529-587d-837c-5351fb237d24",
+    "revision": "787e61717b6acaf1590aa3832e6b48fc219ab21c41b8dad3fe1ecc95d4813b87",
+    "word": "baseball",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a ball game played with a bat and ball between two teams of nine players; teams take turns at bat trying to score runs",
+    "learnerDefinition": "A game in which two teams of nine players take turns hitting a ball and trying to score runs."
+  },
+  {
+    "meaningId": "76b67aea-3da9-551b-a57a-02a5a5ffd617",
+    "revision": "f87bcf451870c6bf1f69128666a2c1bb7cf628bedd9e1a346b5a3729cd39df2a",
+    "word": "miserable",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "very unhappy; full of misery",
+    "learnerDefinition": "Very unhappy."
+  },
+  {
+    "meaningId": "ab8eafa9-2723-5eff-a20b-5fb4241d7235",
+    "revision": "8a9800a87e5266204c039d1d199d8af08da8fb43ea117f4c4e78a1e718d5e1fb",
+    "word": "plastic",
+    "partOfSpeech": "noun",
+    "shortDefinition": "generic name for certain synthetic or semisynthetic materials that can be molded or extruded into objects or films or filaments or used for making e.g. coatings and adhesives",
+    "learnerDefinition": "A material made by chemical processes that can be shaped to make many different things."
+  },
+  {
+    "meaningId": "553aa5fc-786b-5e3c-8359-2ad36542cb82",
+    "revision": "d12dd9b653a86924a2663a7b77789e986a336f3982899aff878e7f156445156e",
+    "word": "imagination",
+    "partOfSpeech": "noun",
+    "shortDefinition": "the formation of a mental image of something that is not perceived as real and is not present to the senses",
+    "learnerDefinition": "The ability to form pictures or ideas in your mind of things that are not really there."
+  },
+  {
+    "meaningId": "f28e32a7-0713-5800-8b9d-0c27b8f94db4",
+    "revision": "f34c902cb989f726160f556fcef708f725c869b07d85513bd9db52fdbb4568ed",
+    "word": "practically",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "almost; nearly",
+    "learnerDefinition": "Almost, but not completely."
+  },
+  {
+    "meaningId": "e5c03473-035f-595e-9b64-773fb68beaa8",
+    "revision": "f4a5e8f1478f194e0c7e2e33ede52330e47a16a05c8f69e3faf8f5e18c5c8c5c",
+    "word": "steel",
+    "partOfSpeech": "noun",
+    "shortDefinition": "an alloy of iron with small amounts of carbon; widely used in construction; mechanical properties can be varied over a wide range",
+    "learnerDefinition": "A strong metal made mainly from iron and a small amount of carbon, often used in building."
+  },
+  {
+    "meaningId": "0dd73649-25a5-5108-83ab-c6caab068c4e",
+    "revision": "5e4a341fc64a505e8ffbd329659822ec000bdc320488ffeb1298d71dfa7d9ebf",
+    "word": "rabbit",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any of various burrowing animals of the family Leporidae having long ears and short tails; some domesticated and raised for pets or food",
+    "learnerDefinition": "A small animal with long ears and a short tail that often lives in holes in the ground."
+  },
+  {
+    "meaningId": "37ac1144-6486-5be3-8bae-ed26b426b3c6",
+    "revision": "a8597f471709182f1af045b3ffcfad9cc6744b5dcfc20299ae78522d51f61454",
+    "word": "virus",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(virology) ultramicroscopic infectious agent that replicates itself only within cells of living hosts; many are pathogenic; a piece of nucleic acid (DNA or RNA) wrapped in a thin coat of protein",
+    "learnerDefinition": "A tiny germ that multiplies only inside living cells and may cause disease."
+  },
+  {
+    "meaningId": "a607bae7-4f04-572e-925a-34fc75f9075f",
+    "revision": "d40f3657014b5e6a17348a2d836095c70c8450197f3cecaf9df358e077a1d1fc",
+    "word": "reckon",
+    "partOfSpeech": "verb",
+    "shortDefinition": "expect, believe, or suppose",
+    "learnerDefinition": "To think or believe that something is true or likely."
+  },
+  {
+    "meaningId": "eea7633b-0b22-5b44-852f-bc573822dd2c",
+    "revision": "1ff91d0919fd9a533dc5d26528a61ccb171453c03795e31f36d63fb4b3654d24",
+    "word": "thick",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "not thin; of a specific thickness or of relatively great extent from one surface to the opposite usually in the smallest of the three solid dimensions",
+    "learnerDefinition": "Having a large distance between two opposite surfaces."
+  },
+  {
+    "meaningId": "9514c1d4-f113-5ef9-b7d0-e8c8cfb8887d",
+    "revision": "f5fae22ae8d59ce62e2e962c236457b2e0671ffa8afbe0334fe5c2566ce4257e",
+    "word": "replace",
+    "partOfSpeech": "verb",
+    "shortDefinition": "substitute a person or thing for (another that is broken or inefficient or lost or no longer working or yielding what is expected)",
+    "learnerDefinition": "To put a new person or thing in the place of one that is missing or no longer works."
+  },
+  {
+    "meaningId": "1f8962d1-8954-5344-a24a-e03fe421456e",
+    "revision": "d805aac2c51ecc444fe5ff63253cb83277374ee36792d54b5c5276d8c754578b",
+    "word": "trunk",
+    "partOfSpeech": "noun",
+    "shortDefinition": "the main stem of a tree; usually covered with bark; the bole is usually the part that is commercially useful for lumber",
+    "learnerDefinition": "The main woody stem of a tree."
+  },
+  {
+    "meaningId": "bd9fdd20-651a-5d72-84f9-b2df475a79ff",
+    "revision": "bb2ca465da9922feddbfeb3dff1dd9882debccab9147cbd303e223e450db5eff",
+    "word": "bishop",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a senior member of the Christian clergy having spiritual and administrative authority; appointed in Christian churches to oversee priests or ministers; considered in some churches to be successors of the twelve Apostles of Christ",
+    "learnerDefinition": "A senior Christian religious leader who is responsible for priests or ministers in an area."
+  },
+  {
+    "meaningId": "c4774bab-4cfe-533d-8755-958e454fda07",
+    "revision": "56b8391e8a6ed8c79fb9a4d91f5f7de6fe56532b50a3fa9284d6650eb05700a1",
+    "word": "defendant",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a person or institution against whom an action is brought in a court of law; the person being sued or accused",
+    "learnerDefinition": "A person or organisation accused of a crime or being sued in a court."
+  },
+  {
+    "meaningId": "833f8dc7-1b80-588f-accb-8531e4f132e7",
+    "revision": "3a3a72f76a1b14a144f49d07750cc5fd38a43b2c5975c85787fb81db5d03b1b2",
+    "word": "salad",
+    "partOfSpeech": "noun",
+    "shortDefinition": "food mixtures either arranged on a plate or tossed and served with a moist dressing; usually consisting of or including greens",
+    "learnerDefinition": "A mixture of foods, often vegetables, served with a sauce or dressing."
+  },
+  {
+    "meaningId": "ca9a3372-cfc8-5300-8161-9bb8d21911d2",
+    "revision": "f1473f423ceef1d4cee015b98e5be581275a087b5b45a1103442752e9908a2ad",
+    "word": "mouse",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any of numerous small rodents typically resembling diminutive rats having pointed snouts and small ears on elongated bodies with slender usually hairless tails",
+    "learnerDefinition": "A small animal with a pointed nose, small ears and a long, thin tail."
+  },
+  {
+    "meaningId": "ed6ff92a-7835-5a13-a06e-a4b62e4794d2",
+    "revision": "b9d08440d000179485c20e8cbfeaec75a91c07af33ebb27737a649181123f8ae",
+    "word": "knight",
+    "partOfSpeech": "noun",
+    "shortDefinition": "originally a person of noble birth trained to arms and chivalry; today in Great Britain a person honored by the sovereign for personal merit",
+    "learnerDefinition": "A person given an honour by a king or queen; in the past, a trained noble soldier."
+  },
+  {
+    "meaningId": "b14abed0-7881-5d6b-8446-5f9589209f68",
+    "revision": "caeaf1231cc90ca3407a9a23568f04b7406e744107daa562c8360c188eb3effd",
+    "word": "photograph",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a representation of a person or scene in the form of a print or transparent slide; recorded by a camera on light-sensitive material",
+    "learnerDefinition": "A picture made with a camera."
+  },
+  {
+    "meaningId": "063bdf2a-21ee-5074-9d80-427b57679bcd",
+    "revision": "1e867a60e63ba0c4fba32e6402fea975948403660fbf8a5d1e1d142a0d94565f",
+    "word": "angle",
+    "partOfSpeech": "noun",
+    "shortDefinition": "the space between two lines or planes that intersect; the inclination of one line to another; measured in degrees or radians",
+    "learnerDefinition": "The amount of space between two lines or surfaces that meet, measured in degrees or radians."
+  },
+  {
+    "meaningId": "dbbc0142-7ee2-5fec-bd43-c9aad73c6520",
+    "revision": "1cd67aeab09cf208b3008c1e9f4b7c9ae0151f39c818bee9c267a8f092931beb",
+    "word": "stretch",
+    "partOfSpeech": "verb",
+    "shortDefinition": "occupy a large, elongated area",
+    "learnerDefinition": "To extend across a long area."
+  },
+  {
+    "meaningId": "3092cb55-45a7-5433-a904-5836efbdf86d",
+    "revision": "0be43ffa008a4182db195d24b00c7901d6af8da2caf9c71a36e4c2bb9fcd37db",
+    "word": "parent",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a father or mother; one who begets or one who gives birth to or nurtures and raises a child; a relative who plays the role of guardian",
+    "learnerDefinition": "A mother, father or someone who takes that role in caring for and raising a child."
+  },
+  {
+    "meaningId": "2c8a4824-7d12-5c10-bc6f-f84811905ed4",
+    "revision": "31e753275c56e0cdb4a9733f7dc1ce5d08b6a8ada421f8d6dce8e376bce77075",
+    "word": "supper",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a light evening meal; served in early evening if dinner is at midday or served late in the evening at bedtime",
+    "learnerDefinition": "An evening meal, often a light one."
+  },
+  {
+    "meaningId": "a748acbb-8796-5a9b-ba5e-353788c92bb7",
+    "revision": "b978880c92cc440c1486cbb3c8b5252e563f067015306070a1f34890504390fc",
+    "word": "alibi",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(law) a defense by an accused person purporting to show that he or she could not have committed the crime in question",
+    "learnerDefinition": "Evidence or a claim showing that an accused person could not have committed a crime."
+  },
+  {
+    "meaningId": "23ed0c2a-6a4a-516a-98a5-c04370f13d8e",
+    "revision": "3a3118b0c3c1c1c684f006c9293b15f2301dfb597b414ad2f6976700ca6e384e",
+    "word": "knee",
+    "partOfSpeech": "noun",
+    "shortDefinition": "hinge joint in the human leg connecting the tibia and fibula with the femur and protected in front by the patella",
+    "learnerDefinition": "The joint in the middle of your leg, where it bends."
+  },
+  {
+    "meaningId": "c78a8f76-929f-5f64-b15e-017b28588618",
+    "revision": "880e1ad91e4fa464af74037016c12a9441f1eb19f39460c519e0062370bc43e8",
+    "word": "corn",
+    "partOfSpeech": "noun",
+    "shortDefinition": "tall annual cereal grass bearing kernels on large ears: widely cultivated in America in many varieties; the principal cereal in Mexico and Central and South America since pre-Columbian times",
+    "learnerDefinition": "A tall plant grown for the rows of seeds on its large heads, which are used as food."
+  },
+  {
+    "meaningId": "92861e0e-4f34-5b44-bde8-68824bb8f3de",
+    "revision": "16039df5a089470b3fdfbdafffc004a53faf95b2e0a0a1e18509d386290b8763",
+    "word": "review",
+    "partOfSpeech": "verb",
+    "shortDefinition": "look at again; examine again",
+    "learnerDefinition": "To look at or examine something again."
+  },
+  {
+    "meaningId": "75c2cb39-95e7-5294-93b6-a9033ac56406",
+    "revision": "92a47b4196d83a6408f0b05bc6720b5f5e76104fac33bbe367a8a83221bbc5bb",
+    "word": "tale",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a message that tells the particulars of an act or occurrence or course of events; presented in writing or drama or cinema or as a radio or television program",
+    "learnerDefinition": "A story about events, told in writing, speech, a film or another form."
+  },
+  {
+    "meaningId": "6d7b77f2-7914-5bcb-99f3-73ce1ea4619f",
+    "revision": "9409321f69c9efb9c6668ce6cd618f7fc066d5347f51bf3372f512df477e5aee",
+    "word": "abandon",
+    "partOfSpeech": "verb",
+    "shortDefinition": "forsake, leave behind",
+    "learnerDefinition": "To leave someone or something behind."
+  },
+  {
+    "meaningId": "5e80f261-8a52-556d-8cff-881955384d8b",
+    "revision": "a64299b5540b6ed80c7def08ae8f714783ce66a88ea8ed86a2d66f26602ade94",
+    "word": "badge",
+    "partOfSpeech": "noun",
+    "shortDefinition": "an emblem (a small piece of plastic or cloth or metal) that signifies your status (rank or membership or affiliation etc.)",
+    "learnerDefinition": "A small piece of material worn to show a person's job, rank or membership of a group."
+  },
+  {
+    "meaningId": "704ceb25-b716-524d-a76b-5c985577db80",
+    "revision": "c3b33b3c1d333006c1feec620ec34a53753ddbdb5fa758038fc9b8cadcd6b324",
+    "word": "temporary",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "not permanent; not lasting",
+    "learnerDefinition": "Lasting for a limited time rather than forever."
+  },
+  {
+    "meaningId": "aeec5a25-5817-50c7-a0a4-7489db76af83",
+    "revision": "10afb039cee283711d6f11be4ef8d7762dacd95d03246e4accd29bbbfe966316",
+    "word": "gravity",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(physics) the force of attraction between all masses in the universe; especially the attraction of the earth's mass for bodies near its surface",
+    "learnerDefinition": "The force that pulls objects toward each other, such as the Earth's pull on things around it."
+  },
+  {
+    "meaningId": "b0dbe302-f850-5466-91bc-a747e1529351",
+    "revision": "2ea3e64140633f0fd496cf7860e299c8955edba3cb16cd0e231c448f2681daca",
+    "word": "editor",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a person responsible for the editorial aspects of publication; the person who determines the final content of a text (especially of a newspaper or magazine)",
+    "learnerDefinition": "A person who decides and checks the content of a newspaper, magazine, book or other publication."
+  },
+  {
+    "meaningId": "b3b1fdcd-20d2-5887-9a9f-908abde708f4",
+    "revision": "2737c1a71df814a4d3e982cb34d8340302b8b8e40d9911b673363a150b459397",
+    "word": "tennis",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a game played with rackets by two or four players who hit a ball back and forth over a net that divides the court",
+    "learnerDefinition": "A game in which two or four people use rackets to hit a ball over a net."
+  },
+  {
+    "meaningId": "b3325e50-4f33-5939-87af-3184d0af31c8",
+    "revision": "a8a0c572a2c859c496833d6339de42e50b2414eb9e5a024fe6c70dd0be211ea3",
+    "word": "permit",
+    "partOfSpeech": "verb",
+    "shortDefinition": "consent to, give permission",
+    "learnerDefinition": "To allow someone to do something."
+  },
+  {
+    "meaningId": "42e45a64-817c-5b10-a5bc-080e0e3c282f",
+    "revision": "13925c16f44996914ea59a70f64150c3292245411c8de1845b603da9a87b25c9",
+    "word": "marshal",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a law officer having duties similar to those of a sheriff in carrying out the judgments of a court of law",
+    "learnerDefinition": "A law officer who carries out decisions made by a court."
+  },
+  {
+    "meaningId": "26e7bbe8-1d57-51a7-abe7-b79ba22850dc",
+    "revision": "07612d7c672edaee53baf7299331750bc26a57ef753aa6bf75697ac1d9bf98ce",
+    "word": "tag",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a label written or printed on paper, cardboard, or plastic that is attached to something to indicate its owner, nature, price, etc.",
+    "learnerDefinition": "A small label attached to something to show information such as its price or owner."
+  },
+  {
+    "meaningId": "16d59502-8547-5131-8593-e1a710c2adc2",
+    "revision": "37c3abe622ebaad33c11ef6fa77b88833e81515ab6a9d861c877c9daff373e17",
+    "word": "root",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(botany) the usually underground organ that lacks buds or leaves or nodes; absorbs water and mineral salts; usually it anchors the plant to the ground",
+    "learnerDefinition": "The part of a plant, usually underground, that takes in water and holds it in place."
+  },
+  {
+    "meaningId": "5facaea8-ec4f-5779-a3f2-f4faa68a050b",
+    "revision": "d72f409fbb1db70cdc7629aeabba1cd9426b46eb9a5ad4ddb967a68884980d3d",
+    "word": "vital",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "urgently needed; absolutely necessary",
+    "learnerDefinition": "So important or necessary that you cannot do without it."
+  },
+  {
+    "meaningId": "142e4185-7d63-5943-9505-cbcada8e9f80",
+    "revision": "d46287f03d8d3c6336feba5c3e55a81e9a3b851822d35ec05060f33c49519df9",
+    "word": "announce",
+    "partOfSpeech": "verb",
+    "shortDefinition": "make known; make an announcement",
+    "learnerDefinition": "To tell people about something publicly."
+  },
+  {
+    "meaningId": "6cd72ea4-765d-5889-8486-5170ffea9002",
+    "revision": "118af0b6634058a02c2ec33a43dac689de319e5edbb57463b68693274609f398",
+    "word": "republic",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a political system in which the supreme power lies in a body of citizens who can elect people to represent them",
+    "learnerDefinition": "A system of government in which citizens hold the power and can elect people to represent them."
+  },
+  {
+    "meaningId": "a6ba8541-b69f-589d-8f92-4998e5576631",
+    "revision": "ef68c9c1cee014ef105b2ca0049604b50fd788b1416953a7f90b7b61a9929575",
+    "word": "deposit",
+    "partOfSpeech": "verb",
+    "shortDefinition": "put, fix, force, or implant",
+    "learnerDefinition": "To put or place something somewhere."
+  },
+  {
+    "meaningId": "9095e1ad-d8fc-5ee0-98fe-3ea6e3c7b51a",
+    "revision": "9d33ffe41e2cdb02d793649cd8d039e945633fdbb4b142ea22701c1856ec5248",
+    "word": "marked",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "strongly marked; easily noticeable",
+    "learnerDefinition": "Very easy to notice."
+  },
+  {
+    "meaningId": "71d3d227-c884-5083-afed-f0375ae57c65",
+    "revision": "5ef133b761fba27d3eecfadfa9a292869a1f4a698b754057cedfb81036457d62",
+    "word": "rubber",
+    "partOfSpeech": "noun",
+    "shortDefinition": "an elastic material obtained from the latex sap of trees (especially trees of the genera Hevea and Ficus) that can be vulcanized and finished into a variety of products",
+    "learnerDefinition": "A stretchy material made from the liquid inside certain trees and used to make many products."
+  },
+  {
+    "meaningId": "ef4bba69-8c87-52ae-9f44-5617a81d7c3d",
+    "revision": "71fee9e219d1540995ff61929cd05443bb59b8f30ba558978d555d793f21d94e",
+    "word": "acid",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any of various water-soluble compounds having a sour taste and capable of turning litmus red and reacting with a base to form a salt",
+    "learnerDefinition": "A chemical substance that can react with a base to form a salt and often has a sour taste."
+  },
+  {
+    "meaningId": "8910ca34-fcf1-5e28-804d-a9c0c970e070",
+    "revision": "7997a35a6370eb679d510bcf846d27e8cf111ce6ff5304efe680be4f42aa1378",
+    "word": "tin",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a silvery malleable metallic element that resists corrosion; used in many alloys and to coat other metals to prevent corrosion; obtained chiefly from cassiterite where it occurs as tin oxide",
+    "learnerDefinition": "A silver-coloured metal used in mixtures with other metals and as a protective coating."
+  },
+  {
+    "meaningId": "ef54ff3a-7de9-5ef0-8a5f-56e01820b45c",
+    "revision": "6aea5cf6ef1d6b22cf3c57cfaae0255b854021eef65c5dc78036d8b68104f4ee",
+    "word": "envy",
+    "partOfSpeech": "verb",
+    "shortDefinition": "feel envious towards; admire enviously",
+    "learnerDefinition": "To wish you had something that another person has."
+  },
+  {
+    "meaningId": "7ca56c4c-ce34-5605-b144-a2a2fe7be132",
+    "revision": "914a1af542ef9bf24fd98c3a4e2bbfd0a79079b3b4c01b4a30de04bff8612dc2",
+    "word": "lung",
+    "partOfSpeech": "noun",
+    "shortDefinition": "either of two saclike respiratory organs in the chest of vertebrates; serves to remove carbon dioxide and provide oxygen to the blood",
+    "learnerDefinition": "One of the two organs in your chest that take oxygen into the blood and remove carbon dioxide."
+  },
+  {
+    "meaningId": "b9e182b8-6a27-5620-8cbc-8f605e8ac5f3",
+    "revision": "a3e106558aa4ec2b2beefab962f5433e94862f5a3bb10481283ca1dede56abac",
+    "word": "kidney",
+    "partOfSpeech": "noun",
+    "shortDefinition": "either of two bean-shaped excretory organs that filter wastes (especially urea) from the blood and excrete them and water in urine",
+    "learnerDefinition": "One of the two organs that clean waste and extra water from the blood to make urine."
+  },
+  {
+    "meaningId": "a983b9b7-72a6-525f-88b0-d4a8437acf76",
+    "revision": "c4c4b5d50d1d06554ec326608a76af48c3c52405e3214a88dae83842dd7ada59",
+    "word": "endless",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "tiresomely long; seemingly without end",
+    "learnerDefinition": "So long that it seems it will never finish."
+  },
+  {
+    "meaningId": "15d8ce88-0c28-50b6-b1c7-041ab7e5e1e9",
+    "revision": "504bda4f71063e70006593d061868c56fd0497414d34f91dba4f22ac99a18b26",
+    "word": "verdict",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(law) the findings of a jury on issues of fact submitted to it for decision; can be used in formulating a judgment",
+    "learnerDefinition": "A jury's decision about the facts in a court case."
+  },
+  {
+    "meaningId": "4cd954d4-4858-5764-ac77-965f8004be83",
+    "revision": "821300f457565c0dfd70467736d28a0f74c0ee4302d574526c1326856fa95fc9",
+    "word": "generally",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "usually; as a rule",
+    "learnerDefinition": "Usually, or in most cases."
+  },
+  {
+    "meaningId": "5df07488-3889-51fe-8b1c-2e392a048107",
+    "revision": "4f45dbbcad796263d40cd3eb9517b2deda09698dc02680c532ba54bc2a5101ba",
+    "word": "secretly",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "in secrecy; not openly",
+    "learnerDefinition": "In a way that other people do not know about."
+  },
+  {
+    "meaningId": "dfa7907c-dcf3-5ee3-ae18-387dd03fff53",
+    "revision": "c5624288efbe9b98bb36be3b10b28bfb1c697b00b9065e3e860ca6893cff7942",
+    "word": "deed",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a legal document signed and sealed and delivered to effect a transfer of property and to show the legal right to possess it",
+    "learnerDefinition": "A legal document showing ownership of property or the transfer of that ownership."
+  },
+  {
+    "meaningId": "5d64f3c8-262b-5995-8f9b-1de74fa40f9e",
+    "revision": "3f6d6247721756316874c91051eb16339e00aaba58a3bcdf57aaf122741dc169",
+    "word": "collapse",
+    "partOfSpeech": "verb",
+    "shortDefinition": "break down, literally or metaphorically",
+    "learnerDefinition": "To break down or stop working, either physically or in another way."
+  },
+  {
+    "meaningId": "504bb4ff-a3b8-56d0-b6d5-91f90b1e104c",
+    "revision": "b822164fefa8276a68eadef7cd1d96e785c2251c518265bc69b955d65f1064eb",
+    "word": "screech",
+    "partOfSpeech": "verb",
+    "shortDefinition": "make a high-pitched, screeching noise",
+    "learnerDefinition": "To make a loud, high, harsh sound."
+  },
+  {
+    "meaningId": "f43f2129-29b1-53e3-97b5-b7bd0586a381",
+    "revision": "34b649b94a1d33201c08fbc04633becee7d33d6d30693454a9af8d5a151e74d3",
+    "word": "passenger",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a traveler riding in a vehicle (a boat or bus or car or plane or train etc) who is not operating it",
+    "learnerDefinition": "A person who travels in a vehicle but is not driving or operating it."
+  },
+  {
+    "meaningId": "6bc2f322-e1f5-507a-8e6f-b9ac56334f29",
+    "revision": "d5a2905426a1aefe06f6ba3271cc6b2cf5034d94a58eb537aa3f6bba81a34844",
+    "word": "chemistry",
+    "partOfSpeech": "noun",
+    "shortDefinition": "the science of matter; the branch of the natural sciences dealing with the composition of substances and their properties and reactions",
+    "learnerDefinition": "The science of what substances are made of and how they behave and react with each other."
+  },
+  {
+    "meaningId": "b22a5421-80fd-5579-8748-0e44bc4ad64b",
+    "revision": "42b2bed8dd6ba566030f44133a159d0f6ccbe8415edf573d716aa6668c74285b",
+    "word": "worm",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any of numerous relatively small elongated soft-bodied animals especially of the phyla Annelida and Chaetognatha and Nematoda and Nemertea and Platyhelminthes; also many insect larvae",
+    "learnerDefinition": "A small animal with a long, soft body and no legs; also the young form of some insects."
+  },
+  {
+    "meaningId": "8cc586c2-b04f-568c-9dc4-6d90e34c16d6",
+    "revision": "ce039b391171d9d160cacaae2277bf50b4c7556b3e8a54398cb5a4d9685ca4e2",
+    "word": "essential",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "absolutely necessary; vitally necessary",
+    "learnerDefinition": "Completely necessary."
+  },
+  {
+    "meaningId": "633ba94e-5bd6-5105-9ac7-78e7ae2c260c",
+    "revision": "def07ae6adcf50d7698f373cf29aa4d4eda7bba64bbca7d64ffc7115886bc82c",
+    "word": "harvest",
+    "partOfSpeech": "verb",
+    "shortDefinition": "gather, as of natural products",
+    "learnerDefinition": "To gather crops or other natural products."
+  },
+  {
+    "meaningId": "7df38a88-9405-5fa3-b208-9de9b3bb1ac4",
+    "revision": "4de6db71744c88c8b75307cfa7462bcb2273241968670fa123cdf3ddd3b18846",
+    "word": "spoon",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a piece of cutlery with a shallow bowl-shaped container and a handle; used to stir or serve or take up food",
+    "learnerDefinition": "A tool with a small bowl and a handle, used for eating, serving or stirring food."
+  },
+  {
+    "meaningId": "13ca941a-e5cc-5f8b-a5b3-0c809a6746b8",
+    "revision": "21267cb9a9822d9588ef5d3c0c042f5df3b0064a4f12e0213a623b5f1c4c3cf6",
+    "word": "earthquake",
+    "partOfSpeech": "noun",
+    "shortDefinition": "shaking and vibration at the surface of the earth resulting from underground movement along a fault plane of from volcanic activity",
+    "learnerDefinition": "A sudden shaking of the ground caused by movement inside the Earth or volcanic activity."
+  },
+  {
+    "meaningId": "dc7df106-c52a-5b2c-830a-46744a1ad039",
+    "revision": "006eb88201ffa67b036e89f03cada604fa28bfd87ce58a518656bf3cb4fad7c6",
+    "word": "assassin",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a murderer (especially one who kills a prominent political figure) who kills by a surprise attack and often is hired to do the deed",
+    "learnerDefinition": "A person who kills someone, especially an important public figure, by a surprise attack, often for money."
+  },
+  {
+    "meaningId": "010cdfc0-822c-5471-a570-b9a3eb8b11fd",
+    "revision": "6cd305480194d23e7d286e2b57d5a11ed8488597ed92e453becf9385ef9f2508",
+    "word": "starve",
+    "partOfSpeech": "verb",
+    "shortDefinition": "be hungry; go without food",
+    "learnerDefinition": "To be very hungry or go without food."
+  },
+  {
+    "meaningId": "6981ece8-0084-58aa-ac74-fd23644af495",
+    "revision": "173b807b4765df5ea4ddedf48ada07003b6a6658e399f0b6b7d0673f1d91ef64",
+    "word": "sincere",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "open and genuine; not deceitful",
+    "learnerDefinition": "Honest about what you feel or believe."
+  },
+  {
+    "meaningId": "bd5898c0-5daa-5500-bf7d-57b0cae905f6",
+    "revision": "44b4cbf0db3661a84fe7d61188c58c9ac306316277a7f19fe04db9303da3c8cb",
+    "word": "wax",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any of various substances of either mineral origin or plant or animal origin; they are solid at normal temperatures and insoluble in water",
+    "learnerDefinition": "A substance that is solid at normal temperatures and does not dissolve in water, used in things such as candles."
+  },
+  {
+    "meaningId": "4ed89a2d-53a9-5e51-a428-de9da4c6caaa",
+    "revision": "5bfe1e27446ce11923faa615e1bd88681b36fc9f86dbe5ef2c0fd2bdb02c4f67",
+    "word": "seize",
+    "partOfSpeech": "verb",
+    "shortDefinition": "take hold of; grab",
+    "learnerDefinition": "To take hold of something suddenly or firmly."
+  },
+  {
+    "meaningId": "1aada66b-fcc2-5d02-b777-facc8108a6f4",
+    "revision": "d1f0d7c27622bda235c936e09bbd34824b7dec455c8ffdd0f1bd881212cd4daf",
+    "word": "wardrobe",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a tall piece of furniture that provides storage space for clothes; has a door and rails or hooks for hanging clothes",
+    "learnerDefinition": "A tall cupboard for storing clothes, with space to hang them."
+  },
+  {
+    "meaningId": "2c73a0d9-b4c9-55ba-9e0d-9db541b1cd99",
+    "revision": "6258b3d2c2ae648e4e9b4cc07ca0bb82ba4165e349b533ff300ce5a7b22aa324",
+    "word": "violin",
+    "partOfSpeech": "noun",
+    "shortDefinition": "bowed stringed instrument that is the highest member of the violin family; this instrument has four strings and a hollow body and an unfretted fingerboard and is played with a bow",
+    "learnerDefinition": "A wooden musical instrument with four strings, usually played by moving a bow across them."
+  },
+  {
+    "meaningId": "d4e5cd3e-1416-53a7-80e3-106d7a9788eb",
+    "revision": "95de6f366278a9f395ae205a9781040d0187fb1251a5a4c94531b92a4516c81c",
+    "word": "jelly",
+    "partOfSpeech": "noun",
+    "shortDefinition": "an edible jelly (sweet or pungent) made with gelatin and used as a dessert or salad base or a coating for foods",
+    "learnerDefinition": "A soft food made with gelatin, used as a dessert or in other dishes."
+  },
+  {
+    "meaningId": "cb613d44-3521-5ee3-9d67-6bf4da2db33b",
+    "revision": "319aa4700fe7c720f7fc3e2dd637af7cc7877f3db0171918afa655aca33463bb",
+    "word": "vow",
+    "partOfSpeech": "verb",
+    "shortDefinition": "make a vow; promise",
+    "learnerDefinition": "To make a serious promise."
+  },
+  {
+    "meaningId": "4ca0d2ee-a750-5eb5-9844-51daafef44d6",
+    "revision": "03d46f083d3867d955d3fa9122421c50f528cabb497cba6562317e00739b74a6",
+    "word": "sock",
+    "partOfSpeech": "noun",
+    "shortDefinition": "hosiery consisting of a cloth covering for the foot; worn inside the shoe; reaches to between the ankle and the knee",
+    "learnerDefinition": "A piece of clothing that covers the foot and part of the leg, usually worn inside a shoe."
+  },
+  {
+    "meaningId": "29373784-de48-5e00-9572-a1614fd5c180",
+    "revision": "45caa7598b18d7e5b99bf8747e6a6648662cd02aafb73b804fb6f0b34914a67d",
+    "word": "volcano",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a fissure in the earth's crust (or in the surface of some other planet) through which molten lava and gases erupt",
+    "learnerDefinition": "An opening in the Earth's surface, or another planet's surface, through which hot rock and gases come out."
+  },
+  {
+    "meaningId": "c679c0fa-c58a-5400-a40a-3e332c661216",
+    "revision": "170b6ffc328ceb7519b64682ef454f33da740c4ecf68b1b763255352d4ae70c3",
+    "word": "duel",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a prearranged fight with deadly weapons by two people (accompanied by seconds) in order to settle a quarrel over a point of honor",
+    "learnerDefinition": "A fight arranged between two people using deadly weapons, traditionally to settle a disagreement about honour."
+  },
+  {
+    "meaningId": "f02d774a-b65b-5b9d-aeef-66b4cc767b30",
+    "revision": "2d1dc473e38a5ca46222bcd4d248dac149a2782459955771e2fcde3e7209ad2e",
+    "word": "shallow",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "lacking physical depth; having little spatial extension downward or inward from an outer surface or backward or outward from a center",
+    "learnerDefinition": "Having only a small distance from the top or outside to the bottom or inside."
+  },
+  {
+    "meaningId": "53ed422f-73d0-52a3-bb71-c9cb59710ba5",
+    "revision": "a33a379614324453c01077934adfabd812e91f200526cc3b0f70491759acdd21",
+    "word": "phony",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "fraudulent; having a misleading appearance",
+    "learnerDefinition": "Made to look real in order to deceive people."
+  },
+  {
+    "meaningId": "b8072998-91f1-5dae-9065-48b15415fb33",
+    "revision": "54e1fed929926649cdf8869191ec7a22be3232628b599492ae5f14a1bf002bd0",
+    "word": "heel",
+    "partOfSpeech": "noun",
+    "shortDefinition": "the bottom of a shoe or boot; the back part of a shoe or boot that touches the ground and provides elevation",
+    "learnerDefinition": "The back part of the bottom of a shoe or boot, which raises the foot above the ground."
+  },
+  {
+    "meaningId": "d934301f-2f50-5e46-bec6-a5a10b925046",
+    "revision": "ff56649c9b3c1342a0aa3a17e72b9f3488aaaa11929ec74250cf8fab6b26930d",
+    "word": "caution",
+    "partOfSpeech": "verb",
+    "shortDefinition": "warn strongly; put on guard",
+    "learnerDefinition": "To warn someone strongly about a danger or problem."
+  },
+  {
+    "meaningId": "016693a6-959b-5a90-b7c4-5529ac07d325",
+    "revision": "6356eca99f23b739fb256bd8c1088ceef391ca55f27a6f97cb9891a26256e7eb",
+    "word": "comet",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(astronomy) a relatively small extraterrestrial body consisting of a frozen mass that travels around the sun in a highly elliptical orbit",
+    "learnerDefinition": "A small, frozen object that travels around the Sun in a long, oval path."
+  },
+  {
+    "meaningId": "8cb50de4-0d69-5061-83a9-0766b5a8348b",
+    "revision": "b6665a2873258278903cf1bb3b20a99bef9685af07200ecc3441f239a9f96c60",
+    "word": "sherry",
+    "partOfSpeech": "noun",
+    "shortDefinition": "dry to sweet amber wine from the Jerez region of southern Spain or similar wines produced elsewhere; usually drunk as an aperitif",
+    "learnerDefinition": "A wine from southern Spain, or a similar wine, often drunk before a meal."
+  },
+  {
+    "meaningId": "c7bebb30-e846-5809-8340-dec7fcae192b",
+    "revision": "f1e9eff0339c920b1e5497433b1b67eef4ea128b6360cb9cc7a7b1a01c245979",
+    "word": "sincerely",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "with sincerity; without pretense",
+    "learnerDefinition": "In a way that honestly expresses what you feel or believe."
+  },
+  {
+    "meaningId": "f51ce8a1-16fd-57a9-b7de-8ef180a874a0",
+    "revision": "61a23f2385d094a5d0adfcf966a40e71c84abc12a92134ba46f1860b620d765d",
+    "word": "ant",
+    "partOfSpeech": "noun",
+    "shortDefinition": "social insect living in organized colonies; characteristically the males and fertile queen have wings during breeding season; wingless sterile females are the workers",
+    "learnerDefinition": "A small insect that lives and works in a large, organised group."
+  },
+  {
+    "meaningId": "2d384281-cb83-5e16-b08f-f5a75054e8fc",
+    "revision": "5a9f8dc140a3eacaf94c068c527a0cda79495c380064f16986608a3114e49bcb",
+    "word": "vegetable",
+    "partOfSpeech": "noun",
+    "shortDefinition": "edible seeds or roots or stems or leaves or bulbs or tubers or nonsweet fruits of any of numerous herbaceous plant",
+    "learnerDefinition": "A part of a plant, such as a root, leaf or seed, that people eat and that is usually not sweet."
+  },
+  {
+    "meaningId": "dcc33c63-cc19-5e41-8a88-7d16953e41d9",
+    "revision": "194f3d618eb3fd41a30328e9e06821d053408eae5ec65974a94f77ec68605005",
+    "word": "container",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any object that can be used to hold things (especially a large metal boxlike object of standardized dimensions that can be loaded from one form of transport to another)",
+    "learnerDefinition": "An object used to hold things, such as a box, bottle or large metal shipping box."
+  },
+  {
+    "meaningId": "bc1521d2-a68d-55a1-9d4c-fe797d7f01b6",
+    "revision": "8c0baa52cdfe5b128b9a71a231588f1d3536074381c9e786107154bb765e9a0f",
+    "word": "platoon",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a military unit that is a subdivision of a company; usually has a headquarters and two or more squads; usually commanded by a lieutenant",
+    "learnerDefinition": "A group of soldiers within a larger military unit, usually led by a lieutenant."
+  },
+  {
+    "meaningId": "4037b585-c644-5c30-99ae-2e9f622bd45f",
+    "revision": "904d83db74f6e394d0e43c3d19a87d2a0ade1318799ecbdaf8804a6ec098b1b2",
+    "word": "protein",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any of a large group of nitrogenous organic compounds that are essential constituents of living cells; consist of polymers of amino acids; essential in the diet of animals for growth and for repair of tissues; can be obtained from meat and eggs and milk and legumes",
+    "learnerDefinition": "A substance found in living things and foods such as meat and beans that helps bodies grow and repair themselves."
+  },
+  {
+    "meaningId": "285d6882-ef4f-5aeb-9e72-3fcaf263282c",
+    "revision": "c37710b1024c55824816a4cda55df932a076fd06311cb54c111525b4e4e0bf52",
+    "word": "immigration",
+    "partOfSpeech": "noun",
+    "shortDefinition": "migration into a place (especially migration to a country of which you are not a native in order to settle there)",
+    "learnerDefinition": "The act of moving into another country or place to live there."
+  },
+  {
+    "meaningId": "d14f15e0-eb62-5931-955a-26ee4d1788ab",
+    "revision": "ef9fc1d52323c158518f8477c98af8df3bf4193433ef2ebbbc6650e89a45cd23",
+    "word": "definite",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "precise; explicit and clearly defined",
+    "learnerDefinition": "Clear, exact and not uncertain."
+  },
+  {
+    "meaningId": "855987c8-fc5d-5508-9764-f2aaecc7f2fc",
+    "revision": "6026b49cd1c98b46c605f29ba74c423496616b5042aab22b42e4eb8ef27e68c0",
+    "word": "mold",
+    "partOfSpeech": "verb",
+    "shortDefinition": "form in clay, wax, etc",
+    "learnerDefinition": "To make a shape by working with a soft material such as clay or wax."
+  },
+  {
+    "meaningId": "1e1f2b2f-3862-524c-bcfb-aa51eb52653d",
+    "revision": "0196d25fdcc0e80e43ee233722d14923cd6f41a97bbbca4694f5ed6455d3cee1",
+    "word": "gasoline",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a volatile flammable mixture of hydrocarbons (hexane and heptane and octane etc.) derived from petroleum; used mainly as a fuel in internal-combustion engines",
+    "learnerDefinition": "A liquid fuel made from oil, used mainly in vehicle engines."
+  },
+  {
+    "meaningId": "65435b59-9c98-5bfa-b48a-5d29a282901f",
+    "revision": "efc0bc81a85999a5197f05cbd395f98873bc45b8b227b7d9e5ea3179fb9ecb93",
+    "word": "trumpet",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a brass musical instrument with a brilliant tone; has a narrow tube and a flared bell and is played by means of valves",
+    "learnerDefinition": "A brass musical instrument with a bright sound, played by blowing into it and pressing its valves."
+  },
+  {
+    "meaningId": "fb675ed1-8be4-5f67-a987-76fcf2fcd42c",
+    "revision": "eafea801ada3b46dbe9e546b0e3a44a4bc56e75a32c0da2c4dbf57c7b56fb6de",
+    "word": "imaginary",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "not based on fact; unreal",
+    "learnerDefinition": "Existing only in the mind rather than in reality."
+  },
+  {
+    "meaningId": "b8e8a3f6-a786-5d83-a281-72a42638b06a",
+    "revision": "aca4f82cb9dc8d8a77eecdbb1e1b7994635c3a8f2549ca4ec6177495eaa59be3",
+    "word": "sew",
+    "partOfSpeech": "verb",
+    "shortDefinition": "fasten by sewing; do needlework",
+    "learnerDefinition": "To join or make something using a needle and thread."
+  },
+  {
+    "meaningId": "f165d261-aab3-5050-93e1-2d5ccd6c9ead",
+    "revision": "d88ee68d3550518a43418d2ab2a8714eec958dac617a6576a32e246624c4dbba",
+    "word": "nickel",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a hard malleable ductile silvery metallic element that is resistant to corrosion; used in alloys; occurs in pentlandite and smaltite and garnierite and millerite",
+    "learnerDefinition": "A hard, silver-coloured metal that resists damage from chemical reactions and is often mixed with other metals."
+  },
+  {
+    "meaningId": "4ef65bf9-6dac-52f9-b747-f2b6354fe27e",
+    "revision": "c3703b9e0f32cc25cf6362ae7d2b7076596282e635ab6e72c2128645537afc8b",
+    "word": "flute",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a high-pitched woodwind instrument; a slender tube closed at one end with finger holes on one end and an opening near the closed end across which the breath is blown",
+    "learnerDefinition": "A musical instrument shaped like a tube, played by blowing across a hole and covering other holes."
+  },
+  {
+    "meaningId": "56a91b00-c81d-57ab-b092-57daa46eb079",
+    "revision": "dc74834c823f3a52836644c860e117cdb485c619f5037988af2ce4a3eb1aa00a",
+    "word": "nightclub",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a spot that is open late at night and that provides entertainment (as singers or dancers) as well as dancing and food and drink",
+    "learnerDefinition": "A place open late at night where people can enjoy music, dancing, food and drinks."
+  },
+  {
+    "meaningId": "aa99a0f7-1db3-54bb-b497-361b2b4c3ee6",
+    "revision": "65f0dc53e31dc164d2f7ea5aec6ec2396c643bb7c6520e83e97782f052913ea5",
+    "word": "preliminary",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "denoting an action or event preceding or in preparation for something more important; designed to orient or acquaint with a situation before proceeding",
+    "learnerDefinition": "Done before something more important in order to prepare for it."
+  },
+  {
+    "meaningId": "f9bcd594-9295-5ef0-9a9f-1ed95198ac71",
+    "revision": "b366e600af5dd4d7fd077033ec0f131da0bc651c0d596aa2dc65d0fe9afa690f",
+    "word": "dine",
+    "partOfSpeech": "verb",
+    "shortDefinition": "have supper; eat dinner",
+    "learnerDefinition": "To eat dinner or an evening meal."
+  },
+  {
+    "meaningId": "42072801-093c-53c1-8c9d-d05e865176a4",
+    "revision": "32bc5dbb37dc4942ffa8491379d62d8a68f0d48baa4f2e3572d75270aeff24fd",
+    "word": "keyboard",
+    "partOfSpeech": "noun",
+    "shortDefinition": "device consisting of a set of keys on a piano or organ or typewriter or typesetting machine or computer or the like",
+    "learnerDefinition": "A set of keys on a computer, typewriter or musical instrument that you press to use it."
+  },
+  {
+    "meaningId": "eb71582f-c3fc-5984-bc22-14d2b72cbc1d",
+    "revision": "da25a4f1f731aecdb2803efea54916e92cb4e0fee09ab0ebc2bd41971d574350",
+    "word": "hydrogen",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a nonmetallic univalent element that is normally a colorless and odorless highly flammable diatomic gas; the simplest and lightest and most abundant element in the universe",
+    "learnerDefinition": "The lightest chemical element, usually a gas with no colour or smell that burns easily."
+  },
+  {
+    "meaningId": "e15a09fb-cd43-5817-95b2-03165088c03e",
+    "revision": "456ead6bafdd619b931ba51182359a63552bfcea50d4648ebba6b5658691bfb2",
+    "word": "metaphor",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a figure of speech in which an expression is used to refer to something that it does not literally denote in order to suggest a similarity",
+    "learnerDefinition": "A way of describing something by using words for a different thing to suggest a similarity."
+  },
+  {
+    "meaningId": "84f3fb44-2314-57ef-9348-3a9912f292d6",
+    "revision": "f43791d67053236f3203ef1c88f7a7bcf2c8485e31d6007873dce763fbe3f4d3",
+    "word": "chimney",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a vertical flue that provides a path through which smoke from a fire is carried away through the wall or roof of a building",
+    "learnerDefinition": "A passage that carries smoke from a fire out through a building's wall or roof."
+  },
+  {
+    "meaningId": "8d65a4fc-99f7-507d-93a2-a6ea7706b9e9",
+    "revision": "815d9baab1643986d5c519816da0a4affd55e7e58ede96d9cb8a9cf80aad35b8",
+    "word": "bronze",
+    "partOfSpeech": "noun",
+    "shortDefinition": "an alloy of copper and tin and sometimes other elements; also any copper-base alloy containing other elements in place of tin",
+    "learnerDefinition": "A metal made mainly by mixing copper with tin or certain other metals."
+  },
+  {
+    "meaningId": "77dc22f3-f015-5b84-8659-210e78def46b",
+    "revision": "57a30c9f5ad06326780e9c234edc528bfece5ece44055e047f388eb1054b18ec",
+    "word": "detector",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any device that receives a signal or stimulus (as heat or pressure or light or motion etc.) and responds to it in a distinctive manner",
+    "learnerDefinition": "A device that notices and responds to something such as heat, light, pressure or movement."
+  },
+  {
+    "meaningId": "c1d2445c-ec59-59d1-9205-f2a8fe5c51ad",
+    "revision": "9b5d56ff0e70ad130c8dfed7974b88f3c91479a9d5c68fb16ddd87d7b86fb6d8",
+    "word": "motivation",
+    "partOfSpeech": "noun",
+    "shortDefinition": "the psychological feature that arouses an organism to action toward a desired goal; the reason for the action; that which gives purpose and direction to behavior",
+    "learnerDefinition": "The reason or desire that makes someone act toward a goal."
+  },
+  {
+    "meaningId": "04e698ef-7da3-582a-920b-d1374d4d79c3",
+    "revision": "d8767809cd443783a82566daf127ccacf7dbed9b9df615cf4d37e91cfc6164c0",
+    "word": "disc",
+    "partOfSpeech": "noun",
+    "shortDefinition": "sound recording consisting of a disk with a continuous groove; used to reproduce music by rotating while a phonograph needle tracks in the groove",
+    "learnerDefinition": "A flat, round record with a groove, played by a needle to produce recorded sound."
+  },
+  {
+    "meaningId": "fb6b86f2-cb19-5f02-a6f5-5f9edf15c592",
+    "revision": "db2f6f3c65583b0f4a5dda521f71650776e09dfa856663d760dcf4e28ad728c1",
+    "word": "diaper",
+    "partOfSpeech": "noun",
+    "shortDefinition": "garment consisting of a folded cloth drawn up between the legs and fastened at the waist; worn by infants to catch excrement",
+    "learnerDefinition": "A cloth worn between a baby's legs and fastened at the waist to catch body waste."
+  },
+  {
+    "meaningId": "a34e6201-969b-57e6-8efe-8749eb96178c",
+    "revision": "6a6ba04881465df2e7f4309d2a2c25b98f75f53c156d168054735d2d3de3b652",
+    "word": "raft",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a flat float (usually made of logs or planks) that can be used for transport or as a platform for swimmers",
+    "learnerDefinition": "A flat floating platform, often made from wood, used for travel on water or for swimming."
+  },
+  {
+    "meaningId": "82ee66fc-339c-51c4-8db0-e18917453a80",
+    "revision": "91fffc04b66c8cb0538910962287aae49a4ea4f4fdd8ef91fa37e6454375dac4",
+    "word": "lace",
+    "partOfSpeech": "verb",
+    "shortDefinition": "spin,wind, or twist together",
+    "learnerDefinition": "To twist or weave things together."
+  },
+  {
+    "meaningId": "04a8701b-2071-52f7-a344-7d32c4c25da2",
+    "revision": "6615c856fc935a1602a517aadef130dc295c3af3fc10db05ffbd7ac793895a67",
+    "word": "matrix",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(mathematics) a rectangular array of quantities or expressions set out by rows and columns; treated as a single element and manipulated according to rules",
+    "learnerDefinition": "A set of numbers or expressions arranged in rows and columns and used together in mathematics."
+  },
+  {
+    "meaningId": "d6a3e901-6690-5565-bd15-ff8559e7d6f2",
+    "revision": "7caa5a357c3343ebb065faddd1efa36c56ce416fbdb5ef83be01ea91a97207fc",
+    "word": "hypocrite",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a person who professes beliefs and opinions that he or she does not hold in order to conceal his or her real feelings or motives",
+    "learnerDefinition": "Someone who pretends to hold beliefs or opinions that they do not really have."
+  },
+  {
+    "meaningId": "1c323f84-424a-5c14-a28c-4d75b9c02f06",
+    "revision": "c42459b1193cc624b56c2319e465b3bab8c69f3d742b102d7e05070ae6dcda80",
+    "word": "pneumonia",
+    "partOfSpeech": "noun",
+    "shortDefinition": "respiratory disease characterized by inflammation of the lung parenchyma (excluding the bronchi) with congestion caused by viruses or bacteria or irritants",
+    "learnerDefinition": "An illness in which lung tissue becomes inflamed, often because of an infection."
+  },
+  {
+    "meaningId": "76c14675-6328-503a-a36b-510464323b5d",
+    "revision": "97b7aa100b383fef899b77a2457cefb79dbf5191b8b50af0ee13953a866c8f1f",
+    "word": "groan",
+    "partOfSpeech": "verb",
+    "shortDefinition": "indicate pain, discomfort, or displeasure",
+    "learnerDefinition": "To make a low sound to show pain, discomfort or unhappiness."
+  },
+  {
+    "meaningId": "bba3dc09-c3b2-5ce8-b6f3-33ba18e9bc40",
+    "revision": "b5fe15b27ccdba17b0b571af6a26518a23f61e49bbfeb2aabb0301b169d0cc33",
+    "word": "oppose",
+    "partOfSpeech": "verb",
+    "shortDefinition": "be against; express opposition to",
+    "learnerDefinition": "To disagree with something and speak or act against it."
+  },
+  {
+    "meaningId": "7d1a1d9c-1de9-597e-9c95-b9c45ac911e0",
+    "revision": "1957b81c6a3bff8b80dd0bf0369258b5454c5ef991bb94c692f186dfa662b64c",
+    "word": "fingerprint",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a print made by an impression of the ridges in the skin of a finger; often used for biometric identification in criminal investigations",
+    "learnerDefinition": "A mark showing the lines on the skin of a finger, used to identify a person."
+  },
+  {
+    "meaningId": "5b04c372-e7cc-56a0-9156-064d220c0aa1",
+    "revision": "a6dfe9c053210539036b9249628706638e0e842b40035d2b4a662cd90b835f78",
+    "word": "troll",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(Scandanavian folklore) a supernatural creature (either a dwarf or a giant) that is supposed to live in caves or in the mountains",
+    "learnerDefinition": "An imaginary creature from Scandinavian stories, often a giant or dwarf that lives in caves or mountains."
+  },
+  {
+    "meaningId": "8b79a931-45e6-53db-a671-7c09657ea873",
+    "revision": "1f3b1d6dd8d3b98deb739f4a5f7ba5aab545a9a47c638a1046532803bbdf25ba",
+    "word": "harness",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a support consisting of an arrangement of straps for holding something to the body (especially one supporting a person suspended from a parachute)",
+    "learnerDefinition": "A set of straps used to hold something against a body or support a person safely."
+  },
+  {
+    "meaningId": "b2665f2c-bb02-57f0-9e00-e6522540c508",
+    "revision": "cd1378c4c131f3172088bda2a040fed2badda8c5b96c5e7216adef6f4f3cb5eb",
+    "word": "groove",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a long narrow furrow cut either by a natural process (such as erosion) or by a tool (as e.g. a groove in a phonograph record)",
+    "learnerDefinition": "A long, narrow cut or hollow line in a surface, made naturally or with a tool."
+  },
+  {
+    "meaningId": "3c90b377-486f-5b2d-99d8-a9e4415723b1",
+    "revision": "a32bffcc2558ce5ad311e5ad0e699d3955ba87e60b6c6a494d77c37d341fb1e9",
+    "word": "sensor",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any device that receives a signal or stimulus (as heat or pressure or light or motion etc.) and responds to it in a distinctive manner",
+    "learnerDefinition": "A device that notices and responds to something such as heat, light, pressure or movement."
+  },
+  {
+    "meaningId": "3bfa8f50-6971-5e60-ac4c-9c5a878bec88",
+    "revision": "019bd511019d41ade34100273ab9d3c15a95cbae999e613c02b308579f8b0ea1",
+    "word": "clutch",
+    "partOfSpeech": "verb",
+    "shortDefinition": "take hold of; grab",
+    "learnerDefinition": "To take hold of something tightly or suddenly."
+  },
+  {
+    "meaningId": "f17e7ba6-09fc-56c3-b44e-18411e6fab4a",
+    "revision": "cbf3267b43a0b94f2ad8dd2eb2a8d8a6bbb5abb944ec656f0ba01488e636c398",
+    "word": "undoubtedly",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "without doubt; certainly",
+    "learnerDefinition": "With no doubt that something is true."
+  },
+  {
+    "meaningId": "d849f65a-a95a-5f28-ace2-f654261e233d",
+    "revision": "6b7b33789073e89bb8448607c2e3470221cc8d121bbd5da55036eab535673c14",
+    "word": "genie",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(Islam) an invisible spirit mentioned in the Koran and believed by Muslims to inhabit the earth and influence mankind by appearing in the form of humans or animals",
+    "learnerDefinition": "An invisible spirit in Islamic belief and stories that can affect people and appear in human or animal form."
+  },
+  {
+    "meaningId": "9bcf01bd-ebcf-52cb-8048-ee026c63be64",
+    "revision": "721956141d6c24491e7180ba13b1ceeb419033fb8dd3c0c171fbc5443e13991d",
+    "word": "fiddle",
+    "partOfSpeech": "noun",
+    "shortDefinition": "bowed stringed instrument that is the highest member of the violin family; this instrument has four strings and a hollow body and an unfretted fingerboard and is played with a bow",
+    "learnerDefinition": "A violin: a wooden musical instrument with four strings, usually played with a bow."
+  },
+  {
+    "meaningId": "b388229b-b5cf-587f-b597-388aedb7d2e4",
+    "revision": "456cd3ce4925e650dee8775a111e4f23952976af32a46291a0441e84a99e047a",
+    "word": "wrench",
+    "partOfSpeech": "verb",
+    "shortDefinition": "twist or pull violently or suddenly, especially so as to remove (something) from that to which it is attached or from where it originates",
+    "learnerDefinition": "To twist or pull something suddenly and forcefully, especially to remove it."
+  },
+  {
+    "meaningId": "63b8ddb6-d41e-5c27-b164-8456ccb1477e",
+    "revision": "18ee1646d73805765969f2def041facc375f7a0420cf095c05c457ffb4acc6da",
+    "word": "doorway",
+    "partOfSpeech": "noun",
+    "shortDefinition": "the entrance (the space in a wall) through which you enter or leave a room or building; the space that a door can close",
+    "learnerDefinition": "The opening through which you enter or leave a room or building."
+  },
+  {
+    "meaningId": "77b7e7b8-17e4-5d15-acd5-b26e5ad596a3",
+    "revision": "11078fa8ae4608e1cee5dc4bc317c1a443e148a5e4bd7bac3afda70024e869b8",
+    "word": "plaster",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a mixture of lime or gypsum with sand and water; hardens into a smooth solid; used to cover walls and ceilings",
+    "learnerDefinition": "A mixture that is spread on walls or ceilings and becomes hard and smooth when it dries."
+  },
+  {
+    "meaningId": "f72f4a13-b152-5125-b30c-6dee429cbc45",
+    "revision": "09bb82108140087bd352fa4bb6d17fe9ea0e9f15e02761edb862b1da7181c750",
+    "word": "chug",
+    "partOfSpeech": "verb",
+    "shortDefinition": "make a dull, explosive sound",
+    "learnerDefinition": "To make a repeated low, heavy sound."
+  },
+  {
+    "meaningId": "ae1ad81c-48ba-5cf4-8647-9cc04723e865",
+    "revision": "c92f568a10d7ad0673bac473d79e196b5bee89a4e1a4349da41e102569cbb597",
+    "word": "hare",
+    "partOfSpeech": "noun",
+    "shortDefinition": "swift timid long-eared mammal larger than a rabbit having a divided upper lip and long hind legs; young born furred and with open eyes",
+    "learnerDefinition": "A fast animal like a large rabbit, with long ears and strong back legs."
+  },
+  {
+    "meaningId": "38a0a3d3-7c0d-5885-b8a7-f41af6f04d51",
+    "revision": "199d0e1f41dc7d6247efd30ebb4f48ecb74cf7c85cf9b1eac096c43bb2b99da1",
+    "word": "vouch",
+    "partOfSpeech": "verb",
+    "shortDefinition": "give personal assurance; guarantee",
+    "learnerDefinition": "To give a personal promise that something is true or reliable."
+  },
+  {
+    "meaningId": "a00dc04a-b5d0-53c0-b3be-85e2d338a6e3",
+    "revision": "907858a33f401ca41de1c7938514a24d6cb7d74e4a5767e34a9746304f267153",
+    "word": "irresistible",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "impossible to resist; overpowering",
+    "learnerDefinition": "So powerful or attractive that you cannot refuse or resist it."
+  },
+  {
+    "meaningId": "eab6be29-e928-5fbe-8d6d-004d8db6cee0",
+    "revision": "0cab77b3979c999d3c2510d08dd0008a1ebbcaa7961f5d58ae8af869e6e02d37",
+    "word": "bogus",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "fraudulent; having a misleading appearance",
+    "learnerDefinition": "Made to look real in order to deceive people."
+  },
+  {
+    "meaningId": "8f3024a3-38a8-5ba1-ba40-1bdfbd68739c",
+    "revision": "628d61423f62a1e6399e50861351817726a18832003c61e6a0c9b186718a235e",
+    "word": "outlaw",
+    "partOfSpeech": "verb",
+    "shortDefinition": "declare illegal; outlaw",
+    "learnerDefinition": "To make something illegal."
+  },
+  {
+    "meaningId": "be21ba80-dbd1-5507-8dd7-01f2dbab154f",
+    "revision": "2edeeb6439f0e58a980091d0d91a21a1b36ff819a0f3ce17bdef77f200d7e826",
+    "word": "economics",
+    "partOfSpeech": "noun",
+    "shortDefinition": "the branch of social science that deals with the production and distribution and consumption of goods and services and their management",
+    "learnerDefinition": "The study of how goods and services are produced, shared and used."
+  },
+  {
+    "meaningId": "7e21a276-cf00-58ce-8f46-2f4d59509dae",
+    "revision": "470079908b7a2337868e540438085ae83bd5926e5a50fc53ba8b7ab43660f2ae",
+    "word": "vinegar",
+    "partOfSpeech": "noun",
+    "shortDefinition": "sour-tasting liquid produced usually by oxidation of the alcohol in wine or cider and used as a condiment or food preservative",
+    "learnerDefinition": "A sour liquid made from wine, cider or other alcohol, used to flavour or preserve food."
+  },
+  {
+    "meaningId": "7ded75ee-a9f4-5624-89c2-099ef49b7483",
+    "revision": "be1081c2d231bf04f01d3e89c92ac465620f66eaef634d5ef62529804c4e195f",
+    "word": "snoop",
+    "partOfSpeech": "verb",
+    "shortDefinition": "watch, observe, or inquire secretly",
+    "learnerDefinition": "To secretly look for information about someone or something."
+  },
+  {
+    "meaningId": "c9ab82b4-da14-585e-9d7f-44a7279d1ea3",
+    "revision": "1e8461ea77b1537c6e770ce641ba375e4db2419beece36c07866bcf6c6a74ce3",
+    "word": "moan",
+    "partOfSpeech": "verb",
+    "shortDefinition": "indicate pain, discomfort, or displeasure",
+    "learnerDefinition": "To make a low sound to show pain, discomfort or unhappiness."
+  },
+  {
+    "meaningId": "3fed1124-9a0e-51aa-93d6-746fcc38b483",
+    "revision": "e2ca1c1dcc5fb7d01bbf7a54683719e5eb2085b0e0270765ebdfa9962c0491ee",
+    "word": "paragraph",
+    "partOfSpeech": "noun",
+    "shortDefinition": "one of several distinct subdivisions of a text intended to separate ideas; the beginning is usually marked by a new indented line",
+    "learnerDefinition": "A group of sentences in a piece of writing that deals with one idea or part of a subject."
+  },
+  {
+    "meaningId": "9e96550d-dc27-5f6d-9118-3833015a9b7e",
+    "revision": "033bfe9b77e1fdcb104dfbf2c793ff0bcc426373a64823bc8799670a452ad3a3",
+    "word": "glitter",
+    "partOfSpeech": "verb",
+    "shortDefinition": "be shiny, as if wet",
+    "learnerDefinition": "To shine with small flashes of light."
+  },
+  {
+    "meaningId": "e12aec2d-44d4-500a-9323-8d348c15ebae",
+    "revision": "42d447eb1eda63515c67d4a9737aecd5023788bf36911cb0134c3eba40212107",
+    "word": "output",
+    "partOfSpeech": "noun",
+    "shortDefinition": "final product; the things produced",
+    "learnerDefinition": "The things produced by a person, machine or process."
+  },
+  {
+    "meaningId": "b76335a5-9231-5082-9a10-37bde2888bef",
+    "revision": "e9fd1319d23a2f98c956fede7d25a01c9667847b18338ff7169717e5448efcea",
+    "word": "comfortably",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "in mental comfort; without stress",
+    "learnerDefinition": "In a relaxed way, without worry or stress."
+  },
+  {
+    "meaningId": "4f4964fa-d01f-5d84-8eef-0aa341dd7300",
+    "revision": "4da8ad2fa2b8189f041f4aecffc7dc04de0bfa26f9018cf22a1bb9599ac77097",
+    "word": "squeak",
+    "partOfSpeech": "verb",
+    "shortDefinition": "make a high-pitched, screeching noise",
+    "learnerDefinition": "To make a short, high-pitched sound."
+  },
+  {
+    "meaningId": "c40ce691-8b0d-5155-84b4-55ebf5c7ea32",
+    "revision": "c9d0929bf9c40391f307001f0fc12ede1ed702922614bb65bf6e57255536662c",
+    "word": "overlook",
+    "partOfSpeech": "verb",
+    "shortDefinition": "look past, fail to notice",
+    "learnerDefinition": "To fail to see or notice something."
+  },
+  {
+    "meaningId": "31fcc1b5-77dc-5666-a374-ef98bdc893c7",
+    "revision": "1063f7dbe889de529817f0715da9a624adc1e09d1445e2439db36356695c1d64",
+    "word": "unwanted",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "not wanted; not needed",
+    "learnerDefinition": "Not wanted or needed."
+  },
+  {
+    "meaningId": "8e6ea58e-8ea0-5234-84b1-4be46c154c98",
+    "revision": "0ccefc50daa5623f6666e72ae490a0c888d87ecf550105d00ead96ff946cb923",
+    "word": "aloud",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "using the voice; not silently",
+    "learnerDefinition": "Using your voice so that other people can hear."
+  },
+  {
+    "meaningId": "d43980c4-49ef-5eff-a138-9651a624cc75",
+    "revision": "5d7d615fc832ab648e5dd7dc431a25bb4e6c63695fb6657b0e9cd8e916f9fe2c",
+    "word": "disclose",
+    "partOfSpeech": "verb",
+    "shortDefinition": "make known to the public information that was previously known only to a few people or that was meant to be kept a secret",
+    "learnerDefinition": "To make information known when it was secret or known only to a few people."
+  },
+  {
+    "meaningId": "db82d6de-d4ae-5426-a897-4beff2ae356a",
+    "revision": "56f1682fab29a559a4c0d42fa944f362cfd6a73189e2071e8d7fbe1d4e88b915",
+    "word": "divert",
+    "partOfSpeech": "verb",
+    "shortDefinition": "turn aside; turn away from",
+    "learnerDefinition": "To turn away from a direction or course."
+  },
+  {
+    "meaningId": "66d41951-3b80-544c-9fcb-2f670563dff3",
+    "revision": "3c4e3b88ee6bff0eb7e1bbf97f4b8c065d78fc6fc8f22344ea56918918425d26",
+    "word": "dictatorship",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a form of government in which the ruler is an absolute dictator (not restricted by a constitution or laws or opposition etc.)",
+    "learnerDefinition": "A system of government in which a ruler has complete power without effective limits from laws or opposition."
+  },
+  {
+    "meaningId": "2a8e0500-8ba3-51a5-8de3-9408cea86618",
+    "revision": "cef062af34c09990c38adde2cef711cf1f1dd708a0fe6c60d09df48e87f7604e",
+    "word": "takeoff",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a departure; especially of airplanes",
+    "learnerDefinition": "The act of leaving, especially when an aircraft leaves the ground."
+  },
+  {
+    "meaningId": "cc7a854e-ae38-5e5f-b71c-3dea6b19cbae",
+    "revision": "83e3d6e1c5c8d266ff133bbb8338fb8d217ae5af282531a2dbd716957aa92750",
+    "word": "reap",
+    "partOfSpeech": "verb",
+    "shortDefinition": "gather, as of natural products",
+    "learnerDefinition": "To gather crops or other natural products."
+  },
+  {
+    "meaningId": "8098e774-46d7-536b-a438-e716309cdc21",
+    "revision": "94c444018a4eb0d9eb4661267dfa1155ed6d00c697103bbe05984eeea4460c15",
+    "word": "somber",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "lacking brightness or color; dull",
+    "learnerDefinition": "Dark or dull in colour, without brightness."
+  },
+  {
+    "meaningId": "d1bbbca9-74e1-5d77-b764-114e36a8cef0",
+    "revision": "5c9e68913b21f61160529b023e6cd6a26337eb807899ec5da4548d9f4111c1dc",
+    "word": "veer",
+    "partOfSpeech": "verb",
+    "shortDefinition": "turn sharply; change direction abruptly",
+    "learnerDefinition": "To change direction suddenly."
+  },
+  {
+    "meaningId": "fb04ebb0-1952-5f54-b60c-67190fa8ff37",
+    "revision": "d39b8121c28c38ce3bfe232eb1ae1fea2bf0fbabf36f142c1fc0c3a40f59b910",
+    "word": "confide",
+    "partOfSpeech": "verb",
+    "shortDefinition": "reveal in private; tell confidentially",
+    "learnerDefinition": "To tell someone private information that you trust them to keep secret."
+  },
+  {
+    "meaningId": "1ee6de1c-5259-5588-af47-00a334da11eb",
+    "revision": "51139f4782937e4918bf2d8a4a78b64cab675a89a411df69f92699dc0447b3ad",
+    "word": "tumble",
+    "partOfSpeech": "verb",
+    "shortDefinition": "fall down, as if collapsing",
+    "learnerDefinition": "To fall down suddenly."
+  },
+  {
+    "meaningId": "e986511a-8463-543e-96a4-9370729f575d",
+    "revision": "0adbed35e362ea5e96f28e08e8c0a67597c150837552b47fee4d1984db9480f8",
+    "word": "crummy",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "of very poor quality; flimsy",
+    "learnerDefinition": "Of very poor quality."
+  },
+  {
+    "meaningId": "744564d1-8950-5b66-b7b3-dbcc2c6041eb",
+    "revision": "10d53158273075d357be17d56594221f18fc5832ae2a5051a7c7c83e9bbe724b",
+    "word": "ion",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a particle that is electrically charged (positive or negative); an atom or molecule or group that has lost or gained one or more electrons",
+    "learnerDefinition": "An atom or group of atoms with an electrical charge because it has gained or lost electrons."
+  },
+  {
+    "meaningId": "8b9c80ab-0c50-5846-8837-c8fd4ceddcf8",
+    "revision": "3d9a3406d4b80041fe49a9d3aa74802038ed9052a0c1566c93b9128b17382c3e",
+    "word": "mould",
+    "partOfSpeech": "verb",
+    "shortDefinition": "form in clay, wax, etc",
+    "learnerDefinition": "To make a shape by working with a soft material such as clay or wax."
+  },
+  {
+    "meaningId": "2479e5c1-1916-5069-a4cf-172d11ab2fa0",
+    "revision": "4dcf409c2b34a132ec34279cf76c95759bf96047253191768302df74a5e2036e",
+    "word": "sprout",
+    "partOfSpeech": "verb",
+    "shortDefinition": "produce buds, branches, or germinate",
+    "learnerDefinition": "To start growing buds or branches, or to begin growing from a seed."
+  },
+  {
+    "meaningId": "2fcdacfb-2791-5593-a3c6-b88c6f933fa8",
+    "revision": "f5de213e3fc938252b233e31975c494ff4a34f205d7d6739726d841328534c60",
+    "word": "nurture",
+    "partOfSpeech": "verb",
+    "shortDefinition": "help develop, help grow",
+    "learnerDefinition": "To help someone or something grow and develop."
+  },
+  {
+    "meaningId": "3e0071b9-08de-5432-8147-4b352da4d787",
+    "revision": "5e8f599da6db71e73d5ab60cfb197b5d06ab9db726c5186a7d398f20191c6578",
+    "word": "reunite",
+    "partOfSpeech": "verb",
+    "shortDefinition": "have a reunion; unite again",
+    "learnerDefinition": "To come together again, or bring people or things together again."
+  },
+  {
+    "meaningId": "6fb6c8d3-ec76-51b6-bb48-76743401e0f1",
+    "revision": "57903b16e96ae5ee90f2fcd6e087764696fb9884a96e7023aa7463b896244827",
+    "word": "flashback",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a transition (in literary or theatrical works or films) to an earlier event or scene that interrupts the normal chronological development of the story",
+    "learnerDefinition": "A part of a story, film or play that returns to an earlier event."
+  },
+  {
+    "meaningId": "05d897dd-f307-504b-9faa-811550a7657f",
+    "revision": "1621d495a725c5efe4a6053f38efc6d35f573ec1899e5a7a3bd2da5c6599041c",
+    "word": "imperfect",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "not perfect; defective or inadequate",
+    "learnerDefinition": "Having faults or not being good enough in some way."
+  },
+  {
+    "meaningId": "be19d3e2-cdfc-57b6-b155-5e89ed7aae8d",
+    "revision": "6664e5188ae31feaddfe4aa421ebbaeecb2588567423359c1433e31e59ecadf9",
+    "word": "unprepared",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "without preparation; not prepared for",
+    "learnerDefinition": "Not ready for something because you have not prepared."
+  },
+  {
+    "meaningId": "6cc2e6b1-132f-5528-ac46-b7d0221e0b24",
+    "revision": "16787ad2d9e7f9efa243f4eb8e7220c91034521536e91fab44c2052c1661f69d",
+    "word": "divulge",
+    "partOfSpeech": "verb",
+    "shortDefinition": "make known to the public information that was previously known only to a few people or that was meant to be kept a secret",
+    "learnerDefinition": "To make information known when it was secret or known only to a few people."
+  },
+  {
+    "meaningId": "68fb5286-27a0-5c8c-894c-fabe30b49330",
+    "revision": "763656b5a7fec9cf739b997a9524582e2177df6199ec40d8c2d2e3fe0427cdad",
+    "word": "perch",
+    "partOfSpeech": "verb",
+    "shortDefinition": "sit, as on a branch",
+    "learnerDefinition": "To sit or rest on something such as a branch."
+  },
+  {
+    "meaningId": "cb318b30-a99f-5c11-ae71-559a3fa09877",
+    "revision": "f5974752f495cc82ebaf5f903e4533e144c8fbc7eb2a7ae4d725ce9cea12473d",
+    "word": "lovingly",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "with fondness; with love",
+    "learnerDefinition": "In a way that shows love or affection."
+  },
+  {
+    "meaningId": "10fc28aa-ec05-5d83-878f-ab943173a8a3",
+    "revision": "d2aa0d0d05974ef4356d5fd89a8d5d1768d73e3125135bd3c1b6202db15b7d29",
+    "word": "loophole",
+    "partOfSpeech": "noun",
+    "shortDefinition": "an ambiguity (especially one in the text of a law or contract) that makes it possible to evade a difficulty or obligation",
+    "learnerDefinition": "An unclear part of a law or agreement that lets someone avoid a rule or duty."
+  },
+  {
+    "meaningId": "7fd415ed-6b90-53ab-b52e-d2038a7841d9",
+    "revision": "948436de3892ebb3ffd695ae9a6bd41253435a6be368c6185d701ad74069fda9",
+    "word": "eloquent",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "expressing yourself readily, clearly, effectively",
+    "learnerDefinition": "Able to express ideas clearly and effectively."
+  },
+  {
+    "meaningId": "643ed624-17d9-579d-a97e-c815b72bfcfc",
+    "revision": "525afda09a5d412b7063e119d270f4469bf1302501cc64596d11eddc40784c0c",
+    "word": "divinity",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any supernatural being worshipped as controlling some part of the world or some aspect of life or who is the personification of a force",
+    "learnerDefinition": "A god or other being worshipped as having power over part of life or the world."
+  },
+  {
+    "meaningId": "1011ef0c-a0e5-5451-993b-934a9b28e478",
+    "revision": "6e42210c0bac86799f5fc512e6074d82e21224048b2ee62f983118d59e91a3c0",
+    "word": "catheter",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a thin flexible tube inserted into the body to permit introduction or withdrawal of fluids or to keep the passageway open",
+    "learnerDefinition": "A thin tube put into the body to move liquid in or out or keep a passage open."
+  },
+  {
+    "meaningId": "74362706-79ae-5658-8cea-df919d381edd",
+    "revision": "b8b8590668e7825e295840c954d564b021eecce9c40864cab533152f38245cfc",
+    "word": "plumb",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "completely; used as intensifiers",
+    "learnerDefinition": "Completely; used to make a statement stronger."
+  },
+  {
+    "meaningId": "195801f5-44d3-531a-b360-28f3c206e1d2",
+    "revision": "f0c3acfa4c768c42689a6a2e0561caa27e64f08357647fb99964ba06359e01e1",
+    "word": "shudder",
+    "partOfSpeech": "verb",
+    "shortDefinition": "shake, as from cold",
+    "learnerDefinition": "To shake suddenly, for example because you are cold."
+  },
+  {
+    "meaningId": "91ed497e-045d-5aea-9e1c-935f587287f1",
+    "revision": "ca4450ad858b639dc3c11bef74ce90e3d8b59af846ad77513ae0bd9eb8f107cf",
+    "word": "roost",
+    "partOfSpeech": "verb",
+    "shortDefinition": "sit, as on a branch",
+    "learnerDefinition": "To sit or rest on a branch or similar place."
+  },
+  {
+    "meaningId": "ef2d2b92-25fe-5af9-8fed-aa15d298b53c",
+    "revision": "8f4dfacd64cbb70bfff51e40201ffe4ade65084b2ddb0f148e7627cf39f10922",
+    "word": "necktie",
+    "partOfSpeech": "noun",
+    "shortDefinition": "neckwear consisting of a long narrow piece of material worn (mostly by men) under a collar and tied in knot at the front",
+    "learnerDefinition": "A long, narrow piece of cloth worn under a shirt collar and tied at the front."
+  },
+  {
+    "meaningId": "31669e21-0589-52e4-8f13-aa44da247bc3",
+    "revision": "7a72101518eb472c31743854431fa7067834703d9eed8b79127da4a02922c81e",
+    "word": "counterattack",
+    "partOfSpeech": "noun",
+    "shortDefinition": "an attack by a defending force against an attacking enemy force in order to regain lost ground or cut off enemy advance units etc.",
+    "learnerDefinition": "An attack made in response to an enemy's attack to recover ground or stop their advance."
+  },
+  {
+    "meaningId": "aa2120d1-885f-5a1d-af16-03f20bbe0055",
+    "revision": "22e323082ed1a61d0fd79fdb8bed42a132f3fe1813705dc97e9f7790d52c8272",
+    "word": "baggy",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "not fitting closely; hanging loosely",
+    "learnerDefinition": "Hanging loosely instead of fitting closely."
+  },
+  {
+    "meaningId": "d0491fd7-66e6-594a-bb41-b6068ffdc7b4",
+    "revision": "36d6a703d20be982c877b43b5a0a4450fefe8da50ff15c48db0c7ad180961827",
+    "word": "exempt",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "(of persons) freed from or not subject to an obligation or liability (as e.g. taxes) to which others or other things are subject",
+    "learnerDefinition": "Not required to follow a rule or pay something, such as a tax, that applies to others."
+  },
+  {
+    "meaningId": "1ce0532d-d944-5e62-914e-ac0cc7ba094b",
+    "revision": "468ff1f4bf8000f089b70a4d77cc10922221aeb94a36c83f3cf60b62ae230a33",
+    "word": "befall",
+    "partOfSpeech": "verb",
+    "shortDefinition": "become of; happen to",
+    "learnerDefinition": "To happen to someone or something."
+  },
+  {
+    "meaningId": "214f0e22-62ad-51ee-be51-a0044bce11cb",
+    "revision": "629c8d1a5c1b2428c032bb5eb7ad0be86b7e8747cd3c5da0646f6aaa8d252560",
+    "word": "alight",
+    "partOfSpeech": "verb",
+    "shortDefinition": "to come to rest, settle",
+    "learnerDefinition": "To land or come to rest somewhere."
+  },
+  {
+    "meaningId": "36dce8ed-9d22-5eee-939b-a2fc28703b96",
+    "revision": "1569ad7dfff4ba3a48a458a8e548a73c23c46629b60d68ee345fe61ee59b946a",
+    "word": "topple",
+    "partOfSpeech": "verb",
+    "shortDefinition": "fall down, as if collapsing",
+    "learnerDefinition": "To fall down suddenly."
+  },
+  {
+    "meaningId": "067af5e2-c227-56ba-a944-bb38fad0d470",
+    "revision": "24277c5f6e047c81db191d3d800cb24e3966990f263cdd08b05d6781066faad4",
+    "word": "pasty",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "resembling paste in color; pallid",
+    "learnerDefinition": "Having a pale, unhealthy-looking colour like paste."
+  },
+  {
+    "meaningId": "9f700d61-1cb5-5ae9-b9eb-ef9c8d088cc3",
+    "revision": "467f77e000cbb79611d4341f7dd2575a8a611e8674bb81156269f726d22e85d2",
+    "word": "macabre",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "shockingly repellent; inspiring horror",
+    "learnerDefinition": "Horrifying or disturbing, especially because it involves death."
+  },
+  {
+    "meaningId": "0b714d72-bf44-58cf-a6db-1a1cc2ba491f",
+    "revision": "65503a3eb807df51b5ede7b6030310f2df08c329c4cef5213b6c1adbe6a5bbaa",
+    "word": "mindful",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "bearing in mind; attentive to",
+    "learnerDefinition": "Aware of something and paying attention to it."
+  },
+  {
+    "meaningId": "fd494d02-41e3-548f-b1c5-45cfeada8eeb",
+    "revision": "9294f5fd34cb2e36476968dc8935240a2aae1d59ff03171f9fdadb0121f0cd99",
+    "word": "terrify",
+    "partOfSpeech": "verb",
+    "shortDefinition": "fill with terror; frighten greatly",
+    "learnerDefinition": "To make someone feel very frightened."
+  },
+  {
+    "meaningId": "8d5a48e4-672c-5443-ae8a-cc63c1dc9fa3",
+    "revision": "874376b3bf0a7568eb4c702130a14e9f9b5441fb8aa09777b9b5f57f83ea60c6",
+    "word": "symposium",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a meeting or conference for the public discussion of some topic especially one in which the participants form an audience and make presentations",
+    "learnerDefinition": "A meeting at which people give talks and discuss a particular subject."
+  },
+  {
+    "meaningId": "c2782658-7e60-5f4b-9ed6-6bbd865e6d1a",
+    "revision": "25d4c4db7e11eb71523effe015e174ad6e66f4fc5a91040a849366b5868c60be",
+    "word": "unanimously",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "of one mind; without dissent",
+    "learnerDefinition": "With everyone agreeing."
+  },
+  {
+    "meaningId": "b2b5e847-d6d9-5544-a297-c6dc0c8912d0",
+    "revision": "6524cf80c97e228a64d07d152a0dbfed87f08bdecd786e052c02af3ddf5be449",
+    "word": "quiver",
+    "partOfSpeech": "verb",
+    "shortDefinition": "shake with fast, tremulous movements",
+    "learnerDefinition": "To shake with small, quick movements."
+  },
+  {
+    "meaningId": "2afaae8d-6fb3-52ec-888a-59a8cbcf9a62",
+    "revision": "6490741f0788b6d328bd7c4dba9bbdff95172b9bdfc1e162a7a8b4a487c578bd",
+    "word": "twine",
+    "partOfSpeech": "verb",
+    "shortDefinition": "spin,wind, or twist together",
+    "learnerDefinition": "To twist or wind things together."
+  },
+  {
+    "meaningId": "6ce486e4-3677-59ec-b760-12b1d9be3913",
+    "revision": "d1cb8d14956ab6eb1c321637c2f16c52949a428e4da18932ab2ef012c12d464d",
+    "word": "collectively",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "in conjunction with; combined",
+    "learnerDefinition": "Together as a group."
+  },
+  {
+    "meaningId": "2b00f2de-9c91-5921-8df6-eeb3f91321fc",
+    "revision": "e6a5cd4f116448c46d6d43c6c1fb0e862fa9c1f4e74ec6f45f8d954cadb31d77",
+    "word": "invulnerable",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "immune to attack; impregnable",
+    "learnerDefinition": "Unable to be harmed or attacked successfully."
+  },
+  {
+    "meaningId": "110dcb31-bfe0-5ae8-a98e-51e865d71c18",
+    "revision": "eb3d84cdf2ba5cdf8b3b6d27cb7889b4a4b7f6a3dbf8e0d8f0ce01b2c16839b8",
+    "word": "doubtless",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "without doubt; certainly",
+    "learnerDefinition": "With no doubt that something is true."
+  },
+  {
+    "meaningId": "f99f71e7-2095-5bec-98e7-7835baf5df47",
+    "revision": "ebcfe7fd30f0f1aaf810b28d986a76c14ac8d9f77c3e1b370ac2df4fc71ed1e7",
+    "word": "poise",
+    "partOfSpeech": "verb",
+    "shortDefinition": "be motionless, in suspension",
+    "learnerDefinition": "To stay still while hanging or balancing in the air."
+  },
+  {
+    "meaningId": "6381835f-ed19-510c-a518-4e46b7463d2e",
+    "revision": "68b293e8a83141fc87f295164922f9e04883a29c6428a9bf366cbf986fc1a854",
+    "word": "beech",
+    "partOfSpeech": "noun",
+    "shortDefinition": "any of several large deciduous trees with rounded spreading crowns and smooth grey bark and small sweet edible triangular nuts enclosed in burs; north temperate regions",
+    "learnerDefinition": "A large tree with smooth grey bark that loses its leaves in winter and produces small, edible nuts."
+  },
+  {
+    "meaningId": "9bdfb680-a96c-53e8-a7a0-34a58f456b41",
+    "revision": "03a483040a12f1d411782c224e9b9aa4c1568e05db688533b4a869010eca29f6",
+    "word": "persevere",
+    "partOfSpeech": "verb",
+    "shortDefinition": "be persistent, refuse to stop",
+    "learnerDefinition": "To keep trying and refuse to stop."
+  },
+  {
+    "meaningId": "a4dfb1f8-54f6-5847-be19-30b7100a4a35",
+    "revision": "fb02c47a18a7028cfd555072ab0c9c0836621ac9ac0581cf9e58f57bb529b4b8",
+    "word": "obsess",
+    "partOfSpeech": "verb",
+    "shortDefinition": "haunt like a ghost; pursue",
+    "learnerDefinition": "To keep troubling or filling someone's thoughts."
+  },
+  {
+    "meaningId": "e895a9ad-2e20-5d00-a64e-799c6774d9e4",
+    "revision": "0b990692454b2b32f874423794c84dfac7d7c86305f45b3eac22997ba3e81f4a",
+    "word": "deviate",
+    "partOfSpeech": "verb",
+    "shortDefinition": "turn aside; turn away from",
+    "learnerDefinition": "To turn away from a direction or course."
+  },
+  {
+    "meaningId": "1178a31e-2a6c-563e-910d-b1ab5e47a2c0",
+    "revision": "1212c53700f72cb4cd893d7ad727dfec4947a0649588a099469da9ab566821cc",
+    "word": "padlock",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a detachable lock; has a hinged shackle that can be passed through the staple of a hasp or the links in a chain and then snapped shut",
+    "learnerDefinition": "A lock with a curved metal bar that closes through a ring or chain to hold it shut."
+  },
+  {
+    "meaningId": "abf2f658-cfcf-55e5-a48a-0c05802219ce",
+    "revision": "a71e79b245e1f866df29ae7ac8eabc2276516e556ec260652983a8b0bc6f18b3",
+    "word": "deplorable",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "bad; unfortunate",
+    "learnerDefinition": "Very bad or unfortunate."
+  },
+  {
+    "meaningId": "1161e78f-0f73-5bb1-80c1-8fa489f09e10",
+    "revision": "29f1bcee991448e4465db77d5453a9bb24b97b0bb7be55dee09d2ef3c7e6d3f7",
+    "word": "dugout",
+    "partOfSpeech": "noun",
+    "shortDefinition": "either of two low shelters on either side of a baseball diamond where the players and coaches sit during the game",
+    "learnerDefinition": "A low shelter beside a baseball field where players and coaches sit during a game."
+  },
+  {
+    "meaningId": "a869f211-c9d0-5687-ba0f-8b52271c46ac",
+    "revision": "b59849cade61e86be01f1f590525a3c64c6a5b14e7a951905dd703ce6fcbbab3",
+    "word": "swerve",
+    "partOfSpeech": "verb",
+    "shortDefinition": "turn sharply; change direction abruptly",
+    "learnerDefinition": "To change direction suddenly."
+  },
+  {
+    "meaningId": "71d73aae-85a4-5730-ac8d-8317359bb2e3",
+    "revision": "2de2a897edb8049d4cfdaa39aa3c4102b918cad16fe8e58e421825a7cf6587fb",
+    "word": "firework",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(usually plural) a device with an explosive that burns at a low rate and with colored flames; can be used to illuminate areas or send signals etc.",
+    "learnerDefinition": "A device containing chemicals that burn or explode to produce coloured light, often for celebrations or signals."
+  },
+  {
+    "meaningId": "f47d9f71-2357-55c7-b41d-9949ab8e69b6",
+    "revision": "ecff1316b590824db8838134387e1aabb07141f7a115e8540f1b1b019609b68a",
+    "word": "woodpecker",
+    "partOfSpeech": "noun",
+    "shortDefinition": "bird with strong claws and a stiff tail adapted for climbing and a hard chisel-like bill for boring into wood for insects",
+    "learnerDefinition": "A bird with strong claws and a hard beak that makes holes in wood to find insects."
+  },
+  {
+    "meaningId": "6e5db7e0-9fed-592d-9319-4c205df05093",
+    "revision": "b9d449ace487836096d7ff8f1c7c4afb710797ea922b57a9ebd859f98ba2cab2",
+    "word": "depress",
+    "partOfSpeech": "verb",
+    "shortDefinition": "lower someone's spirits; make downhearted",
+    "learnerDefinition": "To make someone feel sad or less hopeful."
+  },
+  {
+    "meaningId": "64535557-7be4-56cb-9200-56feb64af346",
+    "revision": "6e94fd8e41dd93890efa304def88b285ca1f4f0d7e834c8e4bd5d8d1d927eace",
+    "word": "coolant",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a fluid agent (gas or liquid) that produces cooling; especially one used to cool a system by transferring heat away from one part to another",
+    "learnerDefinition": "A liquid or gas used to carry heat away and keep a machine or system cool."
+  },
+  {
+    "meaningId": "3c414ea8-28b5-5b2d-9b8a-afd6a0d84615",
+    "revision": "bc510a2f51f36bdb04b07211ce795365b109df15bef453b423cd504196a3d8aa",
+    "word": "habitual",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "commonly used or practiced; usual",
+    "learnerDefinition": "Done or used regularly as a habit."
+  },
+  {
+    "meaningId": "1d718992-ccdd-5bc8-b242-36df72171d03",
+    "revision": "ea9b260d4ab5775fc546a440effa248f3faac57e586d4264e1fb3e9b3edc2e20",
+    "word": "elude",
+    "partOfSpeech": "verb",
+    "shortDefinition": "escape, either physically or mentally",
+    "learnerDefinition": "To escape from someone or avoid being caught or understood."
+  },
+  {
+    "meaningId": "c0a6d79f-1d5a-58ab-971b-b57e7500503e",
+    "revision": "9f583c0d251127b0989887e596517f50e29c14e6e3bcfc042893730a92d191a1",
+    "word": "embankment",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a long artificial mound of stone or earth; built to hold back water or to support a road or as protection",
+    "learnerDefinition": "A long raised bank of earth or stone built to hold back water or support a road."
+  },
+  {
+    "meaningId": "52c889e6-deb8-565c-ab1d-23585fadac6e",
+    "revision": "0c760646f8c7578e5359e6d6f21edb44e984dfcbbc11db2159b3e73226565510",
+    "word": "kickoff",
+    "partOfSpeech": "noun",
+    "shortDefinition": "(football) a kick from the center of the field to start a football game or to resume it after a score",
+    "learnerDefinition": "A kick that starts a football game or restarts it after a score."
+  },
+  {
+    "meaningId": "7b60126e-cfe5-56cc-b147-2d32da5e9eff",
+    "revision": "a866c8165c9c0bfbcd8a7af38999232f599ebaf58643d260ec72a5a1a05669fe",
+    "word": "skeet",
+    "partOfSpeech": "noun",
+    "shortDefinition": "the sport of shooting at clay pigeons that are hurled upward in such a way as to simulate the flight of a bird",
+    "learnerDefinition": "A sport in which people shoot at clay discs thrown into the air like flying birds."
+  },
+  {
+    "meaningId": "93cb6cf2-67cd-58d0-b7c0-469d73096ee6",
+    "revision": "c79aa859fea3300ce868c3501e63d0bc8fe27e83db2fc8ecc80af1a1f0b21b33",
+    "word": "steeple",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a tall tower that forms the superstructure of a building (usually a church or temple) and that tapers to a point at the top",
+    "learnerDefinition": "A tall, pointed tower on a building, usually a church."
+  },
+  {
+    "meaningId": "1da86f4f-f6a4-5a83-a99e-59c974aa812e",
+    "revision": "1a6a1c7006ec718a42b19477d9fa9f54c083af781c5426f3d4066f8edd530a4c",
+    "word": "diagonal",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "connecting two nonadjacent corners of a plane figure or any two corners of a solid that are not in the same face",
+    "learnerDefinition": "Joining two corners of a flat shape that are not next to each other, or corners on different faces of a solid."
+  },
+  {
+    "meaningId": "311160ae-191e-5f5d-837b-298cb3bb757e",
+    "revision": "1d2c7214459195cc734319dbebc81a06c10352e98c2a83a209f25bf67cc11f52",
+    "word": "glint",
+    "partOfSpeech": "verb",
+    "shortDefinition": "be shiny, as if wet",
+    "learnerDefinition": "To shine with a small flash of light."
+  },
+  {
+    "meaningId": "c72c32c2-9d8b-59b5-a918-0dbb1f71aaea",
+    "revision": "5ec7b211c0fa132a71ba8b9eb4d7a6ee2c1093f11ab6c1ffc9acc6eedb47d68b",
+    "word": "materialize",
+    "partOfSpeech": "verb",
+    "shortDefinition": "come into being; become reality",
+    "learnerDefinition": "To become real or come into existence."
+  },
+  {
+    "meaningId": "b2ca5a5f-bb75-57c4-82b9-455bf28cba21",
+    "revision": "f3fe025c623886eac0a2cdda4ba8158e20971a6da3e2dc7477249ca61ec4fc29",
+    "word": "undamaged",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "not harmed or spoiled; sound",
+    "learnerDefinition": "Not harmed or spoiled."
+  },
+  {
+    "meaningId": "d5ef66c7-06b7-5c5a-919e-789031d377c5",
+    "revision": "6f24c9da770f7a3677927d30d3b3a48d701f25b4666f62bb37edd2151968bd2a",
+    "word": "reread",
+    "partOfSpeech": "verb",
+    "shortDefinition": "read anew; read again",
+    "learnerDefinition": "To read something again."
+  },
+  {
+    "meaningId": "ebcf42d9-de6c-52ee-a1cd-b02b0b02447c",
+    "revision": "927b36d7d8fe47d7288346a47f5ae4231b8b5b6086ed78e3084134acafd856ea",
+    "word": "notably",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "especially; in particular",
+    "learnerDefinition": "Especially or in particular."
+  },
+  {
+    "meaningId": "6e77808b-b028-58e5-b2b0-2d6cfbbbca14",
+    "revision": "f127a5a63ee676403cca6eb1e5c4d5e152b800deb02dbc93202aefe1b060dbd6",
+    "word": "sonogram",
+    "partOfSpeech": "noun",
+    "shortDefinition": "an image of a structure that is produced by ultrasonography (reflections of high-frequency sound waves); used to observe fetal growth or to study bodily organs",
+    "learnerDefinition": "A picture made using sound waves, often to see a baby before birth or organs inside the body."
+  },
+  {
+    "meaningId": "214f287f-2bda-5cdf-a18c-5f0d25bc9ff6",
+    "revision": "4f202603ab06b260b25d0b23c9431c23b2d3366116ef785a0b4486f3ebccca21",
+    "word": "midwestern",
+    "partOfSpeech": "adjective",
+    "shortDefinition": "of a region of the United States generally including Ohio; Indiana; Illinois; Iowa; Missouri; Kansas; Nebraska; and sometimes Michigan; Wisconsin; Minnesota",
+    "learnerDefinition": "Relating to the north-central part of the United States, including states such as Iowa, Illinois and Ohio."
+  },
+  {
+    "meaningId": "741fdc4a-b664-50b7-a5c4-772825b7d84d",
+    "revision": "f41d1e35d004be5b38b4d20829e2dd61ebcf5a0bd81100449abcf4c1da29a9d7",
+    "word": "backlog",
+    "partOfSpeech": "noun",
+    "shortDefinition": "an accumulation of jobs not done or materials not processed that are yet to be dealt with (especially unfilled customer orders for products or services)",
+    "learnerDefinition": "Work or orders that have built up and still need to be dealt with."
+  },
+  {
+    "meaningId": "6f0fd25e-96fa-5972-a873-e76508ab2eff",
+    "revision": "f651ace9f8d9cca9cbc7adfd2a4f8f13331a0f44ebe9dc3cbf5746d3cb87c968",
+    "word": "hopscotch",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a game in which a child tosses a stone into an area drawn on the ground and then hops through it and back to regain the stone",
+    "learnerDefinition": "A game in which children throw a stone onto a marked pattern on the ground, then hop through it."
+  },
+  {
+    "meaningId": "1898a731-bb15-5ae0-8461-6030f0ae610b",
+    "revision": "dd46c736cf0f9b83e327f096d3ff7678d74a36e2d08d2784cbabc6662ea5bb2e",
+    "word": "chaise",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a long chair; for reclining",
+    "learnerDefinition": "A long chair that you can lean back or lie on."
+  },
+  {
+    "meaningId": "45a8327e-83d8-5eee-9421-4cf4d0d1177c",
+    "revision": "4f20330613e4a74a121047d67f74d4f469425417c2cd3733a75a09c8bbd530a9",
+    "word": "spire",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a tall tower that forms the superstructure of a building (usually a church or temple) and that tapers to a point at the top",
+    "learnerDefinition": "A tall, pointed tower on a building, usually a church."
+  },
+  {
+    "meaningId": "3f1ae960-e58e-5db4-8f84-e5c9b11ddf3c",
+    "revision": "3df5e52740139708bc7afaa201b46d6f0205db7c353a54e47424484a8cd7dec3",
+    "word": "tungsten",
+    "partOfSpeech": "noun",
+    "shortDefinition": "a heavy grey-white metallic element; the pure form is used mainly in electrical applications; it is found in several ores including wolframite and scheelite",
+    "learnerDefinition": "A heavy, grey-white metal used especially in electrical equipment."
+  },
+  {
+    "meaningId": "88d33c57-4ee5-53ab-88c7-c63c6b699268",
+    "revision": "699cccfe7e71e2b0f0b42a217378c95897c38005ac5c28799e27c12840bdfbdd",
+    "word": "digress",
+    "partOfSpeech": "verb",
+    "shortDefinition": "lose clarity or turn aside especially from the main subject of attention or course of argument in writing, thinking, or speaking",
+    "learnerDefinition": "To move away from the main subject when speaking, writing or thinking."
+  },
+  {
+    "meaningId": "84e77dda-8c32-52b2-9186-79f8956e7825",
+    "revision": "02c726a326a0be96f8fd29023dcdb2bd3cd7dc14989d89eea2af191641dee4bd",
+    "word": "unawares",
+    "partOfSpeech": "adverb",
+    "shortDefinition": "without forethought or plan; inadvertently",
+    "learnerDefinition": "Without planning or realising it."
+  },
+  {
+    "meaningId": "7e01f7f1-e257-5890-b2d8-fd6988afbe3f",
+    "revision": "756ff3b6d3b0d8367019c861f80f34aaacb97b88c6538b2bce2c7d712c0e226b",
+    "word": "rosette",
+    "partOfSpeech": "noun",
+    "shortDefinition": "an ornament or pattern resembling a rose that is worn as a badge of office or as recognition of having won an honor",
+    "learnerDefinition": "A decoration shaped like a rose, worn to show an official role or an achievement."
+  }
+]

@@ -1,5 +1,18 @@
 # Vocanova current product state
 
+## Remaining UI/UX findings — 12 November 2026
+
+The [completion delivery](ui-ux-completion-2026-11-12.md) adds resend/address
+recovery, same-user Profile/email tab drafts, consistent Unicode name limits,
+learning-first list controls, one primary story action and a distinct empty writing
+catalog state. The [content audit](catalog-readability-2026-11-12.md) covers all
+10,051 source meanings and adds 257 exact-revision learner explanations after
+individual semantic review of 320 candidates. Canonical grading/media identities
+remain unchanged. The [learner study](learner-usability-study-2026-11-12.md) is
+prepared; the owner will arrange participants and no sessions have been observed.
+Integrated verification and release status are recorded with the consolidated PR;
+these implementation changes are distinct from the preceding 0.4.30 deployment.
+
 ## UI/UX review — 12 November 2026
 
 The [dated audit](ui-ux-audit-2026-11-12.md) records recent AI-assisted design

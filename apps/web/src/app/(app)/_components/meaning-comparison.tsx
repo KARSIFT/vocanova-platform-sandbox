@@ -1,3 +1,4 @@
+import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import type { WordDetail } from "@vocanova/api-client";
 
@@ -43,7 +44,12 @@ export function MeaningComparison({
                 {currentMeaningId ? "Explore meaning" : `Meaning ${index + 1}`}{" "}
                 · {meaning.partOfSpeech}
               </span>
-              <span className="mt-1">{meaning.shortDefinition}</span>
+              <span className="mt-1">
+                {getPrimaryDefinition(
+                  meaning.shortDefinition,
+                  meaning.learnerDefinition,
+                )}
+              </span>
             </Link>
           </li>
         ))}

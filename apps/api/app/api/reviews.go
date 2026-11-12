@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/learnerdefinitions"
 	"net/http"
 	"time"
 
@@ -15,15 +16,16 @@ import (
 // DueWordDTO is a due saved meaning projected for review. It includes the backend
 // review step for the prompt engine but must not be rendered raw to the learner.
 type DueWordDTO struct {
-	UserWordID      string `json:"userWordId" format:"uuid" doc:"Saved record identifier"`
-	MeaningID       string `json:"meaningId" format:"uuid" doc:"Meaning identifier"`
-	WordID          string `json:"wordId" format:"uuid" doc:"Canonical word identifier"`
-	WordText        string `json:"wordText" doc:"Canonical word text"`
-	WordSlug        string `json:"wordSlug" doc:"Canonical word URL slug"`
-	PartOfSpeech    string `json:"partOfSpeech" doc:"Part of speech"`
-	ShortDefinition string `json:"shortDefinition" doc:"Short definition"`
-	Status          string `json:"status" doc:"Learning status"`
-	ReviewStep      int    `json:"reviewStep" doc:"Backend review step"`
+	UserWordID        string `json:"userWordId" format:"uuid" doc:"Saved record identifier"`
+	MeaningID         string `json:"meaningId" format:"uuid" doc:"Meaning identifier"`
+	WordID            string `json:"wordId" format:"uuid" doc:"Canonical word identifier"`
+	WordText          string `json:"wordText" doc:"Canonical word text"`
+	WordSlug          string `json:"wordSlug" doc:"Canonical word URL slug"`
+	PartOfSpeech      string `json:"partOfSpeech" doc:"Part of speech"`
+	ShortDefinition   string `json:"shortDefinition" doc:"Short definition"`
+	LearnerDefinition string `json:"learnerDefinition,omitempty" doc:"Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged"`
+	Status            string `json:"status" doc:"Learning status"`
+	ReviewStep        int    `json:"reviewStep" doc:"Backend review step"`
 }
 
 // ListReviewsDueInput requests a paginated list of the authenticated requester's
@@ -167,15 +169,16 @@ func RegisterReviews(api huma.API, svc *reviews.Service, authSvc *auth.Service) 
 
 func dueWordToDTO(d reviews.DueWord) DueWordDTO {
 	return DueWordDTO{
-		UserWordID:      d.UserWordID.String(),
-		MeaningID:       d.MeaningID.String(),
-		WordID:          d.WordID.String(),
-		WordText:        d.WordText,
-		WordSlug:        d.WordSlug,
-		PartOfSpeech:    d.PartOfSpeech,
-		ShortDefinition: d.ShortDefinition,
-		Status:          d.Status,
-		ReviewStep:      d.ReviewStep,
+		UserWordID:        d.UserWordID.String(),
+		MeaningID:         d.MeaningID.String(),
+		WordID:            d.WordID.String(),
+		WordText:          d.WordText,
+		WordSlug:          d.WordSlug,
+		PartOfSpeech:      d.PartOfSpeech,
+		ShortDefinition:   d.ShortDefinition,
+		LearnerDefinition: learnerdefinitions.Resolve(d.MeaningID.String(), d.WordText, d.PartOfSpeech, d.ShortDefinition, ""),
+		Status:            d.Status,
+		ReviewStep:        d.ReviewStep,
 	}
 }
 

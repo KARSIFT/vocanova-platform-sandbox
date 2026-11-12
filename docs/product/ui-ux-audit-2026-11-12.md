@@ -57,6 +57,13 @@ failure paths use isolated local fixtures with browser audio muted.
 
 ## Remaining findings and product decisions
 
+The owner requested these follow-ups after the initial 0.4.30 release. Their
+[implementation and evidence](ui-ux-completion-2026-11-12.md),
+[complete source content audit](catalog-readability-2026-11-12.md), and
+[prepared learner study](learner-usability-study-2026-11-12.md) are tracked
+separately. The list below records the original findings; it does not establish
+that a real learner study has taken place.
+
 - **P2, content quality:** live search includes dictionary-style definitions such
   as “forsake, leave behind” and long technical descriptions. Audit definition
   readability and polysemy against the intended A2–B1 learner, with editorial

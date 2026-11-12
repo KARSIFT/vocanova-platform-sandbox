@@ -179,6 +179,7 @@ export function isRegisteredBusinessModule(name) {
     "stories",
     "pronunciation", // Authenticated public-content audio; bounded shared cache.
     "meaninguses", // Original supplemental public senses; no learner schema.
+    "learnerdefinitions", // Revision-bound public teaching copy; no learner storage or writes.
     "meaningmedia", // Revision-bound approved images; no learner writes.
   ]);
   return allowedBusinessModules.has(name);

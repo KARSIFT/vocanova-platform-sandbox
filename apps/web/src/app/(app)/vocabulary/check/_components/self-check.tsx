@@ -1,5 +1,7 @@
 "use client";
 
+import { getPrimaryDefinition } from "@/lib/word-definition";
+
 import Link from "@/ui/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -201,7 +203,9 @@ export function VocabularySelfCheck({
         {item.wordText}
       </h2>
       <p className="mt-1 text-sm text-neutral-600">{item.partOfSpeech}</p>
-      <p className="mt-4 text-lg text-neutral-900">{item.shortDefinition}</p>
+      <p className="mt-4 text-lg text-neutral-900">
+        {getPrimaryDefinition(item.shortDefinition, item.learnerDefinition)}
+      </p>
       <ListenButton
         key={item.meaningId}
         text={item.wordText}

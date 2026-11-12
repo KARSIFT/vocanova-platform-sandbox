@@ -59,6 +59,7 @@ type Item struct {
 	WordSlug          string              `json:"wordSlug"`
 	PartOfSpeech      string              `json:"partOfSpeech"`
 	ShortDefinition   string              `json:"shortDefinition"`
+	LearnerDefinition string              `json:"learnerDefinition,omitempty" doc:"Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged"`
 	ExampleSentence   string              `json:"exampleSentence,omitempty"`
 	SelfReportedKnown bool                `json:"selfReportedKnown"`
 	Saved             bool                `json:"saved"`

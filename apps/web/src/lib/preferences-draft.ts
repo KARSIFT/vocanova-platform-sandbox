@@ -5,10 +5,18 @@ import type {
   UpdateSettingsBody,
 } from "@vocanova/api-client";
 
+import { isDisplayNameWithinLimit } from "./display-name";
+
 const PREFIX = "vocanova:preferences-draft:";
 const TTL_MS = 2 * 60 * 60 * 1000;
 const MAX_BYTES = 4096;
 const TARGETS = [5, 10, 15, 20, 30, 50, 75, 100];
+const departedDocuments = new WeakSet<object>();
+
+/** Successful explicit account exits end this document's recovery lifetime. */
+export function isPreferencesDraftDocumentActive(): boolean {
+  return typeof window !== "undefined" && !departedDocuments.has(window);
+}
 
 export interface OnboardingDraftValues {
   englishLevel: EnglishLevel | null;
@@ -23,10 +31,10 @@ interface OnboardingDraft {
   step: number;
 }
 
-type Kind = "onboarding" | "settings";
+type Kind = "onboarding" | "settings" | "profile" | "email-change";
 
 function storageFor(userId?: string): Storage | null {
-  if (!userId || typeof window === "undefined") return null;
+  if (!userId || !isPreferencesDraftDocumentActive()) return null;
   try {
     const storage = window.sessionStorage;
     // A tab changing accounts must not retain the previous learner's drafts.
@@ -52,7 +60,7 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function boundedText(value: unknown): value is string {
-  return typeof value === "string" && Array.from(value).length <= 80;
+  return typeof value === "string" && isDisplayNameWithinLimit(value);
 }
 
 function onboardingValues(value: unknown): OnboardingDraftValues | null {
@@ -243,9 +251,79 @@ export function clearSettingsDraft(userId?: string): void {
   clear(userId, "settings");
 }
 
+export function readProfileDraft(userId?: string): string | null {
+  const envelope = read(userId, "profile");
+  if (!envelope) return null;
+  if (boundedText(envelope.displayName)) return envelope.displayName;
+  clearProfileDraft(userId);
+  return null;
+}
+
+export function saveProfileDraft({
+  userId,
+  displayName,
+}: {
+  userId?: string;
+  displayName: string;
+}): void {
+  save(userId, "profile", boundedText(displayName) ? { displayName } : null);
+}
+
+export function clearProfileDraft(userId?: string): void {
+  clear(userId, "profile");
+}
+
+function emailDraftText(value: unknown): value is string {
+  // An unfinished address may not be valid yet. Bound recovery text without
+  // claiming it is ready to submit; native and server validation still apply.
+  return typeof value === "string" && value.length <= 320;
+}
+
+export function readEmailChangeDraft(
+  userId: string | undefined,
+  currentEmail: string,
+): string | null {
+  const envelope = read(userId, "email-change");
+  if (!envelope) return null;
+  if (
+    envelope.currentEmail === currentEmail &&
+    emailDraftText(envelope.newEmail) &&
+    envelope.newEmail.trim()
+  )
+    return envelope.newEmail;
+  clearEmailChangeDraft(userId);
+  return null;
+}
+
+export function saveEmailChangeDraft({
+  userId,
+  currentEmail,
+  newEmail,
+}: {
+  userId?: string;
+  currentEmail: string;
+  newEmail: string;
+}): void {
+  save(
+    userId,
+    "email-change",
+    emailDraftText(currentEmail) && emailDraftText(newEmail) && newEmail.trim()
+      ? { currentEmail, newEmail }
+      : null,
+  );
+}
+
+export function clearEmailChangeDraft(userId?: string): void {
+  clear(userId, "email-change");
+}
+
 /** Called only after successful explicit sign-out or account deletion. */
 export function clearPreferencesDrafts(): void {
   if (typeof window === "undefined") return;
+  // Mark departure before accessing optional storage: pending callbacks must
+  // stay inactive even if cleanup throws or replacement navigation fails.
+  // Authentication resumes through full navigation in a fresh document.
+  departedDocuments.add(window);
   try {
     const storage = window.sessionStorage;
     for (let index = storage.length - 1; index >= 0; index--) {

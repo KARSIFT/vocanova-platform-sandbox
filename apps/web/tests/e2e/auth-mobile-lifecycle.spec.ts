@@ -184,7 +184,9 @@ for (const theme of ["light", "dark"] as const) {
         await expect.poll(() => requests).toBe(2);
       } finally { release(); }
       await expect(region.getByRole("status")).toContainText("sent instructions");
-      await expect(region.getByRole("button")).toHaveCount(0);
+      await expect(region.getByRole("button")).toHaveCount(2);
+      await expect(region.getByRole("button", { name: /Resend available in/ })).toBeDisabled();
+      await expect(region.getByRole("button", { name: "Use a different email", exact: true })).toBeEnabled();
       // Requesting an email must never claim the account already has a password.
       await expect(region).toContainText("No password is set.");
       await checkLayout(page);

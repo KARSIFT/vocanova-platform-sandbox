@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import type { WordDetail } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { handleApiError, isSessionExpiredError } from "@/lib/session";
-import { getAdditionalDefinition } from "@/lib/word-definition";
+import {
+  getAdditionalDefinition,
+  getPrimaryDefinition,
+} from "@/lib/word-definition";
 import styles from "../knowledge-map/workspace.module.css";
 
 const WORD_DETAILS_DEADLINE_MS = 8_000;
@@ -13,14 +16,26 @@ function MeaningDetails({
   meaning,
   current = false,
   exampleSentence,
+  displayedDefinition,
 }: {
   meaning: WordDetail["meanings"][number];
   current?: boolean;
   exampleSentence?: string;
+  displayedDefinition?: string;
 }) {
-  const explanation = getAdditionalDefinition(
+  const primaryDefinition = getPrimaryDefinition(
     meaning.shortDefinition,
     meaning.learnerDefinition,
+  );
+  const currentExplanation = current
+    ? getAdditionalDefinition(
+        displayedDefinition ?? meaning.shortDefinition,
+        primaryDefinition,
+      )
+    : null;
+  const referenceDefinition = getAdditionalDefinition(
+    current ? (displayedDefinition ?? primaryDefinition) : primaryDefinition,
+    meaning.shortDefinition,
   );
   const examples = current
     ? meaning.examples.filter(
@@ -28,7 +43,13 @@ function MeaningDetails({
       )
     : meaning.examples;
 
-  if (current && !explanation && !examples.length && !meaning.usageNotes.length)
+  if (
+    current &&
+    !currentExplanation &&
+    !referenceDefinition &&
+    !examples.length &&
+    !meaning.usageNotes.length
+  )
     return null;
 
   return (
@@ -38,9 +59,20 @@ function MeaningDetails({
         {current ? " · This meaning" : ""}
       </p>
       {!current && (
-        <p className={styles.meaningDefinition}>{meaning.shortDefinition}</p>
+        <p className={styles.meaningDefinition}>
+          {getPrimaryDefinition(
+            meaning.shortDefinition,
+            meaning.learnerDefinition,
+          )}
+        </p>
       )}
-      {explanation && <p>{explanation}</p>}
+      {currentExplanation && <p>{currentExplanation}</p>}
+      {referenceDefinition && (
+        <p>
+          <span className="font-medium">Reference definition: </span>
+          {referenceDefinition}
+        </p>
+      )}
       {examples.map((example) => (
         <p key={example.id} className={styles.example}>
           {example.exampleText}
@@ -59,11 +91,13 @@ export function DiscoveryWordDetails({
   meaningId,
   meaningRevision,
   exampleSentence,
+  displayedDefinition,
 }: {
   wordSlug: string;
   meaningId: string;
   meaningRevision?: string;
   exampleSentence?: string;
+  displayedDefinition?: string;
 }) {
   const [word, setWord] = useState<WordDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -184,6 +218,7 @@ export function DiscoveryWordDetails({
           <MeaningDetails
             current
             exampleSentence={exampleSentence}
+            displayedDefinition={displayedDefinition}
             meaning={currentMeaning}
           />
         </>

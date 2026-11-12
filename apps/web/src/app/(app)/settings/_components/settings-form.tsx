@@ -7,8 +7,10 @@ import { Settings, UpdateSettingsBody } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
+import { isDisplayNameWithinLimit } from "@/lib/display-name";
 import {
   clearSettingsDraft,
+  isPreferencesDraftDocumentActive,
   readSettingsDraft,
   saveSettingsDraft,
 } from "@/lib/preferences-draft";
@@ -103,7 +105,7 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (isSaving.current) return;
+    if (isSaving.current || !isPreferencesDraftDocumentActive()) return;
 
     const submittedState = currentState.current;
     const body = buildUpdateBody(
@@ -130,7 +132,12 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
     let writeStarted = false;
     try {
       const csrfToken = await getOrRefreshCSRFToken();
-      if (!mounted.current || recoveryScope.current?.userId !== userId) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current?.userId !== userId
+      )
+        return;
       if (!csrfToken) {
         setStatus({
           type: "error",
@@ -143,7 +150,12 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
       const { data } = await client.updateSettings(body, {
         headers: { "X-CSRF-Token": csrfToken },
       });
-      if (!mounted.current || recoveryScope.current?.userId !== userId) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current?.userId !== userId
+      )
+        return;
       const savedSettings = toFormState(data);
       // The response confirms only the submitted snapshot. Keep edits made
       // while it was pending, including a reversion to the previous baseline.
@@ -169,7 +181,12 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
     } catch (error) {
       // A pending response from a departed form must not recreate private
       // drafts after a successful logout/deletion or affect a new account.
-      if (!mounted.current || recoveryScope.current?.userId !== userId) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current?.userId !== userId
+      )
+        return;
       if (writeStarted) {
         // A failed response does not prove the server rejected the write.
         // Explicitly resend these fields on retry, even when the learner
@@ -358,17 +375,24 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
           name="displayName"
           type="text"
           autoComplete="nickname"
+          aria-describedby="settings-display-name-limit"
           value={state.displayName}
           onChange={(event) => {
             // Match the API's Unicode code-point cap. Native maxLength
             // counts UTF-16 units and allows only 40 supplementary letters.
             // Reject over-limit edits without truncating the previous name.
-            if (Array.from(event.target.value).length <= 80) {
+            if (isDisplayNameWithinLimit(event.target.value)) {
               patch("displayName", event.target.value);
             }
           }}
           className="block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
         />
+        <p
+          id="settings-display-name-limit"
+          className="text-sm text-neutral-700"
+        >
+          Up to 80 characters.
+        </p>
       </fieldset>
 
       {status.type === "error" ? (

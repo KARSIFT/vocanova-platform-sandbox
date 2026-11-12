@@ -42,7 +42,7 @@ for (const theme of ["light", "dark"] as const) {
       try {
         await expect(page.getByRole("button", { name: "Sending confirmation link...", exact: true })).toBeDisabled();
         await expect(address).toBeDisabled();
-        await expect(page.getByRole("status").filter({ hasText: "We sent a confirmation link" })).toHaveCount(0);
+        await expect(page.getByRole("status").filter({ hasText: "If this address can be used" })).toHaveCount(0);
         // Pending UI precedes asynchronous CSRF preparation and request dispatch.
         await expect.poll(() => requests).toBe(1);
       } finally {
@@ -52,7 +52,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(address).toHaveValue("new-learner@example.com");
       await expect(send).toBeEnabled();
       await send.click();
-      await expect(page.getByRole("status").filter({ hasText: "We sent a confirmation link to new-learner@example.com" })).toBeVisible();
+      await expect(page.getByRole("status").filter({ hasText: "If this address can be used, we've sent a confirmation link to new-learner@example.com" })).toBeVisible();
       expect(requests).toBe(2);
       await expect(address).toHaveCount(0);
       const another = page.getByRole("button", { name: "Use a different address" });
@@ -60,7 +60,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.keyboard.press("Enter");
       await expect(address).toHaveValue("");
       await expect(send).toBeDisabled();
-      await expect(page.getByRole("status").filter({ hasText: "We sent a confirmation link" })).toHaveCount(0);
+      await expect(page.getByRole("status").filter({ hasText: "If this address can be used" })).toHaveCount(0);
     });
 
     test("email request expiry returns to account sign-in without claiming delivery", async ({ page }) => {
@@ -71,7 +71,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "Send confirmation link", exact: true }).click();
       await expect(page).toHaveURL(/\/login\?/);
       expect(new URL(page.url()).searchParams.get("returnTo")).toBe("/settings/account");
-      await expect(page.getByRole("status").filter({ hasText: "We sent a confirmation link" })).toHaveCount(0);
+      await expect(page.getByRole("status").filter({ hasText: "If this address can be used" })).toHaveCount(0);
     });
 
     test("pending deletion locks confirmation controls and expiry never claims deactivation", async ({ page }) => {

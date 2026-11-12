@@ -39,6 +39,7 @@ type WordListMember struct {
 	WordSlug          string    `json:"wordSlug"`
 	WordText          string    `json:"wordText"`
 	ShortDefinition   string    `json:"shortDefinition"`
+	LearnerDefinition string    `json:"learnerDefinition,omitempty" doc:"Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged"`
 	PartOfSpeech      string    `json:"partOfSpeech"`
 	PracticeAvailable bool      `json:"practiceAvailable"`
 	AddedAt           time.Time `json:"addedAt"`
