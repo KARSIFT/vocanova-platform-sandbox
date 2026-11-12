@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
+import { expectKeyboardTargetClear } from "./keyboard-navigation.js";
 
 async function prepareFeedback(
   page: Page,
@@ -161,9 +162,14 @@ for (const theme of ["light", "dark"] as const) {
     expect(pending?.idempotencyKey).toBeTruthy();
     await expect(input).toBeEnabled();
     const feedback = page.getByRole("region", { name: "Practice with pour" });
+    await expectKeyboardTargetClear(page, feedback.getByRole("button", { name: "Check my sentence", exact: true }));
     await feedback.screenshot({
       path: testInfo.outputPath(`sentence-current-error-${theme}.png`),
     });
+    // Locator screenshots can scroll older controls partly behind the sticky
+    // header. Scan the whole document from a defined position after verifying
+    // the real retry control's native keyboard focus and unobscured hit target.
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
     const scan = await scanForAxeViolations(page);
     expect(
       scan.criticalOrSerious,
@@ -293,6 +299,25 @@ test("a late report for previous feedback cannot mark the new feedback as report
   } finally {
     releaseReport();
   }
+});
+
+test("feedback reporting recovers a missing CSRF cookie and retries a temporary recovery failure", async ({ page, context }, testInfo) => {
+  await prepareFeedback(page, context, testInfo.project.use.baseURL!);
+  await context.clearCookies({ name: "vocanova_csrf" });
+  await page.route("**/api/v1/me", (route) => route.abort("failed"), { times: 1 });
+  let reports = 0;
+  await page.route("**/api/v1/sentence-feedback/*/reports", async (route) => {
+    reports += 1;
+    expect(route.request().headers()["x-csrf-token"]).toBeTruthy();
+    await route.fulfill({ status: 204 });
+  });
+  await page.getByRole("button", { name: "Report a problem", exact: true }).click();
+  await page.getByRole("button", { name: "Already correct", exact: true }).click();
+  await expect(page.getByText("Unable to report. Try again.", { exact: true })).toBeVisible();
+  expect(reports).toBe(0);
+  await page.getByRole("button", { name: "Already correct", exact: true }).click();
+  await expect(page.getByText("Reported", { exact: true })).toBeVisible();
+  expect(reports).toBe(1);
 });
 
 test("a disappearing CSRF cookie recovers before checking and retains one retry identity", async ({

@@ -91,7 +91,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "I want to delete my account" }).click();
       const phrase = page.getByLabel("Type the confirmation phrase");
       await phrase.fill("DELETE MY ACCOUNT");
-      const deactivate = page.getByRole("button", { name: "Permanently deactivate my account" });
+      const deactivate = page.getByRole("button", { name: "Deactivate my account" });
       await expect(deactivate).toBeDisabled();
       await phrase.fill("delete my account");
       await deactivate.click();

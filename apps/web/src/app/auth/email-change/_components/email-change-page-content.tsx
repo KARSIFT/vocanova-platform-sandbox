@@ -2,7 +2,7 @@
 
 import Link from "@/ui/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiResponseError } from "@vocanova/api-client";
 
@@ -14,18 +14,19 @@ type ConfirmationState =
   | { type: "loading" }
   | { type: "success"; email: string }
   | { type: "signin" }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string; recovery?: "retry" | "refresh" };
 
 export function EmailChangePageContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
-  const started = useRef(false);
+  const inFlight = useRef(false);
+  const retryButton = useRef<HTMLButtonElement>(null);
+  const accountLink = useRef<HTMLAnchorElement>(null);
+  const signInLink = useRef<HTMLAnchorElement>(null);
   const [state, setState] = useState<ConfirmationState>({ type: "loading" });
 
-  useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-
+  const confirmEmailChange = useCallback(async () => {
+    if (inFlight.current) return;
     if (!token) {
       setState({
         type: "error",
@@ -46,7 +47,24 @@ export function EmailChangePageContent() {
     const invalidLinkMessage =
       "This confirmation link is invalid or has expired. Request a new one from account settings.";
 
-    async function confirmEmailChange() {
+    function showRecoverableError(error: unknown) {
+      const status =
+        error instanceof ApiResponseError ? error.status : undefined;
+      setState({
+        type: "error",
+        recovery: status === 403 ? "refresh" : "retry",
+        message:
+          status === 403
+            ? "This page needs to be refreshed before we can confirm your email securely."
+            : status === 429
+              ? "Too many confirmation attempts were made. Please wait a few minutes, then try again."
+              : "We couldn't confirm your email right now. Please try again.",
+      });
+    }
+
+    inFlight.current = true;
+    setState({ type: "loading" });
+    try {
       try {
         await client.getCurrentUser();
       } catch (error) {
@@ -54,7 +72,7 @@ export function EmailChangePageContent() {
           setState({ type: "signin" });
           return;
         }
-        setState({ type: "error", message: invalidLinkMessage });
+        showRecoverableError(error);
         return;
       }
 
@@ -80,22 +98,40 @@ export function EmailChangePageContent() {
               setState({ type: "signin" });
               return;
             }
+            // Without a confirmed session, a failed recheck cannot establish
+            // that the proof itself is invalid. Keep it for an explicit retry.
+            showRecoverableError(sessionError);
+            return;
           }
           setState({ type: "error", message: invalidLinkMessage });
           return;
         }
-        setState({
-          type: "error",
-          message:
-            error instanceof ApiResponseError
-              ? error.message
-              : invalidLinkMessage,
-        });
+        if (error instanceof ApiResponseError && error.status === 409) {
+          setState({
+            type: "error",
+            message:
+              "This email address could not be used. Request a new confirmation link from account settings.",
+          });
+          return;
+        }
+        showRecoverableError(error);
       }
+    } finally {
+      inFlight.current = false;
     }
-
-    void confirmEmailChange();
   }, [token]);
+
+  useEffect(() => {
+    void confirmEmailChange();
+  }, [confirmEmailChange]);
+
+  useEffect(() => {
+    if (state.type === "loading") return;
+    if (state.type === "signin") signInLink.current?.focus();
+    else if (state.type === "error" && state.recovery)
+      retryButton.current?.focus();
+    else accountLink.current?.focus();
+  }, [state]);
 
   const returnTo = `/auth/email-change?${new URLSearchParams({ token }).toString()}`;
 
@@ -124,11 +160,12 @@ export function EmailChangePageContent() {
             <p
               role="status"
               aria-live="polite"
-              className="text-base text-green-800"
+              className="text-base text-green-800 [overflow-wrap:anywhere]"
             >
               Your sign-in email is now {state.email}.
             </p>
             <Link
+              ref={accountLink}
               href="/settings/account"
               className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
             >
@@ -144,6 +181,7 @@ export function EmailChangePageContent() {
               confirmation link again.
             </p>
             <Link
+              ref={signInLink}
               href={`/login?${new URLSearchParams({ returnTo, magicOnly: "1" }).toString()}`}
               className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
             >
@@ -167,7 +205,23 @@ export function EmailChangePageContent() {
             >
               {state.message}
             </p>
+            {state.recovery ? (
+              <button
+                ref={retryButton}
+                type="button"
+                onClick={() => {
+                  if (state.recovery === "refresh") window.location.reload();
+                  else void confirmEmailChange();
+                }}
+                className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+              >
+                {state.recovery === "refresh"
+                  ? "Refresh page"
+                  : "Retry confirmation"}
+              </button>
+            ) : null}
             <Link
+              ref={accountLink}
               href="/settings/account"
               className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
             >

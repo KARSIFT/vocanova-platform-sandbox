@@ -524,6 +524,10 @@ export async function handleLearningFeatures({
           : {}),
       })),
     );
+    if (cookies.e2e_vocabulary === "multiple-meanings") {
+      const first = all.find((item) => item.wordSlug === "pour");
+      all.push({ ...first, meaningId: "mean-pour-second", shortDefinition: "to arrive in large numbers", partOfSpeech: "verb" });
+    }
     for (const word of all)
       word.selfReportedKnown =
         state.wordKnowledge?.get(word.meaningId)?.selfReportedKnown ?? false;

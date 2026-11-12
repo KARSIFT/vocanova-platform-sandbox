@@ -1,5 +1,19 @@
 # Vocanova release readiness
 
+## UI/UX acceptance — 12 November 2026
+
+See the [UI/UX audit](ui-ux-audit-2026-11-12.md) for scope and remaining findings.
+Targeted muted-Chrome acceptance passed **312 cases with six layout-scoped
+skips** at 360px, 430px and desktop. It covers both themes, keyboard/focus,
+200% text in recovered forms, same-user full-navigation draft recovery,
+cross-account isolation, confirmation failures, exact meaning links, reporting,
+export, account actions and the core learning loop. Unit checks passed 294/294.
+An entry-page sweep passed 168 combinations (28 surfaces, three widths, two
+themes) with the expected headings, no horizontal overflow and no critical or
+serious WCAG-tagged axe findings.
+These are isolated fixture checks, not live-provider or learner-study evidence.
+Hosted CI and rollout remain separate delivery gates.
+
 ## Mobile feedback acceptance — 9 November 2026
 
 Local acceptance covers exact Discovery selection, keyboard and dismissal

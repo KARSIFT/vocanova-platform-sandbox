@@ -40,7 +40,7 @@ export default async function OnboardingPage() {
             your daily review target later in Settings.
           </p>
         </header>
-        <OnboardingForm />
+        <OnboardingForm key={meResponse.data.id} userId={meResponse.data.id} />
       </Surface>
     </AuthShell>
   );

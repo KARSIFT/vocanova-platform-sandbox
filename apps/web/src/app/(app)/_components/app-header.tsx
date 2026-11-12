@@ -10,6 +10,7 @@ import { getAuthErrorMessage } from "@/lib/auth-feedback";
 import { CSRF_COOKIE_NAME, deleteCookie } from "@/lib/cookies";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { clearOAuthContinuation } from "@/lib/oauth-continuation";
+import { clearPreferencesDrafts } from "@/lib/preferences-draft";
 import { handleSessionExpired, isSessionExpiredError } from "@/lib/session";
 import { BrandSymbol } from "@/ui/brand-mark";
 import { markNavigationStart } from "@/ui/navigation-state";
@@ -97,6 +98,7 @@ export function AppHeader() {
         headers: { "X-CSRF-Token": csrfToken },
       });
       clearSentenceFeedbackDrafts();
+      clearPreferencesDrafts();
       clearOAuthContinuation();
       deleteCookie(CSRF_COOKIE_NAME);
       window.location.assign("/login?signedOut=1");

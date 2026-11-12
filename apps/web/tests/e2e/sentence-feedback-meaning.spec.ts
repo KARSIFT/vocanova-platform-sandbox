@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 import { formatViolations, scanForAxeViolations } from "./axe-helper.js";
+import { expectKeyboardTargetClear } from "./keyboard-navigation.js";
+
 
 for (const theme of ["light", "dark"] as const) {
   test(
@@ -88,6 +90,12 @@ for (const theme of ["light", "dark"] as const) {
       ).toBeLessThanOrEqual(page.viewportSize()!.width);
       // Saving refreshes streamed route metadata; scan the settled document.
       await expect(page).toHaveTitle("Vocanova");
+      // Check actual focused controls independently of an arbitrary reading
+      // scroll position where a sticky header naturally clips earlier content.
+      await expectKeyboardTargetClear(page, page.getByRole("button", { name: "Edit knowledge and note", exact: true }));
+      await expectKeyboardTargetClear(page, page.locator("summary").filter({ hasText: "Optional writing" }));
+      await expectKeyboardTargetClear(page, feedback.getByRole("button", { name: "Revise sentence", exact: true }));
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
       const { criticalOrSerious } = await scanForAxeViolations(page);
       expect(
         criticalOrSerious,

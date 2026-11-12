@@ -56,6 +56,35 @@ async function act(page: Page, name = "Continue") {
     ).toBeVisible();
   return session;
 }
+test("story progression focuses the new line and current question instead of the transcript title", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(window, "speechSynthesis", {
+      value: undefined,
+      configurable: true,
+    }),
+  );
+  await start(page);
+  for (let index = 0; index < 3; index++) {
+    const session = await act(page);
+    const line = main(page)
+      .getByRole("list", { name: "Story dialogue", exact: true })
+      .getByRole("listitem")
+      .last();
+    await expect(line).toBeFocused();
+    await expect(line).toContainText(session.currentStep!.line!.text);
+    await expect(line).toBeInViewport({ ratio: 1 });
+  }
+  const session = await act(page);
+  const question = main(page).getByText(session.currentStep!.prompt!, {
+    exact: true,
+  });
+  await expect(question).toBeFocused();
+  await expect(question).toBeInViewport({ ratio: 1 });
+  await expect(main(page).getByRole("radio").first()).toBeEnabled();
+});
+
 test("six original situations, full transcript, vocabulary and optional audio", async ({
   page,
   context,
@@ -205,6 +234,8 @@ test("lost action response retries the exact request and resumes from library", 
   await expect(
     main(page).getByRole("button", { name: "Retry safely", exact: true }),
   ).toBeVisible();
+  await expect(main(page).getByRole("alert")).toBeFocused();
+  await expect(main(page).getByRole("alert")).toBeInViewport({ ratio: 1 });
   const next = await act(page, "Retry safely");
   expect(requests).toHaveLength(2);
   expect(requests[0]).toBe(requests[1]);
@@ -224,6 +255,29 @@ test("lost action response retries the exact request and resumes from library", 
   await expect(
     main(page).getByText("1 of 10 steps completed", { exact: true }),
   ).toBeVisible();
+});
+for (const task of ["line", "question"] as const)
+test(`loading unchanged story progress restores focus to the current ${task}`, async ({
+  page,
+}) => {
+  let session = await start(page);
+  if (task === "question") {
+    for (let index = 0; index < 4; index++) session = await act(page);
+    await main(page).getByRole("radio", { name: "She has a meeting at two.", exact: true }).check();
+  }
+  await page.route("**/api/v1/story-sessions/*/actions", (route) => route.abort("failed"), {
+    times: 1,
+  });
+  await main(page).getByRole("button", { name: task === "line" ? "Continue" : "Check answer", exact: true }).click();
+  await expect(main(page).getByRole("alert")).toBeFocused();
+  await main(page).getByRole("button", { name: "Load saved progress", exact: true }).click();
+  await expect(main(page).getByRole("alert")).toHaveCount(0);
+  await expect(main(page).getByText(`${session.completedSteps} of 10 steps completed`, { exact: true })).toBeVisible();
+  const currentTask = task === "line"
+    ? main(page).getByRole("list", { name: "Story dialogue", exact: true }).getByRole("listitem").last()
+    : main(page).getByText(session.currentStep!.prompt!, { exact: true });
+  await expect(currentTask).toBeFocused();
+  await expect(currentTask).toBeInViewport({ ratio: 1 });
 });
 test("conflicting progress offers reload and keyboard controls in both themes", async ({
   page,

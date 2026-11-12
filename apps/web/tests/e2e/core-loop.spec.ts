@@ -72,7 +72,7 @@ import { reviewSeedActions } from "../staging-e2e/review-seed";
 const ONBOARDING_COOKIE_VALUE = "not_started";
 const CORE_LOOP_TEST_TIMEOUT_MS = 90_000;
 const SENTENCE_PRIVACY_REMINDER =
-  "Avoid personal details such as contact information or passwords.";
+  "AI checks your sentence and learning context. Avoid private details; AI can make mistakes.";
 
 async function expectSentencePracticePrivacyReminder(page: Page) {
   await expect(

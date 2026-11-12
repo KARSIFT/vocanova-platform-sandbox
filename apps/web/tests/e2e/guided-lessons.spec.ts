@@ -218,6 +218,8 @@ test("an applied lesson action can be retried after its response is lost", async
   await expect(page.getByRole("main").getByRole("alert")).toContainText(
     "could not confirm",
   );
+  await expect(page.getByRole("main").getByRole("alert")).toBeFocused();
+  await expect(page.getByRole("main").getByRole("alert")).toBeInViewport({ ratio: 1 });
   await expect(
     page.getByRole("button", { name: "Continue", exact: true }),
   ).toBeDisabled();
@@ -229,6 +231,25 @@ test("an applied lesson action can be retried after its response is lost", async
   expect(requests[0]!.key).toBeTruthy();
   expect(requests[1]).toEqual(requests[0]);
   await expect(page.getByText("1 of 9 steps", { exact: true })).toBeVisible();
+});
+
+test("loading unchanged lesson progress restores focus to the current task", async ({
+  page,
+}) => {
+  await page.goto("/learn/conversation-basics");
+  await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+  const heading = page.getByRole("heading", { name: "invite", exact: true });
+  await expect(heading).toBeVisible();
+  await page.route("**/api/v1/lesson-sessions/*/actions", (route) => route.abort("failed"), {
+    times: 1,
+  });
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toBeFocused();
+  await page.getByRole("button", { name: "Load saved progress", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+  await expect(page.getByText("0 of 9 steps", { exact: true })).toBeVisible();
+  await expect(heading).toBeFocused();
+  await expect(heading).toBeInViewport({ ratio: 1 });
 });
 
 test("a failed CSRF preflight preserves the chosen lesson answer for retry", async ({

@@ -54,7 +54,7 @@ test.describe("Account deletion confirmation", () => {
       });
     });
     const deactivate = page.getByRole("button", {
-      name: "Permanently deactivate my account",
+      name: "Deactivate my account",
     });
     await deactivate.click();
     await expect(page.locator("#delete-confirmation-error")).toBeVisible();

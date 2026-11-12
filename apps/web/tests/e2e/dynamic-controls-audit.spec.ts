@@ -69,7 +69,8 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto(path);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await main.getByRole("link", { name: "invite", exact: true }).press("Enter");
-    await expect(page).toHaveURL(`${baseURL}/vocabulary/invite`);
+    await expect(page).toHaveURL(`${baseURL}/vocabulary/invite#meaning-${list.members[0]!.meaningId}`);
+    await expect(page.locator(`#meaning-${list.members[0]!.meaningId}`)).toBeInViewport();
     await expect(main.getByRole("heading", { level: 1, name: "invite", exact: true })).toBeVisible();
     await page.goto(path);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
