@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
+import { expectKeyboardTargetClear } from "./keyboard-navigation.js";
 
 async function prepareFeedback(
   page: Page,
@@ -161,9 +162,14 @@ for (const theme of ["light", "dark"] as const) {
     expect(pending?.idempotencyKey).toBeTruthy();
     await expect(input).toBeEnabled();
     const feedback = page.getByRole("region", { name: "Practice with pour" });
+    await expectKeyboardTargetClear(page, feedback.getByRole("button", { name: "Check my sentence", exact: true }));
     await feedback.screenshot({
       path: testInfo.outputPath(`sentence-current-error-${theme}.png`),
     });
+    // Locator screenshots can scroll older controls partly behind the sticky
+    // header. Scan the whole document from a defined position after verifying
+    // the real retry control's native keyboard focus and unobscured hit target.
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
     const scan = await scanForAxeViolations(page);
     expect(
       scan.criticalOrSerious,

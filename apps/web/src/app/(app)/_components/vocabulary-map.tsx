@@ -1,5 +1,6 @@
 import Link from "@/ui/link";
 import type { VocabularySearchItem } from "@vocanova/api-client";
+import { meaningAnchor } from "./meaning-comparison";
 
 function stage(item: VocabularySearchItem) {
   if (item.selfReportedKnown)
@@ -35,7 +36,7 @@ export function VocabularyMap({ items }: { items: VocabularySearchItem[] }) {
           return (
             <li key={item.meaningId}>
               <Link
-                href={`/vocabulary/${encodeURIComponent(item.wordSlug)}`}
+                href={`/vocabulary/${encodeURIComponent(item.wordSlug)}#${meaningAnchor(item.meaningId)}`}
                 className={`flex h-full min-h-40 flex-col rounded-2xl border p-4 text-neutral-900 transition-colors hover:border-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 ${status.color}`}
               >
                 <span

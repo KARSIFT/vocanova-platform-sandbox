@@ -51,7 +51,9 @@ export function StoryPlayer({
     session.feedback?.stepId === step?.id ? session.feedback : null;
   const locked = busy || needsRetry || needsRefresh;
   useEffect(() => {
-    if (!focusAfterResponse.current) return;
+    // A new question can commit before the pending action unlocks its
+    // fieldset. Keep the intent until native focus can reach that question.
+    if (!focusAfterResponse.current || locked) return;
     focusAfterResponse.current = false;
     const recoverTask = focusTaskAfterRecovery.current;
     focusTaskAfterRecovery.current = false;
@@ -65,11 +67,13 @@ export function StoryPlayer({
         session.currentStep?.kind === "line"
           ? currentLine.current
           : currentQuestion.current;
-      target?.focus({ preventScroll: true });
+      // Firefox needs the newly mounted legend laid out before native focus
+      // can reach it. Position the task first, then focus without scrolling.
       target?.scrollIntoView({ block: "center", behavior: "instant" });
+      target?.focus({ preventScroll: true });
     } else if (session.feedback) feedback.current?.focus();
     priorStep.current = session.currentStep?.id;
-  }, [session]);
+  }, [session, locked]);
   useEffect(() => {
     if (!error) return;
     errorRegion.current?.focus({ preventScroll: true });

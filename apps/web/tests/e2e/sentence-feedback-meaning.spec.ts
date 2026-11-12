@@ -1,26 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { formatViolations, scanForAxeViolations } from "./axe-helper.js";
-import { pressTab } from "./keyboard-navigation.js";
+import { expectKeyboardTargetClear } from "./keyboard-navigation.js";
 
-async function expectKeyboardTargetClear(page: Page, target: Locator) {
-  await target.focus();
-  await pressTab(page);
-  await pressTab(page, { backwards: true });
-  await expect(target).toBeFocused();
-  await expect.poll(() => target.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    const header = document.querySelector("header")?.getBoundingClientRect();
-    const bottomNav = Array.from(document.querySelectorAll("nav")).find((nav) =>
-      getComputedStyle(nav).position === "fixed" && nav.getBoundingClientRect().height > 0 &&
-      nav.getBoundingClientRect().bottom >= innerHeight - 1)?.getBoundingClientRect();
-    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-    return rect.top >= Math.max(0, header?.bottom ?? 0) && rect.bottom <= (bottomNav?.top ?? innerHeight) &&
-      rect.width >= 44 && rect.height >= 44 && !!hit && element.contains(hit);
-  })).toBe(true);
-}
 
 for (const theme of ["light", "dark"] as const) {
   test(

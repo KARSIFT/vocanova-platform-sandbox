@@ -206,6 +206,10 @@ for (const theme of ["light", "dark"] as const) {
       expect(saved.ok()).toBe(true);
       await goto(page, "/learn/conversation-basics");
       await page.getByRole("button", { name: "Save invite for review", exact: true }).click();
+      for (const word of session.words) {
+        await expect(page.getByRole("main").getByRole("link", { name: word.wordText, exact: true }))
+          .toHaveAttribute("href", `/vocabulary/${encodeURIComponent(word.wordSlug)}#meaning-${word.meaningId}`);
+      }
       for (const word of [invite, confirm]) {
         // A returned lesson streams before its independently loaded saved
         // states. Establish this destination and its saved link before

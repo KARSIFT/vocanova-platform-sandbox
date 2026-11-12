@@ -82,6 +82,7 @@ test("story progression focuses the new line and current question instead of the
   });
   await expect(question).toBeFocused();
   await expect(question).toBeInViewport({ ratio: 1 });
+  await expect(main(page).getByRole("radio").first()).toBeEnabled();
 });
 
 test("six original situations, full transcript, vocabulary and optional audio", async ({

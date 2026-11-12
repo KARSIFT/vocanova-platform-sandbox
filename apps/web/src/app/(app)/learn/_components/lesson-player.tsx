@@ -282,7 +282,7 @@ export function LessonPlayer({
               <li key={word.meaningId} className="py-4">
                 <Link
                   className="inline-flex min-h-11 items-center text-lg font-semibold text-primary-700"
-                  href={`/vocabulary/${encodeURIComponent(word.wordSlug)}`}
+                  href={`/vocabulary/${encodeURIComponent(word.wordSlug)}#meaning-${word.meaningId}`}
                 >
                   {word.wordText}
                 </Link>
