@@ -135,6 +135,9 @@ test("a newer profile edit survives an older confirmed save", async ({
   });
   await page.goto("/settings/profile");
   const name = page.getByRole("textbox", { name: "Display name", exact: true });
+  const avatar = page
+    .getByRole("region", { name: "Your profile", exact: true })
+    .locator('[aria-hidden="true"]');
   await name.fill("Earlier confirmed name");
   await page.getByRole("button", { name: "Save profile", exact: true }).click();
   await expect.poll(() => committed).toBe(true);
@@ -145,6 +148,9 @@ test("a newer profile edit survives an older confirmed save", async ({
   }
   await expect(page.getByRole("status")).toContainText("newer changes");
   await expect(name).toHaveValue("Newer unsaved name");
+  // The acknowledgement starts router.refresh. Its server-rendered avatar
+  // confirms that refresh before the explicit document reload below.
+  await expect(avatar).toHaveText("EC");
   await page.reload();
   await expect(name).toHaveValue("Newer unsaved name");
   await expect(page.getByRole("status")).toContainText("restored");
@@ -152,6 +158,7 @@ test("a newer profile edit survives an older confirmed save", async ({
   await expect(page.getByRole("status")).toContainText(
     "Your profile has been saved",
   );
+  await expect(avatar).toHaveText("NU");
 });
 
 test("a reverted profile draft survives a committed save with a lost response", async ({
@@ -399,6 +406,11 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByRole("status")).toContainText(
       "Your profile has been saved",
     );
+    await expect(
+      page
+        .getByRole("region", { name: "Your profile", exact: true })
+        .locator('[aria-hidden="true"]'),
+    ).toHaveText("𐐀");
     await expect
       .poll(() =>
         page.evaluate(
