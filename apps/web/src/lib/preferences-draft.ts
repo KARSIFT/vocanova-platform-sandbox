@@ -11,6 +11,12 @@ const PREFIX = "vocanova:preferences-draft:";
 const TTL_MS = 2 * 60 * 60 * 1000;
 const MAX_BYTES = 4096;
 const TARGETS = [5, 10, 15, 20, 30, 50, 75, 100];
+const departedDocuments = new WeakSet<object>();
+
+/** Successful explicit account exits end this document's recovery lifetime. */
+export function isPreferencesDraftDocumentActive(): boolean {
+  return typeof window !== "undefined" && !departedDocuments.has(window);
+}
 
 export interface OnboardingDraftValues {
   englishLevel: EnglishLevel | null;
@@ -28,7 +34,7 @@ interface OnboardingDraft {
 type Kind = "onboarding" | "settings" | "profile" | "email-change";
 
 function storageFor(userId?: string): Storage | null {
-  if (!userId || typeof window === "undefined") return null;
+  if (!userId || !isPreferencesDraftDocumentActive()) return null;
   try {
     const storage = window.sessionStorage;
     // A tab changing accounts must not retain the previous learner's drafts.
@@ -314,6 +320,10 @@ export function clearEmailChangeDraft(userId?: string): void {
 /** Called only after successful explicit sign-out or account deletion. */
 export function clearPreferencesDrafts(): void {
   if (typeof window === "undefined") return;
+  // Mark departure before accessing optional storage: pending callbacks must
+  // stay inactive even if cleanup throws or replacement navigation fails.
+  // Authentication resumes through full navigation in a fresh document.
+  departedDocuments.add(window);
   try {
     const storage = window.sessionStorage;
     for (let index = storage.length - 1; index >= 0; index--) {

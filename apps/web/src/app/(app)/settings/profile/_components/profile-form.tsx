@@ -9,6 +9,7 @@ import { handleApiError } from "@/lib/session";
 import { isDisplayNameWithinLimit } from "@/lib/display-name";
 import {
   clearProfileDraft,
+  isPreferencesDraftDocumentActive,
   readProfileDraft,
   saveProfileDraft,
 } from "@/lib/preferences-draft";
@@ -58,7 +59,7 @@ export function ProfileForm({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isSaving.current) return;
+    if (isSaving.current || !isPreferencesDraftDocumentActive()) return;
 
     const submittedDisplayName = currentDisplayName.current;
     const scope = recoveryScope.current;
@@ -67,7 +68,12 @@ export function ProfileForm({
     setMessage("");
     try {
       const csrfToken = await getOrRefreshCSRFToken();
-      if (!mounted.current || recoveryScope.current !== scope) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
       if (!csrfToken) {
         setState("error");
         setMessage(
@@ -79,7 +85,12 @@ export function ProfileForm({
         { displayName: submittedDisplayName.trim() },
         { headers: { "X-CSRF-Token": csrfToken } },
       );
-      if (!mounted.current || recoveryScope.current !== scope) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
       const savedDisplayName = data.displayName ?? submittedDisplayName.trim();
       baseline.current = savedDisplayName;
       // Only replace the submitted text with the server's normalized value.
@@ -99,7 +110,12 @@ export function ProfileForm({
       setState(!hasNewerChanges ? "saved" : "newer_changes");
       router.refresh();
     } catch (error) {
-      if (!mounted.current || recoveryScope.current !== scope) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
       // A failed response may follow a committed write. Keep the latest
       // input, including an intentional reversion, for an explicit retry.
       saveProfileDraft({ userId, displayName: currentDisplayName.current });

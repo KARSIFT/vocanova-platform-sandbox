@@ -15,6 +15,7 @@ import {
   readEmailChangeDraft,
   saveEmailChangeDraft,
   clearEmailChangeDraft,
+  isPreferencesDraftDocumentActive,
 } from "../../src/lib/preferences-draft";
 
 class MemoryStorage {
@@ -57,6 +58,61 @@ const answers = {
   dailyReviewTarget: 15,
 };
 const settingsKey = "vocanova:preferences-draft:learner-a:settings";
+
+it("a successful account exit permanently blocks late draft work in the departing document", () => {
+  assert.equal(isPreferencesDraftDocumentActive(), true);
+  saveProfileDraft({
+    userId: "learner-a",
+    displayName: "Private before logout",
+  });
+  clearPreferencesDrafts();
+  assert.equal(isPreferencesDraftDocumentActive(), false);
+  // These calls model pending save/error continuations running after cleanup
+  // while the old document's replacement navigation has not committed yet.
+  saveProfileDraft({
+    userId: "learner-a",
+    displayName: "Private late profile",
+  });
+  saveEmailChangeDraft({
+    userId: "learner-a",
+    currentEmail: "old@example.test",
+    newEmail: "private-late@example.test",
+  });
+  saveSettingsDraft({
+    userId: "learner-a",
+    changes: { displayName: "Private late settings" },
+  });
+  saveOnboardingDraft({ userId: "learner-a", values: answers, step: 4 });
+  assert.equal(storage.length, 0);
+  assert.equal(readProfileDraft("learner-a"), null);
+  assert.equal(readEmailChangeDraft("learner-a", "old@example.test"), null);
+  assert.equal(readSettingsDraft("learner-a"), null);
+  assert.equal(readOnboardingDraft("learner-a"), null);
+  // A fresh authenticated document has its own lifetime and can edit again.
+  setStorage(storage);
+  assert.equal(isPreferencesDraftDocumentActive(), true);
+  saveProfileDraft({ userId: "learner-a", displayName: "Fresh document" });
+  assert.equal(readProfileDraft("learner-a"), "Fresh document");
+});
+
+it("marks departure before optional storage cleanup can fail", () => {
+  let blocked = true;
+  setStorage({
+    get length() {
+      if (blocked) throw new Error("storage unavailable during exit");
+      return storage.length;
+    },
+    key: (index: number) => storage.key(index),
+    getItem: (key: string) => storage.getItem(key),
+    setItem: (key: string, value: string) => storage.setItem(key, value),
+    removeItem: (key: string) => storage.removeItem(key),
+  });
+  assert.doesNotThrow(() => clearPreferencesDrafts());
+  blocked = false;
+  assert.equal(isPreferencesDraftDocumentActive(), false);
+  saveProfileDraft({ userId: "learner-a", displayName: "Late private value" });
+  assert.equal(storage.length, 0);
+});
 
 it("restores profile and unsent email drafts only in the same authenticated account", () => {
   saveProfileDraft({ userId: "learner-a", displayName: "𐐀".repeat(80) });

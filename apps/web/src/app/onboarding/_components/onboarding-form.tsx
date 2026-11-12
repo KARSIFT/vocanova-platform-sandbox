@@ -15,6 +15,7 @@ import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
 import {
   clearOnboardingDraft,
+  isPreferencesDraftDocumentActive,
   readOnboardingDraft,
   saveOnboardingDraft,
 } from "@/lib/preferences-draft";
@@ -125,6 +126,7 @@ export function OnboardingForm({
   const [restored, setRestored] = useState(false);
   const currentDraft = useRef({ values: state, step });
   const recoveryScope = useRef<{ userId?: string } | null>(null);
+  const mounted = useRef(false);
   const stepContentRef = useRef<HTMLDivElement>(null);
   const shouldMoveFocus = useRef(false);
 
@@ -134,6 +136,13 @@ export function OnboardingForm({
     () => stepIsComplete(step, state),
     [step, state],
   );
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (recoveryScope.current?.userId === userId && recoveryScope.current)
@@ -198,7 +207,7 @@ export function OnboardingForm({
   }
 
   async function handleSubmit() {
-    if (!isFormComplete(state)) {
+    if (!isPreferencesDraftDocumentActive() || !isFormComplete(state)) {
       return;
     }
     const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
@@ -220,11 +229,18 @@ export function OnboardingForm({
       timezone: getBrowserTimezone(),
     };
     const client = createApiClient();
+    const scope = recoveryScope.current;
     saveOnboardingDraft({ userId, ...currentDraft.current });
     try {
       await client.completeOnboarding(body, {
         headers: { "X-CSRF-Token": csrfToken },
       });
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
       clearOnboardingDraft(userId);
       // router.push + refresh ensures the Next.js cache for any
       // /me-derived page (e.g. /home) re-reads the additive
@@ -232,6 +248,12 @@ export function OnboardingForm({
       router.push("/home");
       router.refresh();
     } catch (error) {
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
       // handleApiError may leave the document on a 401. Persist first;
       // controlled inputs alone cannot survive the full sign-in navigation.
       saveOnboardingDraft({ userId, ...currentDraft.current });

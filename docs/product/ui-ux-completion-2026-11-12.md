@@ -18,7 +18,9 @@ confirmed that the learner study should be prepared while they arrange learners.
 - Profile and unsent email-change inputs use the existing validated same-user,
   two-hour tab drafts. Confirmed actions clear resolved drafts; newer edits survive
   earlier responses and uncertain commits. User/account boundaries, successful
-  logout and deactivation clear private recovery. No password, confirmation proof,
+  logout and deactivation clear private recovery. Successful exit also invalidates
+  the departing document before storage cleanup, so late responses cannot recreate
+  cleared drafts or apply stale save results if replacement navigation fails. No password, confirmation proof,
   pending sent state or authentication cookie is persisted as a draft.
 - Signup, Profile and Settings use the API's 80 Unicode code-point name limit,
   including supplementary characters, instead of a native UTF-16 unit limit.

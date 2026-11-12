@@ -5,7 +5,7 @@
 See [the completion delivery](ui-ux-completion-2026-11-12.md),
 [full source content audit](catalog-readability-2026-11-12.md) and
 [prepared learner study](learner-usability-study-2026-11-12.md). Whole Go tests,
-web 298 and API-client 61 unit tests, package/web/API builds, lint, app/browser
+web 300 and API-client 61 unit tests, package/web/API builds, lint, app/browser
 TypeScript, formatting and generated OpenAPI comparison passed locally. The
 API validates the same 80/81 supplementary-Unicode boundary used by the UI.
 Cross-client recipient/IP budget tests verify the existing server-side rate

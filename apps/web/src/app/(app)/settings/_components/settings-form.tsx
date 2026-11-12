@@ -10,6 +10,7 @@ import { handleApiError } from "@/lib/session";
 import { isDisplayNameWithinLimit } from "@/lib/display-name";
 import {
   clearSettingsDraft,
+  isPreferencesDraftDocumentActive,
   readSettingsDraft,
   saveSettingsDraft,
 } from "@/lib/preferences-draft";
@@ -104,7 +105,7 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (isSaving.current) return;
+    if (isSaving.current || !isPreferencesDraftDocumentActive()) return;
 
     const submittedState = currentState.current;
     const body = buildUpdateBody(
@@ -131,7 +132,12 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
     let writeStarted = false;
     try {
       const csrfToken = await getOrRefreshCSRFToken();
-      if (!mounted.current || recoveryScope.current?.userId !== userId) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current?.userId !== userId
+      )
+        return;
       if (!csrfToken) {
         setStatus({
           type: "error",
@@ -144,7 +150,12 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
       const { data } = await client.updateSettings(body, {
         headers: { "X-CSRF-Token": csrfToken },
       });
-      if (!mounted.current || recoveryScope.current?.userId !== userId) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current?.userId !== userId
+      )
+        return;
       const savedSettings = toFormState(data);
       // The response confirms only the submitted snapshot. Keep edits made
       // while it was pending, including a reversion to the previous baseline.
@@ -170,7 +181,12 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
     } catch (error) {
       // A pending response from a departed form must not recreate private
       // drafts after a successful logout/deletion or affect a new account.
-      if (!mounted.current || recoveryScope.current?.userId !== userId) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current?.userId !== userId
+      )
+        return;
       if (writeStarted) {
         // A failed response does not prove the server rejected the write.
         // Explicitly resend these fields on retry, even when the learner

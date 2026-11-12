@@ -7,6 +7,7 @@ import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import {
   clearEmailChangeDraft,
+  isPreferencesDraftDocumentActive,
   readEmailChangeDraft,
   saveEmailChangeDraft,
 } from "@/lib/preferences-draft";
@@ -67,7 +68,7 @@ export function EmailChangeForm({
 
   async function handleRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (requesting.current) return;
+    if (requesting.current || !isPreferencesDraftDocumentActive()) return;
     const trimmed = newEmail.trim();
     if (!trimmed) {
       return;
@@ -80,7 +81,12 @@ export function EmailChangeForm({
     const client = createApiClient();
     try {
       const csrfToken = await getOrRefreshCSRFToken();
-      if (!mounted.current || recoveryScope.current !== scope) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
       if (!csrfToken) {
         setPhase({
           type: "error",
@@ -93,12 +99,22 @@ export function EmailChangeForm({
         { newEmail: trimmed },
         { headers: { "X-CSRF-Token": csrfToken } },
       );
-      if (!mounted.current || recoveryScope.current !== scope) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
       clearEmailChangeDraft(userId);
       setRestored(false);
       setPhase({ type: "pending", newEmail: trimmed });
     } catch (error) {
-      if (!mounted.current || recoveryScope.current !== scope) return;
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== scope
+      )
+        return;
       // Preserve only the unsent input before a 401 leaves this document.
       // The confirmation proof and pending/sent phase are never persisted.
       saveEmailChangeDraft({ userId, currentEmail, newEmail });
