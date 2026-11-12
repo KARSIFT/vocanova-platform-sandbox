@@ -1,9 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import type {
-  KnowledgeMap,
-  KnowledgeMapDecision,
-  KnowledgeMapItem,
-} from "@vocanova/api-client";
+import type { KnowledgeMap, KnowledgeMapDecision } from "@vocanova/api-client";
 import { expect, test } from "@playwright/test";
 
 for (const theme of ["light", "dark"] as const) {
@@ -91,36 +87,22 @@ for (const theme of ["light", "dark"] as const) {
       { name: "vocanova_csrf", value: "plain-map-decisions", url: baseURL! },
       { name: "vocanova_theme", value: theme, url: baseURL! },
     ]);
-    const canonical: KnowledgeMapItem[] = [];
+    const api = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
+    const sourceResponse = await page
+      .context()
+      .request.get(`${api}/api/v1/knowledge-map?band=2`);
+    expect(sourceResponse.ok()).toBe(true);
+    const sourceMap: KnowledgeMap = await sourceResponse.json();
+    const canonical = structuredClone(sourceMap.currentBand.items.slice(0, 2));
+    expect(canonical).toHaveLength(2);
+    await page
+      .context()
+      .addCookies([
+        { name: "e2e_learner_explanation", value: "true", url: baseURL! },
+      ]);
     const decisions: KnowledgeMapDecision[] = [];
     const teaching = (rank: number) =>
       `A plain explanation for the selected meaning at position ${rank}.`;
-    await page.route("**/api/v1/knowledge-map?band=2", async (route) => {
-      const response = await route.fetch();
-      const original: KnowledgeMap = await response.json();
-      if (!canonical.length) {
-        canonical.push(
-          ...structuredClone(original.currentBand.items.slice(0, 2)),
-        );
-      }
-      const displayed = structuredClone(original);
-      for (const item of displayed.currentBand.items.slice(0, 2)) {
-        item.learnerDefinition = teaching(item.rank);
-        // The shared fixture omits optional catalog metadata. Match the real
-        // API's canonical revision derivation without changing source wording.
-        item.meaningRevision ??= createHash("sha256")
-          .update(
-            JSON.stringify([
-              item.meaningId,
-              item.wordText,
-              item.partOfSpeech,
-              item.shortDefinition,
-            ]),
-          )
-          .digest("hex");
-      }
-      await route.fulfill({ json: displayed });
-    });
     await page.route(
       "**/api/v1/canonical-words/map-word-101",
       async (route) => {
@@ -190,13 +172,11 @@ for (const theme of ["light", "dark"] as const) {
         page.getByText(item.shortDefinition, { exact: true }),
       ).toHaveCount(0);
       if (index === 0) {
-        const details = page
-          .locator("details")
-          .filter({
-            has: page.getByText("Word details & other meanings", {
-              exact: true,
-            }),
-          });
+        const details = page.locator("details").filter({
+          has: page.getByText("Word details & other meanings", {
+            exact: true,
+          }),
+        });
         await details.locator("summary").press("Enter");
         // Matching the untouched canonical metadata must pass the existing
         // detail-revision gate even while the card displays a plain explanation.
@@ -230,5 +210,22 @@ for (const theme of ["light", "dark"] as const) {
     expect(canonical[1]!.shortDefinition).not.toBe(
       teaching(canonical[1]!.rank),
     );
+    await page.context().clearCookies({ name: "e2e_learner_explanation" });
+    const afterResponse = await page
+      .context()
+      .request.get(`${api}/api/v1/knowledge-map?band=2`);
+    expect(afterResponse.ok()).toBe(true);
+    const after: KnowledgeMap = await afterResponse.json();
+    for (const [index, item] of canonical.entries()) {
+      expect(after.currentBand.items[index]!.shortDefinition).toBe(
+        item.shortDefinition,
+      );
+      expect(after.currentBand.items[index]!.meaningRevision).toBe(
+        item.meaningRevision,
+      );
+      expect(after.currentBand.items[index]!.learnerDefinition).toBeUndefined();
+    }
+    expect(after.currentBand.items[0]!.saved).toBe(true);
+    expect(after.currentBand.items[1]!.selfReportedKnown).toBe(true);
   });
 }

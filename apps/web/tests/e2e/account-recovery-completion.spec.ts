@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
+import { pressTab } from "./keyboard-navigation";
 
 const PASSWORD = "a password long enough";
 const PREFIX = "vocanova:preferences-draft:";
@@ -37,8 +38,8 @@ async function checkRecoveryUI(
     exact: true,
   });
   await different.focus();
-  await page.keyboard.press("Shift+Tab");
-  await page.keyboard.press("Tab");
+  await pressTab(page, { backwards: true });
+  await pressTab(page);
   await expect(different).toBeFocused();
   await different.scrollIntoViewIfNeeded();
   expect(
@@ -187,7 +188,12 @@ test("a reverted profile draft survives a committed save with a lost response", 
   } finally {
     release?.();
   }
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(
+    page
+      .getByRole("main")
+      .getByRole("alert")
+      .filter({ hasText: "We couldn't save your profile. Please try again." }),
+  ).toBeVisible();
   await page.reload();
   await expect(name).toHaveValue(original);
   await expect(page.getByRole("status")).toContainText("restored");

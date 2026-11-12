@@ -1,6 +1,6 @@
 // Synthetic transport state for browser interaction. PostgreSQL tests establish
 // real grading, scheduling, ownership and daily credit; this fixture does not.
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 const attribution = {
@@ -76,14 +76,15 @@ export async function handleDailyDiscovery({
           : 1
         : 0;
   const legacyProgress = cookies.e2e_knowledge_map === "legacy-progress";
-  const mixedProgress = legacyProgress || cookies.e2e_knowledge_map === "mixed-progress"
-    ? {
-        1: { decision: "known", revision: 0 },
-        3: { decision: "learn", revision: 0 },
-        12: { decision: "learn", learned: true, revision: 0 },
-        105: { decision: "learn", learned: true, revision: 0 },
-      }
-    : {};
+  const mixedProgress =
+    legacyProgress || cookies.e2e_knowledge_map === "mixed-progress"
+      ? {
+          1: { decision: "known", revision: 0 },
+          3: { decision: "learn", revision: 0 },
+          12: { decision: "learn", learned: true, revision: 0 },
+          105: { decision: "learn", learned: true, revision: 0 },
+        }
+      : {};
   const mapEntry = (rank) =>
     state.mapDecisions.get(rank) ??
     mixedProgress[rank] ??
@@ -126,7 +127,9 @@ export async function handleDailyDiscovery({
         knownCount,
         learningCount,
         unseenCount: 100 - knownCount - learningCount,
-        ...(!legacyProgress && (knownCount || learningCount) ? { wordStates } : {}),
+        ...(!legacyProgress && (knownCount || learningCount)
+          ? { wordStates }
+          : {}),
       };
     }),
     currentBand: {
@@ -191,9 +194,27 @@ export async function handleDailyDiscovery({
     if (cookies.e2e_knowledge_map === "expired")
       return send(401, { detail: "Session expired" });
     const band = Number(url.searchParams.get("band") ?? 1);
-    return Number.isInteger(band) && band >= 1 && band <= 100
-      ? send(200, map(band))
-      : send(400, { detail: "Invalid range" });
+    if (!Number.isInteger(band) || band < 1 || band > 100)
+      return send(400, { detail: "Invalid range" });
+    const displayed = map(band);
+    // Cookie-scoped read projection works through SSR range navigation too.
+    // map() creates fresh items; canonical fixture state and CAS tokens stay put.
+    if (cookies.e2e_learner_explanation === "true") {
+      for (const item of displayed.currentBand.items.slice(0, 2)) {
+        item.learnerDefinition = `A plain explanation for the selected meaning at position ${item.rank}.`;
+        item.meaningRevision = createHash("sha256")
+          .update(
+            JSON.stringify([
+              item.meaningId,
+              item.wordText,
+              item.partOfSpeech,
+              item.shortDefinition,
+            ]),
+          )
+          .digest("hex");
+      }
+    }
+    return send(200, displayed);
   }
   if (req.method === "GET" && path === "/api/v1/daily-lessons/current") {
     if (cookies.e2e_daily_lesson_auth === "expired")
