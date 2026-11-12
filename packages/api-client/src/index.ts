@@ -30,6 +30,7 @@ export interface KnowledgeMapItem {
   wordSlug: string;
   partOfSpeech: string;
   shortDefinition: string;
+  learnerDefinition?: string;
   exampleSentence?: string;
   selfReportedKnown: boolean;
   saved: boolean;
@@ -282,6 +283,7 @@ export interface SituationMeaning {
   wordText: string;
   partOfSpeech: string;
   shortDefinition: string;
+  learnerDefinition?: string;
   saved: boolean;
   selfReportedKnown: boolean;
 }
@@ -348,6 +350,7 @@ export interface SavedMeaning {
   wordSlug: string;
   partOfSpeech: string;
   shortDefinition: string;
+  learnerDefinition?: string;
   status: string;
   source: string;
   saved: boolean;
@@ -377,6 +380,7 @@ export interface VocabularySearchItem {
   wordText: string;
   partOfSpeech: string;
   shortDefinition: string;
+  learnerDefinition?: string;
   difficultyLevel: string;
   saved: boolean;
   selfReportedKnown: boolean;
@@ -472,6 +476,7 @@ export interface WordListMember {
   wordSlug: string;
   wordText: string;
   shortDefinition: string;
+  learnerDefinition?: string;
   partOfSpeech: string;
   practiceAvailable: boolean;
   addedAt: string;
@@ -775,6 +780,7 @@ export interface DueWord {
   wordSlug: string;
   partOfSpeech: string;
   shortDefinition: string;
+  learnerDefinition?: string;
   status: string;
   reviewStep: number;
 }

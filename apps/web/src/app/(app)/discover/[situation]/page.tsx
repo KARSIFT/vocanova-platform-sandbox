@@ -1,3 +1,4 @@
+import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import { notFound } from "next/navigation";
 
@@ -262,7 +263,10 @@ export default async function SituationDiscoverPage({
                       {meaning.wordText}
                     </h2>
                     <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-                      {meaning.shortDefinition}
+                      {getPrimaryDefinition(
+                        meaning.shortDefinition,
+                        meaning.learnerDefinition,
+                      )}
                     </p>
                   </div>
                   {meaning.saved ? (

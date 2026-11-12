@@ -94,6 +94,7 @@ test("create, search, rename and delete a personal list with keyboard controls",
   await expect(
     main.getByRole("heading", { name: "Your list is empty" }),
   ).toBeVisible();
+  await main.locator("summary").filter({ hasText: /^List settings$/ }).click();
   await main
     .getByLabel("List name", { exact: true })
     .fill("Plans with friends");
@@ -118,6 +119,7 @@ test("create, search, rename and delete a personal list with keyboard controls",
     .getByRole("link", { name: "Plans with friends", exact: true })
     .click();
   await expect(page).toHaveURL(new RegExp(`${listPath}$`));
+  await main.locator("summary").filter({ hasText: /^List settings$/ }).click();
   await main.getByRole("button", { name: "Delete list", exact: true }).click();
   await main
     .getByRole("button", { name: "Confirm delete list", exact: true })
@@ -204,6 +206,7 @@ test("stale rename requires current status and preserves the newer name", async 
     },
   );
   expect(newer.status()).toBe(200);
+  await page.locator("summary").filter({ hasText: /^List settings$/ }).click();
   await page
     .getByLabel("List name", { exact: true })
     .fill("Older browser edit");
@@ -450,6 +453,7 @@ test("lost list deletion confirmation retries the exact deletion", async ({
     }
     return route.continue();
   });
+  await page.locator("summary").filter({ hasText: /^List settings$/ }).click();
   await page.getByRole("button", { name: "Delete list", exact: true }).click();
   await page
     .getByRole("button", { name: "Confirm delete list", exact: true })

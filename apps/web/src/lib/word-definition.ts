@@ -1,3 +1,14 @@
+/** Prefer an authored plain-English display explanation without rewriting identity. */
+export function getPrimaryDefinition(
+  shortDefinition: string,
+  learnerDefinition?: string | null,
+): string {
+  return (
+    getAdditionalDefinition(shortDefinition, learnerDefinition) ||
+    shortDefinition
+  );
+}
+
 /** Keep a fuller explanation only when it adds text to the short definition. */
 export function getAdditionalDefinition(
   shortDefinition: string,

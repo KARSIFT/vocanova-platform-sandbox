@@ -1,6 +1,9 @@
 import type { WordDetail } from "@vocanova/api-client";
 
-import { getAdditionalDefinition } from "@/lib/word-definition";
+import {
+  getAdditionalDefinition,
+  getPrimaryDefinition,
+} from "@/lib/word-definition";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { ListenButton } from "@/ui/pronunciation";
 import { WordPracticeDisclosure } from "./word-practice-disclosure";
@@ -60,8 +63,11 @@ export function WordDetailContent({
         <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-md)]">
           {wordData.meanings.map((meaning, index) => {
             const additionalDefinition = getAdditionalDefinition(
+              getPrimaryDefinition(
+                meaning.shortDefinition,
+                meaning.learnerDefinition,
+              ),
               meaning.shortDefinition,
-              meaning.learnerDefinition,
             );
             const reviewState = formatWordReviewState(
               meaning.reviewState,
@@ -88,12 +94,18 @@ export function WordDetailContent({
                   />
                 </div>
                 <p className="mt-[var(--spacing-xs)] text-xl leading-snug text-neutral-900">
-                  {meaning.shortDefinition}
+                  {getPrimaryDefinition(
+                    meaning.shortDefinition,
+                    meaning.learnerDefinition,
+                  )}
                 </p>
                 {additionalDefinition ? (
-                  <p className="mt-[var(--spacing-xs)] text-base text-neutral-600">
-                    {additionalDefinition}
-                  </p>
+                  <details className="mt-[var(--spacing-xs)] text-base text-neutral-600">
+                    <summary className="min-h-11 cursor-pointer py-2 font-medium text-primary-700">
+                      Reference definition
+                    </summary>
+                    <p>{additionalDefinition}</p>
+                  </details>
                 ) : null}
                 {reviewState ? (
                   <p className="mt-[var(--spacing-xs)] text-sm font-medium text-primary-700">

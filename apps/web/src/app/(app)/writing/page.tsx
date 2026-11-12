@@ -3,6 +3,7 @@ import Link from "@/ui/link";
 import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { getPrimaryDefinition } from "@/lib/word-definition";
 import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
 import { SaveAndWrite } from "./_components/save-and-write";
 import { writingPrompts } from "./_components/writing-prompts";
@@ -71,31 +72,33 @@ export default async function WritingPage({
           compare feedback with your own sentence.
         </p>
       </header>
-      <details
-        open={!situation}
-        className="mb-6 rounded-xl border border-neutral-200 bg-white p-4"
-      >
-        <summary className="min-h-11 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
-          {detail
-            ? `Change topic: ${detail.situation.title}`
-            : "Choose a writing topic"}
-        </summary>
-        <nav
-          aria-label="Writing situations"
-          className="mb-6 flex flex-wrap gap-3"
+      {situations.items.length > 0 && (
+        <details
+          open={!situation}
+          className="mb-6 rounded-xl border border-neutral-200 bg-white p-4"
         >
-          {situations.items.map((item) => (
-            <Link
-              key={item.id}
-              href={`/writing?${new URLSearchParams({ situation: item.slug })}`}
-              aria-current={item.slug === situation ? "page" : undefined}
-              className={`${secondaryAction} ${item.slug === situation ? "border-primary-600 bg-primary-50" : ""}`}
-            >
-              {item.title}
-            </Link>
-          ))}
-        </nav>
-      </details>
+          <summary className="min-h-11 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
+            {detail
+              ? `Change topic: ${detail.situation.title}`
+              : "Choose a writing topic"}
+          </summary>
+          <nav
+            aria-label="Writing situations"
+            className="mb-6 flex flex-wrap gap-3"
+          >
+            {situations.items.map((item) => (
+              <Link
+                key={item.id}
+                href={`/writing?${new URLSearchParams({ situation: item.slug })}`}
+                aria-current={item.slug === situation ? "page" : undefined}
+                className={`${secondaryAction} ${item.slug === situation ? "border-primary-600 bg-primary-50" : ""}`}
+              >
+                {item.title}
+              </Link>
+            ))}
+          </nav>
+        </details>
+      )}
       {situations.hasMore && (
         <Link href="/courses" className={textLink}>
           Explore more situations
@@ -136,7 +139,10 @@ export default async function WritingPage({
                       {item.wordText}
                     </Link>
                     <p className="text-sm text-neutral-700">
-                      {item.shortDefinition}
+                      {getPrimaryDefinition(
+                        item.shortDefinition,
+                        item.learnerDefinition,
+                      )}
                     </p>
                   </li>
                 ))}
@@ -160,7 +166,10 @@ export default async function WritingPage({
               </h3>
               {canonical.shortDefinition ? (
                 <p className="mt-2 text-neutral-700">
-                  {canonical.shortDefinition}
+                  {getPrimaryDefinition(
+                    canonical.shortDefinition,
+                    canonical.learnerDefinition,
+                  )}
                 </p>
               ) : null}
               <SaveAndWrite
@@ -185,6 +194,19 @@ export default async function WritingPage({
             className={`${textLink} mt-6`}
           >
             Explore this situation
+          </Link>
+        </Surface>
+      ) : !situations.items.length ? (
+        <Surface>
+          <h2 className="text-xl font-bold text-neutral-900">
+            No writing topics are available
+          </h2>
+          <p className="mt-3 text-neutral-700">
+            You can still write sentences with your saved words. Try the topic
+            library again later.
+          </p>
+          <Link href="/words" className={`${secondaryAction} mt-4`}>
+            Practise with saved words
           </Link>
         </Surface>
       ) : (

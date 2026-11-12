@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Link from "@/ui/link";
 import { useRouter } from "next/navigation";
 import { ApiResponseError, type WordListDetail } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { Surface } from "@/ui/surface";
+import { getPrimaryDefinition } from "@/lib/word-definition";
 import { listWriteHeaders, useListAction } from "./use-list-action";
 import { ListActionStatus } from "./list-action-status";
 import { listButton, listInput, listLink, listPrimary } from "./list-styles";
@@ -26,6 +27,12 @@ export function ListDetail({
   const [query, setQuery] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const action = useListAction();
+  const settingsRef = useRef<HTMLDetailsElement>(null);
+  const managementRequest = useRef(false);
+  useLayoutEffect(() => {
+    if (action.error && managementRequest.current && settingsRef.current)
+      settingsRef.current.open = true;
+  }, [action.error]);
   const reload = () =>
     void action.reload(async () => {
       try {
@@ -45,6 +52,7 @@ export function ListDetail({
     });
   function rename() {
     if (!list) return;
+    managementRequest.current = true;
     const body = { name: name.trim(), expectedRevision: list.revision };
     const key = crypto.randomUUID();
     void action.run(async () => {
@@ -61,6 +69,7 @@ export function ListDetail({
   }
   function remove(meaningId: string) {
     if (!list) return;
+    managementRequest.current = false;
     const revision = list.revision;
     const key = crypto.randomUUID();
     void action.run(async () => {
@@ -77,6 +86,7 @@ export function ListDetail({
   }
   function deleteList() {
     if (!list) return;
+    managementRequest.current = true;
     const revision = list.revision;
     const key = crypto.randomUUID();
     void action.run(async () => {
@@ -94,7 +104,7 @@ export function ListDetail({
   }
   const members =
     list?.members.filter((member) =>
-      `${member.wordText} ${member.shortDefinition}`
+      `${member.wordText} ${member.shortDefinition} ${member.learnerDefinition ?? ""}`
         .toLocaleLowerCase()
         .includes(query.trim().toLocaleLowerCase()),
     ) ?? [];
@@ -164,13 +174,85 @@ export function ListDetail({
               </p>
             )}
           </header>
-          <Surface aria-labelledby="rename-list-heading">
-            <h2
-              id="rename-list-heading"
-              className="text-lg font-bold text-neutral-900"
+          <div role="search" aria-label="Search list meanings" className="my-5">
+            <label
+              htmlFor="list-member-search"
+              className="font-semibold text-neutral-900"
             >
+              Search words and meanings in this list
+            </label>
+            <input
+              id="list-member-search"
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              maxLength={100}
+              className={listInput}
+            />
+          </div>
+          {members.length ? (
+            <ul aria-label="List meanings" className="space-y-3">
+              {members.map((member) => (
+                <li
+                  key={member.meaningId}
+                  className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-4"
+                >
+                  <div className="min-w-0 flex-1">
+                    <h2 className="break-words text-lg font-bold text-neutral-900">
+                      <Link
+                        href={`/vocabulary/${encodeURIComponent(member.wordSlug)}#${meaningAnchor(member.meaningId)}`}
+                        className={listLink}
+                      >
+                        {member.wordText}
+                      </Link>
+                    </h2>
+                    <p className="text-neutral-700">
+                      {member.partOfSpeech} ·{" "}
+                      {getPrimaryDefinition(
+                        member.shortDefinition,
+                        member.learnerDefinition,
+                      )}
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-600">
+                      {member.practiceAvailable
+                        ? "Available for list practice"
+                        : "Organized here; focused practice is not yet available for this meaning"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={action.locked}
+                    className={listButton}
+                    onClick={() => remove(member.meaningId)}
+                    aria-label={`Remove ${member.wordText} from this list`}
+                  >
+                    Remove from list
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Surface>
+              <h2 className="text-xl font-bold text-neutral-900">
+                {query.trim()
+                  ? "No meanings match your search"
+                  : "Your list is empty"}
+              </h2>
+              <p className="mt-2 text-neutral-700">
+                {query.trim()
+                  ? "Try another word or part of its meaning."
+                  : "Find a useful word, then explicitly add its meaning to this list."}
+              </p>
+            </Surface>
+          )}
+          <details
+            id="list-settings"
+            ref={settingsRef}
+            className="mt-6 rounded-xl border border-neutral-200 bg-white p-4"
+          >
+            <summary className="min-h-11 scroll-my-24 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
               List settings
-            </h2>
+            </summary>
             <form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -240,74 +322,7 @@ export function ListDetail({
                 </div>
               </div>
             )}
-          </Surface>
-          <div role="search" aria-label="Search list meanings" className="my-5">
-            <label
-              htmlFor="list-member-search"
-              className="font-semibold text-neutral-900"
-            >
-              Search words and meanings in this list
-            </label>
-            <input
-              id="list-member-search"
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              maxLength={100}
-              className={listInput}
-            />
-          </div>
-          {members.length ? (
-            <ul aria-label="List meanings" className="space-y-3">
-              {members.map((member) => (
-                <li
-                  key={member.meaningId}
-                  className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-4"
-                >
-                  <div className="min-w-0 flex-1">
-                    <h2 className="break-words text-lg font-bold text-neutral-900">
-                      <Link
-                        href={`/vocabulary/${encodeURIComponent(member.wordSlug)}#${meaningAnchor(member.meaningId)}`}
-                        className={listLink}
-                      >
-                        {member.wordText}
-                      </Link>
-                    </h2>
-                    <p className="text-neutral-700">
-                      {member.partOfSpeech} · {member.shortDefinition}
-                    </p>
-                    <p className="mt-1 text-sm text-neutral-600">
-                      {member.practiceAvailable
-                        ? "Available for list practice"
-                        : "Organized here; focused practice is not yet available for this meaning"}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={action.locked}
-                    className={listButton}
-                    onClick={() => remove(member.meaningId)}
-                    aria-label={`Remove ${member.wordText} from this list`}
-                  >
-                    Remove from list
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Surface>
-              <h2 className="text-xl font-bold text-neutral-900">
-                {query.trim()
-                  ? "No meanings match your search"
-                  : "Your list is empty"}
-              </h2>
-              <p className="mt-2 text-neutral-700">
-                {query.trim()
-                  ? "Try another word or part of its meaning."
-                  : "Find a useful word, then explicitly add its meaning to this list."}
-              </p>
-            </Surface>
-          )}
+          </details>
         </>
       )}
       <ListActionStatus action={action} reload={reload} />

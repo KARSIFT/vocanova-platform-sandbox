@@ -1,3 +1,4 @@
+import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import { createHash } from "node:crypto";
 import { Suspense } from "react";
@@ -379,7 +380,12 @@ export default async function HomePage() {
                 </Link>
                 <span className="pos">{latestWord.partOfSpeech}</span>
               </p>
-              <p className="text-neutral-700">{latestWord.shortDefinition}</p>
+              <p className="text-neutral-700">
+                {getPrimaryDefinition(
+                  latestWord.shortDefinition,
+                  latestWord.learnerDefinition,
+                )}
+              </p>
               <ListenButton
                 text={latestWord.wordText}
                 meaningId={latestWord.meaningId}

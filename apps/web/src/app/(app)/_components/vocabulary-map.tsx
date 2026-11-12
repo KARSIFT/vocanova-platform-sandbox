@@ -1,3 +1,4 @@
+import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import type { VocabularySearchItem } from "@vocanova/api-client";
 import { meaningAnchor } from "./meaning-comparison";
@@ -52,7 +53,10 @@ export function VocabularyMap({ items }: { items: VocabularySearchItem[] }) {
                   {item.partOfSpeech}
                 </span>
                 <span className="mt-2 grow text-sm">
-                  {item.shortDefinition}
+                  {getPrimaryDefinition(
+                    item.shortDefinition,
+                    item.learnerDefinition,
+                  )}
                 </span>
                 <span className="mt-4 text-sm font-semibold">
                   {status.label}

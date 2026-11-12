@@ -1,5 +1,7 @@
 "use client";
 
+import { getPrimaryDefinition } from "@/lib/word-definition";
+
 import {
   SESSION_LOCATION_CHANGED,
   replaceSessionLocation,
@@ -654,7 +656,12 @@ export function Discovery({
                 {speech.message} You can keep learning without sound.
               </p>
             )}
-            <p className={styles.definition}>{item.shortDefinition}</p>
+            <p className={styles.definition}>
+              {getPrimaryDefinition(
+                item.shortDefinition,
+                item.learnerDefinition,
+              )}
+            </p>
             <MeaningPicture
               meaningId={item.meaningId}
               image={item.image}
@@ -727,6 +734,11 @@ export function Discovery({
           meaningId={item.meaningId}
           meaningRevision={item.meaningRevision}
           exampleSentence={item.exampleSentence}
+
+          displayedDefinition={getPrimaryDefinition(
+            item.shortDefinition,
+            item.learnerDefinition,
+          )}
         />
       )}
     </div>

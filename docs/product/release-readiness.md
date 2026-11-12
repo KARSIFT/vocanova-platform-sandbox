@@ -1,5 +1,35 @@
 # Vocanova release readiness
 
+## Remaining UI/UX findings acceptance — 12 November 2026
+
+See [the completion delivery](ui-ux-completion-2026-11-12.md),
+[full source content audit](catalog-readability-2026-11-12.md) and
+[prepared learner study](learner-usability-study-2026-11-12.md). Whole Go tests,
+web 298 and API-client 61 unit tests, package/web/API builds, lint, app/browser
+TypeScript, formatting and generated OpenAPI comparison passed locally. The
+API validates the same 80/81 supplementary-Unicode boundary used by the UI.
+The surrounding browser regression suite passed **248 cases with 16 existing
+layout-scoped skips**, zero failures or flaky retries. Those skips are legacy
+desktop-scoped authentication/Profile cases; the new recovery cases run at all
+three supported widths. Final cross-engine targeted acceptance and hosted CI
+are recorded with the consolidated delivery PR and private handoff.
+
+All 257 embedded original explanations match the independently reviewed text;
+the ranked catalog, editorial core, historical aliases and authored seed remain
+byte-identical. The reproducible source audit covers 10,051 meanings and explicitly
+distinguishes mechanical flags from targeted semantic review and comprehension.
+Independent source/auth/data review found and verified a fix for an authored
+Discovery explanation hidden when absent from the current map card.
+
+With a real macOS temporary path, local foundation checks passed 333/337; the
+four platform-specific failures involve GNU sed, Bash coproc and the missing
+Chromium-install fixture. The new read-only package is explicitly registered and
+its inventory suite passed 13/13. Linux CI remains the authoritative full harness
+check; no test rules were disabled. Synthetic browser acceptance does not prove
+real email delivery, fresh user OAuth, AI quality or production durability.
+**Study sessions observed: zero.** The owner will arrange learners using the
+prepared protocol and private observation sheet.
+
 ## UI/UX acceptance — 12 November 2026
 
 See the [UI/UX audit](ui-ux-audit-2026-11-12.md) for scope and remaining findings.

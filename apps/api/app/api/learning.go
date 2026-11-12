@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/learnerdefinitions"
 	"net/http"
 	"time"
 
@@ -14,17 +15,18 @@ import (
 
 // SavedMeaningDTO is a learner-owned saved meaning with canonical word details.
 type SavedMeaningDTO struct {
-	UserWordID      string    `json:"userWordId" format:"uuid" doc:"Saved record identifier"`
-	MeaningID       string    `json:"meaningId" format:"uuid" doc:"Meaning identifier"`
-	WordID          string    `json:"wordId" format:"uuid" doc:"Canonical word identifier"`
-	WordText        string    `json:"wordText" doc:"Canonical word text"`
-	WordSlug        string    `json:"wordSlug" doc:"Canonical word URL slug"`
-	PartOfSpeech    string    `json:"partOfSpeech" doc:"Part of speech"`
-	ShortDefinition string    `json:"shortDefinition" doc:"Short definition"`
-	Status          string    `json:"status" doc:"Learning status"`
-	Source          string    `json:"source" doc:"Origin of the save"`
-	Saved           bool      `json:"saved" doc:"Whether the meaning is currently saved"`
-	AddedAt         time.Time `json:"addedAt" format:"date-time" doc:"When the meaning was added to the learner list"`
+	UserWordID        string    `json:"userWordId" format:"uuid" doc:"Saved record identifier"`
+	MeaningID         string    `json:"meaningId" format:"uuid" doc:"Meaning identifier"`
+	WordID            string    `json:"wordId" format:"uuid" doc:"Canonical word identifier"`
+	WordText          string    `json:"wordText" doc:"Canonical word text"`
+	WordSlug          string    `json:"wordSlug" doc:"Canonical word URL slug"`
+	PartOfSpeech      string    `json:"partOfSpeech" doc:"Part of speech"`
+	ShortDefinition   string    `json:"shortDefinition" doc:"Short definition"`
+	LearnerDefinition string    `json:"learnerDefinition,omitempty" doc:"Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged"`
+	Status            string    `json:"status" doc:"Learning status"`
+	Source            string    `json:"source" doc:"Origin of the save"`
+	Saved             bool      `json:"saved" doc:"Whether the meaning is currently saved"`
+	AddedAt           time.Time `json:"addedAt" format:"date-time" doc:"When the meaning was added to the learner list"`
 }
 
 // SaveUserWordInput requests saving a meaning for the authenticated requester.
@@ -191,17 +193,18 @@ func RegisterLearning(api huma.API, svc *learning.Service, authSvc *auth.Service
 
 func savedMeaningToDTO(m learning.SavedMeaning) SavedMeaningDTO {
 	return SavedMeaningDTO{
-		UserWordID:      m.UserWordID.String(),
-		MeaningID:       m.MeaningID.String(),
-		WordID:          m.WordID.String(),
-		WordText:        m.WordText,
-		WordSlug:        m.WordSlug,
-		PartOfSpeech:    m.PartOfSpeech,
-		ShortDefinition: m.ShortDefinition,
-		Status:          m.Status,
-		Source:          m.Source,
-		Saved:           m.Saved,
-		AddedAt:         m.AddedAt,
+		UserWordID:        m.UserWordID.String(),
+		MeaningID:         m.MeaningID.String(),
+		WordID:            m.WordID.String(),
+		WordText:          m.WordText,
+		WordSlug:          m.WordSlug,
+		PartOfSpeech:      m.PartOfSpeech,
+		ShortDefinition:   m.ShortDefinition,
+		LearnerDefinition: learnerdefinitions.Resolve(m.MeaningID.String(), m.WordText, m.PartOfSpeech, m.ShortDefinition, ""),
+		Status:            m.Status,
+		Source:            m.Source,
+		Saved:             m.Saved,
+		AddedAt:           m.AddedAt,
 	}
 }
 

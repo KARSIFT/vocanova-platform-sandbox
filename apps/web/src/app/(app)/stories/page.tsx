@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "@/ui/link";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
-import { textLink } from "../practice/_components/practice-styles";
+import {
+  primaryAction,
+  textLink,
+} from "../practice/_components/practice-styles";
 
 export const metadata: Metadata = {
   title: "Stories — Vocanova",
@@ -65,20 +68,31 @@ export default async function StoriesPage() {
                     : `${story.latestSession.completedSteps} of ${story.latestSession.totalSteps} steps saved.`}
                 </p>
               )}
-              {story.latestSession?.status === "in_progress" && (
+              {story.latestSession?.status === "in_progress" ? (
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <Link
+                    href={`/stories/session/${encodeURIComponent(story.latestSession.id)}`}
+                    className={primaryAction}
+                  >
+                    Continue story
+                  </Link>
+                  <Link
+                    href={`/stories/${encodeURIComponent(story.key)}`}
+                    className={textLink}
+                  >
+                    Story details
+                  </Link>
+                </div>
+              ) : (
                 <Link
-                  href={`/stories/session/${encodeURIComponent(story.latestSession.id)}`}
-                  className={`${textLink} mt-3 mr-4`}
+                  href={`/stories/${encodeURIComponent(story.key)}`}
+                  className={`${primaryAction} mt-4`}
                 >
-                  Continue story
+                  {story.latestSession?.status === "completed"
+                    ? "Read and practise again"
+                    : "Read and practise"}
                 </Link>
               )}
-              <Link
-                href={`/stories/${encodeURIComponent(story.key)}`}
-                className={`${textLink} mt-3`}
-              >
-                Read and practise
-              </Link>
             </Surface>
           ))}
         </div>

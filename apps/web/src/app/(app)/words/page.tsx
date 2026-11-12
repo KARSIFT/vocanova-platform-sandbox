@@ -1,3 +1,4 @@
+import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import {
   ApiResponseError,
@@ -304,7 +305,10 @@ export default async function SavedWordsPage({
                       </span>
                     </div>
                     <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-                      {savedWord.shortDefinition}
+                      {getPrimaryDefinition(
+                        savedWord.shortDefinition,
+                        savedWord.learnerDefinition,
+                      )}
                     </p>
                     {statusLabel ? (
                       <p className="mt-[var(--spacing-sm)] text-sm font-semibold text-primary-700">

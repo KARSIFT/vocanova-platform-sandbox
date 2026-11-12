@@ -163,6 +163,23 @@ func TestListJourneySituationsReturnsActiveSituations(t *testing.T) {
 	assert.False(t, body.HasMore)
 }
 
+func TestListJourneySituationsReturnsEmptyArrayWhenCatalogIsEmpty(t *testing.T) {
+	repo := content.NewMemoryRepository(content.MemoryRepositoryData{})
+	api, _ := testContentAPIWithRepository(t, nil, repo, content.NewMemorySavedStateReaderWithStates(nil))
+	w := httptest.NewRecorder()
+	req := authenticatedRequest(t, content.MustParseUUID("00000000-0000-0000-0000-000000000009"))
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var body map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.JSONEq(t, `[]`, string(body["items"]))
+	assert.JSONEq(t, `false`, string(body["hasMore"]))
+	if cursor, exists := body["nextCursor"]; exists {
+		assert.JSONEq(t, `""`, string(cursor))
+	}
+}
+
 func TestListJourneySituationsHasMoreMatchesCursor(t *testing.T) {
 	userID := content.MustParseUUID("00000000-0000-0000-0000-000000000009")
 	repo := content.NewMemoryRepository(content.MemoryRepositoryData{

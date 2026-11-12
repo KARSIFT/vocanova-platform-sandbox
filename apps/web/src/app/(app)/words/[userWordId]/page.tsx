@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { getAdditionalDefinition } from "@/lib/word-definition";
+import {
+  getAdditionalDefinition,
+  getPrimaryDefinition,
+} from "@/lib/word-definition";
 import { PageContainer, Surface } from "@/ui/surface";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { WordPracticeDisclosure } from "../../_components/word-practice-disclosure";
@@ -66,8 +69,8 @@ export default async function SavedWordDetailPage({
     meaning.reviewState,
   );
   const additionalDefinition = getAdditionalDefinition(
+    getPrimaryDefinition(meaning.shortDefinition, meaning.learnerDefinition),
     meaning.shortDefinition,
-    meaning.learnerDefinition,
   );
 
   return (
@@ -107,12 +110,18 @@ export default async function SavedWordDetailPage({
       <Surface className="mt-[var(--spacing-lg)]">
         <h2 className="text-xl font-semibold text-neutral-900">Meaning</h2>
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-800">
-          {meaning.shortDefinition}
+          {getPrimaryDefinition(
+            meaning.shortDefinition,
+            meaning.learnerDefinition,
+          )}
         </p>
         {additionalDefinition ? (
-          <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-            {additionalDefinition}
-          </p>
+          <details className="mt-[var(--spacing-xs)] text-base text-neutral-600">
+            <summary className="min-h-11 cursor-pointer py-2 font-medium text-primary-700">
+              Reference definition
+            </summary>
+            <p>{additionalDefinition}</p>
+          </details>
         ) : null}
 
         <MeaningPicture

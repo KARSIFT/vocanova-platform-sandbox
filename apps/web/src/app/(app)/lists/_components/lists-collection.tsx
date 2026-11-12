@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Link from "@/ui/link";
 import { useRouter } from "next/navigation";
 import type { WordListsResponse } from "@vocanova/api-client";
@@ -19,6 +19,10 @@ export function ListsCollection({
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
   const action = useListAction();
+  const createRef = useRef<HTMLDetailsElement>(null);
+  useLayoutEffect(() => {
+    if (action.error && createRef.current) createRef.current.open = true;
+  }, [action.error]);
   const items =
     data?.items.filter((item) =>
       item.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
@@ -70,59 +74,6 @@ export function ListsCollection({
         </Surface>
       ) : (
         <>
-          <Surface aria-labelledby="create-list-heading">
-            <h2
-              id="create-list-heading"
-              className="text-xl font-bold text-neutral-900"
-            >
-              Create a list
-            </h2>
-            <form
-              className="mt-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                create();
-              }}
-            >
-              <label
-                htmlFor="new-list-name"
-                className="font-semibold text-neutral-900"
-              >
-                List name
-              </label>
-              <input
-                id="new-list-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                disabled={action.locked || data.items.length >= 50}
-                maxLength={160}
-                required
-                aria-describedby="list-name-help"
-                className={listInput}
-              />
-              <p id="list-name-help" className="mt-2 text-sm text-neutral-600">
-                Use 1–80 characters. You can keep up to 50 personal lists.
-              </p>
-              <button
-                type="submit"
-                disabled={
-                  action.locked ||
-                  !name.trim() ||
-                  Array.from(name.trim()).length > 80 ||
-                  data.items.length >= 50
-                }
-                className={`${listPrimary} mt-3`}
-              >
-                Create list
-              </button>
-            </form>
-            {data.items.length >= 50 && (
-              <p className="mt-2 text-neutral-700">
-                You have 50 lists. Delete a list you no longer need before
-                creating another.
-              </p>
-            )}
-          </Surface>
           <div
             className="my-5"
             role="search"
@@ -186,6 +137,61 @@ export function ListsCollection({
               </Link>
             </Surface>
           )}
+          <details
+            id="create-list"
+            ref={createRef}
+            open={!data.items.length}
+            className="mt-6 rounded-xl border border-neutral-200 bg-white p-4"
+          >
+            <summary className="min-h-11 scroll-my-24 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+              Create a list
+            </summary>
+            <form
+              className="mt-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                create();
+              }}
+            >
+              <label
+                htmlFor="new-list-name"
+                className="font-semibold text-neutral-900"
+              >
+                List name
+              </label>
+              <input
+                id="new-list-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                disabled={action.locked || data.items.length >= 50}
+                maxLength={160}
+                required
+                aria-describedby="list-name-help"
+                className={listInput}
+              />
+              <p id="list-name-help" className="mt-2 text-sm text-neutral-600">
+                Use 1–80 characters. You can keep up to 50 personal lists.
+              </p>
+              <button
+                type="submit"
+                disabled={
+                  action.locked ||
+                  !name.trim() ||
+                  Array.from(name.trim()).length > 80 ||
+                  data.items.length >= 50
+                }
+                className={`${listPrimary} mt-3`}
+              >
+                Create list
+              </button>
+            </form>
+            {data.items.length >= 50 && (
+              <p className="mt-2 text-neutral-700">
+                You have 50 lists. Delete a list you no longer need before
+                creating another.
+              </p>
+            )}
+          </details>
         </>
       )}
       <ListActionStatus action={action} reload={reload} />

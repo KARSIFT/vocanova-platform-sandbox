@@ -142,6 +142,7 @@ for (const theme of ["light", "dark"] as const) {
         if (route.request().method() === "PUT") await pending;
         await route.continue();
       });
+      await page.locator("summary").filter({ hasText: /^List settings$/ }).click();
       await page.getByLabel("List name", { exact: true }).fill("Everyday conversation plans");
       await page.getByRole("button", { name: "Rename list", exact: true }).click();
       try {

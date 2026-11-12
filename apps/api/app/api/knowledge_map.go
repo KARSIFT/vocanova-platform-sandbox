@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/learnerdefinitions"
 	"net/http"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
@@ -56,6 +57,7 @@ func RegisterKnowledgeMap(api huma.API, svc *knowledgecatalog.Service, authSvc *
 		for i := range state.CurrentBand.Items {
 			item := &state.CurrentBand.Items[i]
 			item.MeaningRevision = meaningidentity.Revision(item.MeaningID.String(), item.WordText, item.PartOfSpeech, item.ShortDefinition)
+			item.LearnerDefinition = learnerdefinitions.Resolve(item.MeaningID.String(), item.WordText, item.PartOfSpeech, item.ShortDefinition, "")
 		}
 		if len(media) > 0 && media[0] != nil && len(state.CurrentBand.Items) > 0 {
 			ids := make([]string, 0, len(state.CurrentBand.Items))

@@ -28,6 +28,9 @@ for (const fixture of ["duplicate", "distinct", "blank", "absent"]) {
     ]) {
       await page.goto(route);
       const main = page.getByRole("main");
+      if (fixture === "distinct") {
+        await main.locator("summary").filter({ hasText: /^Reference definition$/ }).click();
+      }
       const definition = main
         .getByText(shortDefinition, { exact: true })
         .first();

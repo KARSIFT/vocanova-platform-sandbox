@@ -63,7 +63,11 @@ export default async function SettingsAccountPage() {
             {currentEmail ? currentEmail : "Not available"}
           </span>
         </p>
-        <EmailChangeForm currentEmail={currentEmail} />
+        <EmailChangeForm
+          key={meResponse.data.id}
+          userId={meResponse.data.id}
+          currentEmail={currentEmail}
+        />
       </Surface>
 
       <PersonalDataExport />

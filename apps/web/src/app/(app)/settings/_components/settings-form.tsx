@@ -7,6 +7,7 @@ import { Settings, UpdateSettingsBody } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
+import { isDisplayNameWithinLimit } from "@/lib/display-name";
 import {
   clearSettingsDraft,
   readSettingsDraft,
@@ -363,7 +364,7 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
             // Match the API's Unicode code-point cap. Native maxLength
             // counts UTF-16 units and allows only 40 supplementary letters.
             // Reject over-limit edits without truncating the previous name.
-            if (Array.from(event.target.value).length <= 80) {
+            if (isDisplayNameWithinLimit(event.target.value)) {
               patch("displayName", event.target.value);
             }
           }}

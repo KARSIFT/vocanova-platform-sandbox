@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef } from "react";
 import { listButton } from "./list-styles";
 import type { useListAction } from "./use-list-action";
 
@@ -9,6 +10,12 @@ export function ListActionStatus({
   action: ReturnType<typeof useListAction>;
   reload: () => void;
 }) {
+  const alertRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!action.error || !alertRef.current) return;
+    alertRef.current.scrollIntoView({ block: "center" });
+    alertRef.current.focus({ preventScroll: true });
+  }, [action.error]);
   return (
     <>
       {action.busy && (
@@ -23,8 +30,10 @@ export function ListActionStatus({
       )}
       {action.error && (
         <div
+          ref={alertRef}
           role="alert"
-          className="mt-4 rounded-xl border border-secondary-300 bg-secondary-50 p-4 text-neutral-900"
+          tabIndex={-1}
+          className="mt-4 scroll-my-24 rounded-xl border border-secondary-300 bg-secondary-50 p-4 text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
           <p>{action.error}</p>
           <div className="mt-3 flex flex-wrap gap-3">

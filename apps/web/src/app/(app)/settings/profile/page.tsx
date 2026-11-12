@@ -71,7 +71,11 @@ export default async function ProfilePage() {
             </p>
           </div>
         </div>
-        <ProfileForm initialDisplayName={displayName} />
+        <ProfileForm
+          key={user.id}
+          userId={user.id}
+          initialDisplayName={displayName}
+        />
       </Surface>
       <Surface
         aria-labelledby="profile-email-heading"

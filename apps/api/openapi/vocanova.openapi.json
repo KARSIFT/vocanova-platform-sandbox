@@ -1155,6 +1155,10 @@
       "DueWordDTO": {
         "additionalProperties": false,
         "properties": {
+          "learnerDefinition": {
+            "description": "Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged",
+            "type": "string"
+          },
           "meaningId": {
             "description": "Meaning identifier",
             "format": "uuid",
@@ -1457,6 +1461,10 @@
           },
           "learned": {
             "type": "boolean"
+          },
+          "learnerDefinition": {
+            "description": "Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged",
+            "type": "string"
           },
           "meaningId": {
             "type": "string"
@@ -5193,6 +5201,10 @@
             "description": "Currently eligible for a scheduled review, without a daily target cap",
             "type": "boolean"
           },
+          "learnerDefinition": {
+            "description": "Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged",
+            "type": "string"
+          },
           "meaningId": {
             "description": "Meaning identifier",
             "format": "uuid",
@@ -5273,6 +5285,10 @@
           "addedAt": {
             "description": "When the meaning was added to the learner list",
             "format": "date-time",
+            "type": "string"
+          },
+          "learnerDefinition": {
+            "description": "Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged",
             "type": "string"
           },
           "meaningId": {
@@ -5387,6 +5403,10 @@
           "due": {
             "description": "Whether this saved meaning is due according to server time",
             "type": "boolean"
+          },
+          "learnerDefinition": {
+            "description": "Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged",
+            "type": "string"
           },
           "meaningId": {
             "description": "Meaning identifier",
@@ -5803,6 +5823,10 @@
       "SituationMeaningDTO": {
         "additionalProperties": false,
         "properties": {
+          "learnerDefinition": {
+            "description": "Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged",
+            "type": "string"
+          },
           "meaningId": {
             "description": "Meaning identifier",
             "format": "uuid",
@@ -6973,6 +6997,10 @@
         "properties": {
           "addedAt": {
             "format": "date-time",
+            "type": "string"
+          },
+          "learnerDefinition": {
+            "description": "Optional plain-English explanation of this exact meaning; canonical shortDefinition remains unchanged",
             "type": "string"
           },
           "meaningId": {
