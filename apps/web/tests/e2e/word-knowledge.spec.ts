@@ -117,7 +117,7 @@ for (const theme of ["light", "dark"] as const) {
       .getByRole("link")
       .filter({ has: page.getByText("pour", { exact: true }) });
     await expect(tile).toHaveCount(1);
-    await expect(tile).toHaveAttribute("href", "/vocabulary/pour");
+    await expect(tile).toHaveAttribute("href", "/vocabulary/pour#meaning-mean-pour");
     await expect(
       tile.getByText("Already known", { exact: true }),
     ).toBeVisible();
