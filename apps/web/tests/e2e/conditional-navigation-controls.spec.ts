@@ -142,7 +142,7 @@ for (const theme of ["light", "dark"] as const) {
           const row = rows.nth(index);
           const word = row.getByRole("link", { name: item.wordText, exact: true });
           await expect(word).toBeVisible();
-          await expect(word).toHaveAttribute("href", `/vocabulary/${encodeURIComponent(item.wordSlug)}`);
+          await expect(word).toHaveAttribute("href", `/vocabulary/${encodeURIComponent(item.wordSlug)}#meaning-${item.meaningId}`);
           await expect(row.getByText(item.shortDefinition, { exact: true })).toBeVisible();
         }
       }
