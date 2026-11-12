@@ -72,9 +72,11 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
             className="rounded-md border border-primary-300 bg-primary-50 p-[var(--spacing-md)] text-base text-primary-900"
           >
             We sent a confirmation link to{" "}
-            <span className="font-medium">{phase.newEmail}</span>. The link
-            expires in 15 minutes. Open it in this browser while you are signed
-            in to finish the change.
+            <span className="font-medium [overflow-wrap:anywhere]">
+              {phase.newEmail}
+            </span>
+            . The link expires in 15 minutes. Open it in this browser while you
+            are signed in to finish the change.
           </p>
           <button
             type="button"

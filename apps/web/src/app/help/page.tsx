@@ -48,8 +48,8 @@ export default function HelpPage() {
                 <p>
                   Choose a goal and focus in your learning plan. A short,
                   optional word check helps you choose meanings you already know
-                  and words you want to learn. Home suggests a lesson using your
-                  current focus and vocabulary.
+                  and words you want to learn. Home helps you review saved
+                  words, discover new ones, and choose a short practice lesson.
                 </p>
                 <p>
                   The current lessons focus on practical A2–B1 English. Your
@@ -102,8 +102,8 @@ export default function HelpPage() {
                   mastery or add it to your saved words. You can change your
                   known choice and keep private notes on its word page.
                 </p>
-                <Link href="/vocabulary" className={link}>
-                  Explore your vocabulary map
+                <Link href="/discover" className={link}>
+                  Explore your word map
                 </Link>
               </div>
             </details>

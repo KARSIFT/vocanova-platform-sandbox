@@ -8,6 +8,7 @@ import { Surface } from "@/ui/surface";
 import { listWriteHeaders, useListAction } from "./use-list-action";
 import { ListActionStatus } from "./list-action-status";
 import { listButton, listInput, listLink, listPrimary } from "./list-styles";
+import { meaningAnchor } from "../../_components/meaning-comparison";
 
 export function ListDetail({
   listId,
@@ -266,7 +267,7 @@ export function ListDetail({
                   <div className="min-w-0 flex-1">
                     <h2 className="break-words text-lg font-bold text-neutral-900">
                       <Link
-                        href={`/vocabulary/${encodeURIComponent(member.wordSlug)}`}
+                        href={`/vocabulary/${encodeURIComponent(member.wordSlug)}#${meaningAnchor(member.meaningId)}`}
                         className={listLink}
                       >
                         {member.wordText}

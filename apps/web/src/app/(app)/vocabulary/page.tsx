@@ -10,6 +10,7 @@ import { PageContainer } from "@/ui/surface";
 import { MeaningSaveButton } from "../discover/[situation]/[word]/_components/meaning-save-button";
 import { VocabularyMap } from "../_components/vocabulary-map";
 import { DictionaryCard } from "../_components/dictionary-card";
+import { meaningAnchor } from "../_components/meaning-comparison";
 
 const categories = [
   ["", "All situations"],
@@ -290,7 +291,7 @@ export default async function VocabularyPage({
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <Link
-                        href={`/vocabulary/${encodeURIComponent(item.wordSlug)}`}
+                        href={`/vocabulary/${encodeURIComponent(item.wordSlug)}#${meaningAnchor(item.meaningId)}`}
                         className="inline-flex min-h-11 items-center text-xl font-bold text-primary-700"
                       >
                         {item.wordText}

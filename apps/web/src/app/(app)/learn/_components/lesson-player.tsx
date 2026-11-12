@@ -45,23 +45,38 @@ export function LessonPlayer({
   const startKey = useRef<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const feedback = useRef<HTMLDivElement>(null);
+  const errorRegion = useRef<HTMLDivElement>(null);
   const focusAfterResponse = useRef(false);
+  const focusTaskAfterRecovery = useRef(false);
   const priorStep = useRef(initialSession?.currentStep?.id);
 
   useEffect(() => {
     if (!focusAfterResponse.current) return;
     focusAfterResponse.current = false;
+    const recoverTask = focusTaskAfterRecovery.current;
+    focusTaskAfterRecovery.current = false;
     if (
       session?.currentStep?.id !== priorStep.current ||
-      session?.status === "completed"
+      session?.status === "completed" ||
+      (recoverTask && !session?.feedback)
     )
       heading.current?.focus();
     else if (session?.feedback) feedback.current?.focus();
     priorStep.current = session?.currentStep?.id;
   }, [session]);
 
-  function accept(next: LessonSession) {
+  useEffect(() => {
+    if (!error) return;
+    errorRegion.current?.focus({ preventScroll: true });
+    errorRegion.current?.scrollIntoView({
+      block: "center",
+      behavior: "instant",
+    });
+  }, [error]);
+
+  function accept(next: LessonSession, recoverTask = false) {
     focusAfterResponse.current = true;
+    focusTaskAfterRecovery.current = recoverTask;
     if (next.currentStep?.id !== session?.currentStep?.id) {
       setTypedAnswer("");
       setSelectedChoice("");
@@ -80,7 +95,7 @@ export function LessonPlayer({
     inFlight.current = true;
     setBusy(true);
     try {
-      accept((await createApiClient().getLessonSession(session.id)).data);
+      accept((await createApiClient().getLessonSession(session.id)).data, true);
       pendingAction.current = null;
       setNeedsRetry(false);
       setNeedsRefresh(false);
@@ -532,6 +547,8 @@ export function LessonPlayer({
 
       {error && (
         <div
+          ref={errorRegion}
+          tabIndex={-1}
           role="alert"
           className="mt-4 rounded-xl border border-secondary-300 bg-secondary-50 p-4 text-neutral-900"
         >

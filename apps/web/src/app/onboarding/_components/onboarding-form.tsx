@@ -13,6 +13,11 @@ import type {
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
+import {
+  clearOnboardingDraft,
+  readOnboardingDraft,
+  saveOnboardingDraft,
+} from "@/lib/preferences-draft";
 
 import { getBrowserTimezone } from "./onboarding-timezone";
 import {
@@ -24,6 +29,8 @@ import {
 
 interface OnboardingFormProps {
   defaultNativeLanguage?: string;
+  /** Stable API identity; recovery stays disabled without it. */
+  userId?: string;
 }
 
 type Status =
@@ -106,6 +113,7 @@ function isFormComplete(state: FormState): boolean {
 
 export function OnboardingForm({
   defaultNativeLanguage = "",
+  userId,
 }: OnboardingFormProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -114,6 +122,9 @@ export function OnboardingForm({
     nativeLanguage: defaultNativeLanguage,
   });
   const [status, setStatus] = useState<Status>({ type: "idle" });
+  const [restored, setRestored] = useState(false);
+  const currentDraft = useRef({ values: state, step });
+  const recoveryScope = useRef<{ userId?: string } | null>(null);
   const stepContentRef = useRef<HTMLDivElement>(null);
   const shouldMoveFocus = useRef(false);
 
@@ -123,6 +134,35 @@ export function OnboardingForm({
     () => stepIsComplete(step, state),
     [step, state],
   );
+
+  useEffect(() => {
+    if (recoveryScope.current?.userId === userId && recoveryScope.current)
+      return;
+    recoveryScope.current = { userId };
+    const draft = readOnboardingDraft(userId);
+    const values = draft?.values ?? {
+      ...INITIAL_STATE,
+      nativeLanguage: defaultNativeLanguage,
+    };
+    currentDraft.current = { values, step: draft?.step ?? 0 };
+    setState(values);
+    setStep(draft?.step ?? 0);
+    setRestored(Boolean(draft));
+  }, [userId, defaultNativeLanguage]);
+
+  function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
+    const values = { ...currentDraft.current.values, [key]: value };
+    currentDraft.current = { ...currentDraft.current, values };
+    setState(values);
+    saveOnboardingDraft({ userId, ...currentDraft.current });
+  }
+
+  function moveToStep(next: number) {
+    currentDraft.current = { ...currentDraft.current, step: next };
+    saveOnboardingDraft({ userId, ...currentDraft.current });
+    shouldMoveFocus.current = true;
+    setStep(next);
+  }
 
   useEffect(() => {
     if (!shouldMoveFocus.current) {
@@ -147,16 +187,14 @@ export function OnboardingForm({
     if (!canGoForward) {
       return;
     }
-    shouldMoveFocus.current = true;
-    setStep((s) => Math.min(totalSteps - 1, s + 1));
+    moveToStep(Math.min(totalSteps - 1, step + 1));
   }
 
   function goBack() {
     if (!canGoBack) {
       return;
     }
-    shouldMoveFocus.current = true;
-    setStep((s) => Math.max(0, s - 1));
+    moveToStep(Math.max(0, step - 1));
   }
 
   async function handleSubmit() {
@@ -182,21 +220,21 @@ export function OnboardingForm({
       timezone: getBrowserTimezone(),
     };
     const client = createApiClient();
+    saveOnboardingDraft({ userId, ...currentDraft.current });
     try {
       await client.completeOnboarding(body, {
         headers: { "X-CSRF-Token": csrfToken },
       });
+      clearOnboardingDraft(userId);
       // router.push + refresh ensures the Next.js cache for any
       // /me-derived page (e.g. /home) re-reads the additive
       // onboardingStatus field on next render.
       router.push("/home");
       router.refresh();
     } catch (error) {
-      // T06: a 401 mid-onboarding means the session expired before the
-      // answers were saved. handleApiError routes the learner to
-      // re-auth; the per-step answers are still in component state so
-      // they survive the page transition. We never claim onboarding is
-      // complete when the server rejected the submission.
+      // handleApiError may leave the document on a 401. Persist first;
+      // controlled inputs alone cannot survive the full sign-in navigation.
+      saveOnboardingDraft({ userId, ...currentDraft.current });
       const message = handleApiError(
         error,
         "We couldn't save your answers. Please try again.",
@@ -209,46 +247,43 @@ export function OnboardingForm({
     <div className="space-y-[var(--spacing-lg)]">
       <StepIndicator currentStep={step} totalSteps={totalSteps} />
 
+      {restored ? (
+        <p role="status" className="text-sm text-neutral-700">
+          Your unfinished setup was restored in this tab.
+        </p>
+      ) : null}
+
       <div ref={stepContentRef}>
         {step === 0 ? (
           <EnglishLevelStep
             value={state.englishLevel}
-            onChange={(value) =>
-              setState((s) => ({ ...s, englishLevel: value }))
-            }
+            onChange={(value) => patch("englishLevel", value)}
           />
         ) : null}
         {step === 1 ? (
           <NativeLanguageStep
             value={state.nativeLanguage}
-            onChange={(value) =>
-              setState((s) => ({ ...s, nativeLanguage: value }))
-            }
+            onChange={(value) => patch("nativeLanguage", value)}
           />
         ) : null}
         {step === 2 ? (
           <LearningGoalStep
             value={state.learningGoal}
-            onChange={(value) =>
-              setState((s) => ({ ...s, learningGoal: value }))
-            }
+            onChange={(value) => patch("learningGoal", value)}
           />
         ) : null}
         {step === 3 ? (
           <MainUseCaseStep
             value={state.mainUseCase}
-            onChange={(value) =>
-              setState((s) => ({ ...s, mainUseCase: value }))
-            }
+            onChange={(value) => patch("mainUseCase", value)}
           />
         ) : null}
         {step === 4 ? (
           <DailyReviewTargetStep
             value={state.dailyReviewTarget}
-            onChange={(value) =>
-              setState((s) => ({ ...s, dailyReviewTarget: value }))
-            }
+            onChange={(value) => patch("dailyReviewTarget", value)}
             state={state}
+            disabled={status.type === "submitting"}
           />
         ) : null}
       </div>
@@ -479,6 +514,7 @@ function NativeLanguageStep({
         name="nativeLanguage"
         type="text"
         autoComplete="off"
+        maxLength={80}
         required
         value={query}
         onChange={(event) => {
@@ -573,10 +609,12 @@ function DailyReviewTargetStep({
   value,
   onChange,
   state,
+  disabled,
 }: {
   value: number;
   onChange: (next: number) => void;
   state: FormState;
+  disabled: boolean;
 }) {
   return (
     <div className="space-y-[var(--spacing-md)]">
@@ -610,6 +648,7 @@ function DailyReviewTargetStep({
                   name="dailyReviewTarget"
                   value={target}
                   checked={checked}
+                  disabled={disabled}
                   onChange={() => onChange(target)}
                   className="sr-only"
                 />
@@ -647,27 +686,35 @@ function SummaryCard({
     >
       <h3 className="text-lg font-semibold text-neutral-900">Quick check</h3>
       <dl className="mt-[var(--spacing-sm)] space-y-[var(--spacing-xs)]">
-        <div className="flex justify-between">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-[var(--spacing-sm)]">
           <dt className="text-neutral-600">English level</dt>
-          <dd className="font-medium text-neutral-900">{englishLabel}</dd>
+          <dd className="min-w-0 break-words text-right font-medium text-neutral-900">
+            {englishLabel}
+          </dd>
         </div>
-        <div className="flex justify-between">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-[var(--spacing-sm)]">
           <dt className="text-neutral-600">Native language</dt>
-          <dd className="font-medium text-neutral-900">
+          <dd className="min-w-0 break-words text-right font-medium text-neutral-900">
             {nativeLanguageLabel(state.nativeLanguage) || "Not set"}
           </dd>
         </div>
-        <div className="flex justify-between">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-[var(--spacing-sm)]">
           <dt className="text-neutral-600">Reason for learning</dt>
-          <dd className="font-medium text-neutral-900">{goalLabel}</dd>
+          <dd className="min-w-0 break-words text-right font-medium text-neutral-900">
+            {goalLabel}
+          </dd>
         </div>
-        <div className="flex justify-between">
-          <dt className="text-neutral-600">Main use case</dt>
-          <dd className="font-medium text-neutral-900">{useLabel}</dd>
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-[var(--spacing-sm)]">
+          <dt className="text-neutral-600">Where you&apos;ll use English</dt>
+          <dd className="min-w-0 break-words text-right font-medium text-neutral-900">
+            {useLabel}
+          </dd>
         </div>
-        <div className="flex justify-between">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-[var(--spacing-sm)]">
           <dt className="text-neutral-600">Daily reviews</dt>
-          <dd className="font-medium text-neutral-900">{dailyReviewTarget}</dd>
+          <dd className="min-w-0 break-words text-right font-medium text-neutral-900">
+            {dailyReviewTarget}
+          </dd>
         </div>
       </dl>
     </aside>

@@ -1,6 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
+test("search opens the selected later meaning directly", async ({ page, context, baseURL }) => {
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "e2e_vocabulary", value: "multiple-meanings", url: baseURL! },
+  ]);
+  await page.goto("/vocabulary?q=pour");
+  const result = page.getByRole("main").getByRole("listitem").filter({ hasText: "to arrive in large numbers" });
+  await expect(result.getByRole("link", { name: "pour", exact: true })).toHaveAttribute("href", "/vocabulary/pour#meaning-mean-pour-second");
+  await result.getByRole("link", { name: "pour", exact: true }).click();
+  await expect(page).toHaveURL(/#meaning-mean-pour-second$/);
+  await expect(page.locator("#meaning-mean-pour-second")).toContainText("to arrive in large numbers");
+  await expect(page.locator("#meaning-mean-pour-second")).toBeInViewport();
+});
+
 test("a long pasted search is explained as an invalid query, not a lost results page", async ({ page, context, baseURL }) => {
   await context.addCookies([{ name: "vocanova_session", value: randomUUID(), url: baseURL! }]);
   await page.goto("/vocabulary?q=" + "a".repeat(101));

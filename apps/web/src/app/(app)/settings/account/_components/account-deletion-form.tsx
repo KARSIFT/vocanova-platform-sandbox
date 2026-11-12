@@ -10,6 +10,7 @@ import { clearOAuthContinuation } from "@/lib/oauth-continuation";
 import { handleApiError } from "@/lib/session";
 
 import { clearSentenceFeedbackDrafts } from "../../../_components/sentence-feedback-drafts";
+import { clearPreferencesDrafts } from "@/lib/preferences-draft";
 
 type DeletionPhase = { type: "idle" } | { type: "confirming" };
 
@@ -69,6 +70,7 @@ export function AccountDeletionForm() {
       // session cookie in this response. The browser-visible CSRF cookie can
       // be cleared here before leaving the authenticated shell.
       clearSentenceFeedbackDrafts();
+      clearPreferencesDrafts();
       clearOAuthContinuation();
       deleteCookie(CSRF_COOKIE_NAME);
       // The acknowledgement must be outside the authenticated shell: this
@@ -168,9 +170,7 @@ export function AccountDeletionForm() {
               aria-busy={isDeleting}
               className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-red-700 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isDeleting
-                ? "Deactivating..."
-                : "Permanently deactivate my account"}
+              {isDeleting ? "Deactivating..." : "Deactivate my account"}
             </button>
             <button
               type="button"

@@ -1771,6 +1771,9 @@ const server = createServer(async (req, res) => {
     } else if (cookies.e2e_word_difficulty === "missing") {
       delete response.word.difficultyLevel;
     }
+    if (cookies.e2e_vocabulary === "multiple-meanings" && slug === "pour") {
+      response.word.meanings.push({ ...response.word.meanings[0], id: "mean-pour-second", shortDefinition: "to arrive in large numbers", examples: [], usageNotes: [] });
+    }
     logLine(req, 200, { slug });
     jsonResponse(res, 200, response);
     return;

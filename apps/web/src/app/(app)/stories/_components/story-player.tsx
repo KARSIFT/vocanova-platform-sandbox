@@ -38,8 +38,12 @@ export function StoryPlayer({
   const pending = useRef<StoryAction | null>(null);
   const inFlight = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
+  const currentLine = useRef<HTMLLIElement>(null);
+  const currentQuestion = useRef<HTMLLegendElement>(null);
   const feedback = useRef<HTMLDivElement>(null);
+  const errorRegion = useRef<HTMLDivElement>(null);
   const focusAfterResponse = useRef(false);
+  const focusTaskAfterRecovery = useRef(false);
   const priorStep = useRef(initialSession.currentStep?.id);
   const situationSlug = storySituationSlug(session.situation);
   const step = session.currentStep;
@@ -49,15 +53,32 @@ export function StoryPlayer({
   useEffect(() => {
     if (!focusAfterResponse.current) return;
     focusAfterResponse.current = false;
-    if (
+    const recoverTask = focusTaskAfterRecovery.current;
+    focusTaskAfterRecovery.current = false;
+    if (session.status === "completed") heading.current?.focus();
+    else if (
       session.currentStep?.id !== priorStep.current ||
-      session.status === "completed"
-    )
-      heading.current?.focus();
-    else if (session.feedback) feedback.current?.focus();
+      (recoverTask && !session.feedback)
+    ) {
+      // Keep the new task in view as the dialogue grows above it.
+      const target =
+        session.currentStep?.kind === "line"
+          ? currentLine.current
+          : currentQuestion.current;
+      target?.focus({ preventScroll: true });
+      target?.scrollIntoView({ block: "center", behavior: "instant" });
+    } else if (session.feedback) feedback.current?.focus();
     priorStep.current = session.currentStep?.id;
   }, [session]);
-  function accept(next: StorySession) {
+  useEffect(() => {
+    if (!error) return;
+    errorRegion.current?.focus({ preventScroll: true });
+    errorRegion.current?.scrollIntoView({
+      block: "center",
+      behavior: "instant",
+    });
+  }, [error]);
+  function accept(next: StorySession, recoverTask = false) {
     if (next.id !== session.id || next.revision < session.revision) return;
     if (
       next.currentStep?.id !== session.currentStep?.id ||
@@ -65,6 +86,7 @@ export function StoryPlayer({
     )
       setChoice("");
     focusAfterResponse.current = true;
+    focusTaskAfterRecovery.current = recoverTask;
     setSession(next);
   }
   async function submit(action?: StoryAction["action"]) {
@@ -122,7 +144,7 @@ export function StoryPlayer({
     inFlight.current = true;
     setBusy(true);
     try {
-      accept((await createApiClient().getStorySession(session.id)).data);
+      accept((await createApiClient().getStorySession(session.id)).data, true);
       pending.current = null;
       setNeedsRetry(false);
       setNeedsRefresh(false);
@@ -204,7 +226,12 @@ export function StoryPlayer({
         </p>
         <ol aria-label="Story dialogue" className="mt-5 space-y-4">
           {session.visibleLines.map((line, index) => (
-            <li key={line.id} className="rounded-xl bg-neutral-50 p-4">
+            <li
+              key={line.id}
+              ref={line.id === step?.line?.id ? currentLine : undefined}
+              tabIndex={line.id === step?.line?.id ? -1 : undefined}
+              className="rounded-xl bg-neutral-50 p-4"
+            >
               <p className="text-sm font-semibold text-primary-700">
                 {line.speaker}
               </p>
@@ -228,7 +255,11 @@ export function StoryPlayer({
             }}
           >
             <fieldset disabled={locked || !!checked?.correct}>
-              <legend className="mb-3 text-xl font-bold text-neutral-900">
+              <legend
+                ref={currentQuestion}
+                tabIndex={-1}
+                className="mb-3 text-xl font-bold text-neutral-900"
+              >
                 {step.prompt}
               </legend>
               {step.choices?.map((option) => (
@@ -310,6 +341,8 @@ export function StoryPlayer({
         )}
         {error && (
           <div
+            ref={errorRegion}
+            tabIndex={-1}
             role="alert"
             className="mt-5 rounded-xl border border-neutral-300 p-4"
           >

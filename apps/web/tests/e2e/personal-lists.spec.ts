@@ -399,6 +399,11 @@ for (const colorScheme of ["light", "dark"] as const) {
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    for (const member of list.members) {
+      await expect(page.getByRole("list", { name: "List meanings", exact: true })
+        .getByRole("link", { name: member.wordText, exact: true }))
+        .toHaveAttribute("href", `/vocabulary/${member.wordSlug}#meaning-${member.meaningId}`);
+    }
     await page
       .getByLabel("Search words and meanings in this list")
       .fill("change");

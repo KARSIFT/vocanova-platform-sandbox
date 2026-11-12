@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SentenceFeedbackResult } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
-import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { compareSentences, type SentenceChange } from "./sentence-comparison";
@@ -206,16 +205,13 @@ export function SentenceFeedback({
     }
     const generation = feedbackGeneration.current;
 
-    const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrfToken) {
-      setReportStatus("error");
-      return;
-    }
-
     setReportStatus("loading");
 
     const client = createApiClient();
     try {
+      const csrfToken = await getOrRefreshCSRFToken();
+      if (feedbackGeneration.current !== generation) return;
+      if (!csrfToken) throw new Error("Session is not ready");
       await client.reportSentenceFeedback(
         result.attemptId,
         { reason },
@@ -232,9 +228,8 @@ export function SentenceFeedback({
       if (feedbackGeneration.current !== generation) {
         return;
       }
-      // T06: a 401 on a report submission routes the learner to
-      // re-auth. The text is in component state and the feedback
-      // result is still visible — nothing is lost.
+      // Re-authentication preserves the writing draft; the server remains
+      // authoritative about whether this feedback was reported.
       if (
         error &&
         typeof error === "object" &&
@@ -344,8 +339,9 @@ export function SentenceFeedback({
         Write one sentence using{" "}
         <span className="font-semibold text-neutral-900">{targetWord}</span>.
       </p>
-      <p className="mt-[var(--spacing-xs)] text-xs text-neutral-600">
-        Avoid personal details such as contact information or passwords.
+      <p className="mt-[var(--spacing-xs)] text-sm text-neutral-600">
+        AI checks your sentence and learning context. Avoid private details; AI
+        can make mistakes.
       </p>
       <form
         onSubmit={handleSubmit}
@@ -400,7 +396,7 @@ export function SentenceFeedback({
           type="submit"
           disabled={isLoading || sentence.trim().length === 0}
           aria-busy={isLoading}
-          className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className={`inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50 ${hasSuccessResult ? "border border-neutral-300 text-primary-700 hover:bg-primary-50" : "bg-primary-600 text-neutral-50 hover:bg-primary-700"}`}
         >
           {isLoading ? "Checking..." : "Check my sentence"}
         </button>

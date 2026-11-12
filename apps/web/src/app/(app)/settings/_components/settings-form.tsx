@@ -1,12 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Settings, UpdateSettingsBody } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
+import {
+  clearSettingsDraft,
+  readSettingsDraft,
+  saveSettingsDraft,
+} from "@/lib/preferences-draft";
 
 const DAILY_REVIEW_TARGETS = [5, 10, 15, 20, 30, 50, 75, 100];
 
@@ -32,6 +37,8 @@ type SaveStatus =
 
 interface SettingsFormProps {
   initialSettings: Settings;
+  /** Stable API identity; recovery stays disabled without it. */
+  userId?: string;
 }
 
 type FormState = Omit<Settings, "displayName" | "reviewIntervalPreset"> & {
@@ -39,7 +46,7 @@ type FormState = Omit<Settings, "displayName" | "reviewIntervalPreset"> & {
   reviewIntervalPreset: Settings["reviewIntervalPreset"];
 };
 
-export function SettingsForm({ initialSettings }: SettingsFormProps) {
+export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
   const [state, setState] = useState<FormState>(() =>
     toFormState(initialSettings),
   );
@@ -50,10 +57,44 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const currentState = useRef(state);
   const isSaving = useRef(false);
   const unconfirmedFields = useRef(new Set<keyof FormState>());
+  const recoveryScope = useRef<{ userId?: string } | null>(null);
+  const [restored, setRestored] = useState(false);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (recoveryScope.current?.userId === userId && recoveryScope.current)
+      return;
+    recoveryScope.current = { userId };
+    const confirmed = toFormState(initialSettings);
+    const changes = readSettingsDraft(userId);
+    const next = { ...confirmed, ...changes };
+    currentState.current = next;
+    unconfirmedFields.current.clear();
+    setState(next);
+    setBaseline(confirmed);
+    const dirty = buildUpdateBody(next, confirmed);
+    saveSettingsDraft({ userId, changes: dirty });
+    setRestored(Object.keys(dirty).length > 0);
+  }, [initialSettings, userId]);
 
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     currentState.current = { ...currentState.current, [key]: value };
     setState(currentState.current);
+    saveSettingsDraft({
+      userId,
+      changes: buildUpdateBody(
+        currentState.current,
+        baseline,
+        unconfirmedFields.current,
+      ),
+    });
     if (status.type !== "saving") {
       setStatus({ type: "idle" });
     }
@@ -71,16 +112,25 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       unconfirmedFields.current,
     );
     if (Object.keys(body).length === 0) {
+      clearSettingsDraft(userId);
+      setRestored(false);
       setStatus({ type: "saved" });
       return;
     }
 
     isSaving.current = true;
+    // Retain the submitted fields while pending too: a newer edit can revert
+    // to the previous baseline before the request commits or the tab reloads.
+    for (const key of Object.keys(body) as Array<keyof FormState>) {
+      unconfirmedFields.current.add(key);
+    }
+    saveSettingsDraft({ userId, changes: body });
     setStatus({ type: "saving" });
     const client = createApiClient();
     let writeStarted = false;
     try {
       const csrfToken = await getOrRefreshCSRFToken();
+      if (!mounted.current || recoveryScope.current?.userId !== userId) return;
       if (!csrfToken) {
         setStatus({
           type: "error",
@@ -93,6 +143,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       const { data } = await client.updateSettings(body, {
         headers: { "X-CSRF-Token": csrfToken },
       });
+      if (!mounted.current || recoveryScope.current?.userId !== userId) return;
       const savedSettings = toFormState(data);
       // The response confirms only the submitted snapshot. Keep edits made
       // while it was pending, including a reversion to the previous baseline.
@@ -104,6 +155,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       setState(nextState);
       setBaseline(savedSettings);
       unconfirmedFields.current.clear();
+      saveSettingsDraft({
+        userId,
+        changes: buildUpdateBody(nextState, savedSettings),
+      });
+      setRestored(false);
       setStatus({
         type:
           Object.keys(buildUpdateBody(nextState, savedSettings)).length > 0
@@ -111,6 +167,9 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             : "saved",
       });
     } catch (error) {
+      // A pending response from a departed form must not recreate private
+      // drafts after a successful logout/deletion or affect a new account.
+      if (!mounted.current || recoveryScope.current?.userId !== userId) return;
       if (writeStarted) {
         // A failed response does not prove the server rejected the write.
         // Explicitly resend these fields on retry, even when the learner
@@ -119,11 +178,15 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           unconfirmedFields.current.add(key);
         }
       }
-      // T06: a 401 mid-settings-write is the documented
-      // session-expiry mid-flow case. handleApiError routes the
-      // learner to re-auth; the form state is preserved on the
-      // controlled inputs so the learner does not need to retype
-      // their changes after re-authentication.
+      // Persist the latest edits before a 401 triggers full navigation.
+      saveSettingsDraft({
+        userId,
+        changes: buildUpdateBody(
+          currentState.current,
+          baseline,
+          unconfirmedFields.current,
+        ),
+      });
       const message = handleApiError(
         error,
         "We couldn't save your settings. Please try again.",
@@ -140,6 +203,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       aria-label="Practice settings"
       className="mt-[var(--spacing-lg)] space-y-[var(--spacing-lg)] rounded-[0.9rem] border border-neutral-200 bg-white p-[var(--spacing-md)] sm:p-[var(--spacing-lg)]"
     >
+      {restored ? (
+        <p role="status" className="text-sm text-neutral-700">
+          Your unsaved changes were restored in this tab. Save when you&apos;re
+          ready.
+        </p>
+      ) : null}
       <fieldset className="space-y-[var(--spacing-md)] border-b border-neutral-200 pb-[var(--spacing-lg)]">
         <legend className="text-lg font-semibold text-neutral-900">
           Daily review target

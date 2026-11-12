@@ -1,5 +1,14 @@
 # Vocanova current product state
 
+## UI/UX review — 12 November 2026
+
+The [dated audit](ui-ux-audit-2026-11-12.md) records recent AI-assisted design
+guidance, inspected surfaces and remaining product decisions. The delivery
+improves story/lesson focus and recovery, exact-meaning links, same-user setup
+and preferences drafts, confirmation retries, feedback reporting, disclosure
+and support copy. These changes preserve the established navigation and learning
+model. Local acceptance and rollout evidence must be tracked separately.
+
 ## Mobile feedback — 9 November 2026
 
 The mobile delivery replaces the two Discovery selects with searchable lists

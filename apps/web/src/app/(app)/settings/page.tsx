@@ -17,8 +17,12 @@ export const metadata = {
 export default async function SettingsPage() {
   const client = await createServerApiClient();
   let response: Awaited<ReturnType<typeof client.getSettings>>;
+  let user: Awaited<ReturnType<typeof client.getCurrentUser>>;
   try {
-    response = await client.getSettings();
+    [response, user] = await Promise.all([
+      client.getSettings(),
+      client.getCurrentUser(),
+    ]);
   } catch (error) {
     requireAuthRedirect(error, "/settings");
   }
@@ -41,7 +45,11 @@ export default async function SettingsPage() {
           <h2 id="learning-preferences-heading" className="section-title">
             Learning preferences
           </h2>
-          <SettingsForm initialSettings={response.data} />
+          <SettingsForm
+            key={user.data.id}
+            initialSettings={response.data}
+            userId={user.data.id}
+          />
           <CalendarReminder />
         </section>
         <aside className="space-y-5">

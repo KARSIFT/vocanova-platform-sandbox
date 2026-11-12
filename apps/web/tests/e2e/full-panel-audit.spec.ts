@@ -65,7 +65,7 @@ for (const theme of ["light", "dark"] as const) {
     for (const [label, destination] of [
       ["Open your learning plan", "/plan"],
       ["See your progress", "/progress"],
-      ["Explore your vocabulary map", "/vocabulary"],
+      ["Explore your word map", "/discover"],
       ["Choose a practice", "/practice"],
       ["Set up a calendar reminder", "/settings#calendar-reminder-heading"],
       ["Open account security", "/settings/account"],
