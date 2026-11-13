@@ -556,6 +556,7 @@ export function Discovery({
           meaningId: request.body.meaningId,
           word: request.word,
           band: fresh.currentBand.number,
+          // Completion has no next rank; displayedRank is also undefined there.
           rank: nextWord?.rank,
         });
       setData(fresh);

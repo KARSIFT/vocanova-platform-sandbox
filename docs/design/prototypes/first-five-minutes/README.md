@@ -35,5 +35,5 @@ Its meaning and context remain intact; this work does not replace catalog conten
 
 See the [design proposal](../../../superpowers/specs/2026-11-13-first-five-minutes-design.md)
 and [learner protocol](../../../product/first-five-minutes-study-2026-11-13.md).
-The owner approved Warm guided coach and the design proposal on13 November2026; production integration is being validated separately. No learner
+The owner approved Warm guided coach and the design proposal on 13 November 2026; production integration is being validated separately. No learner
 sessions or design winner are claimed.
