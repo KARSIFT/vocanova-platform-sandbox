@@ -34,8 +34,8 @@ export function WordPracticeDisclosure({
     const revealTarget = () => {
       if (window.location.hash !== `#${anchor}` || !disclosure.current) return;
       disclosure.current.open = true;
-      // Legacy draft links remain reachable even when optional writing lives
-      // inside the collapsed personal-tools group.
+      // Legacy draft links remain reachable through any containing disclosure,
+      // including older layouts with writing inside the personal-tools group.
       let ancestor = disclosure.current.parentElement?.closest("details");
       while (ancestor) {
         ancestor.open = true;

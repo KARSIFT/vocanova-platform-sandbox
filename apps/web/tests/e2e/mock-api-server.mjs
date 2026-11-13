@@ -305,6 +305,16 @@ const CANONICAL_WORDS = {
   },
 };
 
+// Opt-in second sense: a distinct saved record for exact-meaning writing tests.
+const SECONDARY_POUR_MEANING = {
+  id: "mean-pour-second",
+  partOfSpeech: "verb",
+  shortDefinition: "to arrive in large numbers",
+  saved: false,
+  examples: [],
+  usageNotes: [],
+};
+
 const JOURNEY_SITUATIONS = [
   {
     id: "sit-cafe",
@@ -533,6 +543,9 @@ function buildDailyMission(
 }
 
 function findCanonicalMeaning(meaningId) {
+  if (meaningId === SECONDARY_POUR_MEANING.id) {
+    return { word: CANONICAL_WORDS.pour, meaning: SECONDARY_POUR_MEANING };
+  }
   for (const word of Object.values(CANONICAL_WORDS)) {
     const meaning = word.meanings.find((item) => item.id === meaningId);
     if (meaning) return { word, meaning };
@@ -625,12 +638,16 @@ function buildDueWords(state, { fixtureDueWordCount, limit }) {
   };
 }
 
-function buildWordDetailResponse(state, slug, definitionFixture) {
+function buildWordDetailResponse(state, slug, definitionFixture, vocabularyFixture) {
   const word = CANONICAL_WORDS[slug];
   if (!word) {
     return null;
   }
-  const meanings = word.meanings.map((meaning) => ({
+  const sourceMeanings =
+    slug === "pour" && vocabularyFixture === "secondary-saved-meaning"
+      ? [...word.meanings, SECONDARY_POUR_MEANING]
+      : word.meanings;
+  const meanings = sourceMeanings.map((meaning) => ({
     ...meaning,
     ...(definitionFixture === "duplicate"
       ? {
@@ -1760,6 +1777,7 @@ const server = createServer(async (req, res) => {
       state,
       slug,
       cookies.e2e_definition_fixture,
+      cookies.e2e_vocabulary,
     );
     if (!response) {
       logLine(req, 404, { slug });

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/ui/link";
+import { LearningNote } from "@/ui/learning-guide";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { SentenceFeedbackResult } from "@vocanova/api-client";
@@ -320,7 +321,7 @@ export function SentenceFeedback({
       aria-labelledby={
         introHeadingId ?? `sentence-feedback-heading-${attemptId}`
       }
-      className="mt-[var(--spacing-md)] rounded-md border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm"
+      className="learning-surface mt-[var(--spacing-md)] p-[var(--spacing-md)] sm:p-[var(--spacing-lg)]"
     >
       {!introHeadingId && (
         <>
@@ -339,10 +340,12 @@ export function SentenceFeedback({
         Write one sentence using{" "}
         <span className="font-semibold text-neutral-900">{targetWord}</span>.
       </p>
-      <p className="mt-[var(--spacing-xs)] text-sm text-neutral-600">
-        AI checks your sentence and learning context. Avoid private details; AI
-        can make mistakes.
-      </p>
+      <LearningNote className="mt-[var(--spacing-sm)]">
+        <p>
+          AI checks your sentence and learning context. Avoid private details;
+          AI can make mistakes.
+        </p>
+      </LearningNote>
       <form
         onSubmit={handleSubmit}
         className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]"
@@ -376,7 +379,7 @@ export function SentenceFeedback({
             disabled={isLoading}
             rows={3}
             placeholder={`Type a sentence using "${targetWord}"...`}
-            className="w-full rounded-md border border-neutral-300 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-neutral-900 placeholder:text-neutral-500 focus:border-primary-500 focus:outline focus:outline-2 focus:outline-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-neutral-900 placeholder:text-neutral-500 focus:border-primary-500 focus:outline focus:outline-2 focus:outline-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60"
           />
           <p
             id={characterCountId}
@@ -396,7 +399,7 @@ export function SentenceFeedback({
           type="submit"
           disabled={isLoading || sentence.trim().length === 0}
           aria-busy={isLoading}
-          className={`inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50 ${hasSuccessResult ? "border border-neutral-300 text-primary-700 hover:bg-primary-50" : "bg-primary-600 text-neutral-50 hover:bg-primary-700"}`}
+          className={`vn-btn focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 ${hasSuccessResult ? "vn-btn-secondary" : "vn-btn-primary"}`}
         >
           {isLoading ? "Checking..." : "Check my sentence"}
         </button>
@@ -487,7 +490,7 @@ export function SentenceFeedback({
                   type="button"
                   onClick={handleReviseSentence}
                   disabled={isLoading}
-                  className="mt-3 inline-flex min-h-11 items-center rounded-lg bg-primary-600 px-4 py-3 font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="vn-btn vn-btn-primary mt-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
                 >
                   Revise sentence
                 </button>
@@ -530,13 +533,16 @@ export function SentenceFeedback({
           ) : null}
 
           {hasSuccessResult ? (
-            <div className="rounded-md border border-neutral-200 p-[var(--spacing-md)]">
+            <div className="rounded-xl border border-neutral-200 p-[var(--spacing-md)]">
+              <p className="mb-3 text-base text-neutral-700">
+                Read the feedback, then revise your sentence or try a new one.
+              </p>
               <div className="flex flex-wrap gap-[var(--spacing-sm)]">
                 <button
                   type="button"
                   onClick={handleTryAnotherSentence}
                   disabled={isLoading}
-                  className="inline-flex min-h-11 items-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-neutral-900 hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="vn-btn vn-btn-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
                 >
                   Try another sentence
                 </button>

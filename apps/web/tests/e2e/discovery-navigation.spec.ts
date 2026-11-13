@@ -916,7 +916,7 @@ for (const theme of ["light", "dark"] as const) {
       name: "Start discovering",
       exact: true,
     });
-    const sound = page.getByRole("button", { name: "Sound on", exact: true });
+    const sound = page.getByRole("button", { name: "Sound off", exact: true });
     await expect(start).toBeVisible();
     await expect(sound).toBeVisible();
     await expect
@@ -936,7 +936,7 @@ for (const theme of ["light", "dark"] as const) {
     await sound.focus();
     await page.keyboard.press("Enter");
     await expect(
-      page.getByRole("button", { name: "Sound off", exact: true }),
+      page.getByRole("button", { name: "Sound on", exact: true }),
     ).toBeFocused();
     await start.focus();
     await page.keyboard.press("Enter");

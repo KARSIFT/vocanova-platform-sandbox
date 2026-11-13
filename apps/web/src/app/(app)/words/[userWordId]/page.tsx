@@ -10,6 +10,7 @@ import {
 } from "@/lib/word-definition";
 import { PageContainer, Surface } from "@/ui/surface";
 import { MeaningPicture } from "@/ui/meaning-picture";
+import { LearningIntro } from "@/ui/learning-guide";
 import { WordPracticeDisclosure } from "../../_components/word-practice-disclosure";
 import { ListenButton } from "@/ui/pronunciation";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
@@ -130,14 +131,11 @@ export default async function SavedWordDetailPage({
           meaningRevision={meaning.meaningRevision}
         />
         <MeaningTeaching meaning={meaning} />
-        <details className="mt-4 border-t border-neutral-200 pt-2">
-          <summary className="min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-            Personal tools
-          </summary>
-          <MeaningListEditor meaningId={meaning.id} />
-          <MeaningKnowledgeEditor
-            meaningId={meaning.id}
-            initialKnown={meaning.selfReportedKnown}
+        <div className="mt-6">
+          <LearningIntro
+            title="Try this meaning in a sentence"
+            headingLevel={3}
+            description="Make your own example. Writing is optional, and you can edit your sentence after feedback."
           />
           <WordPracticeDisclosure>
             <SentenceFeedback
@@ -148,6 +146,17 @@ export default async function SavedWordDetailPage({
               shortDefinition={savedWord.shortDefinition}
             />
           </WordPracticeDisclosure>
+        </div>
+
+        <details className="mt-4 border-t border-neutral-200 pt-2">
+          <summary className="min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+            Personal tools
+          </summary>
+          <MeaningListEditor meaningId={meaning.id} />
+          <MeaningKnowledgeEditor
+            meaningId={meaning.id}
+            initialKnown={meaning.selfReportedKnown}
+          />
         </details>
       </Surface>
 

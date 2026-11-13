@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer } from "@/ui/surface";
 import { MeaningPicture } from "@/ui/meaning-picture";
+import { LearningIntro, LearningNote } from "@/ui/learning-guide";
 import { ListenButton } from "@/ui/pronunciation";
 import { LearnIcon } from "../_components/learn-icons";
 import { StartDailyLessonButton } from "../reviews/_components/daily-lesson-start";
@@ -194,24 +195,27 @@ export default async function HomePage() {
         ) : null}
       </header>
 
-      <section aria-label="Review words" className="next-step">
-        <p className="next-step-label">
-          {currentLesson
-            ? "Review in progress"
-            : dueReviewWords > 0
-              ? "Your next step"
-              : "No reviews due"}
-        </p>
-        <h2 id="todays-mission-heading">
-          {discoveryIsNext ? "Discover new words" : "Review words"}
-        </h2>
-        {!discoveryIsNext && (
-          <p className="next-step-copy">
-            {currentLesson
-              ? "Pick up where you left off."
-              : `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`}
-          </p>
-        )}
+      <section aria-label="Review words" className="next-step learning-surface">
+        <LearningIntro
+          id="todays-mission-heading"
+          eyebrow={
+            currentLesson
+              ? "Review in progress"
+              : dueReviewWords > 0
+                ? "Your next step"
+                : "No reviews due"
+          }
+          title={discoveryIsNext ? "Discover new words" : "Review words"}
+          description={
+            discoveryIsNext
+              ? latestWord
+                ? "Keep finding words you would like to use. Save a meaning when it feels useful."
+                : "Choose a useful word. Learn its meaning, then try it in your own sentence."
+              : currentLesson
+                ? "Pick up where you left off."
+                : `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`
+          }
+        />
         <div className="next-step-actions">
           {currentLesson ? (
             <Link
@@ -235,6 +239,11 @@ export default async function HomePage() {
             Reviewed today: <strong>{reviewsCompleted}</strong>
           </p>
         </div>
+        <LearningNote>
+          {discoveryIsNext
+            ? "Come back to see which words are ready. There’s no need to finish everything at once."
+            : "Start with what you remember. It’s fine to get things wrong."}
+        </LearningNote>
       </section>
 
       <section aria-labelledby="today-goal-heading" className="today-goal">

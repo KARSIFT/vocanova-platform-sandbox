@@ -48,6 +48,9 @@ const HomePage = await importPage("home");
 const CoursesPage = await importPage("courses");
 const ProgressPage = await importPage("progress");
 const WritingPage = await importPage("writing");
+const { LearningIntro } = await import(
+  new URL("ui/learning-guide.tsx", sourceRoot).href
+);
 
 const originalFetch = globalThis.fetch;
 const originalApiBaseURL = process.env.API_BASE_URL;
@@ -141,8 +144,13 @@ function elements(node: unknown): ReactElement<Record<string, unknown>>[] {
 }
 function text(node: unknown): string {
   if (Array.isArray(node)) return node.map(text).join(" ");
-  if (isValidElement<Record<string, unknown>>(node))
+  if (isValidElement<Record<string, unknown>>(node)) {
+    // This known pure component now owns its title rather than receiving it
+    // as children. Do not execute arbitrary async/server components here.
+    if (node.type === LearningIntro)
+      return text(LearningIntro(node.props));
     return text(node.props.children);
+  }
   return typeof node === "string" ? node : "";
 }
 

@@ -12,15 +12,16 @@ import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { deviceSpeech } from "@/lib/speech";
+import { LearningNote } from "@/ui/learning-guide";
 import { ListenButton } from "@/ui/pronunciation";
 import { SessionActions } from "@/ui/session";
 import { VocabularySources } from "@/ui/vocabulary-sources";
 import { ReviewSchedule } from "./review-schedule";
 
 const primary =
-  "inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-6 py-3 text-base font-bold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-default disabled:bg-neutral-200 disabled:text-neutral-600";
+  "vn-btn vn-btn-primary text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 const secondary =
-  "inline-flex min-h-11 items-center justify-center rounded-lg border border-neutral-300 px-4 py-2 text-base font-semibold text-neutral-800 hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
+  "vn-btn vn-btn-secondary text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 const NO_DUE_DETAIL = "No words are due. Discover a word to start learning.";
 
 function automaticReviewDateLabel(instant: string, timeZone?: string) {
@@ -62,7 +63,7 @@ export function DailyLessonPlayer({
   const [nextReview, setNextReview] =
     useState<NonNullable<DailyLessonAction["nextReview"]>>("automatic");
   const [busy, setBusy] = useState(false);
-  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [audioEnabled, setAudioEnabled] = useState(false);
   // Server and first client render intentionally share the undated label.
   const [reviewTimeZone, setReviewTimeZone] = useState<string>();
   const [error, setError] = useState("");
@@ -400,21 +401,22 @@ export function DailyLessonPlayer({
       )}
 
       {!session ? (
-        <section>
-          <h1
-            ref={heading}
-            tabIndex={-1}
-            className="text-3xl font-bold tracking-tight text-neutral-900"
-          >
+        <section className="learning-surface p-5 sm:p-7">
+          <h1 ref={heading} tabIndex={-1} className="learning-title">
             {dueCount > 0
               ? "Keep your words fresh"
               : "You’re ready for new words"}
           </h1>
-          <p className="mt-4 text-lg text-neutral-700">
+          <p className="learning-description">
             {dueCount > 0
               ? `${dueCount} ${dueCount === 1 ? "word is" : "words are"} ready. Choose the meaning, one word at a time.`
               : "Discover a word and choose whether to learn it or mark it as known."}
           </p>
+          <LearningNote>
+            {dueCount > 0
+              ? "Take your time. Choose an answer, then check it before moving on."
+              : "Come back to see which words are ready."}
+          </LearningNote>
           <div className="mt-7 flex flex-wrap gap-3">
             {dueCount > 0 ? (
               <button
@@ -433,12 +435,8 @@ export function DailyLessonPlayer({
           </div>
         </section>
       ) : session.status === "completed" ? (
-        <section>
-          <h1
-            ref={heading}
-            tabIndex={-1}
-            className="text-3xl font-bold tracking-tight text-neutral-900"
-          >
+        <section className="learning-surface p-5 sm:p-7">
+          <h1 ref={heading} tabIndex={-1} className="learning-title">
             {completionStatus !== "ready"
               ? "Review saved"
               : completionCanContinue
@@ -453,6 +451,10 @@ export function DailyLessonPlayer({
           <p className="mt-3 text-base text-neutral-600">
             {session.firstAnswersCorrect} correct on the first try.
           </p>
+          <LearningNote>
+            <p>Your next review follows each word’s saved schedule.</p>
+            <p>Come back to see which words are ready.</p>
+          </LearningNote>
           {completionStatus === "loading" && (
             <p role="status" className="mt-3 text-neutral-700">
               Checking for more words…
@@ -489,6 +491,7 @@ export function DailyLessonPlayer({
         </section>
       ) : step ? (
         <form
+          className="learning-surface p-4 sm:p-7"
           onSubmit={(event) => {
             event.preventDefault();
             if (!locked) void submit("answer");
@@ -500,10 +503,13 @@ export function DailyLessonPlayer({
           <h1
             ref={heading}
             tabIndex={-1}
-            className="mt-2 break-words text-3xl font-bold tracking-tight text-neutral-900 sm:text-[2.75rem]"
+            className="headword mt-2 text-4xl sm:text-[2.75rem]"
           >
             {step.wordText}
           </h1>
+          <p className="learning-description">
+            Choose the meaning that fits this word. You can listen if it helps.
+          </p>
           <div className="mt-2 flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <ListenButton
@@ -544,12 +550,12 @@ export function DailyLessonPlayer({
               </svg>
             </button>
           </div>
-          <fieldset disabled={locked} className="mt-4 grid gap-2">
+          <fieldset disabled={locked} className="mt-4 grid min-w-0 gap-2">
             <legend className="sr-only">Meaning of {step.wordText}</legend>
             {step.choices.map((option) => (
               <label
                 key={option.id}
-                className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 text-base leading-relaxed text-neutral-900 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${choice === option.id ? "border-primary-700 bg-primary-50" : "border-neutral-200 bg-white hover:border-primary-300"}`}
+                className={`flex min-h-14 min-w-0 cursor-pointer flex-wrap items-center gap-2 rounded-xl border-2 px-3 py-3 text-base leading-relaxed text-neutral-900 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${choice === option.id ? "border-primary-700 bg-primary-50" : "border-neutral-200 bg-white hover:border-primary-300"}`}
               >
                 <input
                   type="radio"
@@ -582,10 +588,12 @@ export function DailyLessonPlayer({
                   }}
                   className="size-5 shrink-0 accent-primary-700"
                 />
-                <span>{option.text}</span>
+                <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                  {option.text}
+                </span>
                 {feedback?.correctChoiceId === option.id && (
                   <span
-                    className="ml-auto font-bold"
+                    className="basis-full text-right font-bold"
                     aria-label="Correct meaning"
                   >
                     ✓
@@ -621,6 +629,12 @@ export function DailyLessonPlayer({
               {!feedback.skipped && feedback.reviewStep !== undefined && (
                 <p className="mt-2 text-sm font-semibold">
                   Level {feedback.reviewStep + 1} of 8
+                </p>
+              )}
+              {!feedback.skipped && !feedback.correct && (
+                <p className="mt-3 text-base">
+                  Read the meaning, then continue. Your first answer stays
+                  recorded.
                 </p>
               )}
             </div>

@@ -9,6 +9,7 @@ import type { DueWord } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
+import { LearningNote } from "@/ui/learning-guide";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
 import { saveReviewCompletionContext } from "../../_components/sentence-feedback-drafts";
 
@@ -347,17 +348,18 @@ export function ReviewSession({
 
     return (
       <div className="py-[var(--spacing-xl)]">
-        <div className="mx-auto max-w-[34rem] text-center">
+        <div className="learning-surface mx-auto max-w-[34rem] p-5 sm:p-7">
           <h2
             ref={completionHeadingRef}
             tabIndex={-1}
-            className="text-xl font-semibold text-neutral-900"
+            className="learning-title"
           >
             {completionSummary ? "Review complete" : "You're all caught up"}
           </h2>
-          <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
+          <p className="learning-description">
             {completionSummary ?? "No words are due for review right now."}
           </p>
+          <LearningNote>Come back to see which words are ready.</LearningNote>
           {lastReviewedCard && lastReviewAttemptId ? (
             <p className="mt-[var(--spacing-sm)] text-sm text-neutral-600">
               Optional: practise a reviewed word in your own sentence.
@@ -430,19 +432,19 @@ export function ReviewSession({
       ) : null}
 
       <div
-        className="mt-[var(--spacing-md)] rounded-md border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm"
+        className="learning-surface mt-[var(--spacing-md)] p-5 sm:p-7"
         aria-busy={isRefetching || isSubmitting}
       >
         {shouldShowReviewCardPrompt(isRefetching) ? (
           <>
-            <div className="mb-[var(--spacing-lg)] text-center">
+            <div className="mb-[var(--spacing-lg)]">
               <span className="inline-block rounded-full bg-neutral-100 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm text-neutral-700">
                 {currentCard.partOfSpeech}
               </span>
               <h2
                 ref={promptHeadingRef}
                 tabIndex={-1}
-                className="mt-[var(--spacing-sm)] text-3xl font-semibold text-neutral-900"
+                className="headword mt-[var(--spacing-sm)] text-4xl"
               >
                 {currentCard.wordText}
               </h2>
@@ -530,7 +532,7 @@ export function ReviewSession({
                   isRefetching,
                   hasSubmittedCurrentCard,
                 )}
-                className="min-h-11 w-full rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="vn-btn vn-btn-primary w-full text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
               >
                 Show answer
               </button>
@@ -547,6 +549,9 @@ export function ReviewSession({
                     {currentCard.learnerDefinition}
                   </p>
                 ) : null}
+                <p className="mt-3 text-base text-red-800">
+                  Read the meaning, then continue to save your answer.
+                </p>
                 <button
                   type="button"
                   onClick={() =>
@@ -561,7 +566,7 @@ export function ReviewSession({
                     isRefetching,
                     hasSubmittedCurrentCard,
                   )}
-                  className="mt-[var(--spacing-md)] min-h-11 w-full rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="vn-btn vn-btn-primary mt-[var(--spacing-md)] w-full text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
                 >
                   Continue
                 </button>
@@ -576,6 +581,10 @@ export function ReviewSession({
                     Correct
                   </p>
                 ) : null}
+                <LearningNote className="mb-4">
+                  How well did you remember? Choose a rating to save this
+                  review.
+                </LearningNote>
                 <fieldset>
                   <legend className="sr-only">
                     {isMultipleChoiceCorrect
