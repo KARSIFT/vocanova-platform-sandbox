@@ -19,6 +19,7 @@ import {
   useState,
   useSyncExternalStore,
   useTransition,
+  type FocusEvent,
 } from "react";
 import {
   ApiResponseError,
@@ -29,7 +30,6 @@ import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { getExternalMeaningPicture } from "@/lib/meaning-pictures";
 import { handleApiError } from "@/lib/session";
 import { deviceSpeech, type PronunciationState } from "@/lib/speech";
-import { meaningAnchor } from "../_components/meaning-comparison";
 import {
   applyWordState,
   confirmedWordState,
@@ -78,7 +78,7 @@ function SavedMeaning({ choice }: { choice: SavedChoice }) {
           )}
         </p>
         <Link
-          href={`/vocabulary/${encodeURIComponent(choice.word.wordSlug)}#${meaningAnchor(choice.meaningId)}`}
+          href={`/vocabulary/${encodeURIComponent(choice.word.wordSlug)}#sentence-practice-${choice.meaningId}`}
           className="vn-text-link mt-2 inline-flex min-h-11 items-center"
         >
           Use {choice.word.wordText} in a sentence
@@ -86,6 +86,32 @@ function SavedMeaning({ choice }: { choice: SavedChoice }) {
       </LearningNote>
     </section>
   );
+}
+
+function revealFocusedControl(event: FocusEvent<HTMLDivElement>) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement) || target.closest("dialog")) return;
+  // Let native keyboard scrolling settle before measuring the real
+  // reading area beneath the sticky header.
+  requestAnimationFrame(() => {
+    if (
+      !target.isConnected ||
+      document.activeElement !== target ||
+      !target.matches(":focus-visible")
+    )
+      return;
+    const header = document.querySelector("header.app-header");
+    const safeTop = (header?.getBoundingClientRect().bottom ?? 0) + 8;
+    const safeBottom = window.innerHeight - 8;
+    const bounds = target.getBoundingClientRect();
+    const delta =
+      bounds.top < safeTop
+        ? bounds.top - safeTop
+        : bounds.bottom > safeBottom
+          ? bounds.bottom - safeBottom
+          : 0;
+    if (delta) window.scrollBy({ top: delta, behavior: "instant" });
+  });
 }
 
 // Next can restore any previously visited snapshot of a range on Back or Forward.
@@ -660,7 +686,7 @@ export function Discovery({
 
   if (done)
     return (
-      <div className={styles.focus}>
+      <div className={styles.focus} onFocusCapture={revealFocusedControl}>
         {saveAnnouncement}
         <DiscoveryFinished data={data} active={started} headingRef={titleRef} />
         {savedMeaning}
@@ -669,7 +695,7 @@ export function Discovery({
 
   if (!item)
     return (
-      <div className={styles.focus}>
+      <div className={styles.focus} onFocusCapture={revealFocusedControl}>
         {saveAnnouncement}
         <p role="alert">This word could not load.</p>
         <Link href={journeyRangeHref(band)} className={styles.secondary}>
@@ -683,7 +709,7 @@ export function Discovery({
     : "";
 
   return (
-    <div className={styles.focus}>
+    <div className={styles.focus} onFocusCapture={revealFocusedControl}>
       {saveAnnouncement}
       <div className={styles.top}>
         <span className={styles.counter}>{rangeName}</span>
@@ -709,31 +735,6 @@ export function Discovery({
         <section
           aria-labelledby="discovery-intro"
           className="learning-surface mt-6 p-4 sm:p-6"
-          onFocusCapture={(event) => {
-            const target = event.target;
-            if (!(target instanceof HTMLElement)) return;
-            // Let native keyboard scrolling settle before measuring the real
-            // reading area beneath the sticky header.
-            requestAnimationFrame(() => {
-              if (
-                !target.isConnected ||
-                document.activeElement !== target ||
-                !target.matches(":focus-visible")
-              )
-                return;
-              const header = document.querySelector("header.app-header");
-              const safeTop = (header?.getBoundingClientRect().bottom ?? 0) + 8;
-              const safeBottom = window.innerHeight - 8;
-              const bounds = target.getBoundingClientRect();
-              const delta =
-                bounds.top < safeTop
-                  ? bounds.top - safeTop
-                  : bounds.bottom > safeBottom
-                    ? bounds.bottom - safeBottom
-                    : 0;
-              if (delta) window.scrollBy({ top: delta, behavior: "instant" });
-            });
-          }}
         >
           <LearningIntro
             id="discovery-intro"

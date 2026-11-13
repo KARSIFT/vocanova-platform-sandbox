@@ -138,6 +138,156 @@ test("a secondary saved meaning opens and submits its exact writing draft", asyn
   ).toContainText(draft);
 });
 
+for (const meaningId of ["mean-pour", "mean-pour-second"] as const) {
+  test(`an exact writing link restores only ${meaningId} and preserves its alias`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await context.addCookies([
+      { name: "e2e_vocabulary", value: "secondary-saved-meaning", url: baseURL! },
+    ]);
+    const api = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
+    const csrf = (await context.cookies()).find(
+      (cookie) => cookie.name === "vocanova_csrf",
+    )!.value;
+    for (const id of ["mean-pour", "mean-pour-second"]) {
+      const saved = await context.request.post(`${api}/api/v1/user-words`, {
+        headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+        data: { meaningId: id, source: "journey" },
+      });
+      expect(saved.status()).toBe(200);
+    }
+
+    const fragment = `sentence-practice-${meaningId}`;
+    const destination = `/vocabulary/pour#${fragment}`;
+    await page.goto(destination);
+    const main = page.getByRole("main");
+    const target = main.locator(`#meaning-${meaningId}`);
+    const otherId = meaningId === "mean-pour" ? "mean-pour-second" : "mean-pour";
+    const other = main.locator(`#meaning-${otherId}`);
+    const writing = target.getByRole("textbox", {
+      name: "Write a sentence using pour", exact: true,
+    });
+    const otherWriting = other.getByRole("textbox", {
+      name: "Write a sentence using pour", exact: true,
+    });
+    const disclosure = target.locator("summary").filter({ hasText: /^Optional writing$/ });
+    const personalTools = main.locator("details").filter({
+      has: page.locator("summary").filter({ hasText: /^Personal tools$/ }),
+    });
+    await expect(writing).toBeVisible();
+    await expect(otherWriting).toBeHidden();
+    await expect(page).toHaveURL(`${baseURL}${destination}`);
+    await expect(personalTools).toHaveCount(2);
+    for (const tools of await personalTools.all()) {
+      await expect(tools).not.toHaveAttribute("open");
+    }
+    // Keep the established fragment strings. Canonical aliases target the
+    // native summary; the first meaning also keeps its legacy details anchor.
+    const existingAnchor = meaningId === "mean-pour" ? "sentence-practice" : fragment;
+    await expect(disclosure.locator("..")).toHaveAttribute("open", "");
+    if (meaningId === "mean-pour") {
+      await expect(target.locator("details#sentence-practice")).toHaveAttribute("open", "");
+    }
+    await expect(main.locator(`[id="${fragment}"]`)).toHaveCount(1);
+    // Native fragment navigation sets the keyboard starting point. Revealing
+    // an editor by scrolling alone must not send Tab back through the header.
+    for (let tabs = 0; tabs < 2; tabs++) {
+      if (await writing.evaluate((element) => element === document.activeElement)) break;
+      await page.keyboard.press("Tab");
+      expect(await target.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+    }
+    await expect(writing).toBeFocused();
+    const draft = meaningId === "mean-pour"
+      ? "I pour tea into my cup."
+      : "The fans pour into the stadium.";
+    await writing.fill(draft);
+    await page.reload();
+    await expect(writing).toBeVisible();
+    await expect(writing).toHaveValue(draft);
+    await expect(otherWriting).toBeHidden();
+    await expect(page).toHaveURL(`${baseURL}${destination}`);
+
+    await disclosure.press("Enter");
+    await expect(writing).toBeHidden();
+    await expect(page).toHaveURL(`${baseURL}/vocabulary/pour`);
+    await disclosure.press("Enter");
+    await expect(writing).toBeVisible();
+    await expect(writing).toHaveValue(draft);
+    await expect(page).toHaveURL(`${baseURL}/vocabulary/pour#${existingAnchor}`);
+
+    // Ordinary meaning navigation must not turn an optional editor on, even
+    // when that meaning has an existing writing draft in this browser.
+    await disclosure.press("Enter");
+    await expect(writing).toBeHidden();
+    await page.goto(`/vocabulary/pour#meaning-${meaningId}`);
+    await page.reload();
+    await expect(writing).toBeHidden();
+    await expect(otherWriting).toBeHidden();
+    for (const tools of await personalTools.all()) {
+      await expect(tools).not.toHaveAttribute("open");
+    }
+    await page.goto("/vocabulary/pour#sentence-practice");
+    await expect(main.locator("#sentence-practice")).toHaveAttribute("open", "");
+    await expect(main.locator("#meaning-mean-pour").getByRole("textbox", {
+      name: "Write a sentence using pour", exact: true,
+    })).toBeVisible();
+    await expect(main.locator("#meaning-mean-pour-second").getByRole("textbox", {
+      name: "Write a sentence using pour", exact: true,
+    })).toBeHidden();
+  });
+
+  test(`an unsaved exact writing link lands on the ${meaningId} save row`, async ({
+    page,
+    context,
+    baseURL,
+  }, info) => {
+    await context.addCookies([
+      { name: "e2e_vocabulary", value: "secondary-saved-meaning", url: baseURL! },
+    ]);
+    const otherId = meaningId === "mean-pour" ? "mean-pour-second" : "mean-pour";
+    const csrf = (await context.cookies()).find(
+      (cookie) => cookie.name === "vocanova_csrf",
+    )!.value;
+    const saved = await context.request.post(
+      `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}/api/v1/user-words`,
+      {
+        headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+        data: { meaningId: otherId, source: "journey" },
+      },
+    );
+    expect(saved.status()).toBe(200);
+    const fragment = `sentence-practice-${meaningId}`;
+    await page.goto(`/vocabulary/pour#${fragment}`);
+    const main = page.getByRole("main");
+    const target = main.locator(`#meaning-${meaningId}`);
+    const destination = target.locator(`[id="${fragment}"]`);
+    await expect(destination).toHaveCount(1);
+    const save = destination.getByRole("button", { name: /^Save pour:/ });
+    await expect(save).toBeInViewport({ ratio: 1 });
+    const definition = target.getByText(
+      meaningId === "mean-pour"
+        ? "to make liquid flow into a container"
+        : "to arrive in large numbers",
+      { exact: true },
+    );
+    await expect(definition).toBeInViewport({ ratio: 1 });
+    const [headerBox, rowBox] = await Promise.all([
+      page.getByRole("banner").boundingBox(), destination.boundingBox(),
+    ]);
+    expect(headerBox).not.toBeNull();
+    expect(rowBox).not.toBeNull();
+    expect(rowBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+    await expect(target.getByRole("textbox", { name: "Write a sentence using pour", exact: true })).toHaveCount(0);
+    await expect(main.locator(`#meaning-${otherId}`).getByRole("textbox", {
+      name: "Write a sentence using pour", exact: true,
+    })).toBeHidden();
+    await expect(page).toHaveURL(`${baseURL}/vocabulary/pour#${fragment}`);
+    await page.screenshot({ path: info.outputPath(`unsaved-writing-target-${meaningId}.png`) });
+  });
+}
+
 test("real feedback, revision and failure retain the learner's own sentence", async ({
   page,
 }, testInfo) => {

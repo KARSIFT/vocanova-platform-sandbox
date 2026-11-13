@@ -11,12 +11,16 @@ first learning journey.
   with one filled blue action. Active review, mission targets, saved words and
   reviewed counts retain their existing sources and priority.
 - Discovery adds brief guidance and an optional writing link after a confirmed
-  Learn. It retains the original word and exact meaning while advancing normally.
+  Learn. The link opens that exact meaning's writing editor directly and retains
+  the original word while advancing normally.
   Lost receipts, replay, navigation and fresh-state reconciliation preserve the
   existing request identity and do not manufacture a saved record.
 - Each saved meaning exposes Optional writing before Personal tools. Canonical
   and saved-word routes retain exact record IDs, independent drafts, keyboard
-  disclosure behavior and existing fragments. Real feedback retains original and
+  disclosure behavior and existing fragments. Meaning-specific writing links have
+  native keyboard targets; if a saved meaning was later removed, its link reaches
+  that meaning's Save controls instead of implying an editor is available. Real
+  feedback retains original and
   corrected text, explanation, revision, retry and report controls.
 - Discovery defaults to quiet entry, including direct word links, while retaining
   an explicit sound-on session preference and manual Listen.
@@ -39,12 +43,17 @@ The final production build, lint, app/browser TypeScript, formatting and all
 302 web helper/middleware tests passed. Changed application sources predate the final build; their hashes and exact
 verification outcomes are retained with private evidence.
 
-Final new-flow acceptance passed **447 cases** across Chrome, Firefox and WebKit
+Final new-flow acceptance passed **483 cases** across Chrome, Firefox and WebKit
 at 360px, 430px and desktop, including both themes and 200% text. Twelve intentional
 skips run the 1024px Home breakpoint only in desktop projects rather than duplicate
 it in phone projects. There were zero failures, flaky cases or retry attempts.
 The final matrix includes Arial/Verdana entry stress after the first hosted run
-exposed platform font differences; earlier runs remain historical evidence.
+exposed platform font differences, plus native first/secondary writing navigation,
+unsaved-link recovery and a 360×400 short-screen check. A final compatibility
+subset passed another 72 cases across all nine engine/layout combinations with
+zero skips, failures or retries, preserving pre-hydration disclosure behavior,
+legacy fragments, drafts, authentication recovery and Discovery navigation.
+Earlier runs remain historical evidence.
 
 The surrounding Chrome regression suite passed **461 cases**, with one existing
 phone-only desktop skip and no failures, flaky cases or retries. After the last
@@ -78,6 +87,14 @@ Independent source/screenshot review and reproducing regressions found and fixed
   scrolling under the header, and a too-narrow Home main column at 1024px/200%.
 - Discovery entry controls depending on narrow-font metrics, and Profile allowing
   native submission before its client recovery was ready.
+- A mobile decision bar pinned at both edges covering later saved links and word
+  details. The bar now scrolls past later content, and very short screens use
+  normal flow so keyboard focus can clear the header.
+- A writing link opening only the meaning card, and its first-meaning alias
+  restarting keyboard navigation at the header. WebKit also required the secondary
+  alias to target the native summary rather than the non-focusable wrapper.
+  Existing bookmarks, drafts and
+  manually opened disclosure fragments remain supported.
 
 Test-harness corrections preserved business assertions: save refresh setup,
 settled fresh-map replay state, independent Personal tools expansion, explicit
@@ -101,13 +118,17 @@ has not been observed and is separate acceptance evidence.
 
 Manual synthetic browser operation exercised Home, confirmed Discovery saving,
 canonical saved writing, submitted feedback, an incorrect real review response,
-completion and return Home without playing audio. These fixtures establish
+completion and return Home without playing audio. A final mobile in-app check
+also verified confirmed saving, an opened exact writing destination and native
+Tab into its sentence field. These fixtures establish
 rendering and interaction, not production persistence, actual AI quality or
 identity-provider behavior. The local map fixture and canonical catalog are
 separate transports; the strict staging core-loop gate therefore additionally
 follows a real confirmed Discovery Learn through its canonical meaning to the
 exact saved writing record, using only the designated synthetic staging identity.
-That gate must pass before production promotion.
+The editor must already be open for the returned saved record; keyboard closing
+and reopening is also checked without submitting a sentence. That gate must pass
+before production promotion.
 
 ## Research and release limits
 

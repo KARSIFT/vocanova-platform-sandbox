@@ -179,7 +179,7 @@ for (const theme of ["light", "dark"]) {
     });
     await expect(writing).toHaveAttribute(
       "href",
-      "/vocabulary/map-word-2#meaning-map-meaning-2",
+      "/vocabulary/map-word-2#sentence-practice-map-meaning-2",
     );
     await expect(savedMeaning(page)).toContainText(
       "A synthetic meaning for this browser fixture.",
@@ -244,7 +244,7 @@ test("a lost Learn receipt exposes no writing until the original request is conf
   ).toBeFocused();
   await expect(savedMeaning(page).getByRole("link")).toHaveAttribute(
     "href",
-    "/vocabulary/map-word-2#meaning-map-meaning-2",
+    "/vocabulary/map-word-2#sentence-practice-map-meaning-2",
   );
   await expect(announcement).toHaveText("Saved be for review.");
   expect(attempts).toHaveLength(2);
@@ -346,7 +346,7 @@ test("an incomplete receipt uses the existing fresh read before offering writing
   ).toBeFocused();
   await expect(savedMeaning(page).getByRole("link")).toHaveAttribute(
     "href",
-    "/vocabulary/map-word-2#meaning-map-meaning-2",
+    "/vocabulary/map-word-2#sentence-practice-map-meaning-2",
   );
   await expect(saveConfirmation(page)).toHaveText("Saved be for review.");
 });
@@ -379,7 +379,7 @@ test("manual word, history and range navigation retire the previous save bridge"
   await page.getByRole("button", { name: "Learn", exact: true }).click();
   await expect(savedMeaning(page).getByRole("link")).toHaveAttribute(
     "href",
-    "/vocabulary/map-word-3#meaning-map-meaning-3",
+    "/vocabulary/map-word-3#sentence-practice-map-meaning-3",
   );
   await expect(announcement).toHaveText("Saved Map word 3 for review.");
   await page.getByRole("button", { name: "Word range", exact: true }).click();

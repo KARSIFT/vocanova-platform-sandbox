@@ -691,7 +691,7 @@ async function prepareEligibleReview(
           name: `Use ${word.text} in a sentence`,
           exact: true,
         });
-        const writingHref = `/vocabulary/${encodeURIComponent(word.slug)}#meaning-${candidate.meaningId}`;
+        const writingHref = `/vocabulary/${encodeURIComponent(word.slug)}#sentence-practice-${candidate.meaningId}`;
         await expect(writingLink).toHaveAttribute("href", writingHref);
         await writingLink.click();
         await expect(page).toHaveURL(new URL(writingHref, test.info().project.use.baseURL!).toString());
@@ -712,14 +712,25 @@ async function prepareEligibleReview(
           .locator("summary")
           .filter({ hasText: "Optional writing" });
         await expect(writing).toBeVisible();
+        const sentence = card.getByRole("textbox", {
+          name: `Write a sentence using ${word.text}`,
+          exact: true,
+        });
+        // The bridge opens this exact editor without an extra disclosure step.
+        await expect(sentence).toBeVisible();
+        await expect(sentence).toHaveAttribute(
+          "id",
+          `sentence-input-${savedMeaning!.userWordId}`,
+        );
         await writing.focus();
         await page.keyboard.press("Enter");
-        await expect(
-          card.getByRole("textbox", {
-            name: `Write a sentence using ${word.text}`,
-            exact: true,
-          }),
-        ).toHaveAttribute("id", `sentence-input-${savedMeaning!.userWordId}`);
+        await expect(sentence).toBeHidden();
+        await page.keyboard.press("Enter");
+        await expect(sentence).toBeVisible();
+        await expect(sentence).toHaveAttribute(
+          "id",
+          `sentence-input-${savedMeaning!.userWordId}`,
+        );
       } else {
         await page.goto(`/vocabulary/${encodeURIComponent(word.slug)}`);
         const card = page

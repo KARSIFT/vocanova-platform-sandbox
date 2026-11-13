@@ -63,7 +63,7 @@ for (const theme of ["light", "dark"] as const) {
       }),
     ).toHaveAttribute(
       "href",
-      "/vocabulary/map-word-9901#meaning-map-meaning-9901",
+      "/vocabulary/map-word-9901#sentence-practice-map-meaning-9901",
     );
     // A subsequent history selection is a different visit; the receipt must
     // not follow the learner onto another meaning.

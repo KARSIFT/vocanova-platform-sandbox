@@ -633,7 +633,6 @@
 .actions {
   position: sticky;
   z-index: 5;
-  top: 8rem;
   bottom: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
@@ -668,6 +667,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+@media (max-height: 30rem) {
+  .actions {
+    position: static;
+  }
 }
 
 @media (min-width: 40rem) {

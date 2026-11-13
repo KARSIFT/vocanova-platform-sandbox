@@ -35,7 +35,7 @@ async function expectReadableControl(
   for (const text of texts) {
     await expect(text).toBeVisible();
     const visible = await text.evaluate((element) => {
-      const button = element.closest("button, a")!;
+      const button = element.closest("button, a, summary")!;
       const buttonRect = button.getBoundingClientRect();
       const ownRect = element.getBoundingClientRect();
       const range = document.createRange();
@@ -115,6 +115,42 @@ for (const theme of ["light", "dark"] as const) {
       for (const name of ["Learn", "Already know"]) {
         const action = page.getByRole("button", { name, exact: true });
         await expectReadableControl(page, action, [action]);
+      }
+      if (textSize === 200 && page.viewportSize()!.width === 360) {
+        const originalViewport = page.viewportSize()!;
+        await page.setViewportSize({ width: 360, height: 400 });
+        for (const name of ["Learn", "Already know"]) {
+          const action = page.getByRole("button", { name, exact: true });
+          await expectReadableControl(page, action, [action]);
+        }
+        await page.setViewportSize(originalViewport);
+      }
+      if (textSize === 200) {
+        await page.route("**/api/v1/canonical-words/map-word-3", (route) =>
+          route.fulfill({ status: 503, json: { title: "Unavailable" } }),
+        );
+        await page.getByRole("button", { name: "Learn", exact: true }).click();
+        await expect(page.getByRole("heading", { name: "Map word 3", exact: true })).toBeFocused();
+        const receipt = page.getByRole("region", { name: "Saved meaning", exact: true });
+        const writing = receipt.getByRole("link", { name: "Use be in a sentence", exact: true });
+        await expect(writing).toBeVisible();
+        // Later content must remain reachable after the decision bar scrolls
+        // out of the reading area, including pointer hits on its actual text.
+        await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+        await writing.evaluate((element) => element.scrollIntoView({ block: "center" }));
+        expect(await writing.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          return hit !== null && element.contains(hit);
+        }), "The saved writing link must receive pointer hits after scrolling past decisions").toBe(true);
+        await expectReadableControl(page, writing, [writing]);
+        const summary = page.getByText("Word details & other meanings", { exact: true });
+        await expectReadableControl(page, summary, [summary], true);
+        await summary.press("Enter");
+        const retry = page.getByRole("button", { name: "Retry word details", exact: true });
+        await expect(retry).toBeVisible();
+        await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+        await expectReadableControl(page, retry, [retry], true);
       }
       await page.screenshot({
         path: info.outputPath(`discovery-${theme}-${textSize}.png`),

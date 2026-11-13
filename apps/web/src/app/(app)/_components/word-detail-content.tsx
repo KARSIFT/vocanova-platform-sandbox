@@ -74,6 +74,9 @@ export function WordDetailContent({
               meaning.reviewState,
               meaning.due,
             );
+            const writingAvailable = Boolean(
+              meaning.saved && meaning.userWordId,
+            );
 
             return (
               <li
@@ -84,7 +87,14 @@ export function WordDetailContent({
               >
                 {/* Kind of word and the save toggle share one row so the
                     definition below keeps the full reading width. */}
-                <div className="flex items-start justify-between gap-[var(--spacing-md)]">
+                <div
+                  id={
+                    writingAvailable
+                      ? undefined
+                      : `sentence-practice-${meaning.id}`
+                  }
+                  className={`flex items-start justify-between gap-[var(--spacing-md)]${writingAvailable ? "" : " scroll-mt-24"}`}
+                >
                   <p className="pos pt-2.5 text-base">{meaning.partOfSpeech}</p>
                   <MeaningSaveButton
                     meaningId={meaning.id}
@@ -135,6 +145,7 @@ export function WordDetailContent({
                           ? "sentence-practice"
                           : `sentence-practice-${meaning.id}`
                       }
+                      alias={`sentence-practice-${meaning.id}`}
                     >
                       <SentenceFeedback
                         targetWord={wordData.text}
