@@ -1,5 +1,19 @@
 # Vocanova release readiness
 
+## First-five-minutes exploration — 13 November 2026
+
+The [design comparison](../superpowers/specs/2026-11-13-first-five-minutes-design.md)
+has three working standalone prototypes and a prepared formative learner protocol.
+Local Chromium exercised 18 flows across three directions, two themes and three
+widths, with 288 layout checks (including 200% text) and 18 entry accessibility
+scans. Those checks passed after correcting the prototype's reduced-motion rule,
+which had introduced a brief inherited-color transition during theme setup.
+The coach journey and direction switcher were also manually operated in the
+ChatGPT browser. These checks establish prototype interactions only. They do not
+establish cross-engine production acceptance, actual AI feedback, persistence,
+learner success or a winning direction. Owner design selection and learner
+sessions remain pending; no production redesign or analytics is released here.
+
 The [13 November manual UI/UX audit](manual-ui-ux-audit-2026-11-13.md) records
 page/function coverage, observed repairs and evidence limits for the latest visual
 pass. Synthetic acceptance is separate from real learner/provider evidence.

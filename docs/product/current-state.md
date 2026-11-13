@@ -1,5 +1,16 @@
 # Vocanova current product state
 
+## First-five-minutes design comparison — 13 November 2026
+
+The [design proposal](../superpowers/specs/2026-11-13-first-five-minutes-design.md)
+and [three clickable directions](../design/prototypes/first-five-minutes/README.md)
+provide a concrete comparison target before further production redesign.
+They are isolated, disposable fixtures, not changes to the live learning system.
+The [comparison study](first-five-minutes-study-2026-11-13.md) and blank observation
+CSV are prepared; sessions remain zero and the owner arranges participants.
+Warm guided coach is recommended; selection and approval of the concrete design
+remain pending. Production implementation and telemetry are not claimed.
+
 ## Manual visual review — 13 November 2026
 
 The [page-by-page audit](manual-ui-ux-audit-2026-11-13.md) records 43 visited route

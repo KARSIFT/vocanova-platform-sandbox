@@ -1,0 +1,500 @@
+/* Three reviewable visual directions for the same disposable learning journey.
+ * Common layout, semantics, controls and state live in the prototype shell.
+ * This file changes presentation only; every selector is direction scoped.
+ */
+
+/* 01 — The pocket dictionary. Crisp rules, a generous headword and a useful
+ * illustration in the margin make the learning material feel worth keeping. */
+body[data-direction="dictionary"] {
+  --radius: 8px;
+  --shadow: none;
+  --direction-accent: var(--blue);
+}
+body[data-direction="dictionary"] .app-header {
+  border-bottom: 1px solid var(--line);
+  box-shadow: none;
+}
+body[data-direction="dictionary"] .brand {
+  letter-spacing: -0.035em;
+}
+body[data-direction="dictionary"] .mark {
+  border-radius: 7px;
+}
+body[data-direction="dictionary"] .app-shell {
+  padding-top: 1.5rem;
+}
+body[data-direction="dictionary"] .eyebrow {
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+body[data-direction="dictionary"] .page-title {
+  max-width: 22ch;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+}
+body[data-direction="dictionary"] .intro {
+  max-width: 58ch;
+}
+body[data-direction="dictionary"] .hero {
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: none;
+}
+body[data-direction="dictionary"] .hero-copy {
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+body[data-direction="dictionary"] .hero-visual {
+  padding: clamp(1rem, 2.5vw, 2rem);
+  background: var(--canvas);
+  border-top: 1px solid var(--line);
+}
+body[data-direction="dictionary"] .surface {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: none;
+}
+body[data-direction="dictionary"] .card-title,
+body[data-direction="dictionary"] .section-heading {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+body[data-direction="dictionary"] .word {
+  font-family: var(--display-font);
+  font-size: clamp(2.5rem, 7vw, 4.25rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 1.1;
+}
+body[data-direction="dictionary"] .pos {
+  font-family: var(--display-font);
+  font-style: italic;
+}
+body[data-direction="dictionary"] .definition {
+  max-width: 38ch;
+  font-size: 1.125rem;
+  line-height: 1.65;
+}
+body[data-direction="dictionary"] .example {
+  margin-inline: 0;
+  padding: 0.75rem 0 0.75rem 1rem;
+  border-left: 2px solid var(--blue);
+  background: transparent;
+  border-radius: 0;
+  line-height: 1.7;
+}
+body[data-direction="dictionary"] .word-image {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+body[data-direction="dictionary"] .steps {
+  gap: 0.6rem;
+}
+body[data-direction="dictionary"] .step-dot {
+  border-radius: 3px;
+}
+body[data-direction="dictionary"] .step-meta {
+  font-size: 0.8125rem;
+  letter-spacing: 0.025em;
+}
+body[data-direction="dictionary"] .primary,
+body[data-direction="dictionary"] .secondary,
+body[data-direction="dictionary"] .option {
+  border-radius: 6px;
+}
+body[data-direction="dictionary"] .coach-note,
+body[data-direction="dictionary"] .notice {
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: none;
+}
+body[data-direction="dictionary"] .detail-row {
+  border-top: 1px solid var(--line);
+}
+body[data-direction="dictionary"] .goal-track,
+body[data-direction="dictionary"] .goal-fill {
+  border-radius: 2px;
+}
+body[data-direction="dictionary"] .footer-nav {
+  box-shadow: none;
+}
+body[data-direction="dictionary"] .nav-item[aria-current="page"] {
+  border-radius: 5px;
+}
+
+/* 02 — A quiet coach. The next step gets the most space; the surrounding
+ * product feels calm and helpful without turning feedback into a reward show. */
+body[data-direction="coach"] {
+  --radius: 18px;
+  --shadow: 0 8px 28px rgb(23 23 23 / 0.035);
+  --direction-accent: var(--blue);
+}
+body[data-direction="coach"] .app-header {
+  box-shadow: none;
+}
+body[data-direction="coach"] .brand {
+  letter-spacing: -0.035em;
+}
+body[data-direction="coach"] .mark {
+  border-radius: 11px;
+}
+body[data-direction="coach"] .app-shell {
+  padding-top: 1.5rem;
+}
+body[data-direction="coach"] .eyebrow {
+  font-weight: 650;
+  letter-spacing: 0.015em;
+}
+body[data-direction="coach"] .page-title {
+  max-width: 24ch;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  letter-spacing: -0.045em;
+  line-height: 1.17;
+}
+body[data-direction="coach"] .intro {
+  max-width: 54ch;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+}
+body[data-direction="coach"] .hero {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  gap: 0;
+}
+body[data-direction="coach"] .hero-copy {
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+body[data-direction="coach"] .hero-visual {
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  background: var(--blue-soft);
+}
+body[data-direction="coach"] .surface {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+body[data-direction="coach"] .card-title,
+body[data-direction="coach"] .section-heading {
+  font-size: 1.0625rem;
+  letter-spacing: -0.02em;
+}
+body[data-direction="coach"] .word {
+  font-family: var(--display-font);
+  font-size: clamp(2.75rem, 7vw, 4.5rem);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1.15;
+}
+body[data-direction="coach"] .pos {
+  font-family: var(--display-font);
+  font-style: italic;
+}
+body[data-direction="coach"] .definition {
+  max-width: 39ch;
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+body[data-direction="coach"] .example {
+  margin-inline: 0;
+  padding: 1rem 1.125rem;
+  background: var(--canvas);
+  border: 0;
+  border-radius: 10px;
+  line-height: 1.7;
+}
+body[data-direction="coach"] .word-image {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+}
+body[data-direction="coach"] .step-meta {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+body[data-direction="coach"] .steps {
+  gap: 0.5rem;
+}
+body[data-direction="coach"] .step-dot {
+  border-radius: 999px;
+}
+body[data-direction="coach"] .primary,
+body[data-direction="coach"] .secondary {
+  border-radius: 11px;
+  padding-inline: 1.5rem;
+}
+body[data-direction="coach"] .option {
+  border-radius: 12px;
+  padding: 1rem 1.125rem;
+}
+body[data-direction="coach"] .option[aria-pressed="true"],
+body[data-direction="coach"] .option[aria-checked="true"] {
+  box-shadow: inset 0 0 0 1px var(--blue);
+}
+body[data-direction="coach"] .coach-note {
+  background: var(--blue-soft);
+  border: 0;
+  border-left: 3px solid var(--blue);
+  border-radius: 0 10px 10px 0;
+  line-height: 1.65;
+}
+body[data-direction="coach"] .feedback {
+  padding: 1.125rem;
+  border-radius: 12px;
+  line-height: 1.65;
+}
+body[data-direction="coach"] .notice {
+  border-radius: 10px;
+}
+body[data-direction="coach"] .goal-row {
+  gap: 1rem;
+}
+body[data-direction="coach"] .goal-track {
+  height: 7px;
+  border-radius: 999px;
+}
+body[data-direction="coach"] .goal-fill {
+  border-radius: 999px;
+}
+body[data-direction="coach"] .footer-nav {
+  box-shadow: 0 -4px 20px rgb(23 23 23 / 0.025);
+}
+body[data-direction="coach"] .nav-item[aria-current="page"] {
+  border-radius: 10px;
+}
+
+/* 03 — English in everyday places. A larger illustration introduces the
+ * situation, while the word and controls retain a clear reading surface. */
+body[data-direction="situations"] {
+  --radius: 14px;
+  --shadow: none;
+  --direction-accent: var(--blue);
+}
+body[data-direction="situations"] .app-header {
+  box-shadow: none;
+}
+body[data-direction="situations"] .brand {
+  letter-spacing: -0.03em;
+}
+body[data-direction="situations"] .mark {
+  border-radius: 9px;
+}
+body[data-direction="situations"] .app-shell {
+  padding-top: 1.5rem;
+}
+body[data-direction="situations"] .eyebrow {
+  font-weight: 700;
+  letter-spacing: 0.035em;
+}
+body[data-direction="situations"] .page-title {
+  max-width: 25ch;
+  font-size: clamp(1.75rem, 3vw, 2.375rem);
+  line-height: 1.13;
+  letter-spacing: -0.045em;
+}
+body[data-direction="situations"] .intro {
+  max-width: 54ch;
+  line-height: 1.7;
+}
+body[data-direction="situations"] .hero {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: none;
+  gap: 0;
+}
+body[data-direction="situations"] .hero-copy {
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+body[data-direction="situations"] .hero-visual {
+  padding: 0;
+  background: var(--canvas);
+  min-width: 0;
+}
+body[data-direction="situations"] .hero-visual .word-image {
+  display: block;
+  height: auto;
+  min-height: 0;
+  border-radius: 0;
+  object-fit: cover;
+}
+body[data-direction="situations"] .surface {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: none;
+}
+body[data-direction="situations"] .card-title,
+body[data-direction="situations"] .section-heading {
+  font-size: 1.0625rem;
+  letter-spacing: -0.02em;
+}
+body[data-direction="situations"] .word {
+  font-family: var(--display-font);
+  font-size: clamp(2.5rem, 6.5vw, 4.125rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.05em;
+}
+body[data-direction="situations"] .pos {
+  font-family: var(--display-font);
+  font-style: italic;
+}
+body[data-direction="situations"] .definition {
+  max-width: 38ch;
+  font-size: 1.125rem;
+  line-height: 1.65;
+}
+body[data-direction="situations"] .example {
+  margin-inline: 0;
+  padding: 0.875rem 1rem;
+  background: var(--blue-soft);
+  border: 0;
+  border-radius: 8px;
+  line-height: 1.7;
+}
+body[data-direction="situations"] .word-image {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+}
+body[data-direction="situations"] .step-meta {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+body[data-direction="situations"] .steps {
+  gap: 0.4rem;
+}
+body[data-direction="situations"] .step-dot {
+  border-radius: 4px;
+}
+body[data-direction="situations"] .primary,
+body[data-direction="situations"] .secondary,
+body[data-direction="situations"] .option {
+  border-radius: 9px;
+}
+body[data-direction="situations"] .coach-note {
+  padding: 1rem 1.125rem;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  line-height: 1.65;
+}
+body[data-direction="situations"] .notice,
+body[data-direction="situations"] .feedback {
+  border-radius: 9px;
+}
+body[data-direction="situations"] .goal-track,
+body[data-direction="situations"] .goal-fill {
+  border-radius: 4px;
+}
+body[data-direction="situations"] .footer-nav {
+  box-shadow: none;
+}
+body[data-direction="situations"] .nav-item[aria-current="page"] {
+  border-radius: 9px;
+}
+
+/* Refinement after viewing the real first-run screens: keep the complete
+ * invitation scene, remove the card-within-card frame and use app-sized copy. */
+body[data-direction] .hero {
+  gap: 0;
+  overflow: hidden;
+}
+body[data-direction] .hero > .surface {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+body[data-direction] .hero-visual .card-title {
+  margin-top: 0.5rem;
+}
+body[data-direction] .hero-visual .word-image {
+  margin-top: 1rem;
+}
+body[data-direction] .hero-copy .coach-note {
+  padding: 0.75rem 0.875rem;
+  margin-bottom: 0;
+  font-size: 0.9375rem;
+}
+body[data-direction="dictionary"] .hero-visual {
+  background: var(--canvas);
+}
+body[data-direction="coach"] .hero-visual {
+  padding: 1.5rem;
+  background: var(--blue-soft);
+}
+body[data-direction="situations"] .hero-visual {
+  padding: 1.25rem;
+  background: var(--canvas);
+}
+body[data-direction="situations"] .hero-visual .word-image {
+  border-radius: 8px;
+}
+
+/* Presentation must stay readable when browser text is enlarged. Grid tracks
+ * use zero minima; no direction relies on fixed heights or clamped copy. */
+@media (min-width: 52rem) {
+  body[data-direction="dictionary"] .hero {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.85fr);
+  }
+  body[data-direction="dictionary"] .hero-visual {
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+  body[data-direction="coach"] .hero {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.9fr);
+  }
+  body[data-direction="situations"] .hero {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  }
+}
+@media (max-width: 35rem) {
+  body[data-direction] .hero-copy {
+    padding: 1.25rem;
+  }
+  body[data-direction="dictionary"] .hero-visual,
+  body[data-direction="coach"] .hero-visual {
+    padding: 1rem;
+  }
+  body[data-direction="situations"] .hero-visual .word-image {
+    min-height: 0;
+    height: auto;
+  }
+  body[data-direction] .word {
+    overflow-wrap: anywhere;
+  }
+}
+body[data-direction][data-theme="dark"] .hero,
+body[data-direction][data-theme="dark"] .surface {
+  box-shadow: none;
+}
+body[data-direction][data-theme="dark"] .footer-nav {
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-direction] *,
+  body[data-direction] *::before,
+  body[data-direction] *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
