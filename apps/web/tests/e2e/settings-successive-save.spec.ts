@@ -83,7 +83,11 @@ test.describe("Settings successive saves", () => {
     const displayName = page.getByRole("textbox", { name: "Display name" });
     await displayName.fill("Retry after failure");
     await page.getByRole("button", { name: "Save settings" }).click();
-    await expect(page.getByText("HTTP 500", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("We couldn't save your settings. Please try again.", {
+        exact: true,
+      }),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Save settings" }).click();
     await expect(

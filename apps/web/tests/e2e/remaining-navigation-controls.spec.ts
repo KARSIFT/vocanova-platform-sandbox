@@ -37,7 +37,7 @@ for (const theme of ["light", "dark"] as const) {
 
     test("saved words and Journey secondary links reach their healthy destinations", async ({ page }) => {
       for (const [source, sourceHeading, name, href, heading] of [
-        ["/words", "Saved vocabulary", "Discover new words", "/discover", "Journey"],
+        ["/words", "Saved vocabulary", "Explore Journey", "/discover", "Journey"],
         ["/words", "Saved vocabulary", "Organize meanings in personal lists", "/lists", "Personal lists"],
         ["/discover", "Journey", "All situations", "/courses", "Situation courses"],
       ] as const) {
@@ -56,6 +56,8 @@ for (const theme of ["light", "dark"] as const) {
       await expect(progress).toContainText(/1 of \d+ words saved/);
       await activate(page, progress.getByRole("link", { name: "View saved vocabulary", exact: true }), "/words", "Saved vocabulary");
       await expect(page.getByRole("link", { name: "Open invite details and sentence practice", exact: true })).toBeVisible();
+      await expect(page.getByRole("main").getByRole("link", { name: "Explore Journey", exact: true })).toHaveCount(0);
+      await activate(page, page.getByRole("main").getByRole("link", { name: "Discover new words", exact: true }), "/discover", "Journey");
     });
 
     test("empty lists and meaning-list tools open the actual selected list", async ({ page }) => {

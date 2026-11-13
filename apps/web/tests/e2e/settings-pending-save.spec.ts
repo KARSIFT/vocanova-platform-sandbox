@@ -170,7 +170,7 @@ test("retains newer edits after a pending save fails and retries all unsaved cha
   });
   await expect(
     page.getByRole("form", { name: "Practice settings" }).getByRole("alert"),
-  ).toContainText("HTTP 500");
+  ).toHaveText("We couldn't save your settings. Please try again.");
   await expect(name).toHaveValue("Name after failure");
   await expect(
     page.getByRole("radio", { name: "5", exact: true }),

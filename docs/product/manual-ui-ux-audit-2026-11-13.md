@@ -13,6 +13,7 @@ belongs to the consolidated delivery PR.
 | Landing columns overlapped and benefit labels clipped at 1024px with 200% text   | Content now wraps according to its reading width; normal desktop remains side-by-side and enlarged text stays readable without horizontal scroll.                                            |
 | Sentence History's inline return link touched its page label                     | Return navigation and introduction occupy separate rows, including enlarged text.                                                                                                            |
 | Plan controls touched on desktop and gained accidental indentation when wrapping | A single wrapping action group supplies consistent horizontal and vertical gaps.                                                                                                             |
+| At 200% text, Practice's path action exceeded its indented row on narrow screens | The active action now has a full row inside the card; both Start and Continue stay bounded and keyboard accessible.                                                                          |
 | Home's empty latest-word message used oversized dictionary typography            | Empty copy uses the normal interface font at the smaller label scale; real words keep their serif styling.                                                                                   |
 | Account export differed from adjacent cards in padding, radius and heading size  | The export uses the same Surface and heading scale as peer account tools.                                                                                                                    |
 | Every story card and several optional Plan actions looked equally primary        | Story browsing uses outline actions; one available continuation can be primary. Plan promotes a ready review or the recommendation, with preference controls secondary.                      |
@@ -62,6 +63,13 @@ were qualified and replaced where used for final visual conclusions.
 
 - New layout, learning hierarchy and selected-control regressions: **144 passed**,
   across three engines, three widths and both themes; zero skips/failures/flakes.
+- Full hosted regression exposed the narrow Practice action overflow, which the
+  local system font had kept inside the viewport despite exceeding its row.
+  A stricter row-containment test failed before repair, then **18 passed** across
+  all nine engine/layout projects and both themes for Start and Continue. Existing
+  navigation tests now operate the retained empty-state action and still exercise
+  the populated header. Settings retry tests require the authored recovery message
+  instead of the replaced raw HTTP status; mutation assertions remain intact.
 - Boundary audit: **168 passed** at 561/768/1024px in both themes, including
   enlarged text. The new Landing regression checks normal desktop columns,
   page/title/benefit reflow at 100% and 200%, and keyboard access. Six additional

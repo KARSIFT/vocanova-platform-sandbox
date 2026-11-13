@@ -220,7 +220,7 @@ export function PracticeJourney({
               <li
                 key={number}
                 aria-current={active ? "step" : undefined}
-                className="flex items-start gap-3 py-3"
+                className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 py-3"
               >
                 <span
                   aria-hidden="true"
@@ -243,25 +243,25 @@ export function PracticeJourney({
                           : "Your next step"
                         : "Coming next"}
                   </p>
-                  {active &&
-                    (current ? (
-                      <Link
-                        href={`/practice/session/${encodeURIComponent(current.id)}`}
-                        className={`${primaryAction} mt-3`}
-                      >
-                        Continue practice
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void start()}
-                        className={`${primaryAction} mt-3`}
-                      >
-                        Start practice lesson
-                      </button>
-                    ))}
                 </div>
+                {active &&
+                  (current ? (
+                    <Link
+                      href={`/practice/session/${encodeURIComponent(current.id)}`}
+                      className={`${primaryAction} col-span-2 mt-3 max-w-full justify-self-start [overflow-wrap:anywhere]`}
+                    >
+                      Continue practice
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void start()}
+                      className={`${primaryAction} col-span-2 mt-3 max-w-full justify-self-start [overflow-wrap:anywhere]`}
+                    >
+                      Start practice lesson
+                    </button>
+                  ))}
               </li>
             );
           })}

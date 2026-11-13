@@ -48,6 +48,28 @@ for (const theme of ["light", "dark"] as const) {
       await page.addInitScript((value) => localStorage.setItem("vocanova:theme-preference", value), theme);
     });
 
+    test("practice path actions stay within their row with enlarged text", async ({ page }) => {
+      for (const name of ["Start practice lesson", "Continue practice"]) {
+        await page.goto("/practice");
+        await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+        const action = page.getByRole(name === "Start practice lesson" ? "button" : "link", { name, exact: true });
+        await expect(action).toBeVisible();
+        const bounds = await action.evaluate((element) => {
+          const button = element.getBoundingClientRect();
+          const row = element.closest("li")!.getBoundingClientRect();
+          return { left: button.left >= row.left, right: button.right <= row.right };
+        });
+        expect(bounds).toEqual({ left: true, right: true });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        await action.focus();
+        await expect(action).toBeFocused();
+        if (name === "Start practice lesson") {
+          await action.press("Enter");
+          await expect(page).toHaveURL(/\/practice\/session\/[^/]+$/u);
+        }
+      }
+    });
+
     test("typed recall separates its intact prompt from the focused task heading", async ({ page }) => {
       let session = await startPractice(page, "Start typed recall");
       const main = page.getByRole("main");
