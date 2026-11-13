@@ -1,10 +1,11 @@
 # Vocanova: a clear first five minutes
 
-Status: **design proposal and working prototypes; owner selection pending**.
+Status: **approved — Warm guided coach**, 13 November 2026.
 Prepared 13 November 2026 against main `9e1c242f` / release 0.4.32.
 The owner authorized the design, comparison, study preparation and subsequent
-delivery workflow. The recommended visual direction below is a proposal, not a
-recorded learner finding or an approval of these specific screens.
+delivery workflow. The owner selected “Approve Warm guided coach and the proposal (Recommended)”
+after reviewing the clickable concepts. This is a product decision, not a learner
+study finding.
 
 ## Intent
 
@@ -96,7 +97,7 @@ plan:
 
 - `apps/web/src/app/(app)/home/page.tsx`: entry hierarchy while retaining the
   server-selected action and actual mission/queue distinctions.
-- `apps/web/src/app/discovery/`: confirmed save/next-step presentation, preserving
+- `apps/web/src/app/(app)/discovery/`: confirmed save/next-step presentation, preserving
   cursor, revision, pending intent and retry behavior.
 - `apps/web/src/app/(app)/_components/word-detail-content.tsx`: exact-meaning
   writing entry and optional tools.

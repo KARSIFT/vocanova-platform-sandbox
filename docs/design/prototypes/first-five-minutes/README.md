@@ -7,14 +7,14 @@ API calls, analytics, saved progress or AI evaluation are involved.
 From the repository root:
 
 ```sh
-python3 -m http.server 3100 --bind 127.0.0.1 --directory docs/design/prototypes/first-five-minutes
+python3 -m http.server 3102 --bind 127.0.0.1 --directory docs/design/prototypes/first-five-minutes
 ```
 
 Open one direction:
 
-- [Calm dictionary](http://127.0.0.1:3100/?direction=dictionary)
-- [Warm guided coach — recommended for discussion](http://127.0.0.1:3100/?direction=coach)
-- [Visual situations](http://127.0.0.1:3100/?direction=situations)
+- [Calm dictionary](http://127.0.0.1:3102/?direction=dictionary)
+- [Warm guided coach — recommended for discussion](http://127.0.0.1:3102/?direction=coach)
+- [Visual situations](http://127.0.0.1:3102/?direction=situations)
 
 Use **Compare designs and preview states** above the product to switch directions,
 themes or scenarios. Collapse it before a learner's first attempt. Scenario values
@@ -35,5 +35,5 @@ Its meaning and context remain intact; this work does not replace catalog conten
 
 See the [design proposal](../../../superpowers/specs/2026-11-13-first-five-minutes-design.md)
 and [learner protocol](../../../product/first-five-minutes-study-2026-11-13.md).
-The owner will select a direction before production implementation. No learner
+The owner approved Warm guided coach and the design proposal on13 November2026; production integration is being validated separately. No learner
 sessions or design winner are claimed.

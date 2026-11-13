@@ -8,8 +8,8 @@ provide a concrete comparison target before further production redesign.
 They are isolated, disposable fixtures, not changes to the live learning system.
 The [comparison study](first-five-minutes-study-2026-11-13.md) and blank observation
 CSV are prepared; sessions remain zero and the owner arranges participants.
-Warm guided coach is recommended; selection and approval of the concrete design
-remain pending. Production implementation and telemetry are not claimed.
+The owner approved Warm guided coach and the concrete proposal. Production
+integration is in progress on the delivery branch; telemetry is not implemented.
 
 ## Manual visual review — 13 November 2026
 
