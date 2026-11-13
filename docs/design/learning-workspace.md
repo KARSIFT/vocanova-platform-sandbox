@@ -5,6 +5,42 @@ The learner should recognise the same product from the public introduction throu
 sign-in, daily practice, and account settings. Real words and situations give the
 interface its character; progress and next actions give it structure.
 
+## Warm guided coach — 13 November 2026
+
+The owner approved the [Warm guided coach proposal](../superpowers/specs/2026-11-13-first-five-minutes-design.md)
+after comparing three working concepts. The production learning journey keeps the
+existing destinations, real queue and individual activities while using a calmer
+reading surface, one clear next action and brief, practical guidance.
+
+- Shared `LearningIntro` and `LearningNote` establish a consistent reading order
+  and use existing generated palette roles. Guidance is ordinary content;
+  confirmed save and feedback announcements remain with their state owners.
+- Home places its server-selected next activity on a neutral surface with a blue
+  action. Mission targets, reviewed counts and available queue stay distinct.
+- Discovery still advances after a confirmed choice. A confirmed Learn may show
+  an optional saved-meaning link containing the original word and meaning ID.
+  Pending, uncertain or superseded saves do not invent a writing destination.
+  A persistent polite status container receives the same confirmed receipt;
+  visible guidance remains ordinary content, avoiding duplicate live messages.
+- Saved meanings expose Optional writing before Personal tools. Each meaning
+  retains its own saved record, fragment, draft and real feedback. Writing and
+  personal organization open independently with native keyboard controls.
+- Discovery and daily review start with automatic sound off. Discovery retains
+  an explicit sound-on choice for that browser session; manual Listen and the
+  sound toggles remain available. Feedback and completion describe the returned
+  result and schedule without claiming mastery or a fixed future workload.
+
+Entry controls must fit common fallback fonts as well as the preferred system
+font. They keep aligned equal-height targets at normal size and stack with intact
+words as text grows. Keyboard focus is revealed beneath the actual sticky header.
+Profile editing and Save wait for the signed-in user's draft recovery; a visible
+loading state explains the brief delay without exposing implementation details.
+The tab icon reuses the existing blue lettermark.
+
+The standalone comparison is a design artifact. Its sample feedback and schedule
+are not production functionality or learner evidence. The prepared study still
+has zero observed sessions; no production analytics collector is introduced.
+
 ## Mobile production feedback — 9 November 2026
 
 - The focused header logo links to Home. The logo uses the blue lettermark alone.
@@ -125,7 +161,7 @@ keeping its palette roles, control sizes and layered control styles.
 - Authentication shares the brand and visual language of the learning workspace.
   Only configured sign-in methods appear. Visual changes do not activate password
   registration; its verification and recovery email requirements still apply.
-- Home reads in one order on phones: the next step (the blue panel with the
+- Home reads in one order on phones: the next step (the calm surface with the
   backend-selected action and "Reviewed today"), today's goal (the mission's own
   review, new-word and optional sentence values and status), keep going (the
   practice path and, when review is next, a Discover row), then the latest saved

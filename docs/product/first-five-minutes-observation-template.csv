@@ -1,0 +1,2 @@
+participant_alias,direction,exposure_index,evidence_class,scenario,task_id,window_phase,outcome,first_click_target,wrong_turn_count,elapsed_seconds,exact_task_prompt,exact_assistance,observed_behavior,goal_paraphrase,meaning_paraphrase,feedback_interpretation,literal_quote_if_consented,interpretation,issue_kind,not_tested_reason,private_evidence_reference
+,,,,,,,,,,,,,,,,,,,,,

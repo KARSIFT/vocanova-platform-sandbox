@@ -18,10 +18,14 @@ export async function pressTab(
   await page.keyboard.press([...modifiers.filter(Boolean), "Tab"].join("+"));
 }
 
-export async function expectKeyboardTargetClear(page: Page, target: Locator) {
+export async function expectKeyboardTargetClear(
+  page: Page,
+  target: Locator,
+  { backwardsFirst = false }: { backwardsFirst?: boolean } = {},
+) {
   await target.focus();
-  await pressTab(page);
-  await pressTab(page, { backwards: true });
+  await pressTab(page, { backwards: backwardsFirst });
+  await pressTab(page, { backwards: !backwardsFirst });
   await expect(target).toBeFocused();
   await expect.poll(() => target.evaluate((element) => {
     const rect = element.getBoundingClientRect();

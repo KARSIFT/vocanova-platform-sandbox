@@ -610,7 +610,23 @@ async function readReviewedTodayCountAfterReviews(
 async function prepareEligibleReview(
   page: Page,
   apiOrigin: string,
+  verifyWritingBridge = false,
 ): Promise<KnowledgeMapItem> {
+  if (verifyWritingBridge) {
+    const expectedEmail =
+      process.env.VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL ??
+      "smoke-test-bot@synthetic.vocanova.invalid";
+    const me = await readStagingState<CurrentUser>(
+      page,
+      apiOrigin,
+      "/api/v1/me",
+    );
+    expect(
+      expectedEmail.endsWith("@synthetic.vocanova.invalid") &&
+        me.email === expectedEmail,
+      "Only the designated synthetic staging identity may exercise the save-to-writing bridge.",
+    ).toBe(true);
+  }
   let attempted = 0;
   for (const band of REVIEW_SEED_BANDS) {
     const map = await readStagingState<KnowledgeMap>(
@@ -646,33 +662,105 @@ async function prepareEligibleReview(
         meaning.selfReportedKnown
       )
         continue;
-      await page.goto(`/vocabulary/${encodeURIComponent(word.slug)}`);
-      const card = page
-        .getByRole("main")
-        .locator(`li[id="meaning-${candidate.meaningId}"]`);
-      const save = card.getByRole("button", {
-        name: `Save ${word.text}: ${meaning.shortDefinition}`,
-        exact: true,
-      });
-      await expect(save).toBeVisible();
-      const saved = page.waitForResponse(
-        (response) =>
-          response.request().method() === "POST" &&
-          new URL(response.url()).origin === apiOrigin &&
-          new URL(response.url()).pathname === "/api/v1/user-words" &&
-          response.request().postDataJSON()?.meaningId === candidate.meaningId,
-      );
-      await save.click();
-      expect(
-        (await saved).ok(),
-        "The real UI must acknowledge saving this exact synthetic review meaning.",
-      ).toBe(true);
-      await expect(
-        card.getByRole("button", {
-          name: `Remove ${word.text} from saved words`,
+      if (verifyWritingBridge) {
+        await page.goto(
+          `/discovery?band=${band}&word=${candidate.rank}&active=1&revisit=1`,
+        );
+        await expect(
+          page.getByRole("heading", { name: word.text, level: 1, exact: true }),
+        ).toBeVisible();
+        const decision = page.waitForResponse(
+          (response) =>
+            response.request().method() === "POST" &&
+            new URL(response.url()).origin === apiOrigin &&
+            new URL(response.url()).pathname ===
+              "/api/v1/knowledge-map/decisions" &&
+            response.request().postDataJSON()?.meaningId ===
+              candidate.meaningId,
+        );
+        await page.getByRole("button", { name: "Learn", exact: true }).click();
+        expect(
+          (await decision).ok(),
+          "The real API must confirm this exact Learn choice.",
+        ).toBe(true);
+        const bridge = page.getByRole("region", {
+          name: "Saved meaning",
           exact: true,
-        }),
-      ).toHaveAttribute("aria-pressed", "true");
+        });
+        const writingLink = bridge.getByRole("link", {
+          name: `Use ${word.text} in a sentence`,
+          exact: true,
+        });
+        const writingHref = `/vocabulary/${encodeURIComponent(word.slug)}#sentence-practice-${candidate.meaningId}`;
+        await expect(writingLink).toHaveAttribute("href", writingHref);
+        await writingLink.click();
+        await expect(page).toHaveURL(new URL(writingHref, test.info().project.use.baseURL!).toString());
+        const confirmedWord = await readStagingState<WordDetailResponse>(
+          page,
+          apiOrigin,
+          `/api/v1/canonical-words/${encodeURIComponent(word.slug)}`,
+        );
+        const savedMeaning = confirmedWord.word.meanings.find(
+          (item) => item.id === candidate.meaningId,
+        );
+        expect(savedMeaning?.saved).toBe(true);
+        expect(savedMeaning?.userWordId).toBeTruthy();
+        const card = page
+          .getByRole("main")
+          .locator(`li[id="meaning-${candidate.meaningId}"]`);
+        const writing = card
+          .locator("summary")
+          .filter({ hasText: "Optional writing" });
+        await expect(writing).toBeVisible();
+        const sentence = card.getByRole("textbox", {
+          name: `Write a sentence using ${word.text}`,
+          exact: true,
+        });
+        // The bridge opens this exact editor without an extra disclosure step.
+        await expect(sentence).toBeVisible();
+        await expect(sentence).toHaveAttribute(
+          "id",
+          `sentence-input-${savedMeaning!.userWordId}`,
+        );
+        await writing.focus();
+        await page.keyboard.press("Enter");
+        await expect(sentence).toBeHidden();
+        await page.keyboard.press("Enter");
+        await expect(sentence).toBeVisible();
+        await expect(sentence).toHaveAttribute(
+          "id",
+          `sentence-input-${savedMeaning!.userWordId}`,
+        );
+      } else {
+        await page.goto(`/vocabulary/${encodeURIComponent(word.slug)}`);
+        const card = page
+          .getByRole("main")
+          .locator(`li[id="meaning-${candidate.meaningId}"]`);
+        const save = card.getByRole("button", {
+          name: `Save ${word.text}: ${meaning.shortDefinition}`,
+          exact: true,
+        });
+        await expect(save).toBeVisible();
+        const saved = page.waitForResponse(
+          (response) =>
+            response.request().method() === "POST" &&
+            new URL(response.url()).origin === apiOrigin &&
+            new URL(response.url()).pathname === "/api/v1/user-words" &&
+            response.request().postDataJSON()?.meaningId ===
+              candidate.meaningId,
+        );
+        await save.click();
+        expect(
+          (await saved).ok(),
+          "The real UI must acknowledge saving this exact synthetic review meaning.",
+        ).toBe(true);
+        await expect(
+          card.getByRole("button", {
+            name: `Remove ${word.text} from saved words`,
+            exact: true,
+          }),
+        ).toHaveAttribute("aria-pressed", "true");
+      }
       const confirmed = await readStagingState<KnowledgeMap>(
         page,
         apiOrigin,
@@ -904,6 +992,11 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         "Refuse assessment outside the designated synthetic account.",
       ).toBe(true);
       await verifyRealKnowledgeMap(page, apiOrigin);
+      expect(await readReviewedTodayCount(page)).toBe(reviewedBefore);
+    });
+
+    await test.step("2c. follow a confirmed discovery save to its exact writing meaning", async () => {
+      await prepareEligibleReview(page, apiOrigin, true);
       expect(await readReviewedTodayCount(page)).toBe(reviewedBefore);
     });
 

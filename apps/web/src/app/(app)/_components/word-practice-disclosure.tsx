@@ -2,14 +2,22 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 
-function persistDisclosureTarget(anchor: string, open: boolean) {
+function matchesDisclosureTarget(hash: string, anchor: string, alias?: string) {
+  return hash === `#${anchor}` || (alias !== undefined && hash === `#${alias}`);
+}
+
+function persistDisclosureTarget(
+  anchor: string,
+  open: boolean,
+  alias?: string,
+) {
   const url = new URL(window.location.href);
   if (open) {
-    if (url.hash === `#${anchor}`) return;
+    if (matchesDisclosureTarget(url.hash, anchor, alias)) return;
     url.hash = anchor;
   } else {
     // Only remove this disclosure's fragment; leave other targets alone.
-    if (url.hash !== `#${anchor}`) return;
+    if (!matchesDisclosureTarget(url.hash, anchor, alias)) return;
     url.hash = "";
   }
   // Preserve Next's history state without adding Back-button stops or scrolling.
@@ -25,17 +33,23 @@ function persistDisclosureTarget(anchor: string, open: boolean) {
 export function WordPracticeDisclosure({
   children,
   anchor = "sentence-practice",
+  alias,
 }: {
   children: ReactNode;
   anchor?: string;
+  alias?: string;
 }) {
   const disclosure = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const revealTarget = () => {
-      if (window.location.hash !== `#${anchor}` || !disclosure.current) return;
+      if (
+        !matchesDisclosureTarget(window.location.hash, anchor, alias) ||
+        !disclosure.current
+      )
+        return;
       disclosure.current.open = true;
-      // Legacy draft links remain reachable even when optional writing lives
-      // inside the collapsed personal-tools group.
+      // Legacy draft links remain reachable through any containing disclosure,
+      // including older layouts with writing inside the personal-tools group.
       let ancestor = disclosure.current.parentElement?.closest("details");
       while (ancestor) {
         ancestor.open = true;
@@ -46,24 +60,27 @@ export function WordPracticeDisclosure({
     revealTarget();
     // Native details can be activated before hydration attaches onClick.
     // Reconcile that already-open state before a reload or sign-in return.
-    if (disclosure.current?.open) persistDisclosureTarget(anchor, true);
+    if (disclosure.current?.open) persistDisclosureTarget(anchor, true, alias);
     window.addEventListener("hashchange", revealTarget);
     return () => window.removeEventListener("hashchange", revealTarget);
-  }, [anchor]);
+  }, [anchor, alias]);
 
+  // A summary target gives native fragment navigation a keyboard starting
+  // point inside writing in WebKit too. Keep distinct legacy wrapper anchors.
   return (
     <details
       ref={disclosure}
-      id={anchor}
+      id={alias === anchor ? undefined : anchor}
       className="mt-4 scroll-mt-24 border-t border-neutral-200 pt-2"
     >
       <summary
-        className="min-h-12 cursor-pointer content-center font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        id={alias}
+        className="min-h-12 scroll-mt-24 cursor-pointer content-center font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         onClick={(event) => {
           if (!event.defaultPrevented && disclosure.current) {
             // Keyboard activation also dispatches click. Record the native
             // action immediately; toggle itself is queued by the browser.
-            persistDisclosureTarget(anchor, !disclosure.current.open);
+            persistDisclosureTarget(anchor, !disclosure.current.open, alias);
           }
         }}
       >

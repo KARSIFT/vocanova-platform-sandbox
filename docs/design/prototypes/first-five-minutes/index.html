@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vocanova — first five minutes design lab</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="directions.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body data-direction="coach" data-theme="light">
+    <a class="skip-link" href="#main">Skip to preview</a>
+    <aside class="lab" aria-label="Prototype controls">
+      <div class="lab-title">
+        <strong>Vocanova design lab</strong
+        ><span>Sample data · scripted feedback · no real progress</span>
+      </div>
+      <details class="lab-settings">
+        <summary>Compare designs and preview states</summary>
+        <div class="lab-controls">
+          <label
+            >Direction<select id="direction">
+              <option value="dictionary">01 · Calm dictionary</option>
+              <option value="coach" selected>02 · Warm guided coach</option>
+              <option value="situations">03 · Visual situations</option>
+            </select></label
+          >
+          <label
+            >Scenario<select id="scenario">
+              <option value="new">New learner</option>
+              <option value="returning">Returning learner</option>
+              <option value="completed">After practice</option>
+              <option value="unavailable">Unavailable next step</option>
+            </select></label
+          >
+          <label
+            >Theme<select id="theme">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select></label
+          >
+          <button type="button" id="restart" class="lab-button">
+            Restart preview
+          </button>
+        </div>
+        <p class="lab-disclosure">
+          Compare the same word and tasks in each direction. Writing feedback is
+          an explicitly labelled, fixed example; your draft is never graded or
+          sent. The review queue here contains only “invite”.
+        </p>
+      </details>
+    </aside>
+    <div id="app"></div>
+    <noscript
+      ><p>
+        This clickable prototype needs JavaScript. It does not connect to your
+        account.
+      </p></noscript
+    >
+  </body>
+</html>

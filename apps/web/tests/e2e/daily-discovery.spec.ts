@@ -1530,8 +1530,13 @@ test("manual review date survives confirmed reload and exact continuation retry"
     nextReview: "7d",
   });
   await page.reload();
+  // Streaming can retain an inactive copy outside the accessible main. Keep
+  // the assertion on the real screen and still reject duplicate visible copy.
   await expect(
-    page.getByText("1 word remembered for today.", { exact: true }),
+    page.getByText("1 word remembered for today.", { exact: true }).filter({ visible: true }),
+  ).toHaveCount(1);
+  await expect(
+    page.getByRole("main").getByText("1 word remembered for today.", { exact: true }),
   ).toBeVisible();
   await page.goto("/home");
   await expect(

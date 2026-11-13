@@ -31,8 +31,12 @@ export function ProfileForm({
   const isSaving = useRef(false);
   const mounted = useRef(false);
   const recoveryScope = useRef<{ userId?: string } | null>(null);
+  const [recoveredScope, setRecoveredScope] = useState<{
+    userId?: string;
+  } | null>(null);
   const baseline = useRef(initialDisplayName);
   const [restored, setRestored] = useState(false);
+  const ready = recoveredScope !== null && recoveredScope.userId === userId;
 
   useEffect(() => {
     mounted.current = true;
@@ -44,7 +48,8 @@ export function ProfileForm({
   useEffect(() => {
     if (recoveryScope.current?.userId === userId && recoveryScope.current)
       return;
-    recoveryScope.current = { userId };
+    const scope = { userId };
+    recoveryScope.current = scope;
     baseline.current = initialDisplayName;
     const draft = readProfileDraft(userId);
     const next = draft ?? initialDisplayName;
@@ -55,10 +60,12 @@ export function ProfileForm({
     setRestored(dirty);
     setState("idle");
     setMessage("");
+    setRecoveredScope(scope);
   }, [initialDisplayName, userId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!ready) return;
     if (isSaving.current || !isPreferencesDraftDocumentActive()) return;
 
     const submittedDisplayName = currentDisplayName.current;
@@ -134,8 +141,14 @@ export function ProfileForm({
   return (
     <form
       onSubmit={handleSubmit}
+      aria-busy={!ready || state === "saving"}
       className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]"
     >
+      {!ready ? (
+        <p role="status" className="text-sm text-neutral-700">
+          Loading your profile…
+        </p>
+      ) : null}
       {restored ? (
         <p role="status" className="text-sm text-neutral-700">
           Your unsaved profile changes were restored in this tab. Save when
@@ -156,6 +169,7 @@ export function ProfileForm({
           autoComplete="nickname"
           aria-describedby="profile-display-name-limit"
           value={displayName}
+          disabled={!ready}
           onChange={(event) => {
             if (!isDisplayNameWithinLimit(event.target.value)) return;
             currentDisplayName.current = event.target.value;
@@ -210,7 +224,7 @@ export function ProfileForm({
       ) : null}
       <button
         type="submit"
-        disabled={state === "saving"}
+        disabled={!ready || state === "saving"}
         aria-busy={state === "saving"}
         className="vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
       >

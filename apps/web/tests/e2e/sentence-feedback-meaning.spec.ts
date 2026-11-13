@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 
 import { formatViolations, scanForAxeViolations } from "./axe-helper.js";
 import { expectKeyboardTargetClear } from "./keyboard-navigation.js";
+import { openPersonalTools } from "./optional-writing";
 
 
 for (const theme of ["light", "dark"] as const) {
@@ -92,7 +93,14 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page).toHaveTitle("Vocanova");
       // Check actual focused controls independently of an arbitrary reading
       // scroll position where a sticky header naturally clips earlier content.
-      await expectKeyboardTargetClear(page, page.getByRole("button", { name: "Edit knowledge and note", exact: true }));
+      await openPersonalTools(page);
+      // This is the last main control on desktop; keep the native keyboard
+      // round trip inside the document rather than crossing its end boundary.
+      await expectKeyboardTargetClear(
+        page,
+        page.getByRole("button", { name: "Edit knowledge and note", exact: true }),
+        { backwardsFirst: true },
+      );
       await expectKeyboardTargetClear(page, page.locator("summary").filter({ hasText: "Optional writing" }));
       await expectKeyboardTargetClear(page, feedback.getByRole("button", { name: "Revise sentence", exact: true }));
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));

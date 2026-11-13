@@ -142,6 +142,58 @@ test.describe("Profile and password security", () => {
 const PROFILE_NEWER_CHANGES_MESSAGE =
   "Your earlier profile changes were saved. You have newer changes to save.";
 
+test("profile waits for recovery before accepting edits or a save", async ({
+  page,
+  context,
+}, testInfo) => {
+  const { cookies } = await authenticatedCookies(testInfo);
+  await context.addCookies(cookies);
+  const navigations: string[] = [];
+  const updates: unknown[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (request.isNavigationRequest()) navigations.push(`${url.pathname}${url.search}`);
+    if (request.method() === "PATCH" && url.pathname === "/api/v1/settings") updates.push(request.postDataJSON());
+  });
+  let releaseScripts!: () => void;
+  const scriptsPending = new Promise<void>((resolve) => { releaseScripts = resolve; });
+  let heldScripts = 0;
+  await page.route("**/_next/static/chunks/*.js", async (route) => {
+    heldScripts += 1;
+    await scriptsPending;
+    await route.continue();
+  });
+  try {
+    await page.goto("/settings/profile", { waitUntil: "commit" });
+    const name = page.getByRole("textbox", { name: "Display name", exact: true });
+    const save = page.getByRole("button", { name: "Save profile", exact: true });
+    await expect(name).toBeVisible();
+    await expect.poll(() => heldScripts).toBeGreaterThan(0);
+    await expect(name).toBeDisabled();
+    await expect(save).toBeDisabled();
+    // Native activation must not submit the SSR form while its code is pending.
+    await save.evaluate((element) => (element as HTMLButtonElement).click());
+    expect(navigations).toEqual(["/settings/profile"]);
+    expect(updates).toEqual([]);
+    expect(await page.evaluate(() => Object.keys(sessionStorage).filter((key) => key.startsWith("vocanova:preferences-draft:")))).toEqual([]);
+    releaseScripts();
+    await expect(name).toBeEditable();
+    await expect(save).toBeEnabled();
+    await name.fill("  Ready learner  ");
+    await save.click();
+    await expect(page.getByRole("status")).toHaveText("Your profile has been saved.");
+    expect(updates).toEqual([{ displayName: "Ready learner" }]);
+    expect(navigations).toEqual(["/settings/profile"]);
+    // Wait for the server-rendered profile refresh before requesting a reload.
+    await expect(page.getByRole("region", { name: "Your profile", exact: true }).getByText("RL", { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(name).toBeEditable();
+    await expect(name).toHaveValue("Ready learner");
+  } finally {
+    releaseScripts();
+  }
+});
+
 for (const theme of ["light", "dark"] as const) {
   test(`preserves a newer profile name when an earlier save completes (${theme})`, async ({
     page,

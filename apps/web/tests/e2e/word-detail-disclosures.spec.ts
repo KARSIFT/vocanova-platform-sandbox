@@ -184,10 +184,15 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page).toHaveURL(/#sentence-practice$/);
     await expect(writing).toHaveValue("I pour coffee before work.");
     const tools = page.getByRole("main").locator("summary").filter({ hasText: "Personal tools" });
+    // A writing deep link opens writing independently of optional organization.
+    await expect(
+      page.getByRole("button", { name: "Edit knowledge and note" }),
+    ).toBeHidden();
+    await tools.focus();
+    await page.keyboard.press("Space");
     await expect(
       page.getByRole("button", { name: "Edit knowledge and note" }),
     ).toBeVisible();
-    await tools.focus();
     await page.keyboard.press("Space");
     await expect(
       page.getByRole("button", { name: "Edit knowledge and note" }),

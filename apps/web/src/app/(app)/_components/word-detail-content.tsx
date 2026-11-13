@@ -5,6 +5,7 @@ import {
   getPrimaryDefinition,
 } from "@/lib/word-definition";
 import { MeaningPicture } from "@/ui/meaning-picture";
+import { LearningIntro } from "@/ui/learning-guide";
 import { ListenButton } from "@/ui/pronunciation";
 import { WordPracticeDisclosure } from "./word-practice-disclosure";
 
@@ -73,6 +74,9 @@ export function WordDetailContent({
               meaning.reviewState,
               meaning.due,
             );
+            const writingAvailable = Boolean(
+              meaning.saved && meaning.userWordId,
+            );
 
             return (
               <li
@@ -83,7 +87,14 @@ export function WordDetailContent({
               >
                 {/* Kind of word and the save toggle share one row so the
                     definition below keeps the full reading width. */}
-                <div className="flex items-start justify-between gap-[var(--spacing-md)]">
+                <div
+                  id={
+                    writingAvailable
+                      ? undefined
+                      : `sentence-practice-${meaning.id}`
+                  }
+                  className={`flex items-start justify-between gap-[var(--spacing-md)]${writingAvailable ? "" : " scroll-mt-24"}`}
+                >
                   <p className="pos pt-2.5 text-base">{meaning.partOfSpeech}</p>
                   <MeaningSaveButton
                     meaningId={meaning.id}
@@ -121,22 +132,20 @@ export function WordDetailContent({
                 />
                 <MeaningTeaching meaning={meaning} />
 
-                <details className="mt-4 border-t border-neutral-200 pt-2">
-                  <summary className="min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-                    Personal tools
-                  </summary>
-                  <MeaningListEditor meaningId={meaning.id} />
-                  <MeaningKnowledgeEditor
-                    meaningId={meaning.id}
-                    initialKnown={meaning.selfReportedKnown}
-                  />
-                  {meaning.saved && meaning.userWordId ? (
+                {meaning.saved && meaning.userWordId ? (
+                  <div className="mt-6">
+                    <LearningIntro
+                      title="Try this meaning in a sentence"
+                      headingLevel={3}
+                      description="Make your own example. Writing is optional, and you can edit your sentence after feedback."
+                    />
                     <WordPracticeDisclosure
                       anchor={
                         index === 0
                           ? "sentence-practice"
                           : `sentence-practice-${meaning.id}`
                       }
+                      alias={`sentence-practice-${meaning.id}`}
                     >
                       <SentenceFeedback
                         targetWord={wordData.text}
@@ -146,7 +155,18 @@ export function WordDetailContent({
                         shortDefinition={meaning.shortDefinition}
                       />
                     </WordPracticeDisclosure>
-                  ) : null}
+                  </div>
+                ) : null}
+
+                <details className="mt-4 border-t border-neutral-200 pt-2">
+                  <summary className="min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+                    Personal tools
+                  </summary>
+                  <MeaningListEditor meaningId={meaning.id} />
+                  <MeaningKnowledgeEditor
+                    meaningId={meaning.id}
+                    initialKnown={meaning.selfReportedKnown}
+                  />
                 </details>
               </li>
             );

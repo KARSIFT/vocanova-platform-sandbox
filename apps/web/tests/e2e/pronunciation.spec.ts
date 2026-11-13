@@ -921,7 +921,7 @@ test("canonical word detail preserves authentication and missing-word handling",
   await expect(page).toHaveURL(/\/login\?returnTo=%2Fvocabulary%2Fpour/);
 });
 
-test("discovery automatically speaks each word, supports mute and explicit replay, and cancels on exit", async ({
+test("discovery speaks after sound opt-in, supports mute and explicit replay, and cancels on exit", async ({
   page,
   context,
   baseURL,
@@ -935,6 +935,9 @@ test("discovery automatically speaks each word, supports mute and explicit repla
   expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual(
     [],
   );
+  // Automatic pronunciation is an explicit choice; quiet is the fresh default.
+  await page.getByRole("button", { name: "Sound off", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Sound on", exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "Start discovering", exact: true })
     .click();
@@ -1042,6 +1045,10 @@ test("daily lesson audio stops when muted and on route exit without changing gra
     [],
   );
   await page.getByRole("button", { name: "Start review", exact: true }).click();
+  const quiet = page.getByRole("button", { name: "Automatic audio off", exact: true });
+  await expect(quiet).toHaveAttribute("aria-pressed", "false");
+  expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual([]);
+  await quiet.click();
   await expect
     .poll(() =>
       page.evaluate(() =>

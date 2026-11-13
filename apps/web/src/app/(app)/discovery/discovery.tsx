@@ -7,6 +7,7 @@ import {
   replaceSessionLocation,
 } from "../_components/session-route";
 import Link from "@/ui/link";
+import { LearningIntro, LearningNote } from "@/ui/learning-guide";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DiscoveryFinished } from "./discovery-finished";
@@ -18,6 +19,7 @@ import {
   useState,
   useSyncExternalStore,
   useTransition,
+  type FocusEvent,
 } from "react";
 import {
   ApiResponseError,
@@ -47,6 +49,69 @@ interface PendingDecision {
   body: KnowledgeMapDecision;
   key: string;
   rank: number;
+  word: Pick<
+    MapWord,
+    "wordSlug" | "wordText" | "shortDefinition" | "learnerDefinition"
+  >;
+}
+
+interface SavedChoice {
+  meaningId: string;
+  word: PendingDecision["word"];
+  // A receipt belongs to the next card reached by that choice, not every
+  // later word or a restored browser-history selection.
+  band: number;
+  rank?: number;
+}
+
+function SavedMeaning({ choice }: { choice: SavedChoice }) {
+  return (
+    <section aria-label="Saved meaning" className="mt-4">
+      <LearningNote>
+        <p className="font-semibold">
+          Saved {choice.word.wordText} for review.
+        </p>
+        <p className="mt-1">
+          {getPrimaryDefinition(
+            choice.word.shortDefinition,
+            choice.word.learnerDefinition,
+          )}
+        </p>
+        <Link
+          href={`/vocabulary/${encodeURIComponent(choice.word.wordSlug)}#sentence-practice-${choice.meaningId}`}
+          className="vn-text-link mt-2 inline-flex min-h-11 items-center"
+        >
+          Use {choice.word.wordText} in a sentence
+        </Link>
+      </LearningNote>
+    </section>
+  );
+}
+
+function revealFocusedControl(event: FocusEvent<HTMLDivElement>) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement) || target.closest("dialog")) return;
+  // Let native keyboard scrolling settle before measuring the real
+  // reading area beneath the sticky header.
+  requestAnimationFrame(() => {
+    if (
+      !target.isConnected ||
+      document.activeElement !== target ||
+      !target.matches(":focus-visible")
+    )
+      return;
+    const header = document.querySelector("header.app-header");
+    const safeTop = (header?.getBoundingClientRect().bottom ?? 0) + 8;
+    const safeBottom = window.innerHeight - 8;
+    const bounds = target.getBoundingClientRect();
+    const delta =
+      bounds.top < safeTop
+        ? bounds.top - safeTop
+        : bounds.bottom > safeBottom
+          ? bounds.bottom - safeBottom
+          : 0;
+    if (delta) window.scrollBy({ top: delta, behavior: "instant" });
+  });
 }
 
 // Next can restore any previously visited snapshot of a range on Back or Forward.
@@ -135,12 +200,13 @@ export function Discovery({
     () => serverSearch,
   );
   const [navigating, startNavigation] = useTransition();
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [audioReady, setAudioReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState(false);
   const [done, setDone] = useState(false);
+  const [savedChoice, setSavedChoice] = useState<SavedChoice | null>(null);
   const [speech, setSpeech] = useState<PronunciationState>({ status: "idle" });
   const pending = useRef<PendingDecision | null>(null);
   const lock = useRef(false);
@@ -161,6 +227,29 @@ export function Discovery({
     busy || navigating || conflict || Boolean(pending.current);
   // Preload the same candidate a confirmed choice would display, including wrap.
   const upcoming = nextUnseenInRange(data, displayedRank ?? 0);
+  const confirmedSave =
+    savedChoice &&
+    !navigationLocked &&
+    !revisit &&
+    savedChoice.band === band &&
+    savedChoice.rank === displayedRank
+      ? savedChoice
+      : null;
+  const savedMeaning = confirmedSave ? (
+    <SavedMeaning choice={confirmedSave} />
+  ) : null;
+  const saveAnnouncement = (
+    <p
+      key="save-confirmation"
+      role="status"
+      aria-label="Save confirmation"
+      aria-live="polite"
+      aria-atomic="true"
+      className="sr-only"
+    >
+      {confirmedSave ? `Saved ${confirmedSave.word.wordText} for review.` : ""}
+    </p>
+  );
 
   const firstRank = bandSummary?.startRank ?? 1;
   const lastRank = bandSummary?.endRank ?? data.totalWords;
@@ -228,9 +317,23 @@ export function Discovery({
         ? current.data.currentBand.items.find((item) => item.rank === requested)
         : discoveryWordInRange(current.data, requested);
       if (!word) {
+        // Completion removes revisit from its own URL. Retain the confirmed
+        // receipt for that same position; a different history selection clears it.
+        if (
+          requested !== current.rank ||
+          active !== current.started ||
+          explicitlySelected !== current.revisit
+        )
+          setSavedChoice(null);
         setDone(true);
         return;
       }
+      if (
+        word.rank !== current.rank ||
+        active !== current.started ||
+        explicitlySelected !== current.revisit
+      )
+        setSavedChoice(null);
       // Keep canonicalization from overwriting a history selection before its
       // card has rendered.
       historyWord.current = {
@@ -254,6 +357,7 @@ export function Discovery({
     if (lock.current || navigationLocked) return;
     deviceSpeech.stop(speechOwner.current);
     setError("");
+    setSavedChoice(null);
     const href = wordHref(nextBand, nextRank, true, true);
     if (nextBand !== band) {
       startNavigation(() => router.push(href));
@@ -271,6 +375,7 @@ export function Discovery({
     if (lock.current || navigationLocked) return;
     deviceSpeech.stop(speechOwner.current);
     setError("");
+    setSavedChoice(null);
     startNavigation(() => router.push(`/discovery?band=${nextBand}&active=1`));
   }
 
@@ -294,7 +399,7 @@ export function Discovery({
     const owner = speechOwner.current;
     deviceSpeech.prepare();
     try {
-      setMuted(sessionStorage.getItem("vocanova-discovery-muted") === "true");
+      setMuted(sessionStorage.getItem("vocanova-discovery-muted") !== "false");
     } catch {
       /* Device storage may be unavailable. */
     }
@@ -406,6 +511,7 @@ export function Discovery({
     if (lock.current || navigating || conflict || !item) return;
     if (!pending.current) {
       if (!decision) return;
+      setSavedChoice(null);
       pending.current = {
         body: {
           meaningId: item.meaningId,
@@ -414,6 +520,12 @@ export function Discovery({
         },
         key: crypto.randomUUID(),
         rank: item.rank,
+        word: {
+          wordSlug: item.wordSlug,
+          wordText: item.wordText,
+          shortDefinition: item.shortDefinition,
+          learnerDefinition: item.learnerDefinition,
+        },
       };
     }
     const request = pending.current;
@@ -440,6 +552,13 @@ export function Discovery({
         const nextInRange = nextUnseenInRange(local, request.rank);
         if (nextInRange) {
           pending.current = null;
+          if (request.body.decision === "learn")
+            setSavedChoice({
+              meaningId: request.body.meaningId,
+              word: request.word,
+              band,
+              rank: nextInRange.rank,
+            });
           setData(local);
           setRank(nextInRange.rank);
           setRevisit(false);
@@ -469,6 +588,18 @@ export function Discovery({
         nextAfterChoice ?? discoveryWordInRange(current),
       );
       pending.current = null;
+      if (
+        request.body.decision === "learn" &&
+        currentDecision &&
+        confirmsChoice(currentDecision, "learn")
+      )
+        setSavedChoice({
+          meaningId: request.body.meaningId,
+          word: request.word,
+          band: fresh.currentBand.number,
+          // Completion has no next rank; displayedRank is also undefined there.
+          rank: nextWord?.rank,
+        });
       setData(fresh);
       setRevisit(false);
       if (!nextWord) setDone(true);
@@ -528,6 +659,7 @@ export function Discovery({
 
   async function reloadWord() {
     if (lock.current) return;
+    setSavedChoice(null);
     lock.current = true;
     setBusy(true);
     try {
@@ -554,14 +686,17 @@ export function Discovery({
 
   if (done)
     return (
-      <div className={styles.focus}>
+      <div className={styles.focus} onFocusCapture={revealFocusedControl}>
+        {saveAnnouncement}
         <DiscoveryFinished data={data} active={started} headingRef={titleRef} />
+        {savedMeaning}
       </div>
     );
 
   if (!item)
     return (
-      <div className={styles.focus}>
+      <div className={styles.focus} onFocusCapture={revealFocusedControl}>
+        {saveAnnouncement}
         <p role="alert">This word could not load.</p>
         <Link href={journeyRangeHref(band)} className={styles.secondary}>
           Back to Journey
@@ -574,7 +709,8 @@ export function Discovery({
     : "";
 
   return (
-    <div className={styles.focus}>
+    <div className={styles.focus} onFocusCapture={revealFocusedControl}>
+      {saveAnnouncement}
       <div className={styles.top}>
         <span className={styles.counter}>{rangeName}</span>
         <span className={styles.counter}>
@@ -596,10 +732,22 @@ export function Discovery({
         </p>
       )}
       {!started ? (
-        <section className={styles.start}>
-          <h1 className={styles.title}>Discover your next words</h1>
-          <p>Listen, then choose Learn or Already know.</p>
-          <div className={styles.startActions}>
+        <section
+          aria-labelledby="discovery-intro"
+          className="learning-surface mt-6 p-4 sm:p-6"
+        >
+          <LearningIntro
+            id="discovery-intro"
+            headingLevel={1}
+            eyebrow="Your next useful words"
+            title="Discover your next words"
+            description="Listen, then choose Learn or Already know."
+          />
+          <LearningNote className="mt-4">
+            Learn saves this meaning for review. Already know records your own
+            choice.
+          </LearningNote>
+          <div className={`${styles.startActions} mt-5`}>
             <button type="button" className={styles.primary} onClick={start}>
               Start discovering
             </button>
@@ -656,6 +804,7 @@ export function Discovery({
                 {speech.message} You can keep learning without sound.
               </p>
             )}
+            <p className="learning-eyebrow mt-4">This meaning</p>
             <p className={styles.definition}>
               {getPrimaryDefinition(
                 item.shortDefinition,
@@ -725,6 +874,7 @@ export function Discovery({
               )}
             </div>
           )}
+          {savedMeaning}
         </>
       )}
       {started && (

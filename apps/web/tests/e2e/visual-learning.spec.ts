@@ -222,6 +222,8 @@ test("Home streams the saved-word picture without delaying Review", async ({ pag
   const picture=page.getByRole("region",{name:"Your latest word",exact:true}).getByTestId("meaning-picture").getByRole("img");
   await expect(picture).toHaveAttribute("src", /_next\/image/);
   await expect(picture).toHaveAttribute("src", /^https:\/\/images\.vocanova\.site\/meanings\//);
+  // Lazy pictures below the initial viewport need learner scroll intent.
+  await picture.scrollIntoViewIfNeeded();
   await expect.poll(()=>picture.evaluate((element)=>(element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   await expect(review.getByRole("button",{name:"Start review",exact:true})).toBeEnabled();
 });
@@ -235,10 +237,13 @@ for (const mode of ["stale", "unavailable"] as const) {
       ...(mode==="unavailable"?[{name:"e2e_meaning_images_status",value:"503",url:baseURL!}]:[]),
     ]);
     await page.goto("/home");
+    const review=page.getByRole("region",{name:"Review words",exact:true}).getByRole("button",{name:"Start review",exact:true});
+    await expect(review).toBeEnabled();
     const picture=page.getByRole("region",{name:"Your latest word",exact:true}).getByTestId("meaning-picture").getByRole("img");
     await expect(picture).toHaveAttribute("src",/_next\/image/);
+    await picture.scrollIntoViewIfNeeded();
     await expect.poll(()=>picture.evaluate((element)=>(element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-    await expect(page.getByRole("region",{name:"Review words",exact:true}).getByRole("button",{name:"Start review",exact:true})).toBeEnabled();
+    await expect(review).toBeEnabled();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   });
 }

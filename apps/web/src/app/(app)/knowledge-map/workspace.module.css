@@ -534,10 +534,20 @@
   line-height: 1.6;
 }
 .startActions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  max-width: 26rem;
   align-items: stretch;
   gap: 0.75rem;
+}
+.startActions > button,
+.startActions .audio button {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  padding-inline: 0.25rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .card {
   margin: 1rem 0 0;
@@ -625,7 +635,7 @@
   z-index: 5;
   bottom: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   gap: 0.75rem;
   margin: 1rem -1rem 0;
   padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
@@ -635,7 +645,10 @@
 }
 .actions .primary,
 .actions .secondary {
+  min-width: 0;
   min-height: 52px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .error {
   margin-top: 1rem;
@@ -654,6 +667,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+@media (max-height: 30rem) {
+  .actions {
+    position: static;
+  }
 }
 
 @media (min-width: 40rem) {
@@ -714,6 +733,8 @@
 /* Navigation changes the displayed word only, never its learning state. */
 .startActions .audio {
   display: inline-flex;
+  min-width: 0;
+  width: 100%;
   align-items: stretch;
   margin: 0;
 }
