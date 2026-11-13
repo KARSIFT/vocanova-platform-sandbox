@@ -68,7 +68,7 @@ function SavedMeaning({ choice }: { choice: SavedChoice }) {
   return (
     <section aria-label="Saved meaning" className="mt-4">
       <LearningNote>
-        <p role="status" className="font-semibold">
+        <p className="font-semibold">
           Saved {choice.word.wordText} for review.
         </p>
         <p className="mt-1">
@@ -201,14 +201,29 @@ export function Discovery({
     busy || navigating || conflict || Boolean(pending.current);
   // Preload the same candidate a confirmed choice would display, including wrap.
   const upcoming = nextUnseenInRange(data, displayedRank ?? 0);
-  const savedMeaning =
+  const confirmedSave =
     savedChoice &&
     !navigationLocked &&
     !revisit &&
     savedChoice.band === band &&
-    savedChoice.rank === displayedRank ? (
-      <SavedMeaning choice={savedChoice} />
-    ) : null;
+    savedChoice.rank === displayedRank
+      ? savedChoice
+      : null;
+  const savedMeaning = confirmedSave ? (
+    <SavedMeaning choice={confirmedSave} />
+  ) : null;
+  const saveAnnouncement = (
+    <p
+      key="save-confirmation"
+      role="status"
+      aria-label="Save confirmation"
+      aria-live="polite"
+      aria-atomic="true"
+      className="sr-only"
+    >
+      {confirmedSave ? `Saved ${confirmedSave.word.wordText} for review.` : ""}
+    </p>
+  );
 
   const firstRank = bandSummary?.startRank ?? 1;
   const lastRank = bandSummary?.endRank ?? data.totalWords;
@@ -646,6 +661,7 @@ export function Discovery({
   if (done)
     return (
       <div className={styles.focus}>
+        {saveAnnouncement}
         <DiscoveryFinished data={data} active={started} headingRef={titleRef} />
         {savedMeaning}
       </div>
@@ -654,6 +670,7 @@ export function Discovery({
   if (!item)
     return (
       <div className={styles.focus}>
+        {saveAnnouncement}
         <p role="alert">This word could not load.</p>
         <Link href={journeyRangeHref(band)} className={styles.secondary}>
           Back to Journey
@@ -667,6 +684,7 @@ export function Discovery({
 
   return (
     <div className={styles.focus}>
+      {saveAnnouncement}
       <div className={styles.top}>
         <span className={styles.counter}>{rangeName}</span>
         <span className={styles.counter}>

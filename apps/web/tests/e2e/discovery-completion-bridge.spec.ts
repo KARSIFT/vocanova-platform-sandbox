@@ -16,6 +16,9 @@ for (const theme of ["light", "dark"] as const) {
     // Learn still confirms this exact meaning in a completed range. Removing
     // revisit from its completion URL must not erase the confirmed receipt.
     await page.goto("/discovery?band=100&word=9902&active=1&revisit=1");
+    const announcement = page.getByRole("status", { name: "Save confirmation", exact: true });
+    await expect(announcement).toBeEmpty();
+    const liveRegion = await announcement.elementHandle();
     await page
       .getByRole("button", { name: "Previous word", exact: true })
       .click();
@@ -49,6 +52,10 @@ for (const theme of ["light", "dark"] as const) {
       exact: true,
     });
     await expect(bridge).toContainText("Saved Map word 9901 for review.");
+    await expect(announcement).toHaveText("Saved Map word 9901 for review.");
+    expect(await liveRegion!.evaluate((node) => node.isConnected)).toBe(true);
+    expect(await announcement.evaluate((node, original) => node === original, liveRegion)).toBe(true);
+    await expect(bridge.getByRole("status")).toHaveCount(0);
     await expect(
       bridge.getByRole("link", {
         name: "Use Map word 9901 in a sentence",
@@ -65,5 +72,6 @@ for (const theme of ["light", "dark"] as const) {
       page.getByRole("heading", { name: "Map word 9902", exact: true }),
     ).toBeVisible();
     await expect(bridge).toHaveCount(0);
+    await expect(announcement).toBeEmpty();
   });
 }

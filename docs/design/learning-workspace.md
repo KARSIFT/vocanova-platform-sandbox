@@ -20,6 +20,8 @@ reading surface, one clear next action and brief, practical guidance.
 - Discovery still advances after a confirmed choice. A confirmed Learn may show
   an optional saved-meaning link containing the original word and meaning ID.
   Pending, uncertain or superseded saves do not invent a writing destination.
+  A persistent polite status container receives the same confirmed receipt;
+  visible guidance remains ordinary content, avoiding duplicate live messages.
 - Saved meanings expose Optional writing before Personal tools. Each meaning
   retains its own saved record, fragment, draft and real feedback. Writing and
   personal organization open independently with native keyboard controls.

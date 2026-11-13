@@ -91,6 +91,14 @@ there is exactly one visible matching message. No scheduling logic was changed.
 The existing hosted Profile overlap flake was not conclusively attributed; the
 separate pre-interactive form bug was independently reproduced and fixed.
 
+The save confirmation updates a persistent, initially empty polite/atomic status
+container, following [W3C ARIA22](https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA22.html).
+The final cross-engine matrix verifies the same DOM node through normal advance
+and completion, an empty message before confirmation or after changed visits,
+and the exact original saved word. The visual receipt shares the same validity
+checks. These are markup/lifecycle preconditions; actual screen-reader speech
+has not been observed and is separate acceptance evidence.
+
 Manual synthetic browser operation exercised Home, confirmed Discovery saving,
 canonical saved writing, submitted feedback, an incorrect real review response,
 completion and return Home without playing audio. These fixtures establish

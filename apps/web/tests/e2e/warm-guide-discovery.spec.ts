@@ -15,6 +15,8 @@ async function learner(page: Page, baseURL: string, theme = "light") {
 
 const savedMeaning = (page: Page) =>
   page.getByRole("region", { name: "Saved meaning", exact: true });
+const saveConfirmation = (page: Page) =>
+  page.getByRole("status", { name: "Save confirmation", exact: true });
 
 for (const scenario of [
   { label: "fresh Start", active: false, preference: "unset" },
@@ -140,6 +142,11 @@ for (const theme of ["light", "dark"]) {
   }) => {
     await learner(page, baseURL!, theme);
     await page.goto("/discovery?band=1&word=2&active=1");
+    const announcement = saveConfirmation(page);
+    await expect(announcement).toBeEmpty();
+    await expect(announcement).toHaveAttribute("aria-live", "polite");
+    await expect(announcement).toHaveAttribute("aria-atomic", "true");
+    const liveRegion = await announcement.elementHandle();
     const reads: string[] = [];
     const bodies: unknown[] = [];
     page.on("request", (request) => {
@@ -162,6 +169,10 @@ for (const theme of ["light", "dark"]) {
     ).toBeFocused();
     await expect(page).toHaveURL(/\/discovery\?band=1&word=3&active=1$/);
     await expect(savedMeaning(page)).toContainText("Saved be for review.");
+    await expect(announcement).toHaveText("Saved be for review.");
+    expect(await liveRegion!.evaluate((node) => node.isConnected)).toBe(true);
+    expect(await announcement.evaluate((node, original) => node === original, liveRegion)).toBe(true);
+    await expect(savedMeaning(page).getByRole("status")).toHaveCount(0);
     const writing = savedMeaning(page).getByRole("link", {
       name: "Use be in a sentence",
       exact: true,
@@ -190,6 +201,9 @@ for (const theme of ["light", "dark"]) {
       page.getByRole("heading", { name: "Map word 4", exact: true }),
     ).toBeFocused();
     await expect(savedMeaning(page)).toHaveCount(0);
+    await expect(announcement).toBeEmpty();
+    expect(await liveRegion!.evaluate((node) => node.isConnected)).toBe(true);
+    expect(await announcement.evaluate((node, original) => node === original, liveRegion)).toBe(true);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(page.viewportSize()!.width);
@@ -202,6 +216,8 @@ test("a lost Learn receipt exposes no writing until the original request is conf
 }) => {
   await learner(page, baseURL!);
   await page.goto("/discovery?band=1&word=2&active=1");
+  const announcement = saveConfirmation(page);
+  await expect(announcement).toBeEmpty();
   const attempts: Array<{ body: string | null; key?: string }> = [];
   await page.route("**/api/v1/knowledge-map/decisions", async (route) => {
     attempts.push({
@@ -218,6 +234,7 @@ test("a lost Learn receipt exposes no writing until the original request is conf
     page.getByRole("button", { name: "Retry choice", exact: true }),
   ).toBeVisible();
   await expect(savedMeaning(page)).toHaveCount(0);
+  await expect(announcement).toBeEmpty();
   await expect(
     page.getByRole("button", { name: "Choose a word", exact: true }),
   ).toBeDisabled();
@@ -229,6 +246,7 @@ test("a lost Learn receipt exposes no writing until the original request is conf
     "href",
     "/vocabulary/map-word-2#meaning-map-meaning-2",
   );
+  await expect(announcement).toHaveText("Saved be for review.");
   expect(attempts).toHaveLength(2);
   expect(attempts[1]).toEqual(attempts[0]);
 });
@@ -308,6 +326,7 @@ for (const changed of ["known", "removed"] as const) {
       page.getByRole("button", { name: "Retry choice", exact: true }),
     ).toHaveCount(0);
     await expect(savedMeaning(page)).toHaveCount(0);
+    await expect(saveConfirmation(page)).toBeEmpty();
   });
 }
 
@@ -329,6 +348,7 @@ test("an incomplete receipt uses the existing fresh read before offering writing
     "href",
     "/vocabulary/map-word-2#meaning-map-meaning-2",
   );
+  await expect(saveConfirmation(page)).toHaveText("Saved be for review.");
 });
 
 test("manual word, history and range navigation retire the previous save bridge", async ({
@@ -337,8 +357,11 @@ test("manual word, history and range navigation retire the previous save bridge"
 }) => {
   await learner(page, baseURL!);
   await page.goto("/discovery?band=1&word=2&active=1");
+  const announcement = saveConfirmation(page);
+  await expect(announcement).toBeEmpty();
   await page.getByRole("button", { name: "Learn", exact: true }).click();
   await expect(savedMeaning(page)).toBeVisible();
+  await expect(announcement).toHaveText("Saved be for review.");
   await page
     .getByRole("button", { name: "Previous word", exact: true })
     .click();
@@ -346,16 +369,19 @@ test("manual word, history and range navigation retire the previous save bridge"
     page.getByRole("heading", { name: "be", exact: true }),
   ).toBeFocused();
   await expect(savedMeaning(page)).toHaveCount(0);
+  await expect(announcement).toBeEmpty();
   await page.goBack();
   await expect(
     page.getByRole("heading", { name: "Map word 3", exact: true }),
   ).toBeVisible();
   await expect(savedMeaning(page)).toHaveCount(0);
+  await expect(announcement).toBeEmpty();
   await page.getByRole("button", { name: "Learn", exact: true }).click();
   await expect(savedMeaning(page).getByRole("link")).toHaveAttribute(
     "href",
     "/vocabulary/map-word-3#meaning-map-meaning-3",
   );
+  await expect(announcement).toHaveText("Saved Map word 3 for review.");
   await page.getByRole("button", { name: "Word range", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Choose a range" })
@@ -365,4 +391,5 @@ test("manual word, history and range navigation retire the previous save bridge"
     page.getByRole("heading", { name: "Map word 101", exact: true }),
   ).toBeFocused();
   await expect(savedMeaning(page)).toHaveCount(0);
+  await expect(announcement).toBeEmpty();
 });
