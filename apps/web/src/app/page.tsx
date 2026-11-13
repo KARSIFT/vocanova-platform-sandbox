@@ -39,7 +39,8 @@ export default function Page() {
           </Link>
         </header>
 
-        <section className="grid flex-1 items-center gap-10 py-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(24rem,0.8fr)] lg:gap-20 lg:py-14">
+        {/* Rem-sized tracks wrap with enlarged text as well as the viewport. */}
+        <section className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-center gap-10 py-8 lg:gap-20 lg:py-14">
           <div className="max-w-[42rem]">
             <p className="inline-flex items-center gap-2 rounded-full border border-secondary-200 bg-secondary-50 px-3 py-1 text-sm font-semibold text-secondary-800">
               <span
@@ -79,7 +80,7 @@ export default function Page() {
           aria-labelledby="how-it-works-heading"
           className="border-t border-neutral-200 py-12 lg:py-16"
         >
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(15rem,0.7fr)_minmax(0,1.3fr)] lg:gap-16">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,30rem),1fr))] gap-8 lg:gap-16">
             <div className="max-w-[24rem]">
               <p className="text-sm font-semibold text-primary-700">
                 A daily learning loop
@@ -91,7 +92,7 @@ export default function Page() {
                 A little practice, with a clear purpose.
               </h2>
             </div>
-            <ol className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
+            <ol className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))]">
               {benefits.map(([label, copy], index) => (
                 <li
                   key={label}

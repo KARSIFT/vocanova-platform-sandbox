@@ -10,6 +10,7 @@ belongs to the consolidated delivery PR.
 
 | Observed problem                                                                 | Result                                                                                                                                                                                       |
 | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Landing columns overlapped and benefit labels clipped at 1024px with 200% text   | Content now wraps according to its reading width; normal desktop remains side-by-side and enlarged text stays readable without horizontal scroll.                                            |
 | Sentence History's inline return link touched its page label                     | Return navigation and introduction occupy separate rows, including enlarged text.                                                                                                            |
 | Plan controls touched on desktop and gained accidental indentation when wrapping | A single wrapping action group supplies consistent horizontal and vertical gaps.                                                                                                             |
 | Home's empty latest-word message used oversized dictionary typography            | Empty copy uses the normal interface font at the smaller label scale; real words keep their serif styling.                                                                                   |
@@ -59,8 +60,13 @@ were qualified and replaced where used for final visual conclusions.
 
 ## Verification
 
-- New layout, learning hierarchy and selected-control regressions: **126 passed**,
+- New layout, learning hierarchy and selected-control regressions: **144 passed**,
   across three engines, three widths and both themes; zero skips/failures/flakes.
+- Boundary audit: **168 passed** at 561/768/1024px in both themes, including
+  enlarged text. The new Landing regression checks normal desktop columns,
+  page/title/benefit reflow at 100% and 200%, and keyboard access. Six additional
+  Landing checks passed at the standard widths. These final runs had zero
+  failures, skips, flakes or retries.
 - Existing entry-layout and dynamic visual-state suites: **198 passed** on Chromium
   at 360/430/1280px, both themes, with enlarged text, keyboard and axe assertions.
 - Broader affected feature regressions: 321 cases passed initially; 12 failures

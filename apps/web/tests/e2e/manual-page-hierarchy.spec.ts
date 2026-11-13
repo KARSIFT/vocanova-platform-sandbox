@@ -48,6 +48,38 @@ for (const theme of ["light", "dark"] as const) {
       await expect(main.getByRole("heading", { name: "Progress", exact: true })).toBeVisible();
     });
 
+    test("landing content reflows at the desktop threshold with enlarged text", async ({ page }, info) => {
+      await page.setViewportSize({ width: 1024, height: 900 });
+      await page.goto("/");
+      const title = page.getByRole("heading", { level: 1 });
+      await expect(title).toHaveText("Learn the words you will actually use.");
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      const example = page.getByRole("region", { name: "Learning example", exact: true });
+      await expect(example).toBeVisible();
+      const [titleBox, exampleBox] = await Promise.all([title.boundingBox(), example.boundingBox()]);
+      expect(titleBox).not.toBeNull();
+      expect(exampleBox).not.toBeNull();
+      expect(exampleBox!.x).toBeGreaterThanOrEqual(titleBox!.x + titleBox!.width);
+      for (const size of ["100%", "200%"]) {
+        await page.addStyleTag({ content: `html { font-size: ${size} !important; }` });
+        await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+          .toBeLessThanOrEqual(1024);
+        await expect.poll(() => title.evaluate(element => element.scrollWidth <= element.clientWidth))
+          .toBe(true);
+        for (const name of ["Discover", "Remember", "Use"]) {
+          const benefit = page.getByRole("heading", { level: 3, name, exact: true });
+          await expect(benefit).toBeVisible();
+          await expect.poll(() => benefit.evaluate(element => element.scrollWidth <= element.clientWidth))
+            .toBe(true);
+        }
+      }
+      const start = page.getByRole("link", { name: "Start learning", exact: true });
+      await start.focus();
+      await expect(start).toBeFocused();
+      await expect(start).toBeInViewport({ ratio: 1 });
+      await page.screenshot({ path: info.outputPath(`landing-threshold-${theme}.png`), fullPage: true });
+    });
+
     test("Home uses interface typography for empty copy and word typography for saved words", async ({ page }, info) => {
       await page.goto("/home");
       const latest = page.getByRole("region", { name: "Your latest word", exact: true });
