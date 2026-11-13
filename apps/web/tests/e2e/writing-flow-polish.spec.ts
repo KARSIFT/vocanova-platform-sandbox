@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { scanForAxeViolations } from "./axe-helper";
 
 test.beforeEach(async ({ context, baseURL }) => {
@@ -24,6 +24,75 @@ function saveButton(page: Page) {
 }
 function sentenceBox(page: Page) {
   return page.getByRole("textbox", { name: "Write a sentence using invite" });
+}
+
+async function sampleSubmitContrast(button: Locator) {
+  return button.evaluateHandle((element) => {
+    const submit = element as HTMLButtonElement;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d", { willReadFrequently: true })!;
+    const samples: {
+      source: "mutation" | "frame";
+      foreground: string;
+      background: string;
+      ratio: number;
+    }[] = [];
+    let sawBusy = false;
+    let frame = 0;
+
+    function luminance(color: string) {
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      const channels = context.getImageData(0, 0, 1, 1).data;
+      const linear = Array.from(channels.slice(0, 3), (channel) => {
+        const value = channel / 255;
+        return value <= 0.04045
+          ? value / 12.92
+          : ((value + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!;
+    }
+
+    function sample(source: "mutation" | "frame") {
+      if (submit.getAttribute("aria-busy") === "true") sawBusy = true;
+      if (!sawBusy || submit.disabled) return;
+      const style = getComputedStyle(submit);
+      const foreground = luminance(style.color);
+      const background = luminance(style.backgroundColor);
+      samples.push({
+        source,
+        foreground: style.color,
+        background: style.backgroundColor,
+        ratio:
+          (Math.max(foreground, background) + 0.05) /
+          (Math.min(foreground, background) + 0.05),
+      });
+    }
+
+    // Observe the re-enabled action immediately: its text color can change
+    // before an animated background reaches the matching variant color.
+    const observer = new MutationObserver(() => sample("mutation"));
+    observer.observe(submit, { attributes: true });
+    function sampleFrame() {
+      sample("frame");
+      frame = requestAnimationFrame(sampleFrame);
+    }
+    frame = requestAnimationFrame(sampleFrame);
+    return {
+      async finish() {
+        await Promise.all(
+          submit.getAnimations().map((animation) => animation.finished),
+        );
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
+        observer.disconnect();
+        cancelAnimationFrame(frame);
+        return samples;
+      },
+    };
+  });
 }
 
 async function openMeaningChooser(page: Page, selectedWord: string) {
@@ -70,6 +139,7 @@ for (const theme of ["light", "dark"]) {
     await context.addCookies([
       { name: "vocanova_theme", value: theme, url: baseURL! },
     ]);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     const writes: string[] = [];
     page.on("request", (request) => {
       if (request.method() === "POST")
@@ -98,9 +168,12 @@ for (const theme of ["light", "dark"]) {
         },
       });
     });
-    await page
-      .getByRole("button", { name: "Check my sentence", exact: true })
-      .click();
+    const submit = page.getByRole("button", {
+      name: "Check my sentence",
+      exact: true,
+    });
+    const contrastSampler = await sampleSubmitContrast(submit);
+    await submit.click();
     const comparison = page.getByRole("region", {
       name: "Sentence comparison",
     });
@@ -111,6 +184,21 @@ for (const theme of ["light", "dark"]) {
       comparison.getByText("I invite you.", { exact: true }),
     ).toBeVisible();
     await expect(comparison.locator("mark")).toHaveText(["i", "!", "I", "."]);
+    const contrastSamples = await contrastSampler.evaluate((sampler) =>
+      sampler.finish(),
+    );
+    await contrastSampler.dispose();
+    await testInfo.attach("submit-contrast-through-feedback", {
+      body: JSON.stringify(contrastSamples, null, 2),
+      contentType: "application/json",
+    });
+    expect(contrastSamples.some((sample) => sample.source === "frame")).toBe(
+      true,
+    );
+    expect(
+      contrastSamples.filter((sample) => sample.ratio < 4.5),
+      "The enabled submit action must remain readable throughout feedback arrival",
+    ).toEqual([]);
     await expectChooserRevealedByFocus(page, "invite");
     // Audit from a stable position, as dictionary-search does; the chooser's
     // actual target is checked above.

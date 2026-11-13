@@ -399,7 +399,7 @@ export function SentenceFeedback({
           type="submit"
           disabled={isLoading || sentence.trim().length === 0}
           aria-busy={isLoading}
-          className={`vn-btn focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 ${hasSuccessResult ? "vn-btn-secondary" : "vn-btn-primary"}`}
+          className={`vn-btn transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 ${hasSuccessResult ? "vn-btn-secondary" : "vn-btn-primary"}`}
         >
           {isLoading ? "Checking..." : "Check my sentence"}
         </button>
