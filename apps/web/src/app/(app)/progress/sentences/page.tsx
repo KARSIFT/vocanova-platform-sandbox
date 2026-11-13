@@ -42,13 +42,15 @@ export default async function SentenceHistoryPage({
       >
         Back to Progress
       </Link>
-      <Eyebrow>Your writing practice</Eyebrow>
-      <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900 [overflow-wrap:anywhere]">
-        Sentence history
-      </h1>
-      <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-        Look back at your original sentences and the feedback you received.
-      </p>
+      <header className="mt-3">
+        <Eyebrow>Your writing practice</Eyebrow>
+        <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900 [overflow-wrap:anywhere]">
+          Sentence history
+        </h1>
+        <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+          Look back at your original sentences and the feedback you received.
+        </p>
+      </header>
 
       {items.length === 0 ? (
         after ? (
@@ -63,7 +65,7 @@ export default async function SentenceHistoryPage({
       {hasMore && nextCursor ? (
         <Link
           href={`/progress/sentences?after=${encodeURIComponent(nextCursor)}`}
-          className="mt-[var(--spacing-lg)] inline-flex min-h-11 items-center rounded-md border border-primary-200 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] font-semibold text-primary-800 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          className="mt-[var(--spacing-lg)] vn-btn vn-btn-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
           View older sentences
         </Link>
@@ -90,7 +92,7 @@ function EmptySentenceHistory() {
       </p>
       <Link
         href="/home"
-        className="mt-[var(--spacing-md)] inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        className="mt-[var(--spacing-md)] vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
       >
         Go to Home
       </Link>
@@ -115,7 +117,7 @@ function ExhaustedSentenceHistory() {
       </p>
       <Link
         href="/progress/sentences"
-        className="mt-[var(--spacing-md)] inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        className="mt-[var(--spacing-md)] vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
       >
         Back to newest sentences
       </Link>

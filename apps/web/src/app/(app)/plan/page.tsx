@@ -12,7 +12,7 @@ import { RecommendedLesson } from "../_components/lesson-recommendation";
 
 export const metadata: Metadata = { title: "Your learning plan — Vocanova" };
 const action =
-  "mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
+  "mt-4 vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 const link =
   "inline-flex min-h-11 items-center font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 
@@ -108,16 +108,15 @@ export default async function LearningPlanPage() {
           Keep your personal goal here and change direction whenever your needs
           change.
         </p>
-        <LearningDirection initial={profile ?? null} />
-        <Link href="/settings" className={`${link} mt-3`}>
-          Change daily preferences
-        </Link>
-        <Link
-          href="/settings#practice-reminder"
-          className={`${link} ml-4 mt-3`}
-        >
-          Set a calendar reminder
-        </Link>
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <LearningDirection initial={profile ?? null} />
+          <Link href="/settings" className={link}>
+            Change daily preferences
+          </Link>
+          <Link href="/settings#practice-reminder" className={link}>
+            Set a calendar reminder
+          </Link>
+        </div>
       </Surface>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <Surface aria-labelledby="plan-review-heading">
@@ -156,11 +155,21 @@ export default async function LearningPlanPage() {
                 Today’s existing target remains {mission.reviewTarget}.
               </p>
             )}
-          <Link href="/review" className={action}>
+          <Link
+            href="/review"
+            className={
+              reviewReady
+                ? action
+                : "vn-btn vn-btn-secondary mt-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            }
+          >
             {reviewReady ? "Start review" : "View reviews"}
           </Link>
         </Surface>
-        <RecommendedLesson data={recommendationResponse?.data ?? null} />
+        <RecommendedLesson
+          data={recommendationResponse?.data ?? null}
+          primary={!reviewReady}
+        />
       </div>
       <Surface aria-labelledby="plan-words-heading" className="mt-4">
         <h2

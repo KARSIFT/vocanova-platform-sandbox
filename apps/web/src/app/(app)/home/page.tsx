@@ -411,7 +411,9 @@ export default async function HomePage() {
             >
               Your latest word
             </h2>
-            <p className="headword text-3xl">Nothing saved yet</p>
+            <p className="text-lg font-semibold text-neutral-900">
+              Nothing saved yet
+            </p>
             <p className="text-neutral-600">
               Choose Learn on a new word and it will wait for you here.
             </p>

@@ -234,10 +234,23 @@ export function PracticePlayer({
           <h1
             ref={heading}
             tabIndex={-1}
-            className="text-2xl font-bold leading-snug text-neutral-900"
+            className={
+              teaching
+                ? "headword text-2xl"
+                : "text-2xl font-bold leading-snug text-neutral-900"
+            }
           >
-            {teaching ? step.wordText : step.prompt}
+            {teaching
+              ? step.wordText
+              : step.kind === "typed_recall"
+                ? "Remember the word"
+                : step.prompt}
           </h1>
+          {step.kind === "typed_recall" && (
+            <p className="mt-3 text-lg leading-relaxed text-neutral-700">
+              {step.prompt}
+            </p>
+          )}
           {step.partOfSpeech && (
             <p className="mt-2 text-sm text-neutral-600">{step.partOfSpeech}</p>
           )}

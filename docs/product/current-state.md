@@ -1,5 +1,13 @@
 # Vocanova current product state
 
+## Manual visual review — 13 November 2026
+
+The [page-by-page audit](manual-ui-ux-audit-2026-11-13.md) records 43 visited route
+patterns, manual synthetic learning flows, screenshot review and corrections to
+spacing, typography, action hierarchy, account cards and recovery-page continuity.
+Its fixture/provider limits and exact acceptance evidence remain explicit; release
+identity and deployment status are recorded by the consolidated delivery PR.
+
 ## Remaining UI/UX findings — 12 November 2026
 
 The [completion delivery](ui-ux-completion-2026-11-12.md) adds resend/address

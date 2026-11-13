@@ -326,11 +326,7 @@ export function LessonPlayer({
             </p>
             {step.kind === "teach" ? (
               <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-                <h1
-                  ref={heading}
-                  tabIndex={-1}
-                  className="text-3xl font-bold leading-snug text-neutral-900"
-                >
+                <h1 ref={heading} tabIndex={-1} className="headword text-3xl">
                   {step.word.wordText}
                 </h1>
                 <ListenButton

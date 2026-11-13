@@ -8,6 +8,7 @@ import { ApiResponseError } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { AuthShell } from "@/ui/auth-shell";
 import { Surface } from "@/ui/surface";
 
 type ConfirmationState =
@@ -136,11 +137,8 @@ export function EmailChangePageContent() {
   const returnTo = `/auth/email-change?${new URLSearchParams({ token }).toString()}`;
 
   return (
-    <main className="grid min-h-screen place-items-center bg-neutral-100 p-6">
-      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-md)]">
-        <p className="text-sm font-bold tracking-wide text-primary-700">
-          VocaNova
-        </p>
+    <AuthShell>
+      <Surface className="w-full space-y-[var(--spacing-md)]">
         <h1 className="text-2xl font-semibold text-neutral-900">
           Confirm your new email
         </h1>
@@ -167,7 +165,7 @@ export function EmailChangePageContent() {
             <Link
               ref={accountLink}
               href="/settings/account"
-              className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+              className="auth-primary"
             >
               Return to account settings
             </Link>
@@ -183,7 +181,7 @@ export function EmailChangePageContent() {
             <Link
               ref={signInLink}
               href={`/login?${new URLSearchParams({ returnTo, magicOnly: "1" }).toString()}`}
-              className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+              className="auth-primary"
             >
               Sign in
             </Link>
@@ -213,7 +211,7 @@ export function EmailChangePageContent() {
                   if (state.recovery === "refresh") window.location.reload();
                   else void confirmEmailChange();
                 }}
-                className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                className="auth-primary"
               >
                 {state.recovery === "refresh"
                   ? "Refresh page"
@@ -223,7 +221,7 @@ export function EmailChangePageContent() {
             <Link
               ref={accountLink}
               href="/settings/account"
-              className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+              className="auth-secondary"
             >
               Go to account settings
             </Link>
@@ -236,6 +234,6 @@ export function EmailChangePageContent() {
           </>
         ) : null}
       </Surface>
-    </main>
+    </AuthShell>
   );
 }

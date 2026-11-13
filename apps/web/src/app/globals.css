@@ -776,53 +776,56 @@ progress::-moz-progress-bar {
   font-style: italic;
 }
 
-/* Actions. Exactly one `.vn-btn-primary` per screen carries the next step. */
-.vn-btn {
-  display: inline-flex;
-  min-height: 48px;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.65rem 1.35rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  font-weight: 650;
-  text-align: center;
-  transition:
-    background-color var(--duration-fast) var(--ease-out),
-    border-color var(--duration-fast) var(--ease-out);
-}
-.vn-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-.vn-btn-primary {
-  border-color: var(--color-primary-700);
-  background: var(--color-primary-700);
-  color: #ffffff;
-  box-shadow: inset 0 -2px 0 rgb(15 23 42 / 0.2);
-}
-.vn-btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-800);
-}
-.vn-btn-primary:active:not(:disabled) {
-  box-shadow: none;
-  transform: translateY(1px);
-}
-.vn-btn-secondary {
-  border-color: var(--color-neutral-300);
-  background: var(--color-white);
-  color: var(--color-primary-800);
-}
-.vn-btn-secondary:hover:not(:disabled) {
-  border-color: var(--color-primary-300);
-  background: var(--color-primary-50);
-}
-:root[data-theme="dark"] .vn-btn-primary {
-  border-color: #93c5fd;
-}
-:root[data-theme="dark"] .vn-btn-secondary {
-  color: #93c5fd;
+/* Keep action defaults below authored utilities, including pressed/selected states. */
+@layer components {
+  /* Actions. Exactly one `.vn-btn-primary` per screen carries the next step. */
+  .vn-btn {
+    display: inline-flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.35rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-weight: 650;
+    text-align: center;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+  .vn-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  .vn-btn-primary {
+    border-color: var(--color-primary-700);
+    background: var(--color-primary-700);
+    color: #ffffff;
+    box-shadow: inset 0 -2px 0 rgb(15 23 42 / 0.2);
+  }
+  .vn-btn-primary:hover:not(:disabled) {
+    background: var(--color-primary-800);
+  }
+  .vn-btn-primary:active:not(:disabled) {
+    box-shadow: none;
+    transform: translateY(1px);
+  }
+  .vn-btn-secondary {
+    border-color: var(--color-neutral-300);
+    background: var(--color-white);
+    color: var(--color-primary-800);
+  }
+  .vn-btn-secondary:hover:not(:disabled) {
+    border-color: var(--color-primary-300);
+    background: var(--color-primary-50);
+  }
+  :root[data-theme="dark"] .vn-btn-primary {
+    border-color: #93c5fd;
+  }
+  :root[data-theme="dark"] .vn-btn-secondary {
+    color: #93c5fd;
+  }
 }
 
 .vn-chip-link {

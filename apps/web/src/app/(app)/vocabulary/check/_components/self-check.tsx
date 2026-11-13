@@ -198,7 +198,7 @@ export function VocabularySelfCheck({
         id="check-word-heading"
         ref={heading}
         tabIndex={-1}
-        className="mt-3 break-words text-3xl font-bold text-neutral-900"
+        className="headword mt-3 text-3xl"
       >
         {item.wordText}
       </h2>

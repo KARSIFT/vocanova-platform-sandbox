@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { createApiClient } from "@/lib/api";
 import { getAuthErrorMessage } from "@/lib/auth-feedback";
 import { normalizeReturnTo } from "@/lib/return-to";
+import { AuthShell } from "@/ui/auth-shell";
 import { Surface } from "@/ui/surface";
 
 export function MagicLinkPageContent() {
@@ -46,14 +47,8 @@ export function MagicLinkPageContent() {
   }, [token, email, returnTo]);
 
   return (
-    <main className="grid min-h-screen place-items-center bg-neutral-100 p-6">
-      {/* max-w-[28rem] (not max-w-md): see the token-collision note on
-          /onboarding's page.tsx - tokens.generated.css's --spacing-md
-          (16px) shadows the intended 28rem max-w-md container size. */}
-      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-md)]">
-        <p className="text-sm font-bold tracking-wide text-primary-700">
-          VocaNova
-        </p>
+    <AuthShell>
+      <Surface className="w-full space-y-[var(--spacing-md)]">
         <h1 className="text-2xl font-semibold text-neutral-900">
           Sign in link
         </h1>
@@ -68,7 +63,7 @@ export function MagicLinkPageContent() {
           <div className="flex flex-wrap gap-[var(--spacing-sm)]">
             <Link
               href={`/login?${new URLSearchParams({ returnTo }).toString()}`}
-              className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+              className="auth-primary"
             >
               Back to sign in
             </Link>
@@ -81,6 +76,6 @@ export function MagicLinkPageContent() {
           </div>
         ) : null}
       </Surface>
-    </main>
+    </AuthShell>
   );
 }

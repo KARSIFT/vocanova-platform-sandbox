@@ -2,7 +2,7 @@ import Link from "@/ui/link";
 import type { LessonRecommendationResponse } from "@vocanova/api-client";
 
 const action =
-  "inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
+  "vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 const link =
   "inline-flex min-h-11 items-center font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 
@@ -10,12 +10,14 @@ export function RecommendedLesson({
   data,
   className,
   compact = false,
+  primary = true,
   browseHref = "/courses",
   browseLabel = "All lessons",
 }: {
   data: LessonRecommendationResponse | null;
   className?: string;
   compact?: boolean;
+  primary?: boolean;
   browseHref?: string;
   browseLabel?: string;
 }) {
@@ -52,7 +54,9 @@ export function RecommendedLesson({
             className={
               compact
                 ? `${link} rounded-xl border border-primary-200 px-5 py-2 hover:bg-primary-50`
-                : action
+                : primary
+                  ? action
+                  : "vn-btn vn-btn-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
             }
           >
             {recommendation.reason === "resume"

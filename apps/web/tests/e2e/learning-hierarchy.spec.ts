@@ -135,7 +135,8 @@ for (const theme of ["light", "dark"] as const) {
       const card = page.getByRole("main").locator("section").filter({ has: page.getByRole("heading", { name: "A quiet lunch", exact: true }) });
       const resume = card.getByRole("link", { name: "Continue story", exact: true });
       await expect(resume).toHaveAttribute("href", `/stories/session/${session.id}`);
-      await expect(resume).toHaveClass(/bg-primary-700/);
+      await expect(resume).toHaveClass(/\bvn-btn-primary\b/);
+      await expect(page.getByRole("main").locator(".vn-btn-primary")).toHaveCount(1);
       await expect(card.getByRole("link", { name: "Read and practise", exact: true })).toHaveCount(0);
       await expect(card.getByRole("link", { name: "Story details", exact: true })).toHaveAttribute("href", "/stories/a-quiet-lunch");
       await accessibleWithoutOverflow(page);
@@ -146,7 +147,8 @@ for (const theme of ["light", "dark"] as const) {
     test("new and completed stories offer one clear reading action", async ({ page, context }) => {
       await page.goto("/stories");
       const card = page.getByRole("main").locator("section").filter({ has: page.getByRole("heading", { name: "A quiet lunch", exact: true }) });
-      await expect(card.getByRole("link", { name: "Read and practise", exact: true })).toHaveClass(/bg-primary-700/);
+      await expect(card.getByRole("link", { name: "Read and practise", exact: true })).toHaveClass(/\bvn-btn-secondary\b/);
+      await expect(page.getByRole("main").locator(".vn-btn-primary")).toHaveCount(0);
       const started = await context.request.post(`${apiURL}/api/v1/story-sessions`, {
         headers: await headers(context), data: { storyKey: "a-quiet-lunch" },
       });
@@ -169,7 +171,8 @@ for (const theme of ["light", "dark"] as const) {
       await page.reload();
       await expect(card.getByRole("link", { name: "Continue story", exact: true })).toHaveCount(0);
       const repeat = card.getByRole("link", { name: "Read and practise again", exact: true });
-      await expect(repeat).toHaveClass(/bg-primary-700/);
+      await expect(repeat).toHaveClass(/\bvn-btn-secondary\b/);
+      await expect(page.getByRole("main").locator(".vn-btn-primary")).toHaveCount(0);
       await expect(repeat).toHaveAttribute("href", "/stories/a-quiet-lunch");
       await accessibleWithoutOverflow(page);
     });
