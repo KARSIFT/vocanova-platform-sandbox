@@ -72,7 +72,11 @@ export function handleApiError(
     return "Your session expired. Redirecting you to sign in...";
   }
   if (error instanceof ApiResponseError) {
-    return error.message;
+    // The client uses a bare status when the server supplied no learner-facing
+    // detail. Keep the screen's recovery guidance in that case.
+    return error.message === `HTTP ${error.status}`
+      ? fallbackMessage
+      : error.message;
   }
   return fallbackMessage;
 }

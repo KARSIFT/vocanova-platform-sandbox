@@ -3,6 +3,7 @@
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
+import { Surface } from "@/ui/surface";
 import { useState } from "react";
 
 function idempotencyKey(): string {
@@ -53,13 +54,13 @@ export function PersonalDataExport() {
   }
 
   return (
-    <section
+    <Surface
       aria-labelledby="personal-data-export-heading"
-      className="mt-[var(--spacing-lg)] rounded-md border border-neutral-300 bg-white p-[var(--spacing-md)] shadow-sm"
+      className="mt-[var(--spacing-lg)]"
     >
       <h2
         id="personal-data-export-heading"
-        className="text-xl font-semibold text-neutral-900"
+        className="text-lg font-semibold text-neutral-900"
       >
         Download your data
       </h2>
@@ -73,7 +74,7 @@ export function PersonalDataExport() {
         onClick={download}
         disabled={state === "loading"}
         aria-busy={state === "loading"}
-        className="mt-[var(--spacing-md)] inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-700 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-50"
+        className="mt-[var(--spacing-md)] vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
       >
         {state === "loading" ? "Preparing download..." : "Download my data"}
       </button>
@@ -90,6 +91,6 @@ export function PersonalDataExport() {
           {message}
         </p>
       ) : null}
-    </section>
+    </Surface>
   );
 }

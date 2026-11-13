@@ -1,5 +1,9 @@
 # Vocanova release readiness
 
+The [13 November manual UI/UX audit](manual-ui-ux-audit-2026-11-13.md) records
+page/function coverage, observed repairs and evidence limits for the latest visual
+pass. Synthetic acceptance is separate from real learner/provider evidence.
+
 ## Remaining UI/UX findings acceptance — 12 November 2026
 
 See [the completion delivery](ui-ux-completion-2026-11-12.md),

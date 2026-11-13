@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { handleSessionExpired } from "../../src/lib/session";
+import { ApiResponseError } from "@vocanova/api-client";
+import { handleApiError, handleSessionExpired } from "../../src/lib/session";
 import { normalizeReturnTo } from "../../src/lib/return-to";
 import {
   getSessionExit,
@@ -56,6 +57,25 @@ describe("session expiry destination", () => {
     handleSessionExpired("/review");
     const redirect = new URL(location.href, "https://vocanova.invalid");
     assert.equal(redirect.searchParams.get("returnTo"), "/review");
+  });
+  it("uses the screen's recovery message instead of a bare HTTP status", () => {
+    for (const status of [403, 404, 429, 500, 503]) {
+      assert.equal(
+        handleApiError(new ApiResponseError(status, null), "Please try the export again."),
+        "Please try the export again.",
+      );
+    }
+  });
+  it("preserves authored API guidance and session-expiry navigation", () => {
+    assert.equal(
+      handleApiError(new ApiResponseError(422, null, "Choose a shorter name."), "Try again."),
+      "Choose a shorter name.",
+    );
+    assert.equal(
+      handleApiError(new ApiResponseError(401, null), "Try again."),
+      "Your session expired. Redirecting you to sign in...",
+    );
+    assert.equal(new URL(location.href, "https://vocanova.invalid").pathname, "/login");
   });
 });
 

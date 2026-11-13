@@ -4,6 +4,7 @@ import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
 import {
   primaryAction,
+  secondaryAction,
   textLink,
 } from "../practice/_components/practice-styles";
 
@@ -18,6 +19,9 @@ export default async function StoriesPage() {
   } catch (error) {
     requireAuthRedirect(error, "/stories");
   }
+  const nextSessionId = library.items.find(
+    (story) => story.latestSession?.status === "in_progress",
+  )?.latestSession?.id;
   return (
     <PageContainer className="max-w-[64rem]">
       <Link href="/discover" className={textLink}>
@@ -72,7 +76,11 @@ export default async function StoriesPage() {
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   <Link
                     href={`/stories/session/${encodeURIComponent(story.latestSession.id)}`}
-                    className={primaryAction}
+                    className={
+                      story.latestSession.id === nextSessionId
+                        ? primaryAction
+                        : secondaryAction
+                    }
                   >
                     Continue story
                   </Link>
@@ -86,7 +94,7 @@ export default async function StoriesPage() {
               ) : (
                 <Link
                   href={`/stories/${encodeURIComponent(story.key)}`}
-                  className={`${primaryAction} mt-4`}
+                  className={`${secondaryAction} mt-4`}
                 >
                   {story.latestSession?.status === "completed"
                     ? "Read and practise again"
