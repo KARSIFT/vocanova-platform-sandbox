@@ -690,7 +690,32 @@ export function Discovery({
       {!started ? (
         <section
           aria-labelledby="discovery-intro"
-          className="learning-surface mt-6 p-5 sm:p-6"
+          className="learning-surface mt-6 p-4 sm:p-6"
+          onFocusCapture={(event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) return;
+            // Let native keyboard scrolling settle before measuring the real
+            // reading area beneath the sticky header.
+            requestAnimationFrame(() => {
+              if (
+                !target.isConnected ||
+                document.activeElement !== target ||
+                !target.matches(":focus-visible")
+              )
+                return;
+              const header = document.querySelector("header.app-header");
+              const safeTop = (header?.getBoundingClientRect().bottom ?? 0) + 8;
+              const safeBottom = window.innerHeight - 8;
+              const bounds = target.getBoundingClientRect();
+              const delta =
+                bounds.top < safeTop
+                  ? bounds.top - safeTop
+                  : bounds.bottom > safeBottom
+                    ? bounds.bottom - safeBottom
+                    : 0;
+              if (delta) window.scrollBy({ top: delta, behavior: "instant" });
+            });
+          }}
         >
           <LearningIntro
             id="discovery-intro"

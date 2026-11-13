@@ -10,7 +10,9 @@ The [comparison study](first-five-minutes-study-2026-11-13.md) and blank observa
 CSV are prepared; sessions remain zero and the owner arranges participants.
 The owner approved Warm guided coach and the concrete proposal. The integrated application now applies the approved direction to Home,
 Discovery, exact-meaning writing and daily/compatibility review presentation.
-See the [delivery evidence](warm-guided-learning-2026-11-13.md) for acceptance and
+Hosted verification additionally exposed font-sensitive entry sizing and an
+independently reproduced pre-interactive Profile submission gap; both are covered
+by regressions. See the [delivery evidence](warm-guided-learning-2026-11-13.md) for acceptance and
 release limits. Telemetry is not implemented.
 
 ## Manual visual review — 13 November 2026

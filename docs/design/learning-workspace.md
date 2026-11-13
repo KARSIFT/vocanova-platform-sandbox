@@ -28,6 +28,13 @@ reading surface, one clear next action and brief, practical guidance.
   sound toggles remain available. Feedback and completion describe the returned
   result and schedule without claiming mastery or a fixed future workload.
 
+Entry controls must fit common fallback fonts as well as the preferred system
+font. They keep aligned equal-height targets at normal size and stack with intact
+words as text grows. Keyboard focus is revealed beneath the actual sticky header.
+Profile editing and Save wait for the signed-in user's draft recovery; a visible
+loading state explains the brief delay without exposing implementation details.
+The tab icon reuses the existing blue lettermark.
+
 The standalone comparison is a design artifact. Its sample feedback and schedule
 are not production functionality or learner evidence. The prepared study still
 has zero observed sessions; no production analytics collector is introduced.

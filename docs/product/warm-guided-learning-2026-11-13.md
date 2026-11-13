@@ -24,33 +24,49 @@ first learning journey.
   and describes the actual recorded result and returned schedule. Four ratings,
   first-answer rules, counts, locks and same-day scheduling remain unchanged.
 
+Profile controls now wait for identity-scoped draft recovery before accepting
+edits or Save. Slow JavaScript can no longer turn a pre-interactive save into a
+native document navigation that drops the typed name. Typing during an actual
+save still keeps a newer draft. The browser tab also uses the existing blue V
+identity through a self-contained SVG icon.
+
 There is no new API contract, database migration, authentication policy, combined
 learning session, feedback provider, reward model or telemetry collector.
 
 ## Local acceptance
 
 The final production build, lint, app/browser TypeScript, formatting and all
-302 web helper/middleware tests passed. All 11 manually changed application
-sources predate the final build; their hashes are retained with private evidence.
+302 web helper/middleware tests passed. Changed application sources predate the final build; their hashes and exact
+verification outcomes are retained with private evidence.
 
-Final new-flow acceptance passed **411 cases** across Chrome, Firefox and WebKit
+Final new-flow acceptance passed **447 cases** across Chrome, Firefox and WebKit
 at 360px, 430px and desktop, including both themes and 200% text. Twelve intentional
 skips run the 1024px Home breakpoint only in desktop projects rather than duplicate
 it in phone projects. There were zero failures, flaky cases or retry attempts.
-An earlier 252-case cross-engine run also passed without skips or retries.
+The final matrix includes Arial/Verdana entry stress after the first hosted run
+exposed platform font differences; earlier runs remain historical evidence.
 
 The surrounding Chrome regression suite passed **461 cases**, with one existing
 phone-only desktop skip and no failures, flaky cases or retries. After the last
 review-option spacing change, the affected review/hierarchy subset passed another
-66 cases without skips or retries. A focused cross-engine review/Home run passed
-42 cases with the same 12 intentional breakpoint skips before the final matrix.
+66 cases without skips or retries. After hosted findings, the original Discovery
+entry regressions passed 36 cases across all nine engine/layout combinations;
+Home image regressions passed 27 native cases plus three font-stressed cases.
+Full Profile checks passed 63 cases with 18 existing representative-desktop
+scope skips; the new blocked-JavaScript readiness case passed all nine engine/layout combinations. The exact manual-date continuation scenario also passed nine cases,
+retaining the original request key/body and credited-review assertions. No accepted
+run had failures, flaky cases or retry attempts.
 
 Independent rendered review covered six widths (360, 430, 561, 768, 1024 and 1280)
 and both themes: 12 complete state journeys, 220 viewport screenshots and 54 axe
 scans, with no serious or critical findings. A final review-only pass after the
 last spacing fix added 76 viewport captures and 18 scans across the same 12
-contexts, all passing. Actual images were inspected, including keyboard focus,
-full review dates, 200% answer readability and the correctness marker. Earlier
+contexts, all passing. A fresh follow-up after the hosted findings passed six
+changed-screen contexts with 100 viewport captures and 20 axe scans, including
+wider fonts, entry/completion controls, and Profile loading/ready/saving states.
+All 100 images were inspected through 32 contact sheets plus selected original
+PNGs. Actual images confirmed keyboard focus, intact enlarged words, full review
+dates, answer readability and the correctness marker. Earlier
 failed artifacts were retained rather than overwritten or counted as acceptance.
 
 Independent source/screenshot review and reproducing regressions found and fixed:
@@ -60,12 +76,20 @@ Independent source/screenshot review and reproducing regressions found and fixed
 - Clipped enlarged Discovery actions and a hidden review date.
 - Review fieldset minimum sizing, squeezed correct-answer text, keyboard actions
   scrolling under the header, and a too-narrow Home main column at 1024px/200%.
+- Discovery entry controls depending on narrow-font metrics, and Profile allowing
+  native submission before its client recovery was ready.
 
 Test-harness corrections preserved business assertions: save refresh setup,
 settled fresh-map replay state, independent Personal tools expansion, explicit
 sound opt-in, unambiguous banner/answer locators and WebKit's fractional-device
-outline rasterization. No production logic was changed to accommodate those
-harness errors.
+outline rasterization. Hosted findings also required scrolling a genuinely lazy
+image into view after the Review/source checks, using a reverse keyboard
+roundtrip at Firefox's last-control boundary, and checking one visible completion
+message in the active main instead of globally matching an inactive streamed
+copy. The duplicate-copy interpretation is guarded by an explicit assertion that
+there is exactly one visible matching message. No scheduling logic was changed.
+The existing hosted Profile overlap flake was not conclusively attributed; the
+separate pre-interactive form bug was independently reproduced and fixed.
 
 Manual synthetic browser operation exercised Home, confirmed Discovery saving,
 canonical saved writing, submitted feedback, an incorrect real review response,

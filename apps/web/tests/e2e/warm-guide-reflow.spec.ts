@@ -8,20 +8,28 @@ async function expectReadableControl(
   page: Page,
   control: Locator,
   texts: Locator[],
+  reverseFirst = false,
 ) {
   await control.focus();
-  await pressTab(page);
-  await pressTab(page, { backwards: true });
+  await pressTab(page, { backwards: reverseFirst });
+  await pressTab(page, { backwards: !reverseFirst });
   await expect(control).toBeFocused();
   await expect(control).toBeInViewport({ ratio: 1 });
+  await expect
+    .poll(
+      async () => {
+        const [bounds, header] = await Promise.all([
+          control.boundingBox(),
+          page.getByRole("banner").boundingBox(),
+        ]);
+        return Boolean(
+          bounds && header && bounds.y >= header.y + header.height,
+        );
+      },
+      { message: "The complete focused control must clear the sticky header" },
+    )
+    .toBe(true);
   const bounds = await control.boundingBox();
-  const headerBottom = await page
-    .getByRole("banner")
-    .evaluate((element) => element.getBoundingClientRect().bottom);
-  expect(
-    bounds!.y,
-    "The complete focused control must clear the sticky header",
-  ).toBeGreaterThanOrEqual(headerBottom);
   expect(bounds!.width).toBeGreaterThanOrEqual(44);
   expect(bounds!.height).toBeGreaterThanOrEqual(44);
   for (const text of texts) {
@@ -243,4 +251,84 @@ for (const theme of ["light", "dark"] as const) {
       path: info.outputPath(`home-1024-${theme}-200.png`),
     });
   });
+}
+
+for (const theme of ["light", "dark"] as const) {
+  for (const textSize of [100, 200]) {
+    test(`discovery entry controls fit fallback fonts at ${textSize}% text in ${theme}`, async ({
+      page,
+      context,
+      baseURL,
+    }, info) => {
+      await context.addCookies([
+        { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+        { name: "vocanova_csrf", value: randomUUID(), url: baseURL! },
+        { name: "vocanova_theme", value: theme, url: baseURL! },
+      ]);
+      await page.route("**/api/v1/pronunciation", (route) =>
+        route.fulfill({ status: 503, json: { title: "Unavailable" } }),
+      );
+      await page.goto("/discovery?band=1&word=1");
+      await expect(
+        page.getByRole("heading", {
+          name: "Discover your next words",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      // Exercise a common fallback and wider glyph metrics rather than
+      // relying on the owner's macOS font for the action layout.
+      for (const font of ["Arial", "Verdana"]) {
+        await page.addStyleTag({
+          content: `body { font-family: ${font}, sans-serif !important; } html { font-size: ${textSize}% !important; }`,
+        });
+        const start = page.getByRole("button", {
+          name: "Start discovering",
+          exact: true,
+        });
+        const sound = page.getByRole("button", {
+          name: "Sound off",
+          exact: true,
+        });
+        if (textSize === 100) {
+          const [first, second] = await Promise.all([
+            start.boundingBox(),
+            sound.boundingBox(),
+          ]);
+          expect(
+            Math.abs(first!.y - second!.y),
+            "Entry actions should share a row at normal text size",
+          ).toBeLessThanOrEqual(1);
+          expect(
+            Math.abs(first!.height - second!.height),
+            "Both entry targets should fill the row height",
+          ).toBeLessThanOrEqual(1);
+        }
+        await expectReadableControl(page, start, [start]);
+        // Sound is the last entry control. Round-trip through Start rather
+        // than through browser chrome, whose Tab behavior differs by engine.
+        await expectReadableControl(page, sound, [sound], true);
+        for (const word of ["Start", "discovering"]) {
+          expect(
+            await start.evaluate((element, targetWord) => {
+              const text = element.firstChild!;
+              const offset = text.textContent!.indexOf(targetWord);
+              const range = document.createRange();
+              range.setStart(text, offset);
+              range.setEnd(text, offset + targetWord.length);
+              return range.getClientRects().length;
+            }, word),
+            `The whole word ${word} must fit without forced splitting`,
+          ).toBe(1);
+        }
+        await page.screenshot({
+          path: info.outputPath(
+            `entry-${font.toLowerCase()}-${theme}-${textSize}.png`,
+          ),
+          fullPage: true,
+          scale: "css",
+        });
+      }
+    });
+  }
 }

@@ -534,10 +534,20 @@
   line-height: 1.6;
 }
 .startActions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  max-width: 26rem;
   align-items: stretch;
   gap: 0.75rem;
+}
+.startActions > button,
+.startActions .audio button {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  padding-inline: 0.25rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .card {
   margin: 1rem 0 0;
@@ -718,6 +728,8 @@
 /* Navigation changes the displayed word only, never its learning state. */
 .startActions .audio {
   display: inline-flex;
+  min-width: 0;
+  width: 100%;
   align-items: stretch;
   margin: 0;
 }
