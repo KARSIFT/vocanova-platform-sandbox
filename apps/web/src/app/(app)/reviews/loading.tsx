@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 export default function ReviewsLoading() {
   return (
     <section
@@ -5,9 +6,14 @@ export default function ReviewsLoading() {
       aria-labelledby="reviews-loading-status"
       className="animate-pulse p-[var(--spacing-lg)]"
     >
-      <p id="reviews-loading-status" role="status" className="sr-only">
+      <StatusMessage
+        as="p"
+        id="reviews-loading-status"
+        role="status"
+        className="sr-only"
+      >
         Loading reviews
-      </p>
+      </StatusMessage>
       <div className="flex items-center justify-between">
         <div className="h-7 w-1/4 rounded bg-neutral-200" />
         <div className="h-4 w-1/4 rounded bg-neutral-200" />

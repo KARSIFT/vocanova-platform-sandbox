@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { ActionLink } from "@/ui/controls";
+
 import Link from "@/ui/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -52,21 +56,22 @@ export function MagicLinkPageContent() {
         <h1 className="text-2xl font-semibold text-neutral-900">
           Sign in link
         </h1>
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="polite"
           className={`text-base ${status.type === "error" ? "text-red-700" : "text-neutral-700"}`}
         >
           {status.message}
-        </p>
+        </StatusMessage>
         {status.type === "error" ? (
           <div className="flex flex-wrap gap-[var(--spacing-sm)]">
-            <Link
+            <ActionLink
               href={`/login?${new URLSearchParams({ returnTo }).toString()}`}
-              className="auth-primary"
             >
               Back to sign in
-            </Link>
+            </ActionLink>
             <Link
               href="/"
               className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"

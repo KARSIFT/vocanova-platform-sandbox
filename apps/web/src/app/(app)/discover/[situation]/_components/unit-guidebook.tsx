@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import type {
@@ -133,15 +134,23 @@ export function UnitGuidebook({
         </Link>
       </div>
       {lessons === null && (
-        <p role="status" className="mt-2 text-sm text-neutral-600">
+        <StatusMessage
+          as="p"
+          role="status"
+          className="mt-2 text-sm text-neutral-600"
+        >
           Guided lessons could not load. You can still explore this guide and
           its words.
-        </p>
+        </StatusMessage>
       )}
       {stories === null && (
-        <p role="status" className="mt-2 text-sm text-neutral-600">
+        <StatusMessage
+          as="p"
+          role="status"
+          className="mt-2 text-sm text-neutral-600"
+        >
           Story links could not load. You can try the story library later.
-        </p>
+        </StatusMessage>
       )}
     </Surface>
   );

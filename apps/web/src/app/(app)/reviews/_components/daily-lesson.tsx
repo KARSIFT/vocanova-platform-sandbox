@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "@/ui/link";
+import { StatusMessage } from "@/ui/status-message";
+import { ActionLink, Button } from "@/ui/controls";
 import { useEffect, useRef, useState } from "react";
 import {
   ApiResponseError,
@@ -419,18 +420,23 @@ export function DailyLessonPlayer({
           </LearningNote>
           <div className="mt-7 flex flex-wrap gap-3">
             {dueCount > 0 ? (
-              <button
+              <Button
+                variant="primary"
                 type="button"
                 onClick={() => void start()}
                 disabled={busy}
                 className={primary}
               >
                 {busy ? "Starting…" : "Start review"}
-              </button>
+              </Button>
             ) : (
-              <Link href="/discovery" className={primary}>
+              <ActionLink
+                variant="primary"
+                href="/discovery"
+                className={primary}
+              >
                 Discover words
-              </Link>
+              </ActionLink>
             )}
           </div>
         </section>
@@ -456,9 +462,13 @@ export function DailyLessonPlayer({
             <p>Come back to see which words are ready.</p>
           </LearningNote>
           {completionStatus === "loading" && (
-            <p role="status" className="mt-3 text-neutral-700">
+            <StatusMessage
+              as="p"
+              role="status"
+              className="mt-3 text-neutral-700"
+            >
               Checking for more words…
-            </p>
+            </StatusMessage>
           )}
           {completionStatus === "ready" && dueCount > 0 && (
             <p className="mt-3 text-neutral-700">
@@ -468,25 +478,34 @@ export function DailyLessonPlayer({
           <div className="mt-7 flex flex-wrap gap-3">
             {completionStatus === "ready" &&
               (completionCanContinue ? (
-                <button
+                <Button
+                  variant="primary"
                   type="button"
                   className={primary}
                   disabled={busy}
                   onClick={() => void start()}
                 >
                   Keep reviewing
-                </button>
+                </Button>
               ) : (
-                <Link href="/discovery" className={primary}>
+                <ActionLink
+                  variant="primary"
+                  href="/discovery"
+                  className={primary}
+                >
                   Discover words
-                </Link>
+                </ActionLink>
               ))}
-            <Link href="/home" className={secondary}>
+            <ActionLink variant="secondary" href="/home" className={secondary}>
               Back to Home
-            </Link>
-            <Link href="/practice" className={secondary}>
+            </ActionLink>
+            <ActionLink
+              variant="secondary"
+              href="/practice"
+              className={secondary}
+            >
               Today’s practice
-            </Link>
+            </ActionLink>
           </div>
         </section>
       ) : step ? (
@@ -603,7 +622,7 @@ export function DailyLessonPlayer({
             ))}
           </fieldset>
           {feedback && (
-            <div
+            <StatusMessage
               ref={feedbackRegion}
               tabIndex={-1}
               role="status"
@@ -637,7 +656,7 @@ export function DailyLessonPlayer({
                   recorded.
                 </p>
               )}
-            </div>
+            </StatusMessage>
           )}
           <SessionActions
             id="daily-lesson-actions"
@@ -671,7 +690,8 @@ export function DailyLessonPlayer({
                 <span />
               )}
               {feedback ? (
-                <button
+                <Button
+                  variant="primary"
                   ref={continueButton}
                   type="button"
                   className={`${primary} review-action-primary`}
@@ -679,25 +699,29 @@ export function DailyLessonPlayer({
                   onClick={() => void submit("continue")}
                 >
                   Continue
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
+                  variant="primary"
                   type="submit"
                   className={`${primary} review-action-primary`}
                   disabled={locked || !choice}
                 >
                   {busy ? "Checking…" : "Check answer"}
-                </button>
+                </Button>
               )}
             </div>
           </SessionActions>
         </form>
       ) : (
-        <p role="status">Load your saved progress to continue.</p>
+        <StatusMessage as="p" role="status">
+          Load your saved progress to continue.
+        </StatusMessage>
       )}
 
       {error && (
-        <div
+        <StatusMessage
+          tone="error"
           ref={errorRegion}
           tabIndex={-1}
           role="alert"
@@ -706,25 +730,27 @@ export function DailyLessonPlayer({
           <p>{error}</p>
           <div className="mt-3 flex flex-wrap gap-3">
             {uncertain && (
-              <button
+              <Button
+                variant="primary"
                 type="button"
                 className={primary}
                 disabled={busy}
                 onClick={() => void submit()}
               >
                 Retry same answer
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              variant="secondary"
               type="button"
               className={secondary}
               disabled={busy}
               onClick={() => void refresh()}
             >
               Load saved progress
-            </button>
+            </Button>
           </div>
-        </div>
+        </StatusMessage>
       )}
       {session && <VocabularySources attribution={session.attribution} />}
     </div>

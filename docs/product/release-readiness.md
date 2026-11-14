@@ -1,5 +1,12 @@
 # Vocanova release readiness
 
+## Shared component consistency acceptance — 14 November 2026
+
+The [component delivery](component-consistency-2026-11-14.md) consolidates ordinary
+controls, panels and feedback and adds a gated synthetic browser gallery. The
+approved learning direction and server-owned behavior remain in place. Exact
+local evidence, platform limitations and pending rollout are recorded there.
+
 ## First-five-minutes exploration — 13 November 2026
 
 The [design comparison](../superpowers/specs/2026-11-13-first-five-minutes-design.md)

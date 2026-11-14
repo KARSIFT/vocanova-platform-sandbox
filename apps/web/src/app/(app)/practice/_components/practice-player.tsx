@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { ActionLink, Button, TextInput } from "@/ui/controls";
 import Link from "@/ui/link";
 import { useEffect, useId, useRef, useState } from "react";
 import {
@@ -225,9 +227,13 @@ export function PracticePlayer({
               ? "Your next step is ready on your learning path."
               : "Come back for another try whenever you like."}
           </p>
-          <Link href="/practice" className={`${primaryAction} mt-5`}>
+          <ActionLink
+            variant="primary"
+            href="/practice"
+            className={`${primaryAction} mt-5`}
+          >
             {journey ? "Back to your path" : "Choose another practice"}
-          </Link>
+          </ActionLink>
         </Surface>
       ) : step ? (
         <Surface key={step.id}>
@@ -315,7 +321,8 @@ export function PracticePlayer({
                 {shownTokens.map((id, index) => {
                   const token = step.choices.find((choice) => choice.id === id);
                   return (
-                    <button
+                    <Button
+                      variant="secondary"
                       key={id}
                       type="button"
                       disabled={answerLocked}
@@ -337,7 +344,7 @@ export function PracticePlayer({
                       }}
                     >
                       {token?.text}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -347,7 +354,8 @@ export function PracticePlayer({
                 aria-label="Available words"
               >
                 {step.choices.map((token) => (
-                  <button
+                  <Button
+                    variant="secondary"
                     key={token.id}
                     type="button"
                     disabled={answerLocked || shownTokens.includes(token.id)}
@@ -357,7 +365,7 @@ export function PracticePlayer({
                     className={`${secondaryAction} disabled:opacity-40`}
                   >
                     {token.text}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <div className="mt-3 flex gap-4">
@@ -396,7 +404,7 @@ export function PracticePlayer({
               >
                 Your answer
               </label>
-              <input
+              <TextInput
                 id={answerId}
                 type="text"
                 value={answer}
@@ -407,7 +415,7 @@ export function PracticePlayer({
                 autoCapitalize="none"
                 spellCheck={false}
                 aria-describedby={helpId}
-                className="mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 py-3 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-60"
+                className="mt-2 w-full"
               />
               <p id={helpId} className="mt-2 text-sm text-neutral-600">
                 Use the word or phrase you learned. Different words can be valid
@@ -433,13 +441,14 @@ export function PracticePlayer({
                   meaningRevision={step.pronunciationRevision}
                 />
               ) : !journey ? (
-                <p
+                <StatusMessage
+                  as="p"
                   role="status"
                   className="rounded-xl bg-secondary-50 p-4 text-neutral-800"
                 >
                   The audio for this question is unavailable. You can show the
                   answer or return to Practice for another activity.
-                </p>
+                </StatusMessage>
               ) : null}
               <form
                 id={answerFormId}
@@ -489,7 +498,7 @@ export function PracticePlayer({
             </p>
           )}
           {checked && (
-            <div
+            <StatusMessage
               ref={feedback}
               tabIndex={-1}
               role="status"
@@ -521,11 +530,12 @@ export function PracticePlayer({
               >
                 Explore {checked.wordText}
               </Link>
-            </div>
+            </StatusMessage>
           )}
           <SessionActions>
             {(!checked || (journey && !session.canContinue)) && !teaching && (
-              <button
+              <Button
+                variant="secondary"
                 type="button"
                 disabled={locked}
                 onClick={() => void submit("reveal")}
@@ -536,7 +546,7 @@ export function PracticePlayer({
                   : journey && (step.kind === "listening_choice" || assembly)
                     ? "Can’t listen now"
                     : "Show answer"}
-              </button>
+              </Button>
             )}
             {!teaching &&
               !checked?.correct &&
@@ -558,7 +568,8 @@ export function PracticePlayer({
                 </button>
               )}
             {session.canContinue && (
-              <button
+              <Button
+                variant="primary"
                 type="button"
                 disabled={locked}
                 className={`${primaryAction} grow`}
@@ -567,7 +578,7 @@ export function PracticePlayer({
                 {session.completedSteps + 1 === session.totalSteps
                   ? "Finish practice"
                   : "Continue"}
-              </button>
+              </Button>
             )}
           </SessionActions>
         </Surface>
@@ -583,19 +594,21 @@ export function PracticePlayer({
           <p className="mt-3 text-neutral-700">
             We could not display the next question.
           </p>
-          <button
+          <Button
+            variant="secondary"
             type="button"
             disabled={busy}
             className={`${secondaryAction} mt-4`}
             onClick={() => void refreshProgress()}
           >
             Load saved progress
-          </button>
+          </Button>
         </Surface>
       )}
 
       {error && (
-        <div
+        <StatusMessage
+          tone="error"
           ref={errorRegion}
           tabIndex={-1}
           role="alert"
@@ -604,35 +617,41 @@ export function PracticePlayer({
           <p>{error}</p>
           <div className="mt-3 flex flex-wrap gap-3">
             {needsRetry && (
-              <button
+              <Button
+                variant="secondary"
                 type="button"
                 disabled={busy}
                 onClick={() => void submit()}
                 className={secondaryAction}
               >
                 Retry answer
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              variant="secondary"
               type="button"
               disabled={busy}
               onClick={() => void refreshProgress()}
               className={secondaryAction}
             >
               Load saved progress
-            </button>
+            </Button>
           </div>
-        </div>
+        </StatusMessage>
       )}
       {notice && (
-        <p role="status" className="mt-4 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mt-4 text-neutral-700">
           {notice}
-        </p>
+        </StatusMessage>
       )}
       {busy && (
-        <p role="status" className="mt-3 text-sm text-neutral-600">
+        <StatusMessage
+          as="p"
+          role="status"
+          className="mt-3 text-sm text-neutral-600"
+        >
           Saving your practice…
-        </p>
+        </StatusMessage>
       )}
     </div>
   );

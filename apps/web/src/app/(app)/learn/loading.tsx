@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 export default function LessonLoading() {
   return (
     <section
@@ -5,9 +6,14 @@ export default function LessonLoading() {
       aria-labelledby="lesson-loading-status"
       className="mx-auto w-full max-w-[44rem] p-[var(--spacing-lg)]"
     >
-      <p id="lesson-loading-status" role="status" className="text-neutral-700">
+      <StatusMessage
+        as="p"
+        id="lesson-loading-status"
+        role="status"
+        className="text-neutral-700"
+      >
         Loading lesson…
-      </p>
+      </StatusMessage>
       <div
         aria-hidden="true"
         className="mt-6 space-y-4 motion-safe:animate-pulse"

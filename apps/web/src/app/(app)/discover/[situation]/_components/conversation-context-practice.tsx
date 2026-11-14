@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "@/ui/link";
+import { ActionLink, Button } from "@/ui/controls";
+import { StatusMessage } from "@/ui/status-message";
 import { useEffect, useRef, useState } from "react";
 
 import type { ConversationPracticeCase } from "./conversation-context-content";
@@ -85,13 +86,14 @@ export function ConversationContextPractice({
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
             Try three short examples about making and changing plans.
           </p>
-          <button
+          <Button
+            variant="secondary"
             type="button"
             onClick={startPractice}
             className={`${secondaryButton} mt-[var(--spacing-sm)]`}
           >
             Start context practice
-          </button>
+          </Button>
         </>
       ) : stage === "practice" && currentCase ? (
         <div key={currentCase.id} className="mt-[var(--spacing-md)]">
@@ -136,7 +138,7 @@ export function ConversationContextPractice({
               </button>
             ))}
           </div>
-          <div
+          <StatusMessage
             role="status"
             aria-live="polite"
             aria-atomic="true"
@@ -163,12 +165,13 @@ export function ConversationContextPractice({
                 </dl>
               </>
             ) : null}
-          </div>
+          </StatusMessage>
           {selectedMeaningId !== null ? (
             <>
               <div className="mt-[var(--spacing-sm)]">
                 {answeredCorrectly ? (
-                  <button
+                  <Button
+                    variant="primary"
                     type="button"
                     onClick={nextExample}
                     className={primaryButton}
@@ -176,9 +179,10 @@ export function ConversationContextPractice({
                     {caseIndex === cases.length - 1
                       ? "Finish practice"
                       : "Next example"}
-                  </button>
+                  </Button>
                 ) : (
-                  <button
+                  <Button
+                    variant="primary"
                     type="button"
                     onClick={() => {
                       nextFocus.current = "choice";
@@ -187,7 +191,7 @@ export function ConversationContextPractice({
                     className={primaryButton}
                   >
                     Try again
-                  </button>
+                  </Button>
                 )}
               </div>
             </>
@@ -213,23 +217,25 @@ export function ConversationContextPractice({
                 (choice) => choice.meaningId === example.correctMeaningId,
               );
               return word ? (
-                <Link
+                <ActionLink
+                  variant="secondary"
                   key={word.meaningId}
                   href={`/discover/${encodeURIComponent(situationSlug)}/${encodeURIComponent(word.wordSlug)}`}
                   className={secondaryButton}
                 >
                   Practice with {word.wordText}
-                </Link>
+                </ActionLink>
               ) : null;
             })}
           </div>
-          <button
+          <Button
+            variant="secondary"
             type="button"
             onClick={startPractice}
             className={`${secondaryButton} mt-[var(--spacing-md)]`}
           >
             Restart practice
-          </button>
+          </Button>
         </div>
       ) : null}
       {stage !== "intro" ? (

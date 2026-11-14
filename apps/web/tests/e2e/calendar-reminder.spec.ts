@@ -164,6 +164,48 @@ for (const theme of ["light", "dark"] as const) {
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(page.viewportSize()!.width);
+      // Opening the instructions can leave an unfocused native field clipped
+      // behind sticky chrome. Reach each field and verify its complete target
+      // before the unfiltered axe scan, rather than measuring that clipped slice.
+      for (const label of ["Start date", "Reminder time"]) {
+        const control = section.getByLabel(label, { exact: true });
+        await control.focus();
+        await control.evaluate((element) =>
+          element.scrollIntoView({ block: "center", inline: "nearest" }),
+        );
+        await expect(control).toBeFocused();
+        const geometry = await control.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          const outline = parseFloat(style.outlineWidth);
+          const ring = outline + Math.max(0, parseFloat(style.outlineOffset));
+          const clearOfChrome = [...document.querySelectorAll("header, nav")].every((node) => {
+            const position = getComputedStyle(node).position;
+            const chrome = node.getBoundingClientRect();
+            return !["fixed", "sticky"].includes(position) || !chrome.width || !chrome.height
+              || box.right + ring <= chrome.left || box.left - ring >= chrome.right
+              || box.bottom + ring <= chrome.top || box.top - ring >= chrome.bottom;
+          });
+          return {
+            width: box.width,
+            height: box.height,
+            visibleRing: outline >= 2 && style.outlineStyle !== "none",
+            clearOfChrome,
+            insideViewport: box.top - ring >= 0 && box.bottom + ring <= innerHeight
+              && box.left - ring >= 0 && box.right + ring <= innerWidth,
+            clearInterior: [0.25, 0.75].every((x) => [0.25, 0.75].every((y) =>
+              document.elementFromPoint(box.left + box.width * x, box.top + box.height * y) === element,
+            )),
+          };
+        });
+        expect(geometry.width, `${label} target width`).toBeGreaterThanOrEqual(48);
+        expect(geometry.height, `${label} target height`).toBeGreaterThanOrEqual(48);
+        expect(geometry.visibleRing, `${label} visible focus ring`).toBe(true);
+        expect(geometry.clearOfChrome, `${label} clears sticky/fixed chrome`).toBe(true);
+        expect(geometry.insideViewport, `${label} complete target and ring`).toBe(true);
+        expect(geometry.clearInterior, `${label} unobscured interior`).toBe(true);
+      }
+      await page.screenshot({ path: testInfo.outputPath(`calendar-focused-${theme}-viewport.png`) });
       const scan = await scanForAxeViolations(page);
       expect(
         scan.criticalOrSerious,

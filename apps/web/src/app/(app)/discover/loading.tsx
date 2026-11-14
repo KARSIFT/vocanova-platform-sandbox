@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 export default function DiscoverLoading() {
   return (
     <section
@@ -5,9 +6,14 @@ export default function DiscoverLoading() {
       aria-labelledby="journey-loading-status"
       className="animate-pulse p-[var(--spacing-lg)]"
     >
-      <p id="journey-loading-status" role="status" className="sr-only">
+      <StatusMessage
+        as="p"
+        id="journey-loading-status"
+        role="status"
+        className="sr-only"
+      >
         Loading Journey
-      </p>
+      </StatusMessage>
       <div className="h-7 w-1/3 rounded bg-neutral-200" />
       <div className="mt-[var(--spacing-xs)] h-4 w-2/3 rounded bg-neutral-200" />
 

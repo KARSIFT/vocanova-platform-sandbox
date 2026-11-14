@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { Button, TextInput } from "@/ui/controls";
+
 import { useEffect, useRef, useState } from "react";
 import {
   createCalendarReminder,
@@ -9,7 +13,7 @@ import {
 import { Surface } from "@/ui/surface";
 
 const inputStyle =
-  "mt-2 min-h-12 scroll-my-24 w-full min-w-0 max-w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus:outline focus:outline-[3px] focus:outline-offset-[3px] focus:outline-primary-500";
+  "mt-2 scroll-my-24 max-w-full focus:outline focus:outline-[3px] focus:outline-offset-[3px] focus:outline-primary-500";
 
 export function CalendarReminder() {
   const [startDate, setStartDate] = useState("");
@@ -154,7 +158,7 @@ export function CalendarReminder() {
             htmlFor="reminder-start-date"
           >
             Start date
-            <input
+            <TextInput
               id="reminder-start-date"
               type="date"
               required
@@ -172,7 +176,7 @@ export function CalendarReminder() {
             htmlFor="reminder-time"
           >
             Reminder time
-            <input
+            <TextInput
               id="reminder-time"
               type="time"
               required
@@ -191,23 +195,29 @@ export function CalendarReminder() {
           Confirm its time zone and alert after importing, including around
           daylight-saving changes.
         </p>
-        <button
-          type="submit"
-          disabled={!startDate}
-          className="mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-60"
-        >
+        <Button type="submit" disabled={!startDate} className="mt-4">
           Download calendar reminder
-        </button>
+        </Button>
         {error && (
-          <p role="alert" className="mt-3 text-sm text-red-700">
+          <StatusMessage
+            as="p"
+            tone="error"
+            role="alert"
+            className="mt-3 text-sm"
+          >
             {error}
-          </p>
+          </StatusMessage>
         )}
         {downloaded && (
-          <p role="status" className="mt-3 text-sm text-neutral-700">
+          <StatusMessage
+            as="p"
+            tone="info"
+            role="status"
+            className="mt-3 text-sm"
+          >
             Calendar file prepared. Open the download and import it into your
             calendar to finish setting up your reminder.
-          </p>
+          </StatusMessage>
         )}
       </form>
       <details className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4">

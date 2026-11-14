@@ -1,6 +1,9 @@
 "use client";
+
+import { StatusMessage } from "@/ui/status-message";
+
+import { Button } from "@/ui/controls";
 import { useEffect, useRef } from "react";
-import { listButton } from "./list-styles";
 import type { useListAction } from "./use-list-action";
 
 export function ListActionStatus({
@@ -19,44 +22,45 @@ export function ListActionStatus({
   return (
     <>
       {action.busy && (
-        <p role="status" className="mt-3 text-neutral-700">
+        <StatusMessage as="p" tone="info" role="status" className="mt-3">
           Checking your list…
-        </p>
+        </StatusMessage>
       )}
       {action.message && (
-        <p role="status" className="mt-3 text-primary-700">
+        <StatusMessage as="p" tone="info" role="status" className="mt-3">
           {action.message}
-        </p>
+        </StatusMessage>
       )}
       {action.error && (
-        <div
+        <StatusMessage
+          tone="error"
           ref={alertRef}
           role="alert"
           tabIndex={-1}
-          className="mt-4 scroll-my-24 rounded-xl border border-secondary-300 bg-secondary-50 p-4 text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          className="mt-4 scroll-my-24 rounded-xl border border-secondary-300 bg-secondary-50 p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
           <p>{action.error}</p>
           <div className="mt-3 flex flex-wrap gap-3">
             {action.needsRetry && (
-              <button
+              <Button
                 type="button"
                 disabled={action.busy}
-                className={listButton}
+                variant="secondary"
                 onClick={() => void action.run()}
               >
                 Retry same change
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               type="button"
               disabled={action.busy}
-              className={listButton}
+              variant="secondary"
               onClick={reload}
             >
               Load current status
-            </button>
+            </Button>
           </div>
-        </div>
+        </StatusMessage>
       )}
     </>
   );

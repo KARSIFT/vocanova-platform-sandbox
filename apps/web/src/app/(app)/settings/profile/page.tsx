@@ -52,14 +52,14 @@ export default async function ProfilePage() {
         aria-labelledby="profile-details-heading"
         className="mt-[var(--spacing-lg)]"
       >
-        <div className="flex items-center gap-[var(--spacing-md)]">
+        <div className="flex flex-wrap items-center gap-[var(--spacing-md)]">
           <span
             aria-hidden="true"
             className="grid size-14 shrink-0 place-items-center rounded-full bg-primary-100 text-lg font-bold text-primary-800"
           >
             {initials(displayName, email)}
           </span>
-          <div>
+          <div className="min-w-0 flex-1 basis-[12rem]">
             <h2
               id="profile-details-heading"
               className="text-lg font-semibold text-neutral-900"

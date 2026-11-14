@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { ActionLink, Button } from "@/ui/controls";
+
 import Link from "@/ui/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -144,31 +148,31 @@ export function EmailChangePageContent() {
         </h1>
 
         {state.type === "loading" ? (
-          <p
+          <StatusMessage
+            as="p"
+            tone="info"
             role="status"
             aria-live="polite"
-            className="text-base text-neutral-700"
+            className="text-base"
           >
             Verifying your confirmation link...
-          </p>
+          </StatusMessage>
         ) : null}
 
         {state.type === "success" ? (
           <>
-            <p
+            <StatusMessage
+              as="p"
+              tone="success"
               role="status"
               aria-live="polite"
-              className="text-base text-green-800 [overflow-wrap:anywhere]"
+              className="text-base [overflow-wrap:anywhere]"
             >
               Your sign-in email is now {state.email}.
-            </p>
-            <Link
-              ref={accountLink}
-              href="/settings/account"
-              className="auth-primary"
-            >
+            </StatusMessage>
+            <ActionLink ref={accountLink} href="/settings/account">
               Return to account settings
-            </Link>
+            </ActionLink>
           </>
         ) : null}
 
@@ -178,13 +182,12 @@ export function EmailChangePageContent() {
               Sign in to the account that requested this change, then open the
               confirmation link again.
             </p>
-            <Link
+            <ActionLink
               ref={signInLink}
               href={`/login?${new URLSearchParams({ returnTo, magicOnly: "1" }).toString()}`}
-              className="auth-primary"
             >
               Sign in
-            </Link>
+            </ActionLink>
             <Link
               href="/"
               className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
@@ -196,35 +199,36 @@ export function EmailChangePageContent() {
 
         {state.type === "error" ? (
           <>
-            <p
+            <StatusMessage
+              as="p"
+              tone="error"
               role="alert"
               aria-live="assertive"
-              className="text-base text-red-700"
+              className="text-base"
             >
               {state.message}
-            </p>
+            </StatusMessage>
             {state.recovery ? (
-              <button
+              <Button
                 ref={retryButton}
                 type="button"
                 onClick={() => {
                   if (state.recovery === "refresh") window.location.reload();
                   else void confirmEmailChange();
                 }}
-                className="auth-primary"
               >
                 {state.recovery === "refresh"
                   ? "Refresh page"
                   : "Retry confirmation"}
-              </button>
+              </Button>
             ) : null}
-            <Link
+            <ActionLink
               ref={accountLink}
               href="/settings/account"
-              className="auth-secondary"
+              variant="secondary"
             >
               Go to account settings
-            </Link>
+            </ActionLink>
             <Link
               href="/"
               className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"

@@ -1,3 +1,4 @@
+import { ActionLink } from "@/ui/controls";
 import type { CSSProperties } from "react";
 import Link from "@/ui/link";
 import {
@@ -138,12 +139,13 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
               "New words are available in an earlier range."
             )}
           </p>
-          <Link
-            className="vn-btn vn-btn-primary"
+          <ActionLink
+            variant="primary"
+
             href={`/discovery?band=${targetBand}${next?.rank === undefined ? "" : `&word=${next.rank}`}`}
           >
             Discover words
-          </Link>
+          </ActionLink>
         </div>
       ) : (
         <p className={styles.status}>No new words left to discover.</p>

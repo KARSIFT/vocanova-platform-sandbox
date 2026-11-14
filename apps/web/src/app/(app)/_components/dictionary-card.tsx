@@ -1,4 +1,5 @@
 import type { DictionaryEntry } from "@vocanova/api-client";
+import { Surface } from "@/ui/surface";
 import { ListenButton } from "@/ui/pronunciation";
 
 export function DictionaryCard({ entry }: { entry: DictionaryEntry }) {
@@ -11,10 +12,7 @@ export function DictionaryCard({ entry }: { entry: DictionaryEntry }) {
   const [first, ...others] = senses;
   if (!first) return null;
   return (
-    <section
-      aria-label="Dictionary result"
-      className="mb-6 rounded-2xl border border-neutral-200 bg-white p-5 sm:p-7"
-    >
+    <Surface aria-label="Dictionary result" className="mb-6">
       <p className="text-sm font-semibold text-neutral-600">Dictionary</p>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h2 className="break-words text-3xl font-bold tracking-tight text-neutral-900">
@@ -73,6 +71,6 @@ export function DictionaryCard({ entry }: { entry: DictionaryEntry }) {
           </div>
         ))}
       </details>
-    </section>
+    </Surface>
   );
 }

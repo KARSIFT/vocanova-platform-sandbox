@@ -1,3 +1,4 @@
+import { ActionLink } from "@/ui/controls";
 import type { Metadata } from "next";
 import Link from "@/ui/link";
 import { notFound } from "next/navigation";
@@ -87,14 +88,15 @@ export default async function WritingPage({
             className="mb-6 flex flex-wrap gap-3"
           >
             {situations.items.map((item) => (
-              <Link
+              <ActionLink
+                variant="secondary"
                 key={item.id}
                 href={`/writing?${new URLSearchParams({ situation: item.slug })}`}
                 aria-current={item.slug === situation ? "page" : undefined}
                 className={`${secondaryAction} ${item.slug === situation ? "border-primary-600 bg-primary-50" : ""}`}
               >
                 {item.title}
-              </Link>
+              </ActionLink>
             ))}
           </nav>
         </details>
@@ -205,9 +207,13 @@ export default async function WritingPage({
             You can still write sentences with your saved words. Try the topic
             library again later.
           </p>
-          <Link href="/words" className={`${secondaryAction} mt-4`}>
+          <ActionLink
+            variant="secondary"
+            href="/words"
+            className={`${secondaryAction} mt-4`}
+          >
             Practise with saved words
-          </Link>
+          </ActionLink>
         </Surface>
       ) : (
         <Surface>

@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "@/ui/link";
+import { StatusMessage } from "@/ui/status-message";
+import { ActionLink, Button, actionClasses } from "@/ui/controls";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { createApiClient } from "@/lib/api";
@@ -84,17 +85,18 @@ export function PracticeJourney({
             Your learning path
           </h2>
         )}
-        <p role="status" className="mt-2 text-neutral-600">
+        <StatusMessage as="p" role="status" className="mt-2 text-neutral-600">
           We could not load your learning path.
-        </p>
-        <button
+        </StatusMessage>
+        <Button
+          variant="secondary"
           type="button"
           disabled={busy}
           onClick={refresh}
           className={`${secondaryAction} mt-4`}
         >
           Try again
-        </button>
+        </Button>
       </section>
     );
   const current = journey.currentSession;
@@ -171,21 +173,23 @@ export function PracticeJourney({
               })}
             </ol>
             {current ? (
-              <Link
+              <ActionLink
+                variant="secondary"
                 href={`/practice/session/${encodeURIComponent(current.id)}`}
-                className="vn-btn vn-btn-secondary min-h-11"
+                className="min-h-11"
               >
                 Continue practice
-              </Link>
+              </ActionLink>
             ) : (
-              <button
+              <Button
+                variant="secondary"
                 type="button"
                 disabled={busy}
                 onClick={() => void start()}
-                className="vn-btn vn-btn-secondary min-h-11"
+                className="min-h-11"
               >
                 Start practice lesson
-              </button>
+              </Button>
             )}
           </div>
         </>
@@ -246,21 +250,23 @@ export function PracticeJourney({
                 </div>
                 {active &&
                   (current ? (
-                    <Link
+                    <ActionLink
+                      variant="primary"
                       href={`/practice/session/${encodeURIComponent(current.id)}`}
                       className={`${primaryAction} col-span-2 mt-3 max-w-full justify-self-start [overflow-wrap:anywhere]`}
                     >
                       Continue practice
-                    </Link>
+                    </ActionLink>
                   ) : (
-                    <button
+                    <Button
+                      variant="primary"
                       type="button"
                       disabled={busy}
                       onClick={() => void start()}
                       className={`${primaryAction} col-span-2 mt-3 max-w-full justify-self-start [overflow-wrap:anywhere]`}
                     >
                       Start practice lesson
-                    </button>
+                    </Button>
                   ))}
               </li>
             );
@@ -268,31 +274,37 @@ export function PracticeJourney({
         </ol>
       )}
       {error && (
-        <div
+        <StatusMessage
+          tone="error"
           role="alert"
           className="mt-5 rounded-xl border border-secondary-300 bg-secondary-50 p-4 text-neutral-900"
         >
           <p>{error}</p>
-          <button
+          <Button
+            variant="secondary"
             type="button"
             disabled={busy}
             onClick={() => void start()}
             className={`${secondaryAction} mt-3`}
           >
             Retry start
-          </button>
-        </div>
+          </Button>
+        </StatusMessage>
       )}
       {starting && (
-        <p role="status" className="mt-3 text-sm text-neutral-600">
+        <StatusMessage
+          as="p"
+          role="status"
+          className="mt-3 text-sm text-neutral-600"
+        >
           Opening your practice…
-        </p>
+        </StatusMessage>
       )}
       {/* Recover independently if the automatic client navigation stalls. */}
       {openedId && (
         <a
           href={`/practice/session/${encodeURIComponent(openedId)}`}
-          className={`${secondaryAction} mt-3`}
+          className={actionClasses("secondary", "mt-3")}
         >
           Open practice
         </a>

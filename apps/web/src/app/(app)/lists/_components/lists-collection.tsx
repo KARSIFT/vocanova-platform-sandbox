@@ -1,4 +1,6 @@
 "use client";
+
+import { Button, TextInput } from "@/ui/controls";
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "@/ui/link";
 import { useRouter } from "next/navigation";
@@ -7,7 +9,7 @@ import { createApiClient } from "@/lib/api";
 import { Surface } from "@/ui/surface";
 import { listWriteHeaders, useListAction } from "./use-list-action";
 import { ListActionStatus } from "./list-action-status";
-import { listButton, listInput, listLink, listPrimary } from "./list-styles";
+import { listLink } from "./list-styles";
 
 export function ListsCollection({
   initialData,
@@ -63,14 +65,15 @@ export function ListsCollection({
           <p className="mt-2 text-neutral-700">
             Load your lists before creating or editing one.
           </p>
-          <button
+          <Button
             type="button"
-            className={`${listButton} mt-3`}
+            variant="secondary"
+            className="mt-3"
             disabled={action.busy}
             onClick={reload}
           >
             Try loading lists again
-          </button>
+          </Button>
         </Surface>
       ) : (
         <>
@@ -85,13 +88,13 @@ export function ListsCollection({
             >
               Search your lists
             </label>
-            <input
+            <TextInput
               id="list-search"
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               maxLength={100}
-              className={listInput}
+              className="mt-2"
             />
           </div>
           {items.length ? (
@@ -159,7 +162,7 @@ export function ListsCollection({
               >
                 List name
               </label>
-              <input
+              <TextInput
                 id="new-list-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
@@ -167,12 +170,12 @@ export function ListsCollection({
                 maxLength={160}
                 required
                 aria-describedby="list-name-help"
-                className={listInput}
+                className="mt-2"
               />
               <p id="list-name-help" className="mt-2 text-sm text-neutral-600">
                 Use 1–80 characters. You can keep up to 50 personal lists.
               </p>
-              <button
+              <Button
                 type="submit"
                 disabled={
                   action.locked ||
@@ -180,10 +183,10 @@ export function ListsCollection({
                   Array.from(name.trim()).length > 80 ||
                   data.items.length >= 50
                 }
-                className={`${listPrimary} mt-3`}
+                className="mt-3"
               >
                 Create list
-              </button>
+              </Button>
             </form>
             {data.items.length >= 50 && (
               <p className="mt-2 text-neutral-700">

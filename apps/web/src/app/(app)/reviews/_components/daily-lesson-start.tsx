@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
@@ -68,9 +69,14 @@ export function StartDailyLessonButton({
         {busy ? "Starting…" : label}
       </button>
       {error && (
-        <p role="alert" className="mt-3 text-base text-neutral-700">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          className="mt-3 text-base text-neutral-700"
+        >
           {error}
-        </p>
+        </StatusMessage>
       )}
     </div>
   );

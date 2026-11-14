@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 export default function PracticeLoading() {
   return (
     <section
@@ -5,13 +6,14 @@ export default function PracticeLoading() {
       aria-labelledby="practice-loading-status"
       className="mx-auto w-full max-w-[64rem] p-[var(--spacing-lg)]"
     >
-      <p
+      <StatusMessage
+        as="p"
         id="practice-loading-status"
         role="status"
         className="text-neutral-700"
       >
         Loading practice…
-      </p>
+      </StatusMessage>
       <div
         aria-hidden="true"
         className="mt-6 space-y-4 motion-safe:animate-pulse"

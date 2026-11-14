@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "./controls";
 import { MeaningPicture } from "./meaning-picture";
 
 /** Original, authored examples only. This demo does not evaluate user writing. */
@@ -68,14 +69,14 @@ export function LearningPreview() {
           </>
         )}
       </div>
-      <button
+      <Button
         type="button"
         aria-pressed={showFeedback}
         onClick={() => setShowFeedback(!showFeedback)}
-        className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800"
+        className="mt-5 w-full"
       >
         {showFeedback ? "Back to the word" : "See example feedback"}
-      </button>
+      </Button>
     </section>
   );
 }

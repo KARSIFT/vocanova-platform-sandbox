@@ -1,4 +1,6 @@
 "use client";
+
+import { ActionLink, Button, TextInput } from "@/ui/controls";
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "@/ui/link";
 import { useRouter } from "next/navigation";
@@ -8,7 +10,7 @@ import { Surface } from "@/ui/surface";
 import { getPrimaryDefinition } from "@/lib/word-definition";
 import { listWriteHeaders, useListAction } from "./use-list-action";
 import { ListActionStatus } from "./list-action-status";
-import { listButton, listInput, listLink, listPrimary } from "./list-styles";
+import { listLink } from "./list-styles";
 import { meaningAnchor } from "../../_components/meaning-comparison";
 
 export function ListDetail({
@@ -127,14 +129,15 @@ export function ListDetail({
               Choose a personal list
             </Link>
           ) : (
-            <button
+            <Button
               type="button"
               onClick={reload}
               disabled={action.busy}
-              className={`${listButton} mt-3`}
+              variant="secondary"
+              className="mt-3"
             >
               Try loading list again
-            </button>
+            </Button>
           )}
         </Surface>
       ) : (
@@ -155,16 +158,15 @@ export function ListDetail({
             </p>
             <div className="mt-3 flex flex-wrap gap-3">
               {list.usableMemberCount > 0 && (
-                <Link
+                <ActionLink
                   href={`/practice?list=${encodeURIComponent(list.id)}`}
-                  className={listPrimary}
                 >
                   Practice this list
-                </Link>
+                </ActionLink>
               )}
-              <Link href="/vocabulary" className={listButton}>
+              <ActionLink href="/vocabulary" variant="secondary">
                 Find words to add
-              </Link>
+              </ActionLink>
             </div>
             {list.usableMemberCount === 0 && (
               <p className="mt-3 text-neutral-700">
@@ -181,13 +183,13 @@ export function ListDetail({
             >
               Search words and meanings in this list
             </label>
-            <input
+            <TextInput
               id="list-member-search"
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               maxLength={100}
-              className={listInput}
+              className="mt-2"
             />
           </div>
           {members.length ? (
@@ -219,15 +221,15 @@ export function ListDetail({
                         : "Organized here; focused practice is not yet available for this meaning"}
                     </p>
                   </div>
-                  <button
+                  <Button
                     type="button"
                     disabled={action.locked}
-                    className={listButton}
+                    variant="secondary"
                     onClick={() => remove(member.meaningId)}
                     aria-label={`Remove ${member.wordText} from this list`}
                   >
                     Remove from list
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -265,16 +267,16 @@ export function ListDetail({
               >
                 List name
               </label>
-              <input
+              <TextInput
                 id="rename-list-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 disabled={action.locked}
                 required
                 maxLength={160}
-                className={listInput}
+                className="mt-2"
               />
-              <button
+              <Button
                 type="submit"
                 disabled={
                   action.locked ||
@@ -282,20 +284,22 @@ export function ListDetail({
                   Array.from(name.trim()).length > 80 ||
                   name.trim() === list.name
                 }
-                className={`${listButton} mt-3`}
+                variant="secondary"
+                className="mt-3"
               >
                 Rename list
-              </button>
+              </Button>
             </form>
             {!confirmDelete ? (
-              <button
+              <Button
                 type="button"
                 disabled={action.locked}
                 onClick={() => setConfirmDelete(true)}
-                className={`${listButton} mt-3`}
+                variant="secondary"
+                className="mt-3"
               >
                 Delete list
-              </button>
+              </Button>
             ) : (
               <div className="mt-4 border-t border-neutral-200 pt-4">
                 <p className="text-neutral-700">
@@ -303,22 +307,22 @@ export function ListDetail({
                   words and knowledge notes remain available.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-3">
-                  <button
+                  <Button
                     type="button"
                     disabled={action.locked}
                     onClick={deleteList}
-                    className={listButton}
+                    variant="secondary"
                   >
                     Confirm delete list
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     disabled={action.locked}
                     onClick={() => setConfirmDelete(false)}
-                    className={listButton}
+                    variant="secondary"
                   >
                     Keep list
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

@@ -1,4 +1,4 @@
-import Link from "@/ui/link";
+import { ActionLink } from "@/ui/controls";
 
 export default function SavedWordNotFound() {
   return (
@@ -9,12 +9,13 @@ export default function SavedWordNotFound() {
       <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
         It may have been removed from your vocabulary.
       </p>
-      <Link
+      <ActionLink
+        variant="secondary"
         href="/words"
-        className="mt-[var(--spacing-lg)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        className="mt-[var(--spacing-lg)] min-w-[var(--spacing-2xl)] text-base text-neutral-50"
       >
         Back to saved vocabulary
-      </Link>
+      </ActionLink>
     </div>
   );
 }

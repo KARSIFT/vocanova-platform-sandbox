@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 function joinClasses(...classes: Array<string | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -8,7 +8,7 @@ export function PageContainer({
   children,
   className,
   ...props
-}: ComponentPropsWithoutRef<"div">) {
+}: ComponentProps<"div">) {
   return (
     <div
       className={joinClasses(
@@ -27,7 +27,7 @@ export function Surface({
   className,
   tone = "default",
   ...props
-}: ComponentPropsWithoutRef<"section"> & {
+}: ComponentProps<"section"> & {
   tone?: "default" | "primary" | "secondary";
 }) {
   return (

@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/ui/controls";
 import { useEffect, useId, useRef, useState } from "react";
 
 import {
@@ -52,30 +53,30 @@ export function SpeechSettings({ disabled = false }: { disabled?: boolean }) {
           <label htmlFor={`${id}-speed`} className="mb-1 block font-medium">
             Playback speed
           </label>
-          <select
+          <Select
             id={`${id}-speed`}
             value={preferences.rate}
             disabled={disabled}
             onChange={(event) => update({ rate: Number(event.target.value) })}
-            className="min-h-11 w-full rounded-md border border-neutral-300 bg-white px-2 text-neutral-900"
+            className="w-full"
           >
             <option value={0.7}>Extra slow</option>
             <option value={0.85}>Learning pace</option>
             <option value={1}>Normal pace</option>
-          </select>
+          </Select>
         </div>
         <div>
           <label htmlFor={`${id}-voice`} className="mb-1 block font-medium">
             English voice
           </label>
-          <select
+          <Select
             id={`${id}-voice`}
             value={preferences.voiceURI}
             disabled={
               disabled || (voices.length === 0 && !preferences.voiceURI)
             }
             onChange={(event) => update({ voiceURI: event.target.value })}
-            className="min-h-11 w-full rounded-md border border-neutral-300 bg-white px-2 text-neutral-900"
+            className="w-full"
           >
             <option value="">Natural voice when available</option>
             {preferences.voiceURI &&
@@ -92,7 +93,7 @@ export function SpeechSettings({ disabled = false }: { disabled?: boolean }) {
                 {voice.name} ({voice.lang})
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <p className="text-xs text-neutral-600">
           Meaning-specific audio uses AI pronunciation. Speed applies to all

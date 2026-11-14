@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "@/ui/link";
+import { StatusMessage } from "@/ui/status-message";
+import { ActionLink, Button, TextInput } from "@/ui/controls";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   ApiResponseError,
@@ -19,10 +21,8 @@ import { SessionActions } from "@/ui/session";
 import { LessonAudio } from "./lesson-audio";
 import { LessonReviewSave } from "./lesson-review-save";
 
-const primary =
-  "inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-50";
-const secondary =
-  "inline-flex min-h-12 items-center justify-center rounded-xl border border-neutral-300 bg-white px-4 py-3 font-semibold text-neutral-900 hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-50";
+const primary = "text-white hover:bg-primary-800";
+const secondary = "text-neutral-900 hover:bg-neutral-50";
 
 export function LessonPlayer({
   lesson,
@@ -243,14 +243,15 @@ export function LessonPlayer({
           <p className="my-6 text-neutral-700">
             {lesson.wordCount} words, then a little practice.
           </p>
-          <button
+          <Button
+            variant="primary"
             type="button"
             disabled={locked}
             className={`${primary} w-full`}
             onClick={() => void submit()}
           >
             {busy ? "Opening lesson…" : "Start lesson"}
-          </button>
+          </Button>
           <p className="mt-3 text-sm text-neutral-600">
             Your progress saves as you go. You can leave and return.
           </p>
@@ -296,18 +297,23 @@ export function LessonPlayer({
             ))}
           </ul>
           <div className="flex flex-wrap gap-3">
-            <Link
+            <ActionLink
+              variant="secondary"
               href={`/practice?lesson=${encodeURIComponent(session.lessonKey)}`}
               className={secondary}
             >
               Practise these words
-            </Link>
-            <Link href="/courses" className={primary}>
+            </ActionLink>
+            <ActionLink variant="primary" href="/courses" className={primary}>
               Choose your next lesson
-            </Link>
-            <Link href="/review" className={secondary}>
+            </ActionLink>
+            <ActionLink
+              variant="secondary"
+              href="/review"
+              className={secondary}
+            >
               Review saved words
-            </Link>
+            </ActionLink>
           </div>
         </Surface>
       ) : step ? (
@@ -420,7 +426,7 @@ export function LessonPlayer({
                     >
                       Your word or phrase
                     </label>
-                    <input
+                    <TextInput
                       id="lesson-typed-answer"
                       type="text"
                       autoComplete="off"
@@ -430,7 +436,7 @@ export function LessonPlayer({
                       value={typedAnswer}
                       onChange={(event) => setTypedAnswer(event.target.value)}
                       disabled={locked || session.canContinue}
-                      className="min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                      className="w-full"
                     />
                     <p className="text-sm text-neutral-600">
                       Try to remember the word. Capital letters and extra spaces
@@ -484,7 +490,7 @@ export function LessonPlayer({
               </div>
             )}
             {session.feedback && (
-              <div
+              <StatusMessage
                 ref={feedback}
                 tabIndex={-1}
                 role="status"
@@ -505,12 +511,13 @@ export function LessonPlayer({
                       : "Choose an answer to try again."}
                   </p>
                 )}
-              </div>
+              </StatusMessage>
             )}
           </div>
           <SessionActions>
             {session.canContinue ? (
-              <button
+              <Button
+                variant="primary"
                 type="button"
                 disabled={locked}
                 onClick={() => void submit("continue")}
@@ -521,9 +528,10 @@ export function LessonPlayer({
                   : session.completedSteps + 1 === session.totalSteps
                     ? "Finish lesson"
                     : "Continue"}
-              </button>
+              </Button>
             ) : step.kind !== "teach" ? (
-              <button
+              <Button
+                variant="primary"
                 type="submit"
                 form={answerFormId}
                 className={`${primary} w-full`}
@@ -535,14 +543,15 @@ export function LessonPlayer({
                 }
               >
                 {busy ? "Checking…" : "Check answer"}
-              </button>
+              </Button>
             ) : null}
           </SessionActions>
         </Surface>
       ) : null}
 
       {error && (
-        <div
+        <StatusMessage
+          tone="error"
           ref={errorRegion}
           tabIndex={-1}
           role="alert"
@@ -551,37 +560,43 @@ export function LessonPlayer({
           <p>{error}</p>
           <div className="mt-3 flex flex-wrap gap-3">
             {needsRetry && (
-              <button
+              <Button
+                variant="secondary"
                 type="button"
                 disabled={busy}
                 onClick={() => void submit()}
                 className={secondary}
               >
                 Retry step
-              </button>
+              </Button>
             )}
             {session && (
-              <button
+              <Button
+                variant="secondary"
                 type="button"
                 disabled={busy}
                 onClick={() => void refreshProgress()}
                 className={secondary}
               >
                 Load saved progress
-              </button>
+              </Button>
             )}
           </div>
-        </div>
+        </StatusMessage>
       )}
       {notice && (
-        <p role="status" className="mt-4 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mt-4 text-neutral-700">
           {notice}
-        </p>
+        </StatusMessage>
       )}
       {busy && (
-        <p role="status" className="mt-3 text-sm text-neutral-600">
+        <StatusMessage
+          as="p"
+          role="status"
+          className="mt-3 text-sm text-neutral-600"
+        >
           Saving your progress…
-        </p>
+        </StatusMessage>
       )}
     </div>
   );

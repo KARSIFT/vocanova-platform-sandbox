@@ -1,0 +1,79 @@
+@layer components {
+  .action {
+    overflow-wrap: anywhere;
+  }
+
+  .action:focus-visible {
+    outline: 2px solid var(--color-primary-700);
+    outline-offset: 2px;
+  }
+
+  .danger {
+    border-color: var(--color-red-700);
+    background: var(--color-red-700);
+    color: #fff;
+  }
+
+  .danger:hover:not(:disabled) {
+    background: var(--color-red-800);
+  }
+
+  .text {
+    color: var(--color-primary-700);
+    background: transparent;
+  }
+
+  .text:hover:not(:disabled) {
+    background: var(--color-primary-50);
+  }
+
+  .field {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    border: 1px solid var(--color-neutral-300);
+    border-radius: 0.75rem;
+    background: var(--color-white);
+    color: var(--color-neutral-900);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font: inherit;
+    font-size: 1rem;
+  }
+
+  .field:hover:not(:disabled) {
+    border-color: var(--color-neutral-400);
+  }
+
+  .field:focus-visible {
+    outline: 2px solid var(--color-primary-700);
+    outline-offset: 2px;
+  }
+
+  .field[aria-invalid="true"] {
+    border-color: var(--color-red-700);
+  }
+
+  .field:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  :global(:root[data-theme="dark"]) .action:focus-visible,
+  :global(:root[data-theme="dark"]) .field:focus-visible {
+    outline-color: var(--color-primary-300);
+  }
+
+  :global(:root[data-theme="dark"]) .text {
+    color: var(--color-primary-300);
+  }
+
+  :global(:root[data-theme="dark"]) .field[aria-invalid="true"] {
+    border-color: var(--color-red-300);
+  }
+
+  .textarea {
+    min-height: 8rem;
+    resize: vertical;
+  }
+}

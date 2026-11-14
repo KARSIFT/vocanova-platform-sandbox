@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { Button } from "@/ui/controls";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -57,27 +59,37 @@ export function RemoveSavedWordButton({
 
   if (status === "removed" && !redirectTo) {
     return (
-      <p role="status" className="text-sm font-medium text-neutral-700">
+      <StatusMessage
+        as="p"
+        role="status"
+        className="text-sm font-medium text-neutral-700"
+      >
         Removed from saved words
-      </p>
+      </StatusMessage>
     );
   }
 
   return (
     <div className="flex flex-col items-end gap-[var(--spacing-xs)]">
-      <button
+      <Button
+        variant="secondary"
         type="button"
         onClick={removeSavedWord}
         disabled={status === "loading" || status === "removed"}
         aria-busy={status === "loading"}
-        className="min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-800 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="min-w-[var(--spacing-2xl)] text-base text-neutral-800 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)]"
       >
         {status === "loading" ? "Removing..." : `Remove ${wordText}`}
-      </button>
+      </Button>
       {errorMessage ? (
-        <p role="alert" className="text-sm text-red-700">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          className="text-sm text-red-700"
+        >
           {errorMessage}
-        </p>
+        </StatusMessage>
       ) : null}
     </div>
   );

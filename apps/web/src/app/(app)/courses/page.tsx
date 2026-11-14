@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
@@ -81,10 +82,10 @@ export default async function CoursesPage() {
         ))}
       </nav>
       {!lessonResponse && (
-        <p role="status" className="mb-4 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mb-4 text-neutral-700">
           Guided lessons are unavailable right now. You can still explore the
           situations below.
-        </p>
+        </StatusMessage>
       )}
       <div id="journey-lessons" className="scroll-mt-24" tabIndex={-1}>
         <LessonPath

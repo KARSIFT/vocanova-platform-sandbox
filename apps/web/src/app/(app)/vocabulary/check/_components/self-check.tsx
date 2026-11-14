@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { ActionLink, Button } from "@/ui/controls";
 import { getPrimaryDefinition } from "@/lib/word-definition";
 
 import Link from "@/ui/link";
@@ -134,16 +136,17 @@ export function VocabularySelfCheck({
         >
           Your starting words are unavailable
         </h2>
-        <p role="status" className="mt-3 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
           We could not load your words. Try again to start the check.
-        </p>
-        <button
+        </StatusMessage>
+        <Button
+          variant="primary"
           type="button"
           className={`${primaryAction} mt-4`}
           onClick={() => window.location.reload()}
         >
           Reload the check
-        </button>
+        </Button>
       </Surface>
     );
 
@@ -176,12 +179,16 @@ export function VocabularySelfCheck({
           your English level.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <Link href="/plan" className={primaryAction}>
+          <ActionLink variant="primary" href="/plan" className={primaryAction}>
             See your learning plan
-          </Link>
-          <Link href="/words" className={secondaryAction}>
+          </ActionLink>
+          <ActionLink
+            variant="secondary"
+            href="/words"
+            className={secondaryAction}
+          >
             Open saved vocabulary
-          </Link>
+          </ActionLink>
           <Link href="/vocabulary?knowledge=known" className={textLink}>
             Review your known words
           </Link>
@@ -212,22 +219,24 @@ export function VocabularySelfCheck({
         meaningId={item.meaningId}
       />
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <button
+        <Button
+          variant="secondary"
           type="button"
           disabled={locked}
           className={`${secondaryAction} min-w-0 text-sm sm:text-base`}
           onClick={() => void choose("known")}
         >
           Already know
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="primary"
           type="button"
           disabled={locked}
           className={`${primaryAction} min-w-0 text-sm sm:text-base`}
           onClick={() => void choose("learn")}
         >
           Want to learn
-        </button>
+        </Button>
         <button
           type="button"
           disabled={locked}
@@ -242,26 +251,28 @@ export function VocabularySelfCheck({
         meaning for practice. Skipping changes nothing.
       </p>
       {busy && (
-        <p role="status" className="mt-3 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
           Saving your choice…
-        </p>
+        </StatusMessage>
       )}
       {error && (
-        <div
+        <StatusMessage
+          tone="error"
           role="alert"
           className="mt-4 rounded-xl border border-secondary-300 bg-secondary-50 p-4 text-neutral-900"
         >
           <p>{error}</p>
           <div className="mt-3 flex flex-wrap gap-3">
             {needsRetry && (
-              <button
+              <Button
+                variant="secondary"
                 type="button"
                 disabled={busy}
                 className={secondaryAction}
                 onClick={() => void choose()}
               >
                 Retry choice
-              </button>
+              </Button>
             )}
             <button
               type="button"
@@ -272,7 +283,7 @@ export function VocabularySelfCheck({
               Reload the check
             </button>
           </div>
-        </div>
+        </StatusMessage>
       )}
     </Surface>
   );

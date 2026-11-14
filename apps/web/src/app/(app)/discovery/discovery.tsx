@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
 import { getPrimaryDefinition } from "@/lib/word-definition";
 
 import {
@@ -239,7 +240,8 @@ export function Discovery({
     <SavedMeaning choice={confirmedSave} />
   ) : null;
   const saveAnnouncement = (
-    <p
+    <StatusMessage
+      as="p"
       key="save-confirmation"
       role="status"
       aria-label="Save confirmation"
@@ -248,7 +250,7 @@ export function Discovery({
       className="sr-only"
     >
       {confirmedSave ? `Saved ${confirmedSave.word.wordText} for review.` : ""}
-    </p>
+    </StatusMessage>
   );
 
   const firstRank = bandSummary?.startRank ?? 1;
@@ -679,9 +681,9 @@ export function Discovery({
 
   if (restoring)
     return (
-      <p className={styles.focus} role="status">
+      <StatusMessage as="p" className={styles.focus} role="status">
         Loading word…
-      </p>
+      </StatusMessage>
     );
 
   if (done)
@@ -697,7 +699,9 @@ export function Discovery({
     return (
       <div className={styles.focus} onFocusCapture={revealFocusedControl}>
         {saveAnnouncement}
-        <p role="alert">This word could not load.</p>
+        <StatusMessage as="p" tone="error" role="alert">
+          This word could not load.
+        </StatusMessage>
         <Link href={journeyRangeHref(band)} className={styles.secondary}>
           Back to Journey
         </Link>
@@ -727,9 +731,9 @@ export function Discovery({
         onWord={(nextRank) => navigateToWord(band, nextRank)}
       />
       {navigating && (
-        <p role="status" className={styles.status}>
+        <StatusMessage as="p" role="status" className={styles.status}>
           Loading word…
-        </p>
+        </StatusMessage>
       )}
       {!started ? (
         <section
@@ -800,9 +804,9 @@ export function Discovery({
               </button>
             </div>
             {speech.message && (
-              <p className={styles.status} role="status">
+              <StatusMessage as="p" className={styles.status} role="status">
                 {speech.message} You can keep learning without sound.
-              </p>
+              </StatusMessage>
             )}
             <p className="learning-eyebrow mt-4">This meaning</p>
             <p className={styles.definition}>
@@ -840,12 +844,13 @@ export function Discovery({
             </button>
           </div>
           {busy && (
-            <p role="status" className={styles.status}>
+            <StatusMessage as="p" role="status" className={styles.status}>
               Saving your choice…
-            </p>
+            </StatusMessage>
           )}
           {error && (
-            <div
+            <StatusMessage
+              tone="error"
               ref={errorRef}
               tabIndex={-1}
               role="alert"
@@ -872,7 +877,7 @@ export function Discovery({
                   Retry choice
                 </button>
               )}
-            </div>
+            </StatusMessage>
           )}
           {savedMeaning}
         </>

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { connectionRetryDestination } from "@/lib/connection-error";
 import { AuthShell } from "@/ui/auth-shell";
 import { Surface } from "@/ui/surface";
+import { actionClasses } from "@/ui/controls";
 
 export const metadata: Metadata = {
   title: "Connection interrupted — Vocanova",
@@ -29,7 +30,10 @@ export default async function ConnectionErrorPage({
         </p>
         {/* A full navigation rechecks the session rather than reusing a cached
             failed route transition. No private learner data is rendered here. */}
-        <a href={safeDestination} className="auth-primary w-full sm:w-auto">
+        <a
+          href={safeDestination}
+          className={actionClasses("primary", "w-full sm:w-auto")}
+        >
           Try again
         </a>
       </Surface>

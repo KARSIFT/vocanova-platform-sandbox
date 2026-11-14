@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { TextInput } from "@/ui/controls";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
   wordState,
@@ -159,7 +161,7 @@ export function DiscoveryNavigation({
             </header>
             <label className={styles.search}>
               {choosingRange ? "Filter ranges" : "Filter words"}
-              <input
+              <TextInput
                 ref={search}
                 type="search"
                 value={query}
@@ -175,9 +177,9 @@ export function DiscoveryNavigation({
               />
             </label>
             {(choosingRange ? ranges.length : words.length) === 0 ? (
-              <p className={styles.empty} role="status">
+              <StatusMessage as="p" className={styles.empty} role="status">
                 {choosingRange ? "No ranges match." : "No words match."}
-              </p>
+              </StatusMessage>
             ) : (
               <ul ref={options} className={styles.options}>
                 {choosingRange

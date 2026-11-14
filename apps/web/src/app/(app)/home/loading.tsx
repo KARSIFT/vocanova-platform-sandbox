@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 export default function HomeLoading() {
   return (
     <section
@@ -5,9 +6,14 @@ export default function HomeLoading() {
       aria-labelledby="home-loading-status"
       className="mx-auto grid w-full max-w-[72rem] gap-5 px-[var(--spacing-md)] py-4 motion-safe:animate-pulse sm:px-[var(--spacing-xl)] lg:py-8"
     >
-      <p id="home-loading-status" role="status" className="sr-only">
+      <StatusMessage
+        as="p"
+        id="home-loading-status"
+        role="status"
+        className="sr-only"
+      >
         Loading home
-      </p>
+      </StatusMessage>
       <div aria-hidden="true">
         <div className="h-9 w-32 rounded-lg bg-neutral-200" />
       </div>

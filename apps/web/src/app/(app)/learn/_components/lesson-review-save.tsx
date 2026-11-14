@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
 import Link from "@/ui/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiResponseError, type WordMeaning } from "@vocanova/api-client";
@@ -233,17 +234,26 @@ export function LessonReviewSave({
         </button>
       ) : null}
       {busy && !pending.current && (
-        <p role="status" className="text-sm text-neutral-600">
+        <StatusMessage
+          as="p"
+          role="status"
+          className="text-sm text-neutral-600"
+        >
           Checking saved status…
-        </p>
+        </StatusMessage>
       )}
       {notice && (
-        <p role="status" className="text-sm text-neutral-700">
+        <StatusMessage
+          as="p"
+          role="status"
+          className="text-sm text-neutral-700"
+        >
           {notice}
-        </p>
+        </StatusMessage>
       )}
       {error && (
-        <div
+        <StatusMessage
+          tone="error"
           role="alert"
           className="rounded-xl border border-secondary-300 bg-secondary-50 p-3 text-neutral-900"
         >
@@ -256,7 +266,7 @@ export function LessonReviewSave({
           >
             {needsRetry ? "Retry save" : "Check saved status"}
           </button>
-        </div>
+        </StatusMessage>
       )}
     </div>
   );

@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { Button, TextInput } from "@/ui/controls";
+
 import { useEffect, useRef, useState } from "react";
 
 import { Settings, UpdateSettingsBody } from "@vocanova/api-client";
@@ -221,10 +225,10 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
       className="mt-[var(--spacing-lg)] space-y-[var(--spacing-lg)] rounded-[0.9rem] border border-neutral-200 bg-white p-[var(--spacing-md)] sm:p-[var(--spacing-lg)]"
     >
       {restored ? (
-        <p role="status" className="text-sm text-neutral-700">
+        <StatusMessage as="p" tone="info" role="status" className="text-sm">
           Your unsaved changes were restored in this tab. Save when you&apos;re
           ready.
-        </p>
+        </StatusMessage>
       ) : null}
       <fieldset className="space-y-[var(--spacing-md)] border-b border-neutral-200 pb-[var(--spacing-lg)]">
         <legend className="text-lg font-semibold text-neutral-900">
@@ -370,7 +374,7 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
         <label className="sr-only" htmlFor="displayName">
           Display name
         </label>
-        <input
+        <TextInput
           id="displayName"
           name="displayName"
           type="text"
@@ -385,7 +389,7 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
               patch("displayName", event.target.value);
             }
           }}
-          className="block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
+          className="w-full"
         />
         <p
           id="settings-display-name-limit"
@@ -396,44 +400,49 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
       </fieldset>
 
       {status.type === "error" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="assertive"
-          className="rounded-md border border-red-300 bg-red-50 p-[var(--spacing-sm)] text-base text-red-800"
+          className="rounded-md border border-red-300 bg-red-50 p-[var(--spacing-sm)] text-base"
         >
           {status.message}
-        </p>
+        </StatusMessage>
       ) : null}
 
       {status.type === "saved" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="success"
           role="status"
           aria-live="polite"
-          className="rounded-md border border-green-300 bg-green-50 p-[var(--spacing-sm)] text-base text-green-800"
+          className="rounded-md border border-green-300 bg-green-50 p-[var(--spacing-sm)] text-base"
         >
           Your settings have been saved.
-        </p>
+        </StatusMessage>
       ) : null}
 
       {status.type === "newer_changes" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="info"
           role="status"
           aria-live="polite"
-          className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+          className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base"
         >
           Your earlier changes were saved. You have newer changes to save.
-        </p>
+        </StatusMessage>
       ) : null}
 
       <div className="flex flex-wrap items-center justify-end gap-[var(--spacing-sm)]">
-        <button
+        <Button
           type="submit"
           disabled={status.type === "saving"}
           aria-busy={status.type === "saving"}
-          className="vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
           {status.type === "saving" ? "Saving..." : "Save settings"}
-        </button>
+        </Button>
       </div>
     </form>
   );

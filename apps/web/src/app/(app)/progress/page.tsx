@@ -1,3 +1,5 @@
+import { StatusMessage } from "@/ui/status-message";
+import { ActionLink } from "@/ui/controls";
 import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
 
@@ -139,13 +141,14 @@ export default async function ProgressPage() {
               <p className="mt-1 text-sm text-neutral-600">
                 Save a word to learn, or mark one you already know.
               </p>
-              <Link
+              <ActionLink
+                variant="secondary"
                 href="/discovery"
-                className="vn-btn vn-btn-secondary mt-4 inline-flex items-center gap-2"
+                className="mt-4 inline-flex items-center gap-2"
               >
                 <LearnIcon name="discover" />
                 Discover words
-              </Link>
+              </ActionLink>
             </div>
           ) : (
             <>
@@ -215,10 +218,10 @@ export default async function ProgressPage() {
           </details>
         </Surface>
       ) : (
-        <p role="status" className="mt-6 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mt-6 text-neutral-700">
           Your saved words are unavailable right now. Your other progress is
           below.
-        </p>
+        </StatusMessage>
       )}
 
       <Surface className="mt-4" aria-labelledby="completion-history-heading">
@@ -272,10 +275,10 @@ export default async function ProgressPage() {
       {achievementsResponse ? (
         <Achievements achievements={achievementsResponse.data} />
       ) : (
-        <p role="status" className="mt-6 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mt-6 text-neutral-700">
           Your milestones could not load. Your other progress is still
           available.
-        </p>
+        </StatusMessage>
       )}
 
       <div className="mt-4 divide-y divide-neutral-200 rounded-[1.25rem] border border-neutral-200 bg-white px-[var(--spacing-md)] sm:px-[var(--spacing-lg)]">
@@ -320,12 +323,12 @@ export default async function ProgressPage() {
             </Link>
           </details>
         ) : (
-          <p role="status" className="py-4 text-neutral-700">
+          <StatusMessage as="p" role="status" className="py-4 text-neutral-700">
             Your lesson progress could not load.{" "}
             <Link href="/courses" className="vn-text-link">
               Browse courses
             </Link>
-          </p>
+          </StatusMessage>
         )}
 
         <section aria-labelledby="sentence-history-heading" className="py-2">
@@ -364,12 +367,16 @@ export default async function ProgressPage() {
             </Link>
           </details>
           {!sentencesResponse && (
-            <p role="status" className="pb-3 text-neutral-700">
+            <StatusMessage
+              as="p"
+              role="status"
+              className="pb-3 text-neutral-700"
+            >
               Your recent writing could not load.{" "}
               <Link href="/progress/sentences" className="vn-text-link">
                 Open sentence history to try again.
               </Link>
-            </p>
+            </StatusMessage>
           )}
         </section>
 

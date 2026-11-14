@@ -1,3 +1,5 @@
+import { StatusMessage } from "@/ui/status-message";
+import { actionClasses } from "@/ui/controls";
 import Link from "@/ui/link";
 import { Suspense } from "react";
 import { ApiResponseError, type Situation } from "@vocanova/api-client";
@@ -76,20 +78,20 @@ async function PlaceCards({ read }: { read: Promise<SituationsRead> }) {
       })}
     </ul>
   ) : (
-    <p role="status" className="mt-3 text-neutral-700">
+    <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
       {situations
         ? "New situations are on the way."
         : "Situations could not load right now. The other ways to learn below are still available."}
-    </p>
+    </StatusMessage>
   );
 }
 
 function PlaceCardsPending() {
   return (
     <div aria-busy="true">
-      <p role="status" className="sr-only">
+      <StatusMessage as="p" role="status" className="sr-only">
         Loading situations…
-      </p>
+      </StatusMessage>
       <ul aria-hidden="true" className={styles.places}>
         {[0, 1, 2].map((index) => (
           <li
@@ -214,13 +216,18 @@ export default async function JourneyPage({
             <h2 id="map-error" className="section-title">
               Your word map
             </h2>
-            <p role="alert" className="mt-2 text-neutral-800">
+            <StatusMessage
+              as="p"
+              tone="error"
+              role="alert"
+              className="mt-2 text-neutral-800"
+            >
               Your map could not load.
-            </p>
+            </StatusMessage>
             <p className="mt-1 text-sm text-neutral-600">
               Your saved words are safe. Try again, or learn with a place below.
             </p>
-            <a className="vn-btn vn-btn-secondary mt-3" href={retryHref}>
+            <a className={actionClasses("secondary", "mt-3")} href={retryHref}>
               Try again
             </a>
           </section>

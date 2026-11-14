@@ -1,3 +1,5 @@
+import { StatusMessage } from "@/ui/status-message";
+import { ActionLink } from "@/ui/controls";
 import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import { createHash } from "node:crypto";
@@ -218,22 +220,18 @@ export default async function HomePage() {
         />
         <div className="next-step-actions">
           {currentLesson ? (
-            <Link
-              href="/review"
-              prefetch="auto"
-              className="vn-btn vn-btn-primary"
-            >
+            <ActionLink variant="primary" href="/review" prefetch="auto">
               Continue review
-            </Link>
+            </ActionLink>
           ) : dueReviewWords > 0 ? (
             <StartDailyLessonButton
               className="vn-btn vn-btn-primary"
               label="Start review"
             />
           ) : (
-            <Link href="/discovery" className="vn-btn vn-btn-primary">
+            <ActionLink variant="primary" href="/discovery">
               Discover words
-            </Link>
+            </ActionLink>
           )}
           <p className="next-step-meta">
             Reviewed today: <strong>{reviewsCompleted}</strong>
@@ -305,9 +303,13 @@ export default async function HomePage() {
               <h3 className="font-semibold text-neutral-900">
                 Today’s practice
               </h3>
-              <p role="status" className="mt-1 text-neutral-600">
+              <StatusMessage
+                as="p"
+                role="status"
+                className="mt-1 text-neutral-600"
+              >
                 Loading practice…
-              </p>
+              </StatusMessage>
             </section>
           }
         >
@@ -319,9 +321,9 @@ export default async function HomePage() {
               <h3>New words</h3>
               <p>Hear a word, then choose Learn or Already know.</p>
             </div>
-            <Link href="/discovery" className="vn-btn vn-btn-secondary">
+            <ActionLink variant="secondary" href="/discovery">
               Discover
-            </Link>
+            </ActionLink>
           </div>
         )}
         <nav

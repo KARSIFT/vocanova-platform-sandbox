@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { Button, Select } from "@/ui/controls";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -135,13 +137,14 @@ export function LearningDirection({
 
   if (!open)
     return (
-      <button
+      <Button
+        variant="secondary"
         type="button"
-        className="vn-btn vn-btn-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+
         onClick={() => setOpen(true)}
       >
         Change learning direction
-      </button>
+      </Button>
     );
 
   return (
@@ -165,7 +168,7 @@ export function LearningDirection({
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="font-semibold text-neutral-900">
               Learning goal
-              <select
+              <Select
                 value={goal}
                 disabled={locked}
                 required
@@ -183,11 +186,11 @@ export function LearningDirection({
                     {label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="font-semibold text-neutral-900">
               Main focus
-              <select
+              <Select
                 value={focus}
                 disabled={locked}
                 required
@@ -205,11 +208,12 @@ export function LearningDirection({
                     {label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           </div>
           {!retry && !reload && (
-            <button
+            <Button
+              variant="primary"
               type="submit"
               className={`${action} mt-4`}
               disabled={
@@ -221,48 +225,55 @@ export function LearningDirection({
               }
             >
               Save learning direction
-            </button>
+            </Button>
           )}
         </>
       ) : (
-        <p role="status" className="mt-3 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
           Load your current choices to change your direction.
-        </p>
+        </StatusMessage>
       )}
       {busy && (
-        <p role="status" className="mt-3 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
           Saving or loading your choices…
-        </p>
+        </StatusMessage>
       )}
       {error && (
-        <p role="alert" className="mt-3 text-neutral-900">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          className="mt-3 text-neutral-900"
+        >
           {error}
-        </p>
+        </StatusMessage>
       )}
       {notice && (
-        <p role="status" className="mt-3 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
           {notice}
-        </p>
+        </StatusMessage>
       )}
       {retry && (
-        <button
+        <Button
+          variant="primary"
           type="button"
           disabled={busy}
           className={`${action} mt-3`}
           onClick={() => void save()}
         >
           Retry saving direction
-        </button>
+        </Button>
       )}
       {(reload || !baseline) && (
-        <button
+        <Button
+          variant="primary"
           type="button"
           disabled={busy}
           className={`${action} mt-3`}
           onClick={() => void loadCurrent()}
         >
           Load current choices
-        </button>
+        </Button>
       )}
     </form>
   );

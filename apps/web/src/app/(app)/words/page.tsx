@@ -1,3 +1,5 @@
+import { StatusMessage } from "@/ui/status-message";
+import { ActionLink, Button, Select, TextInput } from "@/ui/controls";
 import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import {
@@ -101,12 +103,9 @@ export default async function SavedWordsPage({
           </p>
         </div>
         {!emptyCollection && (
-          <Link
-            href="/discover"
-            className="vn-btn vn-btn-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
+          <ActionLink variant="secondary" href="/discover">
             Discover new words
-          </Link>
+          </ActionLink>
         )}
       </div>
 
@@ -128,7 +127,7 @@ export default async function SavedWordsPage({
           >
             Search saved words and meanings
           </label>
-          <input
+          <TextInput
             id="saved-word-query"
             name="q"
             type="search"
@@ -146,7 +145,7 @@ export default async function SavedWordsPage({
           <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <label className="min-w-0 font-semibold text-neutral-900">
               Review stage
-              <select
+              <Select
                 name="stage"
                 defaultValue={stage ?? ""}
                 className={inputStyle}
@@ -157,7 +156,7 @@ export default async function SavedWordsPage({
                     {stageLabels[value]}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl px-1 text-base text-neutral-900">
               <input
@@ -169,9 +168,9 @@ export default async function SavedWordsPage({
               />
               Due for review now
             </label>
-            <button type="submit" className={actionStyle}>
+            <Button variant="primary" type="submit" className={actionStyle}>
               Apply filters
-            </button>
+            </Button>
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4">
             <p className="text-sm text-neutral-600">
@@ -194,11 +193,16 @@ export default async function SavedWordsPage({
           >
             Check your filters
           </h2>
-          <p role="alert" className="mt-2 text-neutral-700">
+          <StatusMessage
+            as="p"
+            tone="error"
+            role="alert"
+            className="mt-2 text-neutral-700"
+          >
             {invalidQuery
               ? "Keep your search to 100 characters or fewer and remove any unsupported characters."
               : "Choose a listed review stage and try your search again."}
-          </p>
+          </StatusMessage>
         </section>
       ) : invalidCursor ? (
         <section aria-labelledby="saved-page-changed" className="py-6">
@@ -224,9 +228,9 @@ export default async function SavedWordsPage({
           >
             Saved vocabulary is unavailable
           </h2>
-          <p role="status" className="mt-2 text-neutral-700">
+          <StatusMessage as="p" role="status" className="mt-2 text-neutral-700">
             We could not load your words. Try again with the same filters.
-          </p>
+          </StatusMessage>
           <ReloadSavedWordsButton />
         </section>
       ) : view === "empty" && filtered ? (
@@ -254,32 +258,38 @@ export default async function SavedWordsPage({
             Save a useful word from Journey and it will appear here, ready for
             review and sentence practice.
           </p>
-          <Link
+          <ActionLink
+            variant="primary"
             href="/discover"
-            className="mt-[var(--spacing-lg)] vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            className="mt-[var(--spacing-lg)]"
           >
             Explore Journey
-          </Link>
+          </ActionLink>
         </section>
       ) : view === "exhausted" ? (
         <section className="py-[var(--spacing-2xl)] text-center">
           <h2 className="text-xl font-semibold text-neutral-900">
             You&apos;ve reached the end
           </h2>
-          <Link
+          <ActionLink
+            variant="secondary"
             href={resultsURL()}
-            className="mt-[var(--spacing-lg)] vn-btn vn-btn-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            className="mt-[var(--spacing-lg)]"
           >
             Back to newest words
-          </Link>
+          </ActionLink>
         </section>
       ) : (
         <>
-          <p role="status" className="text-sm text-neutral-700">
+          <StatusMessage
+            as="p"
+            role="status"
+            className="text-sm text-neutral-700"
+          >
             Showing {items.length} of {data.totalCount}{" "}
             {filtered ? "matching" : "saved"}{" "}
             {data.totalCount === 1 ? "meaning" : "meanings"}.
-          </p>
+          </StatusMessage>
           <ul
             aria-label="Saved vocabulary results"
             className="mt-[var(--spacing-lg)] grid grid-cols-1 gap-[var(--spacing-md)] md:grid-cols-2"
@@ -322,13 +332,14 @@ export default async function SavedWordsPage({
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-sm)]">
-                    <Link
+                    <ActionLink
+                      variant="secondary"
                       href={`/words/${savedWord.userWordId}`}
                       aria-label={`Open ${savedWord.wordText} details and sentence practice`}
-                      className="vn-btn vn-btn-secondary min-h-11"
+                      className="min-h-11"
                     >
                       Open word
-                    </Link>
+                    </ActionLink>
                     <RemoveSavedWordButton
                       meaningId={savedWord.meaningId}
                       wordText={savedWord.wordText}

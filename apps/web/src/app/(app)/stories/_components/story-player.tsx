@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { Button } from "@/ui/controls";
 import Link from "@/ui/link";
 import { useEffect, useId, useRef, useState } from "react";
 import {
@@ -295,7 +297,7 @@ export function StoryPlayer({
           </form>
         )}
         {checked && (
-          <div
+          <StatusMessage
             ref={feedback}
             tabIndex={-1}
             role="status"
@@ -313,22 +315,24 @@ export function StoryPlayer({
                 Choose the correct answer before continuing.
               </p>
             )}
-          </div>
+          </StatusMessage>
         )}
         {step && (
           <SessionActions>
             {step.kind !== "line" && !checked?.correct && (
-              <button
+              <Button
+                variant="primary"
                 type="submit"
                 form={answerFormId}
                 className={`${primaryAction} w-full`}
                 disabled={locked || !choice}
               >
                 {busy ? "Checking…" : checked ? "Check again" : "Check answer"}
-              </button>
+              </Button>
             )}
             {session.canContinue && (
-              <button
+              <Button
+                variant="primary"
                 type="button"
                 className={`${primaryAction} w-full`}
                 disabled={locked}
@@ -339,12 +343,13 @@ export function StoryPlayer({
                   : session.completedSteps + 1 === session.totalSteps
                     ? "Finish story"
                     : "Continue"}
-              </button>
+              </Button>
             )}
           </SessionActions>
         )}
         {error && (
-          <div
+          <StatusMessage
+            tone="error"
             ref={errorRegion}
             tabIndex={-1}
             role="alert"
@@ -353,30 +358,32 @@ export function StoryPlayer({
             <p className="text-neutral-900">{error}</p>
             <div className="mt-3 flex flex-wrap gap-3">
               {needsRetry && (
-                <button
+                <Button
+                  variant="secondary"
                   type="button"
                   className={secondaryAction}
                   disabled={busy}
                   onClick={() => void submit()}
                 >
                   Retry safely
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                variant="secondary"
                 type="button"
                 className={secondaryAction}
                 disabled={busy}
                 onClick={() => void refresh()}
               >
                 Load saved progress
-              </button>
+              </Button>
             </div>
-          </div>
+          </StatusMessage>
         )}
         {notice && (
-          <p role="status" className="mt-3 text-neutral-700">
+          <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
             {notice}
-          </p>
+          </StatusMessage>
         )}
         <StoryVocabularyHelp vocabulary={session.vocabulary} />
       </Surface>

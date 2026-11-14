@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 export default function SavedWordsLoading() {
   return (
     <section
@@ -5,9 +6,14 @@ export default function SavedWordsLoading() {
       aria-labelledby="saved-words-loading-status"
       className="animate-pulse p-[var(--spacing-lg)]"
     >
-      <p id="saved-words-loading-status" role="status" className="sr-only">
+      <StatusMessage
+        as="p"
+        id="saved-words-loading-status"
+        role="status"
+        className="sr-only"
+      >
         Loading saved vocabulary
-      </p>
+      </StatusMessage>
       <div className="h-7 w-1/2 rounded bg-neutral-200" />
       <div className="mt-[var(--spacing-xs)] h-4 w-3/4 rounded bg-neutral-200" />
       <div className="mt-[var(--spacing-lg)] grid grid-cols-1 gap-[var(--spacing-md)] md:grid-cols-2">

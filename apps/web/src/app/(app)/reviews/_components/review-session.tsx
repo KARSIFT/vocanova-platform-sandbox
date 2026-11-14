@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { Button } from "@/ui/controls";
 import Link from "@/ui/link";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
@@ -366,13 +368,14 @@ export function ReviewSession({
             </p>
           ) : null}
           {queueUpdateMessage ? (
-            <p
+            <StatusMessage
+              as="p"
               role="status"
               aria-live="polite"
               className="mt-[var(--spacing-sm)] text-sm text-neutral-700"
             >
               {queueUpdateMessage}
-            </p>
+            </StatusMessage>
           ) : null}
         </div>
         {lastReviewedCard && lastReviewAttemptId ? (
@@ -422,13 +425,14 @@ export function ReviewSession({
         </p>
       </div>
       {queueUpdateMessage ? (
-        <p
+        <StatusMessage
+          as="p"
           role="status"
           aria-live="polite"
           className="mt-[var(--spacing-sm)] text-sm text-neutral-700"
         >
           {queueUpdateMessage}
-        </p>
+        </StatusMessage>
       ) : null}
 
       <div
@@ -524,7 +528,8 @@ export function ReviewSession({
             ) : null}
 
             {promptType === "self_check" && phase === "prompt" ? (
-              <button
+              <Button
+                variant="primary"
                 type="button"
                 onClick={() => setPhase("rate")}
                 disabled={isReviewActionDisabled(
@@ -532,10 +537,10 @@ export function ReviewSession({
                   isRefetching,
                   hasSubmittedCurrentCard,
                 )}
-                className="vn-btn vn-btn-primary w-full text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                className="w-full text-base"
               >
                 Show answer
-              </button>
+              </Button>
             ) : null}
 
             {phase === "feedback" && isMultipleChoiceIncorrect ? (
@@ -552,7 +557,8 @@ export function ReviewSession({
                 <p className="mt-3 text-base text-red-800">
                   Read the meaning, then continue to save your answer.
                 </p>
-                <button
+                <Button
+                  variant="primary"
                   type="button"
                   onClick={() =>
                     submitAttempt({
@@ -566,10 +572,10 @@ export function ReviewSession({
                     isRefetching,
                     hasSubmittedCurrentCard,
                   )}
-                  className="vn-btn vn-btn-primary mt-[var(--spacing-md)] w-full text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                  className="mt-[var(--spacing-md)] w-full text-base"
                 >
                   Continue
-                </button>
+                </Button>
               </div>
             ) : null}
 
@@ -649,23 +655,26 @@ export function ReviewSession({
             ) : null}
 
             {errorMessage ? (
-              <p
+              <StatusMessage
+                as="p"
+                tone="error"
                 role="alert"
                 aria-live="polite"
                 className="mt-[var(--spacing-md)] rounded-md bg-red-50 p-[var(--spacing-sm)] text-sm text-red-700"
               >
                 {errorMessage}
-              </p>
+              </StatusMessage>
             ) : null}
             {hasSubmittedCurrentCard && !queueRefreshFailed && errorMessage ? (
-              <button
+              <Button
+                variant="secondary"
                 type="button"
                 onClick={() => advance(completedReviewCount)}
                 disabled={isRefetching}
-                className="mt-[var(--spacing-sm)] min-h-11 w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-[var(--spacing-sm)] w-full text-base transition-colors"
               >
                 Retry loading reviews
-              </button>
+              </Button>
             ) : null}
             {queueRefreshFailed && errorMessage ? (
               <button
@@ -688,13 +697,14 @@ export function ReviewSession({
             ) : null}
           </>
         ) : (
-          <p
+          <StatusMessage
+            as="p"
             role="status"
             aria-live="polite"
             className="py-[var(--spacing-xl)] text-center text-base text-neutral-700"
           >
             Loading next reviews…
-          </p>
+          </StatusMessage>
         )}
       </div>
     </div>
