@@ -997,6 +997,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
 
     await test.step("2c. follow a confirmed discovery save to its exact writing meaning", async () => {
       await prepareEligibleReview(page, apiOrigin, true);
+      await page.goto("/home");
       expect(await readReviewedTodayCount(page)).toBe(reviewedBefore);
     });
 
