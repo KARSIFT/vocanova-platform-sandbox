@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { Button, TextArea } from "@/ui/controls";
 import Link from "@/ui/link";
 import { LearningNote } from "@/ui/learning-guide";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -355,7 +357,7 @@ export function SentenceFeedback({
             htmlFor={`sentence-input-${attemptId}`}
             className="sr-only"
           >{`Write a sentence using ${targetWord}`}</label>
-          <textarea
+          <TextArea
             id={`sentence-input-${attemptId}`}
             name="sentence"
             aria-describedby={`${characterCountId}${
@@ -379,7 +381,7 @@ export function SentenceFeedback({
             disabled={isLoading}
             rows={3}
             placeholder={`Type a sentence using "${targetWord}"...`}
-            className="w-full rounded-xl border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-neutral-900 placeholder:text-neutral-500 focus:border-primary-500 focus:outline focus:outline-2 focus:outline-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full placeholder:text-neutral-500"
           />
           <p
             id={characterCountId}
@@ -389,9 +391,14 @@ export function SentenceFeedback({
             {characterCount}/{MAX_SENTENCE_CHARACTERS}
           </p>
           {characterLimitStatus ? (
-            <p id={characterLimitMessageId} role="status" className="sr-only">
+            <StatusMessage
+              as="p"
+              id={characterLimitMessageId}
+              role="status"
+              className="sr-only"
+            >
               {characterLimitStatus}
-            </p>
+            </StatusMessage>
           ) : null}
         </div>
 
@@ -420,19 +427,21 @@ export function SentenceFeedback({
       </form>
 
       {errorMessage?.source === "local" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="polite"
           className="mt-[var(--spacing-md)] rounded-md bg-red-50 p-[var(--spacing-sm)] text-base text-red-700"
         >
           {errorMessage.text}
-        </p>
+        </StatusMessage>
       ) : null}
 
       {hasResult ? (
         <div className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]">
           {statusLabel ? (
-            <div
+            <StatusMessage
               role="status"
               aria-label={`Feedback result: ${statusLabel}`}
               className={`rounded-md p-[var(--spacing-md)] ${getStatusClasses(result.status)}`}
@@ -446,7 +455,7 @@ export function SentenceFeedback({
                   {result.explanation}
                 </p>
               ) : null}
-            </div>
+            </StatusMessage>
           ) : null}
 
           {submittedSentence ? (
@@ -486,14 +495,15 @@ export function SentenceFeedback({
                 </p>
               ) : null}
               {hasSuccessResult ? (
-                <button
+                <Button
+                  variant="primary"
                   type="button"
                   onClick={handleReviseSentence}
                   disabled={isLoading}
-                  className="vn-btn vn-btn-primary mt-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                  className="mt-3"
                 >
                   Revise sentence
-                </button>
+                </Button>
               ) : null}
             </section>
           ) : null}
@@ -501,17 +511,19 @@ export function SentenceFeedback({
           {result.errorCode &&
           !result.crisisResourceMessage &&
           errorMessage?.source === "result" ? (
-            <div
+            <StatusMessage
+              tone="error"
               role="alert"
               aria-live="polite"
               className="rounded-md bg-red-50 p-[var(--spacing-md)] text-base text-red-700"
             >
               {errorMessage.text}
-            </div>
+            </StatusMessage>
           ) : null}
 
           {result.crisisResourceMessage ? (
-            <div
+            <StatusMessage
+              tone="error"
               role="alert"
               aria-live="assertive"
               className="rounded-md bg-amber-50 p-[var(--spacing-md)] text-base text-amber-900"
@@ -520,7 +532,7 @@ export function SentenceFeedback({
               <p className="mt-[var(--spacing-xs)]">
                 {result.crisisResourceMessage}
               </p>
-            </div>
+            </StatusMessage>
           ) : null}
 
           {result.improvementTip ? (
@@ -538,14 +550,14 @@ export function SentenceFeedback({
                 Read the feedback, then revise your sentence or try a new one.
               </p>
               <div className="flex flex-wrap gap-[var(--spacing-sm)]">
-                <button
+                <Button
+                  variant="secondary"
                   type="button"
                   onClick={handleTryAnotherSentence}
                   disabled={isLoading}
-                  className="vn-btn vn-btn-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
                 >
                   Try another sentence
-                </button>
+                </Button>
                 <Link
                   href="/progress/sentences"
                   className="inline-flex min-h-11 items-center px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base font-semibold text-primary-700 underline hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"

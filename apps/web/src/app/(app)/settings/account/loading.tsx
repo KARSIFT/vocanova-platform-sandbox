@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 export default function SettingsAccountLoading() {
   return (
     <section
@@ -5,9 +6,15 @@ export default function SettingsAccountLoading() {
       aria-labelledby="account-loading-status"
       className="animate-pulse p-[var(--spacing-lg)]"
     >
-      <p id="account-loading-status" role="status" className="sr-only">
+      <StatusMessage
+        as="p"
+        tone="info"
+        id="account-loading-status"
+        role="status"
+        className="sr-only"
+      >
         Loading account settings
-      </p>
+      </StatusMessage>
       <div className="mb-[var(--spacing-md)] flex items-center justify-between">
         <div className="h-7 w-1/4 rounded bg-neutral-200" />
         <div className="h-5 w-1/6 rounded bg-neutral-200" />

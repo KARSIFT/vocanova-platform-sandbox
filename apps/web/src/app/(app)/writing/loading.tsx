@@ -1,10 +1,11 @@
+import { StatusMessage } from "@/ui/status-message";
 import { PageContainer } from "@/ui/surface";
 export default function WritingLoading() {
   return (
     <PageContainer>
-      <p role="status" className="text-neutral-700">
+      <StatusMessage as="p" role="status" className="text-neutral-700">
         Loading writing topics…
-      </p>
+      </StatusMessage>
     </PageContainer>
   );
 }

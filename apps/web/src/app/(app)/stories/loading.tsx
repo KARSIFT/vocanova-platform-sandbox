@@ -1,11 +1,12 @@
+import { StatusMessage } from "@/ui/status-message";
 import { PageContainer, Surface } from "@/ui/surface";
 export default function StoriesLoading() {
   return (
     <PageContainer className="max-w-[44rem]">
       <Surface>
-        <p role="status" className="text-neutral-700">
+        <StatusMessage as="p" role="status" className="text-neutral-700">
           Loading your story…
-        </p>
+        </StatusMessage>
       </Surface>
     </PageContainer>
   );

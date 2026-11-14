@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "@/ui/link";
+import { ActionLink, Button } from "@/ui/controls";
 import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
 
 interface SavedWordsErrorProps {
@@ -22,21 +22,23 @@ export default function SavedWordsError({
         We couldn&apos;t load your saved vocabulary. Please try again.
       </p>
       <div className="mt-[var(--spacing-lg)] flex flex-wrap gap-[var(--spacing-md)]">
-        <button
+        <Button
+          variant="secondary"
           type="button"
           onClick={retry}
           disabled={isRetrying}
           aria-busy={isRetrying}
-          className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          className="min-w-[var(--spacing-2xl)] text-base text-neutral-50"
         >
           {isRetrying ? "Trying again..." : "Try again"}
-        </button>
-        <Link
+        </Button>
+        <ActionLink
+          variant="secondary"
           href="/discover"
-          className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          className="min-w-[var(--spacing-2xl)] text-base"
         >
           Go to Journey
-        </Link>
+        </ActionLink>
       </div>
     </div>
   );

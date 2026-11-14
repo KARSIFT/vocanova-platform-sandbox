@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/ui/controls";
 import Link from "@/ui/link";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -40,7 +41,8 @@ export function PracticeAudio({
     <div className="my-5" role="group" aria-label="Practice audio">
       {meaningId && <span className="sr-only">AI-generated pronunciation</span>}
       <div className="flex flex-wrap gap-3">
-        <button
+        <Button
+          variant="secondary"
           type="button"
           className={secondaryAction}
           aria-describedby={descriptionId}
@@ -58,8 +60,9 @@ export function PracticeAudio({
           }}
         >
           {active ? "Stop audio" : "Play audio"}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="secondary"
           type="button"
           className={`${secondaryAction} aria-pressed:border-primary-600 aria-pressed:bg-primary-50 aria-pressed:text-primary-800`}
           aria-pressed={slow}
@@ -67,7 +70,7 @@ export function PracticeAudio({
           onClick={() => update({ rate: slow ? 0.85 : 0.7 })}
         >
           Slower audio
-        </button>
+        </Button>
       </div>
       <p
         id={descriptionId}

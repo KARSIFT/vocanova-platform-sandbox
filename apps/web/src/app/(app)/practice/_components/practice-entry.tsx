@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { Button, Select } from "@/ui/controls";
 import Link from "@/ui/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -180,10 +182,14 @@ export function PracticeEntry({
           More practice
         </summary>
         {lessonsUnavailable && (
-          <p role="status" className="mt-3 text-sm text-neutral-600">
+          <StatusMessage
+            as="p"
+            role="status"
+            className="mt-3 text-sm text-neutral-600"
+          >
             Situation lesson choices are unavailable. Your personal practice
             path is still available.
-          </p>
+          </StatusMessage>
         )}
         {hasVocabularySelection ? (
           <div className="mt-4 max-w-[40rem]">
@@ -204,13 +210,13 @@ export function PracticeEntry({
                 Refresh
               </button>
             </div>
-            <select
+            <Select
               id="practice-vocabulary"
               value={selection}
               disabled={locked}
               aria-describedby="practice-vocabulary-help"
               onChange={(event) => setSelection(event.target.value)}
-              className="mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+              className="mt-2 w-full"
             >
               <option value="">Mix from the full course</option>
               {selectedListId && !selectedList && (
@@ -230,7 +236,7 @@ export function PracticeEntry({
                   {lesson.situationTitle}: {lesson.title}
                 </option>
               ))}
-            </select>
+            </Select>
             <details className="mt-1">
               <summary className="min-h-11 cursor-pointer content-center text-sm text-neutral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
                 About this selection
@@ -254,17 +260,17 @@ export function PracticeEntry({
           </p>
         )}
         {unavailableSelection && (
-          <p role="status" className="mt-3 text-neutral-700">
+          <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
             {selectedList
               ? "This list has no meanings available for focused practice. Add a supported meaning or choose another vocabulary source."
               : "Your selected list could not be loaded. Load saved sessions to refresh your lists, or explicitly choose another vocabulary source."}
-          </p>
+          </StatusMessage>
         )}
         {!lists && (
           <div className="mt-3">
-            <p role="status" className="text-neutral-700">
+            <StatusMessage as="p" role="status" className="text-neutral-700">
               Personal lists are unavailable. Refresh to try again.
-            </p>
+            </StatusMessage>
             {!hasVocabularySelection && (
               <button
                 type="button"
@@ -341,9 +347,9 @@ export function PracticeEntry({
         </Link>
       </details>
       {busy && (
-        <p role="status" className="mt-3 text-neutral-700">
+        <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
           {openedSession ? "Opening your practice…" : "Loading your practice…"}
-        </p>
+        </StatusMessage>
       )}
       {/* Recover independently if the automatic client navigation stalls. */}
       {openedSession && (
@@ -355,32 +361,35 @@ export function PracticeEntry({
         </a>
       )}
       {error && (
-        <div
+        <StatusMessage
+          tone="error"
           role="alert"
           className="mt-4 rounded-xl border border-secondary-300 bg-secondary-50 p-4 text-neutral-900"
         >
           <p>{error}</p>
           <div className="mt-3 flex flex-wrap gap-3">
             {needsRetry && (
-              <button
+              <Button
+                variant="secondary"
                 type="button"
                 disabled={busy}
                 className={secondaryAction}
                 onClick={() => void start()}
               >
                 Retry start
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              variant="secondary"
               type="button"
               disabled={busy}
               className={secondaryAction}
               onClick={() => void loadSessions()}
             >
               Load saved sessions
-            </button>
+            </Button>
           </div>
-        </div>
+        </StatusMessage>
       )}
       {!sessions && !error && (
         <div className="mt-4 text-neutral-700">

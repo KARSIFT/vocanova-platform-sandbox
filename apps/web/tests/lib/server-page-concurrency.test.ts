@@ -19,6 +19,15 @@ const pageHooks = registerHooks({
     return nextResolve(specifier, context);
   },
   load(url, context, nextLoad) {
+    // Node does not bundle CSS modules. These tests exercise server-page data
+    // concurrency; browser acceptance checks the actual compiled styles.
+    if (url.startsWith(sourceRoot.href) && url.endsWith(".module.css")) {
+      const css = readFileSync(new URL(url), "utf8");
+      const classes = Object.fromEntries(
+        [...css.matchAll(/\.([a-zA-Z_][\w-]*)/g)].map((match) => [match[1], match[1]]),
+      );
+      return { format: "module", source: `export default ${JSON.stringify(classes)}`, shortCircuit: true };
+    }
     if (url.startsWith(sourceRoot.href) && url.endsWith(".tsx")) {
       return {
         format: "module",

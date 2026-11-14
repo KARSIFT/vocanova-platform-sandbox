@@ -1,4 +1,6 @@
 "use client";
+import { StatusMessage } from "@/ui/status-message";
+import { Button } from "@/ui/controls";
 import Link from "@/ui/link";
 import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
 import { PageContainer, Surface } from "@/ui/surface";
@@ -20,10 +22,16 @@ export default function WritingError({
         <h1 className="text-2xl font-bold text-neutral-900">
           Writing practice could not load
         </h1>
-        <p role="alert" className="my-4 text-neutral-700">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          className="my-4 text-neutral-700"
+        >
           Try again to load your topics and current saved meanings.
-        </p>
-        <button
+        </StatusMessage>
+        <Button
+          variant="primary"
           type="button"
           className={primaryAction}
           onClick={retry}
@@ -31,7 +39,7 @@ export default function WritingError({
           aria-busy={isRetrying}
         >
           {isRetrying ? "Trying again..." : "Try again"}
-        </button>
+        </Button>
         <Link href="/practice" className={`${textLink} ml-4`}>
           Back to Practice
         </Link>

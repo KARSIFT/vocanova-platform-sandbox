@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { ActionLink, Button, TextInput } from "@/ui/controls";
+
 import Link from "@/ui/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -10,10 +14,6 @@ import { isDisplayNameWithinLimit } from "@/lib/display-name";
 
 const PASSWORD_MIN_LENGTH = 15;
 const PASSWORD_MAX_LENGTH = 128;
-
-const inputClassName = "auth-input mt-[var(--spacing-xs)]";
-
-const primaryButtonClassName = "auth-primary";
 
 function useResendCooldown() {
   const [availableAt, setAvailableAt] = useState(0);
@@ -54,10 +54,12 @@ function CheckPasswordEmail({
 }) {
   return (
     <div className="space-y-[var(--spacing-md)]">
-      <p
+      <StatusMessage
+        as="p"
+        tone="info"
         role="status"
         aria-live="polite"
-        className="rounded-xl border border-primary-200 bg-primary-50 p-[var(--spacing-md)] text-base text-primary-900"
+        className="rounded-xl border border-primary-200 bg-primary-50 p-[var(--spacing-md)] text-base"
       >
         {signup
           ? "If this address can create an account, we've sent a verification link. Open it to finish setting up your password."
@@ -65,17 +67,16 @@ function CheckPasswordEmail({
         <span className="mt-[var(--spacing-xs)] block font-medium [overflow-wrap:anywhere]">
           {email}
         </span>
-      </p>
+      </StatusMessage>
       <p className="text-sm text-neutral-700">
         Check your spam folder too. Links expire after 15 minutes.
       </p>
       <div className="flex flex-wrap gap-[var(--spacing-sm)]">
-        <button
+        <Button
           type="button"
           onClick={onResend}
           disabled={sending || seconds > 0}
           aria-busy={sending}
-          className="auth-primary"
         >
           {sending
             ? "Sending..."
@@ -84,24 +85,26 @@ function CheckPasswordEmail({
               : signup
                 ? "Resend verification link"
                 : "Resend password reset link"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={onDifferentEmail}
           disabled={sending}
-          className="auth-secondary"
+          variant="secondary"
         >
           Use a different email
-        </button>
+        </Button>
       </div>
       {message ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="assertive"
-          className="text-base text-red-700"
+          className="text-base"
         >
           {message}
-        </p>
+        </StatusMessage>
       ) : null}
     </div>
   );
@@ -138,7 +141,7 @@ function PasswordInput({
         Password
       </label>
       <div className="relative mt-[var(--spacing-xs)]">
-        <input
+        <TextInput
           id={id}
           name={id}
           type={visible ? "text" : "password"}
@@ -147,7 +150,7 @@ function PasswordInput({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
-          className="auth-input pr-20"
+          className="pr-20"
         />
         <button
           type="button"
@@ -193,7 +196,7 @@ export function PasswordLoginForm({ returnTo }: { returnTo: string }) {
         >
           Email address
         </label>
-        <input
+        <TextInput
           id="signin-email"
           name="email"
           type="email"
@@ -202,7 +205,7 @@ export function PasswordLoginForm({ returnTo }: { returnTo: string }) {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           disabled={state === "loading"}
-          className={inputClassName}
+          className="mt-[var(--spacing-xs)]"
         />
       </div>
       <PasswordInput
@@ -213,22 +216,24 @@ export function PasswordLoginForm({ returnTo }: { returnTo: string }) {
         disabled={state === "loading"}
       />
       {state === "error" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="assertive"
-          className="text-base text-red-700"
+          className="text-base"
         >
           {message}
-        </p>
+        </StatusMessage>
       ) : null}
-      <button
+      <Button
         type="submit"
         disabled={state === "loading"}
         aria-busy={state === "loading"}
-        className={`${primaryButtonClassName} w-full`}
+        className="w-full"
       >
         {state === "loading" ? "Signing in..." : "Sign in"}
-      </button>
+      </Button>
       <div className="flex flex-wrap justify-between gap-[var(--spacing-sm)] text-base">
         <Link
           href={`/signup?${new URLSearchParams({ returnTo: normalizeReturnTo(returnTo) })}`}
@@ -331,7 +336,7 @@ export function PasswordSignupForm() {
         >
           Email address
         </label>
-        <input
+        <TextInput
           id="signup-email"
           ref={emailInput}
           name="email"
@@ -341,7 +346,7 @@ export function PasswordSignupForm() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           disabled={state === "loading"}
-          className={inputClassName}
+          className="mt-[var(--spacing-xs)]"
         />
       </div>
       <div>
@@ -352,7 +357,7 @@ export function PasswordSignupForm() {
           Display name{" "}
           <span className="font-normal text-neutral-700">(optional)</span>
         </label>
-        <input
+        <TextInput
           id="signup-display-name"
           name="name"
           type="text"
@@ -365,7 +370,7 @@ export function PasswordSignupForm() {
             }
           }}
           disabled={state === "loading"}
-          className={inputClassName}
+          className="mt-[var(--spacing-xs)]"
         />
         <p
           id="signup-display-name-limit"
@@ -383,22 +388,24 @@ export function PasswordSignupForm() {
       />
       <p className="text-sm text-neutral-700">Use 15 to 128 characters.</p>
       {state === "error" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="assertive"
-          className="text-base text-red-700"
+          className="text-base"
         >
           {message}
-        </p>
+        </StatusMessage>
       ) : null}
-      <button
+      <Button
         type="submit"
         disabled={state === "loading"}
         aria-busy={state === "loading"}
-        className={`${primaryButtonClassName} w-full`}
+        className="w-full"
       >
         {state === "loading" ? "Creating account..." : "Create account"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -479,7 +486,7 @@ export function PasswordResetRequestForm({
         >
           Email address
         </label>
-        <input
+        <TextInput
           id="reset-email"
           ref={emailInput}
           name="email"
@@ -489,7 +496,7 @@ export function PasswordResetRequestForm({
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           disabled={state === "loading"}
-          className={inputClassName}
+          className="mt-[var(--spacing-xs)]"
         />
       </div>
       <p className="text-sm text-neutral-700">
@@ -498,22 +505,23 @@ export function PasswordResetRequestForm({
         or Google.
       </p>
       {state === "error" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="assertive"
-          className="text-base text-red-700"
+          className="text-base"
         >
           {message}
-        </p>
+        </StatusMessage>
       ) : null}
-      <button
+      <Button
         type="submit"
         disabled={state === "loading"}
         aria-busy={state === "loading"}
-        className={primaryButtonClassName}
       >
         {state === "loading" ? "Sending..." : actionLabel}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -552,16 +560,16 @@ export function PasswordResetForm({ token }: { token: string }) {
   if (state === "done")
     return (
       <div className="space-y-[var(--spacing-md)]">
-        <p
+        <StatusMessage
+          as="p"
+          tone="info"
           role="status"
           aria-live="polite"
-          className="rounded-xl border border-primary-200 bg-primary-50 p-[var(--spacing-md)] text-base text-primary-900"
+          className="rounded-xl border border-primary-200 bg-primary-50 p-[var(--spacing-md)] text-base"
         >
           Your password is ready. Sign in with your email and new password.
-        </p>
-        <Link href="/login" className={primaryButtonClassName}>
-          Sign in
-        </Link>
+        </StatusMessage>
+        <ActionLink href="/login">Sign in</ActionLink>
       </div>
     );
   return (
@@ -575,22 +583,23 @@ export function PasswordResetForm({ token }: { token: string }) {
       />
       <p className="text-sm text-neutral-700">Use 15 to 128 characters.</p>
       {state === "error" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="assertive"
-          className="text-base text-red-700"
+          className="text-base"
         >
           {message}
-        </p>
+        </StatusMessage>
       ) : null}
-      <button
+      <Button
         type="submit"
         disabled={state === "loading"}
         aria-busy={state === "loading"}
-        className={primaryButtonClassName}
       >
         {state === "loading" ? "Saving password..." : "Save new password"}
-      </button>
+      </Button>
     </form>
   );
 }

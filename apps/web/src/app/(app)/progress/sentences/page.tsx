@@ -1,3 +1,4 @@
+import { ActionLink } from "@/ui/controls";
 import Link from "@/ui/link";
 
 import type { LearnerSentence } from "@vocanova/api-client";
@@ -63,12 +64,13 @@ export default async function SentenceHistoryPage({
       )}
 
       {hasMore && nextCursor ? (
-        <Link
+        <ActionLink
+          variant="secondary"
           href={`/progress/sentences?after=${encodeURIComponent(nextCursor)}`}
-          className="mt-[var(--spacing-lg)] vn-btn vn-btn-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          className="mt-[var(--spacing-lg)]"
         >
           View older sentences
-        </Link>
+        </ActionLink>
       ) : null}
     </PageContainer>
   );
@@ -90,12 +92,13 @@ function EmptySentenceHistory() {
         Write a sentence from Home or a saved word to keep a useful record of
         your feedback.
       </p>
-      <Link
+      <ActionLink
+        variant="primary"
         href="/home"
-        className="mt-[var(--spacing-md)] vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        className="mt-[var(--spacing-md)]"
       >
         Go to Home
-      </Link>
+      </ActionLink>
     </Surface>
   );
 }
@@ -115,12 +118,13 @@ function ExhaustedSentenceHistory() {
       <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
         Newer sentence practice is available from the beginning of your history.
       </p>
-      <Link
+      <ActionLink
+        variant="primary"
         href="/progress/sentences"
-        className="mt-[var(--spacing-md)] vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        className="mt-[var(--spacing-md)]"
       >
         Back to newest sentences
-      </Link>
+      </ActionLink>
     </Surface>
   );
 }

@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
@@ -60,11 +61,11 @@ export default async function DiscoveryPage({
     return (
       <PageContainer>
         <h1 className={styles.title}>Discover words</h1>
-        <p role="alert">
+        <StatusMessage as="p" tone="error" role="alert">
           {changedElsewhere
             ? "New words changed elsewhere. Try again to load your next word."
             : "Words could not load."}
-        </p>
+        </StatusMessage>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <a href={returnTo} className={styles.secondary}>
             Try again

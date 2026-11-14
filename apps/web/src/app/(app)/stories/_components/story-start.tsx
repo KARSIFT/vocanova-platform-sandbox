@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { Button } from "@/ui/controls";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createApiClient } from "@/lib/api";
@@ -47,7 +49,8 @@ export function StoryStart({
   }
   return (
     <div>
-      <button
+      <Button
+        variant="primary"
         type="button"
         className={primaryAction}
         disabled={busy}
@@ -60,11 +63,16 @@ export function StoryStart({
             : repeat
               ? "Practise again"
               : "Start story"}
-      </button>
+      </Button>
       {error && (
-        <p role="alert" className="mt-3 text-neutral-900">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          className="mt-3 text-neutral-900"
+        >
           {error}
-        </p>
+        </StatusMessage>
       )}
     </div>
   );

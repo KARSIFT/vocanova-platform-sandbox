@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 import type { Metadata } from "next";
 import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
@@ -133,9 +134,13 @@ export default async function LearningPlanPage() {
               complete today.
             </p>
           ) : (
-            <p role="status" className="mt-3 text-neutral-700">
+            <StatusMessage
+              as="p"
+              role="status"
+              className="mt-3 text-neutral-700"
+            >
               Your daily progress is unavailable right now.
-            </p>
+            </StatusMessage>
           )}
           <p className="mt-2 text-neutral-700">
             {dueCount === undefined

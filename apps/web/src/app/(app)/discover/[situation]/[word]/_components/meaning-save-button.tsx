@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -113,9 +114,15 @@ export function MeaningSaveButton({
         {status === "loading" ? "Saving…" : label}
       </button>
       {errorMessage ? (
-        <p role="alert" aria-live="polite" className="text-sm text-red-700">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          aria-live="polite"
+          className="text-sm text-red-700"
+        >
           {errorMessage}
-        </p>
+        </StatusMessage>
       ) : null}
     </div>
   );

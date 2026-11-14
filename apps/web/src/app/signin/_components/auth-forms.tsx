@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { Button, TextInput } from "@/ui/controls";
+
 import { useEffect, useRef, useState } from "react";
 
 import { createApiClient } from "@/lib/api";
@@ -90,7 +94,9 @@ export function MagicLinkForm({
           <h2 id="check-email-heading" className="text-lg font-semibold">
             Check your email
           </h2>
-          <p
+          <StatusMessage
+            as="p"
+            tone="info"
             role="status"
             aria-live="polite"
             className="mt-[var(--spacing-xs)] text-base"
@@ -100,23 +106,22 @@ export function MagicLinkForm({
               {email}
             </span>
             The link signs you in wherever you open it.
-          </p>
+          </StatusMessage>
         </div>
         <div className="flex flex-wrap gap-[var(--spacing-sm)]">
-          <button
+          <Button
             type="button"
             onClick={() => void requestLink()}
             disabled={isSending || resendSeconds > 0}
             aria-busy={isSending}
-            className="auth-primary"
           >
             {isSending
               ? "Sending..."
               : resendSeconds > 0
                 ? `Resend available in ${resendSeconds}s`
                 : "Resend sign-in link"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => {
               setPhase("idle");
@@ -126,19 +131,21 @@ export function MagicLinkForm({
               clearOAuthContinuation();
             }}
             disabled={isSending}
-            className="auth-secondary"
+            variant="secondary"
           >
             Use a different email
-          </button>
+          </Button>
         </div>
         {errorMessage ? (
-          <p
+          <StatusMessage
+            as="p"
+            tone="error"
             role="alert"
             aria-live="assertive"
-            className="text-base text-red-700"
+            className="text-base"
           >
             {errorMessage}
-          </p>
+          </StatusMessage>
         ) : null}
       </section>
     );
@@ -153,7 +160,7 @@ export function MagicLinkForm({
         >
           {emailLabel}
         </label>
-        <input
+        <TextInput
           id="email"
           name="email"
           type="email"
@@ -161,26 +168,29 @@ export function MagicLinkForm({
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="auth-input mt-[var(--spacing-xs)]"
+          className="mt-[var(--spacing-xs)]"
         />
       </div>
       {errorMessage ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="assertive"
-          className="text-base text-red-700"
+          className="text-base"
         >
           {errorMessage}
-        </p>
+        </StatusMessage>
       ) : null}
-      <button
+      <Button
         type="submit"
         disabled={phase === "sending"}
         aria-busy={phase === "sending"}
-        className={`${secondary ? "auth-secondary" : "auth-primary"} w-full`}
+        variant={secondary ? "secondary" : "primary"}
+        className="w-full"
       >
         {phase === "sending" ? "Sending..." : "Send sign-in link"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -245,19 +255,26 @@ export function OAuthButton({
           ? "Up to 30 days on this device."
           : "A shorter session, up to 24 hours."}
       </p>
-      <button
+      <Button
         type="button"
         onClick={handleClick}
         disabled={status.type === "loading"}
         aria-busy={status.type === "loading"}
-        className="auth-secondary w-full"
+        variant="secondary"
+        className="w-full"
       >
         {status.type === "loading" ? "Redirecting..." : "Continue with Google"}
-      </button>
+      </Button>
       {status.message ? (
-        <p role="alert" aria-live="polite" className="text-base text-red-700">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          aria-live="polite"
+          className="text-base"
+        >
           {status.message}
-        </p>
+        </StatusMessage>
       ) : null}
     </div>
   );

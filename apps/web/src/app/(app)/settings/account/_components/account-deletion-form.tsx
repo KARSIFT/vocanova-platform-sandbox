@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { Button, TextInput } from "@/ui/controls";
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -98,17 +102,18 @@ export function AccountDeletionForm() {
   return (
     <div className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]">
       {phase.type === "idle" ? (
-        <button
+        <Button
           ref={deleteTriggerRef}
           type="button"
           onClick={() => {
             setErrorMessage(null);
             setPhase({ type: "confirming" });
           }}
-          className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-red-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-red-800 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+          variant="danger"
+          className="min-w-[var(--spacing-2xl)]"
         >
           I want to delete my account
-        </button>
+        </Button>
       ) : null}
 
       {phase.type === "confirming" ? (
@@ -135,7 +140,7 @@ export function AccountDeletionForm() {
           <label className="sr-only" htmlFor="delete-confirmation">
             Type the confirmation phrase
           </label>
-          <input
+          <TextInput
             ref={confirmationInputRef}
             id="delete-confirmation"
             name="confirmation"
@@ -147,7 +152,7 @@ export function AccountDeletionForm() {
               setErrorMessage(null);
             }}
             disabled={isDeleting}
-            className="mt-[var(--spacing-xs)] block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-red-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-red-600"
+            className="mt-[var(--spacing-xs)] w-full"
             aria-describedby={
               errorMessage
                 ? "delete-confirmation-helper delete-confirmation-error"
@@ -161,18 +166,19 @@ export function AccountDeletionForm() {
             Type the phrase exactly, with the same lowercase letters and spaces.
           </p>
           <div className="mt-[var(--spacing-md)] flex flex-wrap gap-[var(--spacing-sm)]">
-            <button
+            <Button
               type="button"
               onClick={handleDelete}
               disabled={
                 isDeleting || typedPhrase.trim() !== CONFIRMATION_PHRASE
               }
               aria-busy={isDeleting}
-              className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-red-700 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              variant="danger"
+              className="min-w-[var(--spacing-2xl)]"
             >
               {isDeleting ? "Deactivating..." : "Deactivate my account"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => {
                 shouldRestoreTriggerFocus.current = true;
@@ -181,23 +187,26 @@ export function AccountDeletionForm() {
                 setErrorMessage(null);
               }}
               disabled={isDeleting}
-              className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+              variant="secondary"
+              className="min-w-[var(--spacing-2xl)]"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
 
       {errorMessage ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           id="delete-confirmation-error"
           role="alert"
           aria-live="assertive"
-          className="rounded-md border border-red-300 bg-red-50 p-[var(--spacing-sm)] text-base text-red-800"
+          className="rounded-md border border-red-300 bg-red-50 p-[var(--spacing-sm)] text-base"
         >
           {errorMessage}
-        </p>
+        </StatusMessage>
       ) : null}
     </div>
   );

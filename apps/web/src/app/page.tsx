@@ -1,3 +1,4 @@
+import { ActionLink } from "@/ui/controls";
 import type { Metadata } from "next";
 import Link from "@/ui/link";
 
@@ -31,12 +32,13 @@ export default function Page() {
           >
             <BrandMark />
           </Link>
-          <Link
+          <ActionLink
+            variant="secondary"
             href="/login"
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-neutral-300 bg-white px-5 text-sm font-semibold text-neutral-900 transition-colors hover:border-primary-300 hover:bg-primary-50"
+            className="text-sm transition-colors"
           >
             Sign in
-          </Link>
+          </ActionLink>
         </header>
 
         {/* Rem-sized tracks wrap with enlarged text as well as the viewport. */}
@@ -57,12 +59,13 @@ export default function Page() {
               return to it, use it, and make it yours.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
+              <ActionLink
+                variant="primary"
                 href="/login"
-                className="inline-flex min-h-12 items-center justify-center rounded-full bg-primary-700 px-7 text-base font-semibold text-white transition-colors hover:bg-primary-800"
+                className="text-base text-white transition-colors"
               >
                 Start learning
-              </Link>
+              </ActionLink>
               <a
                 href="#how-it-works"
                 className="inline-flex min-h-12 items-center justify-center rounded-full px-5 text-base font-semibold text-primary-800 hover:bg-primary-50"

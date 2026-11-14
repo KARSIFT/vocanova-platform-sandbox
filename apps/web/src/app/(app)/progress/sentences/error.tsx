@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "@/ui/link";
+import { ActionLink, Button } from "@/ui/controls";
 import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
 
 import { PageContainer, Surface } from "@/ui/surface";
@@ -25,21 +25,19 @@ export default function SentenceHistoryError({
           Progress.
         </p>
         <div className="mt-[var(--spacing-md)] flex flex-wrap gap-[var(--spacing-sm)]">
-          <button
+          <Button
+            variant="primary"
             type="button"
             onClick={handleRetry}
             disabled={isRetrying}
             aria-busy={isRetrying}
-            className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            className="text-white"
           >
             {isRetrying ? "Trying again..." : "Try again"}
-          </button>
-          <Link
-            href="/progress"
-            className="inline-flex min-h-11 items-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
+          </Button>
+          <ActionLink variant="secondary" href="/progress">
             Back to Progress
-          </Link>
+          </ActionLink>
         </div>
       </Surface>
     </PageContainer>

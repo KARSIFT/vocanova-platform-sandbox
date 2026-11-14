@@ -1,3 +1,4 @@
+import { ActionLink } from "@/ui/controls";
 import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import { notFound } from "next/navigation";
@@ -193,20 +194,22 @@ export default async function SituationDiscoverPage({
           </p>
           <div className="mt-[var(--spacing-sm)] flex flex-wrap gap-[var(--spacing-sm)]">
             {nextMeaning ? (
-              <Link
+              <ActionLink
+                variant="primary"
                 href={`/discover/${situation}/${nextMeaning.wordSlug}`}
-                className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                className="text-base text-white"
               >
                 Continue with {nextMeaning.wordText}
-              </Link>
+              </ActionLink>
             ) : null}
             {savedCount > 0 ? (
-              <Link
+              <ActionLink
+                variant="secondary"
                 href="/words"
-                className="inline-flex min-h-11 items-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                className="text-base"
               >
                 View saved vocabulary
-              </Link>
+              </ActionLink>
             ) : null}
           </div>
         </section>
@@ -237,12 +240,13 @@ export default async function SituationDiscoverPage({
             We&apos;re still adding vocabulary for this situation. Try another
             situation for now.
           </p>
-          <Link
+          <ActionLink
+            variant="primary"
             href="/courses"
-            className="mt-[var(--spacing-lg)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            className="mt-[var(--spacing-lg)] min-w-[var(--spacing-2xl)] text-base text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)]"
           >
             Browse other situations
-          </Link>
+          </ActionLink>
         </div>
       ) : (
         <ul

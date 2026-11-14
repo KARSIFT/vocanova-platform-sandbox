@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { Button, TextInput } from "@/ui/controls";
+
 import { useEffect, useRef, useState } from "react";
 
 import { createApiClient } from "@/lib/api";
@@ -139,17 +143,19 @@ export function EmailChangeForm({
   return (
     <div className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]">
       {restored ? (
-        <p role="status" className="text-sm text-neutral-700">
+        <StatusMessage as="p" tone="info" role="status" className="text-sm">
           Your unsent email address was restored in this tab. Check it before
           sending a confirmation link.
-        </p>
+        </StatusMessage>
       ) : null}
       {phase.type === "pending" ? (
         <div className="space-y-[var(--spacing-md)]">
-          <p
+          <StatusMessage
+            as="p"
+            tone="info"
             role="status"
             aria-live="polite"
-            className="rounded-md border border-primary-300 bg-primary-50 p-[var(--spacing-md)] text-base text-primary-900"
+            className="rounded-md border border-primary-300 bg-primary-50 p-[var(--spacing-md)] text-base"
           >
             If this address can be used, we&apos;ve sent a confirmation link to{" "}
             <span className="font-medium [overflow-wrap:anywhere]">
@@ -157,14 +163,15 @@ export function EmailChangeForm({
             </span>
             . The link expires in 15 minutes. Open it in this browser while you
             are signed in to finish the change.
-          </p>
-          <button
+          </StatusMessage>
+          <Button
             type="button"
             onClick={handleStartOver}
-            className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            variant="secondary"
+            className="min-w-[var(--spacing-2xl)]"
           >
             Use a different address
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -182,7 +189,7 @@ export function EmailChangeForm({
           >
             New sign-in email
           </label>
-          <input
+          <TextInput
             id="new-email"
             ref={emailInput}
             name="newEmail"
@@ -206,36 +213,37 @@ export function EmailChangeForm({
             disabled={phase.type === "requesting"}
             placeholder="you@example.com"
             aria-describedby="new-email-helper"
-            className="block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
+            className="w-full"
           />
           <p id="new-email-helper" className="text-sm text-neutral-700">
             We&apos;ll send a confirmation link to this address. The response is
             the same whether this address is already registered or not, to
             protect learner privacy.
           </p>
-          <button
+          <Button
             type="submit"
             disabled={
               phase.type === "requesting" || newEmail.trim().length === 0
             }
             aria-busy={phase.type === "requesting"}
-            className="vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
           >
             {phase.type === "requesting"
               ? "Sending confirmation link..."
               : "Send confirmation link"}
-          </button>
+          </Button>
         </form>
       ) : null}
 
       {phase.type === "error" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="assertive"
-          className="rounded-md border border-red-300 bg-red-50 p-[var(--spacing-sm)] text-base text-red-800"
+          className="rounded-md border border-red-300 bg-red-50 p-[var(--spacing-sm)] text-base"
         >
           {phase.message}
-        </p>
+        </StatusMessage>
       ) : null}
 
       {currentEmail ? (

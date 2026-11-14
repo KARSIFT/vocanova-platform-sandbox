@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/ui/controls";
+import { StatusMessage } from "@/ui/status-message";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiResponseError, type WordMeaning } from "@vocanova/api-client";
@@ -231,17 +233,29 @@ export function SaveAndWrite({
         </button>
       )}
       {busy && (
-        <p role="status" className="mt-3 text-sm text-neutral-600">
+        <StatusMessage
+          as="p"
+          role="status"
+          className="mt-3 text-sm text-neutral-600"
+        >
           Confirming saved meaning…
-        </p>
+        </StatusMessage>
       )}
       {notice && (
-        <p role="status" className="mt-3 text-sm text-neutral-700">
+        <StatusMessage
+          as="p"
+          role="status"
+          className="mt-3 text-sm text-neutral-700"
+        >
           {notice}
-        </p>
+        </StatusMessage>
       )}
       {error && (
-        <div role="alert" className="mt-3 space-y-3 text-sm text-red-700">
+        <StatusMessage
+          tone="error"
+          role="alert"
+          className="mt-3 space-y-3 text-sm text-red-700"
+        >
           <p>{error}</p>
           <button
             type="button"
@@ -251,17 +265,18 @@ export function SaveAndWrite({
           >
             {pending.current ? "Retry save" : "Check saved status"}
           </button>
-        </div>
+        </StatusMessage>
       )}
       {!meaning && !error && (
-        <button
+        <Button
+          variant="primary"
           type="button"
           disabled={busy}
           onClick={() => void checkSavedState()}
           className={`${actionStyle} mt-3`}
         >
           Check saved status
-        </button>
+        </Button>
       )}
     </div>
   );

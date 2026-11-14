@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { Button } from "@/ui/controls";
+
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
@@ -69,27 +73,34 @@ export function PersonalDataExport() {
         sentences, and learner-visible AI feedback. It does not include security
         information or hidden AI instructions.
       </p>
-      <button
+      <Button
         type="button"
         onClick={download}
         disabled={state === "loading"}
         aria-busy={state === "loading"}
-        className="mt-[var(--spacing-md)] vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        className="mt-[var(--spacing-md)]"
       >
         {state === "loading" ? "Preparing download..." : "Download my data"}
-      </button>
+      </Button>
       {state === "done" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="success"
           role="status"
-          className="mt-[var(--spacing-sm)] text-sm text-green-800"
+          className="mt-[var(--spacing-sm)] text-sm"
         >
           Your download has started.
-        </p>
+        </StatusMessage>
       ) : null}
       {state === "error" ? (
-        <p role="alert" className="mt-[var(--spacing-sm)] text-sm text-red-800">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          className="mt-[var(--spacing-sm)] text-sm"
+        >
           {message}
-        </p>
+        </StatusMessage>
       ) : null}
     </Surface>
   );

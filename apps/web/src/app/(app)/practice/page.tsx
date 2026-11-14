@@ -1,3 +1,5 @@
+import { StatusMessage } from "@/ui/status-message";
+import { ActionLink } from "@/ui/controls";
 import type { Metadata } from "next";
 import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
@@ -107,10 +109,14 @@ export default async function PracticePage({
             Review words
           </h2>
           {dueCount === undefined ? (
-            <p role="status" className="mt-1 text-sm text-neutral-600">
+            <StatusMessage
+              as="p"
+              role="status"
+              className="mt-1 text-sm text-neutral-600"
+            >
               We could not load your review count. Open your reviews to try
               again.
-            </p>
+            </StatusMessage>
           ) : (
             <p className="mt-1 text-sm text-neutral-600">
               {dueCount === 0
@@ -119,9 +125,9 @@ export default async function PracticePage({
             </p>
           )}
         </div>
-        <Link href="/review" className="vn-btn vn-btn-secondary min-h-11">
+        <ActionLink variant="secondary" href="/review" className="min-h-11">
           {canStartReview ? "Start review" : "Open reviews"}
-        </Link>
+        </ActionLink>
       </section>
 
       {/* One list of the other ways to practise, instead of scattered rows. */}

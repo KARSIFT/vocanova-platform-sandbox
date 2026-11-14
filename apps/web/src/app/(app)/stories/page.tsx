@@ -1,3 +1,4 @@
+import { ActionLink } from "@/ui/controls";
 import type { Metadata } from "next";
 import Link from "@/ui/link";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
@@ -92,14 +93,15 @@ export default async function StoriesPage() {
                   </Link>
                 </div>
               ) : (
-                <Link
+                <ActionLink
+                  variant="secondary"
                   href={`/stories/${encodeURIComponent(story.key)}`}
                   className={`${secondaryAction} mt-4`}
                 >
                   {story.latestSession?.status === "completed"
                     ? "Read and practise again"
                     : "Read and practise"}
-                </Link>
+                </ActionLink>
               )}
             </Surface>
           ))}

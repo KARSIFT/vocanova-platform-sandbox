@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { Button } from "@/ui/controls";
 import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
 import { PageContainer, Surface } from "@/ui/surface";
 import {
@@ -20,10 +22,16 @@ export default function StoryError({
         <h1 className="text-2xl font-bold text-neutral-900">
           Your story could not load
         </h1>
-        <p role="alert" className="my-4 text-neutral-700">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          className="my-4 text-neutral-700"
+        >
           Try again to load your saved progress.
-        </p>
-        <button
+        </StatusMessage>
+        <Button
+          variant="primary"
           type="button"
           className={primaryAction}
           onClick={retry}
@@ -31,7 +39,7 @@ export default function StoryError({
           aria-busy={isRetrying}
         >
           {isRetrying ? "Trying again..." : "Try again"}
-        </button>
+        </Button>
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Recovery needs a fresh document, not the failed cached RSC payload. */}
         <a href="/stories" className={`${textLink} ml-4`}>
           Back to Stories

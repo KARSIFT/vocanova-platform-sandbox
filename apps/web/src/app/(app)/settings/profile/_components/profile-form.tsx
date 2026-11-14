@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { Button, TextInput } from "@/ui/controls";
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -145,15 +149,15 @@ export function ProfileForm({
       className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]"
     >
       {!ready ? (
-        <p role="status" className="text-sm text-neutral-700">
+        <StatusMessage as="p" tone="info" role="status" className="text-sm">
           Loading your profile…
-        </p>
+        </StatusMessage>
       ) : null}
       {restored ? (
-        <p role="status" className="text-sm text-neutral-700">
+        <StatusMessage as="p" tone="info" role="status" className="text-sm">
           Your unsaved profile changes were restored in this tab. Save when
           you&apos;re ready.
-        </p>
+        </StatusMessage>
       ) : null}
       <div>
         <label
@@ -162,7 +166,7 @@ export function ProfileForm({
         >
           Display name
         </label>
-        <input
+        <TextInput
           id="profile-display-name"
           name="displayName"
           type="text"
@@ -185,7 +189,7 @@ export function ProfileForm({
               setMessage("");
             }
           }}
-          className="mt-[var(--spacing-xs)] block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
+          className="mt-[var(--spacing-xs)] w-full"
         />
         <p
           id="profile-display-name-limit"
@@ -195,41 +199,46 @@ export function ProfileForm({
         </p>
       </div>
       {state === "error" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="assertive"
-          className="text-base text-red-700"
+          className="text-base"
         >
           {message}
-        </p>
+        </StatusMessage>
       ) : null}
       {state === "saved" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="success"
           role="status"
           aria-live="polite"
-          className="text-base text-green-800"
+          className="text-base"
         >
           Your profile has been saved.
-        </p>
+        </StatusMessage>
       ) : null}
       {state === "newer_changes" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="info"
           role="status"
           aria-live="polite"
-          className="text-base text-neutral-700"
+          className="text-base"
         >
           Your earlier profile changes were saved. You have newer changes to
           save.
-        </p>
+        </StatusMessage>
       ) : null}
-      <button
+      <Button
         type="submit"
         disabled={!ready || state === "saving"}
         aria-busy={state === "saving"}
-        className="vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
       >
         {state === "saving" ? "Saving..." : "Save profile"}
-      </button>
+      </Button>
     </form>
   );
 }

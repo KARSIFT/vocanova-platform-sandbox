@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, Select } from "@/ui/controls";
 import { useId, useState } from "react";
 import Link from "@/ui/link";
 import type { WordListDetail, WordListSummary } from "@vocanova/api-client";
@@ -9,11 +10,7 @@ import {
   useListAction,
 } from "../lists/_components/use-list-action";
 import { ListActionStatus } from "../lists/_components/list-action-status";
-import {
-  listButton,
-  listInput,
-  listLink,
-} from "../lists/_components/list-styles";
+import { listLink } from "../lists/_components/list-styles";
 
 export function MeaningListEditor({ meaningId }: { meaningId: string }) {
   const id = useId();
@@ -96,9 +93,14 @@ export function MeaningListEditor({ meaningId }: { meaningId: string }) {
         </p>
       )}
       {!open ? (
-        <button type="button" className={`${listButton} mt-3`} onClick={reload}>
+        <Button
+          variant="secondary"
+          type="button"
+          className="mt-3"
+          onClick={reload}
+        >
           Choose personal lists
-        </button>
+        </Button>
       ) : (
         <>
           {lists && lists.length > 0 && (
@@ -109,12 +111,12 @@ export function MeaningListEditor({ meaningId }: { meaningId: string }) {
               >
                 Choose a list for this meaning
               </label>
-              <select
+              <Select
                 id={`${id}-select`}
                 value={selectedId}
                 disabled={action.locked}
                 onChange={(event) => choose(event.target.value)}
-                className={listInput}
+                className="mt-2"
               >
                 <option value="">Choose a personal list</option>
                 {lists.map((list) => (
@@ -122,7 +124,7 @@ export function MeaningListEditor({ meaningId }: { meaningId: string }) {
                     {list.name}
                   </option>
                 ))}
-              </select>
+              </Select>
               {detail && (
                 <>
                   <p className="mt-2 text-neutral-700">
@@ -130,9 +132,10 @@ export function MeaningListEditor({ meaningId }: { meaningId: string }) {
                       ? "This meaning is in this list."
                       : "This meaning is not in this list."}
                   </p>
-                  <button
+                  <Button
+                    variant="secondary"
                     type="button"
-                    className={`${listButton} mt-3`}
+                    className="mt-3"
                     disabled={
                       action.locked || (!member && detail.memberCount >= 500)
                     }
@@ -141,7 +144,7 @@ export function MeaningListEditor({ meaningId }: { meaningId: string }) {
                     {member
                       ? "Remove meaning from list"
                       : "Add meaning to list"}
-                  </button>
+                  </Button>
                   {!member && detail.memberCount >= 500 && (
                     <p className="mt-2 text-neutral-700">
                       This list has reached its 500-meaning limit.
@@ -164,13 +167,14 @@ export function MeaningListEditor({ meaningId }: { meaningId: string }) {
             </p>
           )}
           {!lists && !action.busy && (
-            <button
+            <Button
+              variant="secondary"
               type="button"
-              className={`${listButton} mt-3`}
+              className="mt-3"
               onClick={reload}
             >
               Try loading lists again
-            </button>
+            </Button>
           )}
           <Link href="/lists" className={`${listLink} mt-3`}>
             Manage personal lists

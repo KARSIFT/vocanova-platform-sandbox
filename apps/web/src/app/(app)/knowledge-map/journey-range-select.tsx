@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/ui/controls";
 import type { ReactNode } from "react";
 
 export function JourneyRangeSelect({
@@ -10,7 +11,7 @@ export function JourneyRangeSelect({
   children: ReactNode;
 }) {
   return (
-    <select
+    <Select
       id="range-choice"
       name="band"
       aria-describedby="range-choice-navigation"
@@ -18,6 +19,6 @@ export function JourneyRangeSelect({
       onChange={(event) => event.currentTarget.form?.requestSubmit()}
     >
       {children}
-    </select>
+    </Select>
   );
 }

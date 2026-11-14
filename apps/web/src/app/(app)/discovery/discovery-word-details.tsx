@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
 import { useEffect, useRef, useState } from "react";
 import type { WordDetail } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
@@ -175,9 +176,13 @@ export function DiscoveryWordDetails({
       }}
     >
       <summary>Word details &amp; other meanings</summary>
-      {loading && <p role="status">Loading word details…</p>}
+      {loading && (
+        <StatusMessage as="p" role="status">
+          Loading word details…
+        </StatusMessage>
+      )}
       {error && (
-        <div role="alert">
+        <StatusMessage tone="error" role="alert">
           <p>{error}</p>
           {revisionChanged && (
             <button
@@ -197,7 +202,7 @@ export function DiscoveryWordDetails({
               Retry word details
             </button>
           )}
-        </div>
+        </StatusMessage>
       )}
       {currentMeaning && (
         <>

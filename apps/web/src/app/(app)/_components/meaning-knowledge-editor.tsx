@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+import { Button, TextArea } from "@/ui/controls";
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MeaningKnowledgeUpdate } from "@vocanova/api-client";
@@ -8,8 +10,7 @@ import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 
-const buttonStyle =
-  "min-h-12 rounded-xl border border-neutral-300 px-4 py-3 font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-50";
+const buttonStyle = "";
 
 export function MeaningKnowledgeEditor({
   meaningId,
@@ -114,13 +115,14 @@ export function MeaningKnowledgeEditor({
         </p>
       )}
       {!open ? (
-        <button
+        <Button
+          variant="secondary"
           type="button"
           className={`${buttonStyle} mt-3`}
           onClick={() => void load()}
         >
           Edit knowledge and note
-        </button>
+        </Button>
       ) : (
         <>
           {loaded && (
@@ -156,7 +158,7 @@ export function MeaningKnowledgeEditor({
                 >
                   My note
                 </label>
-                <textarea
+                <TextArea
                   id={`${id}-note`}
                   value={note}
                   disabled={locked}
@@ -167,47 +169,66 @@ export function MeaningKnowledgeEditor({
                   maxLength={2000}
                   rows={4}
                   placeholder="An example from your life, a translation, or a way to remember this meaning"
-                  className="mt-2 w-full resize-y rounded-xl border border-neutral-300 bg-white p-3 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700 disabled:opacity-60"
+                  className="mt-2 w-full resize-y"
                 />
                 <p className="mt-1 text-sm text-neutral-600">
                   {Array.from(note).length}/2,000 characters. Leave this blank
                   to remove your note.
                 </p>
               </div>
-              <button type="submit" disabled={busy} className={buttonStyle}>
+              <Button
+                variant="secondary"
+                type="submit"
+                disabled={busy}
+                className={buttonStyle}
+              >
                 {busy
                   ? "Saving…"
                   : pending.current
                     ? "Retry saving changes"
                     : "Save my changes"}
-              </button>
+              </Button>
             </form>
           )}
           {!loaded && !busy && (
-            <button
+            <Button
+              variant="secondary"
               type="button"
               onClick={() => void load()}
               className={`${buttonStyle} mt-3`}
             >
               Try loading again
-            </button>
+            </Button>
           )}
           {!loaded && busy && (
-            <p role="status" className="mt-3 text-neutral-600">
+            <StatusMessage
+              as="p"
+              role="status"
+              className="mt-3 text-neutral-600"
+            >
               Loading your personal word details…
-            </p>
+            </StatusMessage>
           )}
         </>
       )}
       {error && (
-        <p role="alert" className="mt-3 text-sm text-red-700">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          className="mt-3 text-sm text-red-700"
+        >
           {error}
-        </p>
+        </StatusMessage>
       )}
       {message && (
-        <p role="status" className="mt-3 text-sm font-medium text-primary-700">
+        <StatusMessage
+          as="p"
+          role="status"
+          className="mt-3 text-sm font-medium text-primary-700"
+        >
           {message}
-        </p>
+        </StatusMessage>
       )}
     </section>
   );

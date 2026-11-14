@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 import type { Metadata } from "next";
 import Link from "@/ui/link";
 
@@ -58,50 +59,60 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         </div>
 
         {signedOut === "1" ? (
-          <p
+          <StatusMessage
+            as="p"
+            tone="info"
             role="status"
             aria-live="polite"
-            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-primary-900"
+            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base"
           >
             You&apos;re signed out.
-          </p>
+          </StatusMessage>
         ) : null}
 
         {signedOut === "expired" ? (
-          <p
+          <StatusMessage
+            as="p"
+            tone="info"
             role="status"
             aria-live="polite"
-            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-primary-900"
+            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base"
           >
             Your previous session had already expired. You can sign in again.
-          </p>
+          </StatusMessage>
         ) : null}
 
         {reason === "session-expired" ? (
-          <p
+          <StatusMessage
+            as="p"
+            tone="info"
             role="status"
             aria-live="polite"
-            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-primary-900"
+            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base"
           >
             Your session expired. Sign in again to continue.
-          </p>
+          </StatusMessage>
         ) : null}
 
         {oauthMessage ? (
-          <p
+          <StatusMessage
+            as="p"
+            tone="error"
             role="alert"
             aria-live="assertive"
-            className="rounded-xl border border-red-200 bg-red-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-red-800"
+            className="rounded-xl border border-red-200 bg-red-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base"
           >
             {oauthMessage}
-          </p>
+          </StatusMessage>
         ) : null}
 
         {magicOnlyUnavailable ? (
-          <p
+          <StatusMessage
+            as="p"
+            tone="info"
             role="status"
             aria-live="polite"
-            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-primary-900"
+            className="rounded-xl border border-primary-200 bg-primary-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base"
           >
             Email sign-in links are unavailable right now.{" "}
             {showOAuth ? "You can continue with Google below. " : null}
@@ -119,7 +130,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             ) : !showOAuth ? (
               "Please try again later."
             ) : null}
-          </p>
+          </StatusMessage>
         ) : null}
 
         {showPassword ? <PasswordLoginForm returnTo={safeReturnTo} /> : null}
@@ -157,13 +168,15 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         ) : null}
 
         {!passwordEnabled && !magicLinkEnabled && !showOAuth ? (
-          <p
+          <StatusMessage
+            as="p"
+            tone="error"
             role="alert"
             aria-live="assertive"
-            className="rounded-xl border border-red-200 bg-red-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-red-800"
+            className="rounded-xl border border-red-200 bg-red-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base"
           >
             Sign-in is temporarily unavailable. Please try again later.
-          </p>
+          </StatusMessage>
         ) : null}
         <Link
           href="/help"

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/ui/controls";
+
 import Link from "@/ui/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -90,20 +92,19 @@ function VerifyPasswordSignupContent() {
           {message}
         </p>
         {status === "ready" || status === "verifying" || status === "retry" ? (
-          <button
+          <Button
             ref={retryButton}
             type="button"
             onClick={() => void verifyEmail()}
             disabled={status === "verifying"}
             aria-busy={status === "verifying"}
-            className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {status === "verifying"
               ? "Verifying..."
               : status === "retry"
                 ? "Retry verification"
                 : "Verify email"}
-          </button>
+          </Button>
         ) : null}
         {status === "done" ? (
           <Link

@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 export default function ProgressLoading() {
   return (
     <section
@@ -5,9 +6,14 @@ export default function ProgressLoading() {
       aria-labelledby="progress-loading-status"
       className="animate-pulse p-[var(--spacing-lg)]"
     >
-      <p id="progress-loading-status" role="status" className="sr-only">
+      <StatusMessage
+        as="p"
+        id="progress-loading-status"
+        role="status"
+        className="sr-only"
+      >
         Loading progress
-      </p>
+      </StatusMessage>
       <div className="h-7 w-1/3 rounded bg-neutral-200" />
       <div className="mt-[var(--spacing-xs)] h-4 w-2/3 rounded bg-neutral-200" />
 

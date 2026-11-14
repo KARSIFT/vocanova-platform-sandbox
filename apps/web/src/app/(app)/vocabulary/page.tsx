@@ -1,3 +1,5 @@
+import { StatusMessage } from "@/ui/status-message";
+import { ActionLink, Button, Select, TextInput } from "@/ui/controls";
 import { getPrimaryDefinition } from "@/lib/word-definition";
 import Link from "@/ui/link";
 import Form from "next/form";
@@ -137,7 +139,7 @@ export default async function VocabularyPage({
           Search words and meanings
         </label>
         <div className="flex items-center gap-2">
-          <input
+          <TextInput
             id="vocabulary-query"
             name="q"
             type="search"
@@ -148,12 +150,13 @@ export default async function VocabularyPage({
             autoComplete="off"
             spellCheck={false}
           />
-          <button
+          <Button
+            variant="primary"
             type="submit"
-            className="min-h-12 shrink-0 rounded-xl bg-primary-700 px-4 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            className="shrink-0 text-white"
           >
             Search
-          </button>
+          </Button>
         </div>
         <details
           className="mt-3"
@@ -165,7 +168,7 @@ export default async function VocabularyPage({
           <div className="grid gap-3 sm:grid-cols-3 sm:items-end">
             <label className="block text-sm font-semibold text-neutral-700">
               Situation
-              <select
+              <Select
                 name="category"
                 defaultValue={category}
                 className={inputStyle}
@@ -175,11 +178,11 @@ export default async function VocabularyPage({
                     {label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block text-sm font-semibold text-neutral-700">
               Level
-              <select name="level" defaultValue={level} className={inputStyle}>
+              <Select name="level" defaultValue={level} className={inputStyle}>
                 {levels.map((value) => (
                   <option key={value} value={value}>
                     {value === ""
@@ -189,11 +192,11 @@ export default async function VocabularyPage({
                         : value.toUpperCase()}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block text-sm font-semibold text-neutral-700">
               My knowledge
-              <select
+              <Select
                 name="knowledge"
                 defaultValue={knowledge}
                 className={inputStyle}
@@ -202,14 +205,14 @@ export default async function VocabularyPage({
                 <option value="known">Already known</option>
                 <option value="saved">Saved to learn</option>
                 <option value="unexplored">Not explored yet</option>
-              </select>
+              </Select>
             </label>
           </div>
         </details>
       </Form>
       {showDictionary && dictionary && <DictionaryCard entry={dictionary} />}
       {dictionaryError && !exactLessonWord && (
-        <div
+        <StatusMessage
           role="status"
           className="mb-5 rounded-xl bg-secondary-50 p-5 text-neutral-900"
         >
@@ -224,19 +227,21 @@ export default async function VocabularyPage({
           >
             Try dictionary again
           </Link>
-        </div>
+        </StatusMessage>
       )}
       {invalidQuery || invalidSearch ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           className="rounded-xl bg-secondary-50 p-5 text-neutral-900"
         >
           {invalidQuery
             ? "Use a search of 100 characters or fewer, without special control characters."
             : "We could not use that search. Check your words and filters, then try again."}
-        </p>
+        </StatusMessage>
       ) : invalidCursor ? (
-        <div
+        <StatusMessage
           role="status"
           className="rounded-xl bg-secondary-50 p-5 text-neutral-900"
         >
@@ -247,9 +252,9 @@ export default async function VocabularyPage({
           >
             Load results again
           </Link>
-        </div>
+        </StatusMessage>
       ) : !data ? (
-        <div
+        <StatusMessage
           role="status"
           className="rounded-xl bg-secondary-50 p-5 text-neutral-900"
         >
@@ -260,7 +265,7 @@ export default async function VocabularyPage({
           >
             Try searching again
           </Link>
-        </div>
+        </StatusMessage>
       ) : (
         data && (
           <>
@@ -366,12 +371,13 @@ export default async function VocabularyPage({
                 </Link>
               )}
               {data.hasMore && data.nextCursor && (
-                <Link
+                <ActionLink
+                  variant="secondary"
                   href={resultURL(data.nextCursor)}
-                  className="ml-auto inline-flex min-h-12 items-center rounded-xl border border-neutral-300 bg-white px-5 font-semibold text-primary-700"
+                  className="ml-auto"
                 >
                   Next results
-                </Link>
+                </ActionLink>
               )}
               <Link
                 href="/words"

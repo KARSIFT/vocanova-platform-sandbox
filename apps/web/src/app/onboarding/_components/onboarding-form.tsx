@@ -1,5 +1,9 @@
 "use client";
 
+import { StatusMessage } from "@/ui/status-message";
+
+import { Button, TextInput } from "@/ui/controls";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -270,9 +274,9 @@ export function OnboardingForm({
       <StepIndicator currentStep={step} totalSteps={totalSteps} />
 
       {restored ? (
-        <p role="status" className="text-sm text-neutral-700">
+        <StatusMessage as="p" tone="info" role="status" className="text-sm">
           Your unfinished setup was restored in this tab.
-        </p>
+        </StatusMessage>
       ) : null}
 
       <div ref={stepContentRef}>
@@ -311,44 +315,47 @@ export function OnboardingForm({
       </div>
 
       {status.type === "error" ? (
-        <p
+        <StatusMessage
+          as="p"
+          tone="error"
           role="alert"
           aria-live="assertive"
-          className="rounded-md border border-red-300 bg-red-50 p-[var(--spacing-sm)] text-base text-red-800"
+          className="rounded-md border border-red-300 bg-red-50 p-[var(--spacing-sm)] text-base"
         >
           {status.message}
-        </p>
+        </StatusMessage>
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-sm)] pt-[var(--spacing-sm)]">
-        <button
+        <Button
           type="button"
           onClick={goBack}
           disabled={!canGoBack}
-          className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+          variant="secondary"
+          className="min-w-[var(--spacing-2xl)]"
         >
           Back
-        </button>
+        </Button>
 
         {step < totalSteps - 1 ? (
-          <button
+          <Button
             type="button"
             onClick={goNext}
             disabled={!canGoForward}
-            className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-w-[var(--spacing-2xl)]"
           >
             Continue
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
             onClick={handleSubmit}
             disabled={!isFormComplete(state) || status.type === "submitting"}
             aria-busy={status.type === "submitting"}
-            className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-w-[var(--spacing-2xl)]"
           >
             {status.type === "submitting" ? "Saving..." : "Finish setup"}
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -531,7 +538,7 @@ function NativeLanguageStep({
       >
         Native language
       </label>
-      <input
+      <TextInput
         id="native-language"
         name="nativeLanguage"
         type="text"
@@ -545,7 +552,7 @@ function NativeLanguageStep({
         }}
         placeholder="Search languages…"
         spellCheck={false}
-        className="block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
+        className="w-full"
         aria-describedby="native-language-helper"
       />
       <p id="native-language-helper" className="text-sm text-neutral-700">

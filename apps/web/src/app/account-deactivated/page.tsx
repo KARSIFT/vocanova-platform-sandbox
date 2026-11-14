@@ -1,3 +1,4 @@
+import { StatusMessage } from "@/ui/status-message";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -33,7 +34,7 @@ export default async function AccountDeactivatedPage({
 
   return (
     <main className="grid min-h-screen place-items-center bg-neutral-50 p-6">
-      <div
+      <StatusMessage
         role="status"
         aria-live="polite"
         className="min-w-0 w-full max-w-[36rem] [overflow-wrap:anywhere] space-y-[var(--spacing-md)] rounded-xl border border-red-300 bg-white p-[var(--spacing-lg)] text-base text-neutral-900 shadow-sm"
@@ -61,7 +62,7 @@ export default async function AccountDeactivatedPage({
         >
           Go to sign in
         </a>
-      </div>
+      </StatusMessage>
     </main>
   );
 }
