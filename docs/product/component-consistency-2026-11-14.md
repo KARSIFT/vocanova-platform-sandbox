@@ -25,6 +25,12 @@ Broad Chrome component-integration acceptance passed **290 cases with 16 existin
 
 Local foundation checks passed **333/337** with a real macOS temporary directory. The four existing platform failures concern GNU sed, Bash coproc and the Chromium-install fixture; Linux CI must pass its full checks. Default macOS temporary-directory symlinks caused additional initial harness failures. No test checks were removed. The pinned Chromium download returned HTTP 403 for this location, so local Chrome uses the installed browser through the repository-pinned Playwright runner; cached Firefox/WebKit ran normally.
 
+## Hosted calendar scan follow-up
+
+The first hosted Firefox/430px job failed both calendar download theme cases on both attempts. Axe explicitly reported an eight-pixel exposed portion of `#reminder-time`, partially obscured by sticky header controls. The downloaded trace/screenshot confirmed that opening the instructions below the form moved the viewport before the final scan. Local macOS Firefox, including an Arial probe, did not reproduce that failure.
+
+The test now focuses and centers each date/time control and verifies its entire minimum 48px target, visible focus ring, viewport bounds, clearance from sticky/fixed chrome and interior hit points before the same unfiltered whole-page axe scan. A viewport screenshot records this state. This establishes a stable scan precondition, not a claim that native focus automatically scrolls correctly: the separate unchanged keyboard-focused enlarged-text test supplies that evidence. Independent review found no blocker in this test-only correction; no production scrolling code or axe rule was changed. Fresh calendar/download plus enlarged-text checks run across all three engines and widths; final hosted results remain a separate gate.
+
 ## Acceptance limits
 
 Synthetic browser fixtures do not establish real authentication delivery, AI-feedback quality, database durability, actual screen-reader speech or learner effectiveness. Component consistency does not complete the product or replace the prepared learner study. Gallery screenshots are development examples and must not be presented as earned learner progress.
