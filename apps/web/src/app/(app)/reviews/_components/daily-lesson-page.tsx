@@ -22,6 +22,7 @@ export async function DailyReviewsContent({
           key={session?.id ?? "new"}
           initialSession={session}
           initialDueCount={data.dueCount}
+          initialGoal={data.goal}
         />
       </PageContainer>
     );

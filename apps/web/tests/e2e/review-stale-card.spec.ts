@@ -85,12 +85,12 @@ test.describe("Review stale-card recovery", () => {
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(
       page.getByRole("heading", {
-        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        name: /^(?:Review saved|Review set complete|You’ve finished your review|All available reviews finished|Today’s review complete)$/,
         exact: true,
       }),
     ).toBeFocused();
     await expect(
-      page.getByText("0 words remembered for today.", { exact: true }),
+      page.getByText("0 of 20 words reviewed today", { exact: true }),
     ).toBeVisible();
   });
   test("preserves earlier confirmed answers when the next word is skipped elsewhere", async ({
@@ -102,12 +102,12 @@ test.describe("Review stale-card recovery", () => {
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(
       page.getByRole("heading", {
-        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        name: /^(?:Review saved|Review set complete|You’ve finished your review|All available reviews finished|Today’s review complete)$/,
         exact: true,
       }),
     ).toBeFocused();
     await expect(
-      page.getByText("1 word remembered for today.", { exact: true }),
+      page.getByText("1 of 20 words reviewed today", { exact: true }),
     ).toBeVisible();
   });
   test("clears stale feedback before later normal answers and credits each word once", async ({
@@ -127,12 +127,12 @@ test.describe("Review stale-card recovery", () => {
     await answerReviewWord(page, "definition for review word 3");
     await expect(
       page.getByRole("heading", {
-        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        name: /^(?:Review saved|Review set complete|You’ve finished your review|All available reviews finished|Today’s review complete)$/,
         exact: true,
       }),
     ).toBeFocused();
     await expect(
-      page.getByText("3 words remembered for today.", { exact: true }),
+      page.getByText("3 of 20 words reviewed today", { exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText("3 correct on the first try.", { exact: true }),

@@ -7,6 +7,7 @@ import {
   ApiResponseError,
   type DailyLesson,
   type DailyLessonAction,
+  type DailyReviewGoal,
 } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
@@ -16,7 +17,13 @@ import { deviceSpeech } from "@/lib/speech";
 import { LearningNote } from "@/ui/learning-guide";
 import { ListenButton } from "@/ui/pronunciation";
 import { SessionActions } from "@/ui/session";
-import { VocabularySources } from "@/ui/vocabulary-sources";
+import { DailyLessonTeaching } from "./daily-lesson-teaching";
+import { DailyLessonChoices } from "./daily-lesson-choices";
+import {
+  dailyReviewView,
+  relativeReviewDate,
+  reviewGoalDayChanged,
+} from "./daily-review-view";
 import { ReviewSchedule } from "./review-schedule";
 
 const primary =
@@ -24,15 +31,6 @@ const primary =
 const secondary =
   "vn-btn vn-btn-secondary text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 const NO_DUE_DETAIL = "No words are due. Discover a word to start learning.";
-
-function automaticReviewDateLabel(instant: string, timeZone?: string) {
-  if (!timeZone || !Number.isFinite(Date.parse(instant))) return "Automatic";
-  try {
-    return `Automatic · ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone }).format(new Date(instant))}`;
-  } catch {
-    return "Automatic";
-  }
-}
 
 interface CompletionCheck {
   sessionId: string;
@@ -54,19 +52,22 @@ function savedChoice(session: DailyLesson | null) {
 export function DailyLessonPlayer({
   initialSession,
   initialDueCount,
+  initialGoal,
 }: {
   initialSession: DailyLesson | null;
   initialDueCount: number;
+  initialGoal?: DailyReviewGoal;
 }) {
   const [session, setSession] = useState(initialSession);
   const [dueCount, setDueCount] = useState(initialDueCount);
+  const [goal, setGoal] = useState(initialGoal ?? initialSession?.goal);
   const [choice, setChoice] = useState(() => savedChoice(initialSession));
   const [nextReview, setNextReview] =
     useState<NonNullable<DailyLessonAction["nextReview"]>>("automatic");
   const [busy, setBusy] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
-  // Server and first client render intentionally share the undated label.
-  const [reviewTimeZone, setReviewTimeZone] = useState<string>();
+  // Legacy responses have no stored zone; use the device only as a fallback.
+  const [deviceTimeZone, setDeviceTimeZone] = useState<string>();
   const [error, setError] = useState("");
   const [uncertain, setUncertain] = useState(false);
   const [conflict, setConflict] = useState(false);
@@ -75,6 +76,7 @@ export function DailyLessonPlayer({
   const completionGeneration = useRef(0);
   const inFlight = useRef(false);
   const startKey = useRef<string | null>(null);
+  const startAdditional = useRef(false);
   const pending = useRef<DailyLessonAction | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const feedbackRegion = useRef<HTMLDivElement>(null);
@@ -93,16 +95,74 @@ export function DailyLessonPlayer({
     completionCheck?.revision === session?.revision
       ? completionCheck?.status
       : "loading";
+  const view = dailyReviewView({ goal, dueCount, session });
   const completionCanContinue =
     dueCount > 0 || Boolean(completionCheck?.hasSession);
+  const nextReviewDate = feedback?.nextReviewAt
+    ? relativeReviewDate(
+        feedback.nextReviewAt,
+        goal?.timeZone ?? deviceTimeZone,
+      )
+    : undefined;
+  const goalLocalDate = goal?.localDate;
+  const goalTimeZone = goal?.timeZone;
+  const nextOpportunity = goal?.nextReviewAt
+    ? relativeReviewDate(goal.nextReviewAt, goal.timeZone ?? deviceTimeZone)
+    : undefined;
 
   useEffect(() => {
     try {
-      setReviewTimeZone(new Intl.DateTimeFormat().resolvedOptions().timeZone);
+      setDeviceTimeZone(new Intl.DateTimeFormat().resolvedOptions().timeZone);
     } catch {
       // Without a usable device zone, keep the honest undated default.
     }
   }, []);
+
+  useEffect(() => {
+    if (!goalTimeZone || !goalLocalDate) return;
+    let active = true;
+    let checking = false;
+    async function checkDay() {
+      if (
+        !active ||
+        checking ||
+        document.visibilityState === "hidden" ||
+        inFlight.current ||
+        pending.current ||
+        startKey.current ||
+        !reviewGoalDayChanged({
+          localDate: goalLocalDate!,
+          timeZone: goalTimeZone!,
+        })
+      )
+        return;
+      checking = true;
+      try {
+        const { data } = await createApiClient().getCurrentDailyLesson();
+        // A read started before an answer cannot overwrite its confirmation.
+        // Keep the current step, checked feedback and unresolved action intact.
+        if (!active || inFlight.current || pending.current || startKey.current)
+          return;
+        if (data.goal) setGoal(data.goal);
+        setDueCount(data.dueCount);
+      } catch {
+        // A day-boundary read is optional; explicit actions still have recovery.
+      } finally {
+        checking = false;
+      }
+    }
+    const timer = window.setInterval(() => void checkDay(), 30_000);
+    const visible = () => void checkDay();
+    document.addEventListener("visibilitychange", visible);
+    window.addEventListener("focus", visible);
+    void checkDay();
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", visible);
+      window.removeEventListener("focus", visible);
+    };
+  }, [goalLocalDate, goalTimeZone]);
 
   useEffect(() => {
     if (session?.id)
@@ -142,10 +202,11 @@ export function DailyLessonPlayer({
       .then(({ data }) => {
         if (!active || generation !== completionGeneration.current) return;
         setDueCount(data.dueCount);
+        if (data.goal) setGoal(data.goal);
         setCompletionCheck({
           ...identity,
           status: "ready",
-          hasSession: Boolean(data.session),
+          hasSession: data.session?.status === "in_progress",
         });
       })
       .catch((cause: unknown) => {
@@ -167,6 +228,7 @@ export function DailyLessonPlayer({
     if (session && next.id === session.id && next.revision < session.revision)
       return;
     completionGeneration.current += 1;
+    if (next.goal) setGoal(next.goal);
     if (savedChoice(next)) setChoice(savedChoice(next));
     else if (next.id !== session?.id || next.currentStep?.id !== step?.id)
       setChoice("");
@@ -176,7 +238,7 @@ export function DailyLessonPlayer({
     setSession(next);
   }
 
-  async function start(loadSavedProgress = false) {
+  async function start(loadSavedProgress = false, additional = false) {
     if (
       inFlight.current ||
       (session?.status === "completed" &&
@@ -188,7 +250,10 @@ export function DailyLessonPlayer({
     setBusy(true);
     setError("");
     deviceSpeech.prepare();
-    startKey.current ??= crypto.randomUUID();
+    if (!startKey.current) {
+      startKey.current = crypto.randomUUID();
+      startAdditional.current = additional;
+    }
     let startAcknowledged = false;
     try {
       const token = await getOrRefreshCSRFToken();
@@ -198,6 +263,7 @@ export function DailyLessonPlayer({
         {
           headers: { "X-CSRF-Token": token },
         },
+        { additional: startAdditional.current },
       );
       // The POST acknowledges this key, but a replayed receipt is an immutable
       // snapshot. Saved-progress recovery must read the current lesson too.
@@ -216,6 +282,7 @@ export function DailyLessonPlayer({
             ? active
             : saved.data;
         setDueCount(current.data.dueCount);
+        if (current.data.goal) setGoal(current.data.goal);
       }
       accept(confirmed);
       window.history.replaceState(
@@ -237,7 +304,8 @@ export function DailyLessonPlayer({
         try {
           const { data } = await createApiClient().getCurrentDailyLesson();
           setDueCount(data.dueCount);
-          if (data.session) accept(data.session);
+          if (data.goal) setGoal(data.goal);
+          if (data.session?.status === "in_progress") accept(data.session);
           else if (session?.status === "completed")
             setCompletionCheck({
               sessionId: session.id,
@@ -351,10 +419,14 @@ export function DailyLessonPlayer({
       });
     try {
       const { data } = await createApiClient().getCurrentDailyLesson();
-      if (data.session) accept(data.session);
+      if (data.session?.status === "in_progress") accept(data.session);
       else if (session?.status !== "completed") setSession(null);
       setDueCount(data.dueCount);
-      if (!data.session && session?.status === "completed")
+      if (data.goal) setGoal(data.goal);
+      if (
+        data.session?.status !== "in_progress" &&
+        session?.status === "completed"
+      )
         setCompletionCheck({
           sessionId: session.id,
           revision: session.revision,
@@ -385,13 +457,21 @@ export function DailyLessonPlayer({
   return (
     <div className="mx-auto max-w-[38rem] pb-[10rem]">
       <div className="mb-3 flex items-center justify-between gap-4">
-        <p className="text-base font-semibold text-neutral-700">Review words</p>
+        <p className="text-base font-semibold text-neutral-700">
+          {view.complete && view.active ? "Optional review" : "Review words"}
+        </p>
         {session && (
           <span className="text-sm font-semibold tabular-nums text-neutral-600">
             {session.completedWords} / {session.totalWords}
           </span>
         )}
       </div>
+      {goal && session?.status === "in_progress" && (
+        <p className="mb-3 text-sm font-semibold text-neutral-700">
+          {view.complete ? "✓ " : ""}
+          {view.reviewed} of {view.target} words reviewed today
+        </p>
+      )}
       {session && (
         <progress
           aria-label="Review progress"
@@ -404,14 +484,30 @@ export function DailyLessonPlayer({
       {!session ? (
         <section className="learning-surface p-5 sm:p-7">
           <h1 ref={heading} tabIndex={-1} className="learning-title">
-            {dueCount > 0
-              ? "Keep your words fresh"
-              : "You’re ready for new words"}
+            {view.complete
+              ? "Today’s review complete"
+              : goal && view.allAvailableFinished && goal.reviewed > 0
+                ? "All available reviews finished"
+                : dueCount > 0
+                  ? "Keep your words fresh"
+                  : "You’re ready for new words"}
           </h1>
+          {view.complete && (
+            <p
+              className="mt-4 text-3xl font-bold text-primary-700"
+              aria-label="Daily review goal completed"
+            >
+              ✓
+            </p>
+          )}
           <p className="learning-description">
-            {dueCount > 0
-              ? `${dueCount} ${dueCount === 1 ? "word is" : "words are"} ready. Choose the meaning, one word at a time.`
-              : "Discover a word and choose whether to learn it or mark it as known."}
+            {view.complete
+              ? `${view.reviewed} of ${view.target} words reviewed today. Discover a new word or try today’s practice.`
+              : goal && view.allAvailableFinished && goal.reviewed > 0
+                ? `${view.reviewed} of ${view.target} words reviewed today. No words are due right now.`
+                : dueCount > 0
+                  ? `${dueCount} ${dueCount === 1 ? "word is" : "words are"} ready. Choose the meaning, one word at a time.`
+                  : "Discover a word and choose whether to learn it or mark it as known."}
           </p>
           <LearningNote>
             {dueCount > 0
@@ -419,7 +515,7 @@ export function DailyLessonPlayer({
               : "Come back to see which words are ready."}
           </LearningNote>
           <div className="mt-7 flex flex-wrap gap-3">
-            {dueCount > 0 ? (
+            {dueCount > 0 && !view.complete ? (
               <Button
                 variant="primary"
                 type="button"
@@ -438,28 +534,64 @@ export function DailyLessonPlayer({
                 Discover words
               </ActionLink>
             )}
+            {view.canReviewExtra && (
+              <Button
+                variant="secondary"
+                type="button"
+                disabled={busy}
+                onClick={() => void start(false, true)}
+              >
+                Review more words
+              </Button>
+            )}
           </div>
         </section>
       ) : session.status === "completed" ? (
         <section className="learning-surface p-5 sm:p-7">
           <h1 ref={heading} tabIndex={-1} className="learning-title">
-            {completionStatus !== "ready"
-              ? "Review saved"
-              : completionCanContinue
-                ? "Review set complete"
-                : "You’ve finished your review"}
+            {view.complete
+              ? "Today’s review complete"
+              : completionStatus !== "ready"
+                ? "Review saved"
+                : !completionCanContinue
+                  ? goal
+                    ? "All available reviews finished"
+                    : "You’ve finished your review"
+                  : "Review set complete"}
           </h1>
+          {view.complete && (
+            <p
+              className="mt-4 text-3xl font-bold text-primary-700"
+              aria-label="Daily review goal completed"
+            >
+              ✓
+            </p>
+          )}
           <p className="mt-4 text-xl text-neutral-900">
-            {session.creditedToday}{" "}
-            {session.creditedToday === 1 ? "word" : "words"} remembered for
-            today.
+            {goal
+              ? `${view.reviewed} of ${view.target} words reviewed today`
+              : `${session.creditedToday} ${session.creditedToday === 1 ? "word" : "words"} remembered for today.`}
           </p>
           <p className="mt-3 text-base text-neutral-600">
             {session.firstAnswersCorrect} correct on the first try.
           </p>
           <LearningNote>
             <p>Your next review follows each word’s saved schedule.</p>
-            <p>Come back to see which words are ready.</p>
+            {nextOpportunity ? (
+              <p>
+                Next review:{" "}
+                <time
+                  dateTime={goal!.nextReviewAt}
+                  title={nextOpportunity.exact}
+                  aria-label={`${nextOpportunity.label}. ${nextOpportunity.exact}`}
+                >
+                  {nextOpportunity.label}
+                </time>
+                .
+              </p>
+            ) : (
+              <p>Come back to see which words are ready.</p>
+            )}
           </LearningNote>
           {completionStatus === "loading" && (
             <StatusMessage
@@ -477,7 +609,7 @@ export function DailyLessonPlayer({
           )}
           <div className="mt-7 flex flex-wrap gap-3">
             {completionStatus === "ready" &&
-              (completionCanContinue ? (
+              (completionCanContinue && !view.complete ? (
                 <Button
                   variant="primary"
                   type="button"
@@ -496,6 +628,16 @@ export function DailyLessonPlayer({
                   Discover words
                 </ActionLink>
               ))}
+            {completionStatus === "ready" && view.canReviewExtra && (
+              <Button
+                variant="secondary"
+                type="button"
+                disabled={busy}
+                onClick={() => void start(false, true)}
+              >
+                Review more words
+              </Button>
+            )}
             <ActionLink variant="secondary" href="/home" className={secondary}>
               Back to Home
             </ActionLink>
@@ -517,110 +659,79 @@ export function DailyLessonPlayer({
           }}
         >
           <p className="text-base text-neutral-600">
-            Choose the meaning · {step.partOfSpeech}
+            {step.kind === "gap_choice"
+              ? "Choose the missing word"
+              : step.kind === "picture_choice"
+                ? "Choose the picture"
+                : "Choose the meaning"}{" "}
+            · {step.partOfSpeech}
           </p>
           <h1
             ref={heading}
             tabIndex={-1}
             className="headword mt-2 text-4xl sm:text-[2.75rem]"
           >
-            {step.wordText}
+            {step.kind === "gap_choice"
+              ? "Complete the sentence"
+              : step.wordText}
           </h1>
           <p className="learning-description">
-            Choose the meaning that fits this word. You can listen if it helps.
+            {step.kind === "gap_choice"
+              ? step.context
+              : step.kind === "picture_choice"
+                ? "Choose the picture that fits this word."
+                : "Choose the meaning that fits this word. You can listen if it helps."}
           </p>
-          <div className="mt-2 flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <ListenButton
-                key={step.id}
-                text={step.wordText}
-                meaningId={step.pronunciationMeaningId}
-                meaningRevision={step.pronunciationRevision}
-                showCaption={false}
-                autoPlay={audioEnabled}
-              />
-            </div>
-            <button
-              type="button"
-              aria-label={`Automatic audio ${audioEnabled ? "on" : "off"}`}
-              title={`Automatic audio ${audioEnabled ? "on" : "off"}`}
-              aria-pressed={audioEnabled}
-              onClick={() => setAudioEnabled((previous) => !previous)}
-              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100"
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="size-5 fill-none stroke-current stroke-2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m11 5-5 4H3v6h3l5 4V5Z"
+          {step.kind !== "gap_choice" && (
+            <div className="mt-2 flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <ListenButton
+                  key={step.id}
+                  text={step.wordText}
+                  meaningId={step.pronunciationMeaningId}
+                  meaningRevision={step.pronunciationRevision}
+                  showCaption={false}
+                  autoPlay={audioEnabled}
                 />
-                {audioEnabled ? (
+              </div>
+              <button
+                type="button"
+                aria-label={`Automatic audio ${audioEnabled ? "on" : "off"}`}
+                title={`Automatic audio ${audioEnabled ? "on" : "off"}`}
+                aria-pressed={audioEnabled}
+                onClick={() => setAudioEnabled((previous) => !previous)}
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="size-5 fill-none stroke-current stroke-2"
+                >
                   <path
                     strokeLinecap="round"
-                    d="M15 9a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"
+                    strokeLinejoin="round"
+                    d="m11 5-5 4H3v6h3l5 4V5Z"
                   />
-                ) : (
-                  <path strokeLinecap="round" d="m16 9 6 6m0-6-6 6" />
-                )}
-              </svg>
-            </button>
-          </div>
-          <fieldset disabled={locked} className="mt-4 grid min-w-0 gap-2">
-            <legend className="sr-only">Meaning of {step.wordText}</legend>
-            {step.choices.map((option) => (
-              <label
-                key={option.id}
-                className={`flex min-h-14 min-w-0 cursor-pointer flex-wrap items-center gap-2 rounded-xl border-2 px-3 py-3 text-base leading-relaxed text-neutral-900 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${choice === option.id ? "border-primary-700 bg-primary-50" : "border-neutral-200 bg-white hover:border-primary-300"}`}
-              >
-                <input
-                  type="radio"
-                  name="meaning"
-                  value={option.id}
-                  checked={choice === option.id}
-                  onChange={() => setChoice(option.id)}
-                  onFocus={(event) => {
-                    // Native focus scrolling cannot account for a fixed action
-                    // rail. Keep keyboard-focused choices clear of both bars.
-                    const input = event.currentTarget;
-                    if (!input.matches(":focus-visible")) return;
-                    const label = input.closest("label");
-                    const bounds = label?.getBoundingClientRect();
-                    const rail = document
-                      .getElementById("daily-lesson-actions")
-                      ?.getBoundingClientRect();
-                    const top =
-                      document.querySelector("header")?.getBoundingClientRect()
-                        .bottom ?? 0;
-                    if (
-                      bounds &&
-                      rail &&
-                      (bounds.bottom > rail.top - 8 || bounds.top < top + 8)
-                    )
-                      label?.scrollIntoView({
-                        block: "center",
-                        behavior: "instant",
-                      });
-                  }}
-                  className="size-5 shrink-0 accent-primary-700"
-                />
-                <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-                  {option.text}
-                </span>
-                {feedback?.correctChoiceId === option.id && (
-                  <span
-                    className="basis-full text-right font-bold"
-                    aria-label="Correct meaning"
-                  >
-                    ✓
-                  </span>
-                )}
-              </label>
-            ))}
-          </fieldset>
+                  {audioEnabled ? (
+                    <path
+                      strokeLinecap="round"
+                      d="M15 9a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"
+                    />
+                  ) : (
+                    <path strokeLinecap="round" d="m16 9 6 6m0-6-6 6" />
+                  )}
+                </svg>
+              </button>
+            </div>
+          )}
+          <DailyLessonChoices
+            key={step.id}
+            step={step}
+            choice={choice}
+            locked={locked}
+            correctChoiceId={feedback?.correctChoiceId}
+            onChange={setChoice}
+          />
           {feedback && (
             <StatusMessage
               ref={feedbackRegion}
@@ -658,6 +769,14 @@ export function DailyLessonPlayer({
               )}
             </StatusMessage>
           )}
+          {feedback && !feedback.skipped && (
+            <DailyLessonTeaching
+              key={`${session.id}:${step.id}:${feedback.meaningId}`}
+              sessionId={session.id}
+              step={step}
+              feedback={feedback}
+            />
+          )}
           <SessionActions
             id="daily-lesson-actions"
             role="region"
@@ -678,10 +797,12 @@ export function DailyLessonPlayer({
                 feedback.reviewStep !== undefined ? (
                 <ReviewSchedule
                   value={nextReview}
-                  automaticLabel={automaticReviewDateLabel(
-                    feedback.nextReviewAt,
-                    reviewTimeZone,
-                  )}
+                  automaticLabel={
+                    nextReviewDate
+                      ? `Automatic · ${nextReviewDate.label}`
+                      : "Automatic"
+                  }
+                  automaticExact={nextReviewDate?.exact}
                   disabled={busy || uncertain || conflict}
                   onChange={setNextReview}
                   nextAction={continueButton}
@@ -752,7 +873,6 @@ export function DailyLessonPlayer({
           </div>
         </StatusMessage>
       )}
-      {session && <VocabularySources attribution={session.attribution} />}
     </div>
   );
 }

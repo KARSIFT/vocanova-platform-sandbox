@@ -81,18 +81,18 @@ test.describe("Review readiness", () => {
 
     expect(await waitForReviewReadiness(page)).toBe("terminal");
     await expect(getTerminalReviewHeading(page)).toHaveText(
-      "You’ve finished your review",
+      "Today’s review complete",
     );
     await page.goto("/reviews");
     expect(await waitForReviewReadiness(page)).toBe("terminal");
     await expect(getTerminalReviewHeading(page)).toHaveText(
-      "You’re ready for new words",
+      "Today’s review complete",
     );
     await page.goto("/home");
     await expect(
       page
         .getByRole("region", { name: "Review words", exact: true })
         .getByText(/^Reviewed today:/),
-    ).toHaveText("Reviewed today: 5");
+    ).toHaveText("Reviewed today: 5 of 5");
   });
 });

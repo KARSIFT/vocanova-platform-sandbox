@@ -5,25 +5,27 @@ import type { DailyLessonAction } from "@vocanova/api-client";
 
 type ReviewChoice = NonNullable<DailyLessonAction["nextReview"]>;
 const intervals: { value: ReviewChoice; label: string }[] = [
-  { value: "1d", label: "In 1 day" },
+  { value: "1d", label: "Tomorrow" },
   { value: "3d", label: "In 3 days" },
-  { value: "7d", label: "In 7 days" },
-  { value: "14d", label: "In 14 days" },
-  { value: "30d", label: "In 30 days" },
-  { value: "60d", label: "In 60 days" },
-  { value: "120d", label: "In 120 days" },
+  { value: "7d", label: "In 1 week" },
+  { value: "14d", label: "In 2 weeks" },
+  { value: "30d", label: "In 1 month" },
+  { value: "60d", label: "In 2 months" },
+  { value: "120d", label: "In 4 months" },
 ];
 
 /** A local schedule choice. Only Continue sends it to the server. */
 export function ReviewSchedule({
   value,
   automaticLabel,
+  automaticExact,
   disabled,
   onChange,
   nextAction,
 }: {
   value: ReviewChoice;
   automaticLabel: string;
+  automaticExact?: string;
   disabled: boolean;
   onChange: (value: ReviewChoice) => void;
   nextAction: RefObject<HTMLButtonElement | null>;
@@ -90,7 +92,8 @@ export function ReviewSchedule({
         ref={trigger}
         type="button"
         className="review-schedule-trigger"
-        aria-label={`Show this word again: ${choices[selected]!.label}`}
+        aria-label={`Show this word again: ${choices[selected]!.label}${value === "automatic" && automaticExact ? `. ${automaticExact}` : ""}`}
+        title={value === "automatic" ? automaticExact : undefined}
         aria-haspopup="menu"
         aria-expanded={open && !disabled}
         aria-controls={open && !disabled ? menuId : undefined}
@@ -116,7 +119,7 @@ export function ReviewSchedule({
           <path d="m5 8 5 5 5-5" />
         </svg>
       </button>
-      <span className="sr-only" aria-live="polite" aria-atomic="true">
+      <span className="sr-only">
         {`Next review: ${choices[selected]!.label}`}
       </span>
       {open && !disabled && (
@@ -176,7 +179,12 @@ export function ReviewSchedule({
                 close(true);
               }}
             >
-              <span>{choice.label}</span>
+              <span>
+                {choice.label}
+                {index === 0 && automaticExact && (
+                  <span className="sr-only">. {automaticExact}</span>
+                )}
+              </span>
               <svg
                 aria-hidden="true"
                 viewBox="0 0 20 20"

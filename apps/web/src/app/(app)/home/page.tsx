@@ -10,6 +10,10 @@ import { MeaningPicture } from "@/ui/meaning-picture";
 import { LearningIntro, LearningNote } from "@/ui/learning-guide";
 import { ListenButton } from "@/ui/pronunciation";
 import { LearnIcon } from "../_components/learn-icons";
+import {
+  dailyReviewView,
+  relativeReviewDate,
+} from "../reviews/_components/daily-review-view";
 import { StartDailyLessonButton } from "../reviews/_components/daily-lesson-start";
 import { PracticeJourney } from "../practice/_components/practice-journey";
 import {
@@ -163,8 +167,23 @@ export default async function HomePage() {
   const currentLesson = dailyLessonResponse.data.session;
   const mission = dailyMissionResponse.data;
   const { reviewsCompleted, streak } = mission;
-  const discoveryIsNext = !currentLesson && dueReviewWords === 0;
-  const goals = missionGoals(mission);
+  const goal = dailyLessonResponse.data.goal;
+  const view = dailyReviewView({
+    goal,
+    dueCount: dueReviewWords,
+    session: currentLesson,
+    legacyReviewed: reviewsCompleted,
+    legacyTarget: mission.reviewTarget,
+  });
+  const { discoveryIsNext } = view;
+  const goals = missionGoals(mission).map((item) =>
+    item.label === "Reviews"
+      ? { ...item, done: view.reviewed, target: view.target }
+      : item,
+  );
+  const nextOpportunity = goal?.nextReviewAt
+    ? relativeReviewDate(goal.nextReviewAt, goal.timeZone)
+    : undefined;
   const wordHref = latestWord
     ? `/words/${encodeURIComponent(latestWord.userWordId)}`
     : undefined;
@@ -201,29 +220,33 @@ export default async function HomePage() {
         <LearningIntro
           id="todays-mission-heading"
           eyebrow={
-            currentLesson
-              ? "Review in progress"
-              : dueReviewWords > 0
-                ? "Your next step"
-                : "No reviews due"
+            view.complete
+              ? "✓ Today’s review complete"
+              : view.active
+                ? "Review in progress"
+                : dueReviewWords > 0
+                  ? "Your next step"
+                  : "No reviews due"
           }
           title={discoveryIsNext ? "Discover new words" : "Review words"}
           description={
-            discoveryIsNext
-              ? latestWord
-                ? "Keep finding words you would like to use. Save a meaning when it feels useful."
-                : "Choose a useful word. Learn its meaning, then try it in your own sentence."
-              : currentLesson
-                ? "Pick up where you left off."
-                : `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`
+            view.complete
+              ? "You’ve reached today’s review goal. Discover a useful word or try today’s practice."
+              : discoveryIsNext
+                ? latestWord
+                  ? "Keep finding words you would like to use. Save a meaning when it feels useful."
+                  : "Choose a useful word. Learn its meaning, then try it in your own sentence."
+                : view.active
+                  ? "Pick up where you left off."
+                  : `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`
           }
         />
         <div className="next-step-actions">
-          {currentLesson ? (
+          {view.active && !view.complete ? (
             <ActionLink variant="primary" href="/review" prefetch="auto">
               Continue review
             </ActionLink>
-          ) : dueReviewWords > 0 ? (
+          ) : dueReviewWords > 0 && !view.complete ? (
             <StartDailyLessonButton
               className="vn-btn vn-btn-primary"
               label="Start review"
@@ -233,14 +256,40 @@ export default async function HomePage() {
               Discover words
             </ActionLink>
           )}
+          {view.canReviewExtra && (
+            <StartDailyLessonButton
+              className="vn-btn vn-btn-secondary"
+              label="Review more words"
+              additional
+            />
+          )}
           <p className="next-step-meta">
-            Reviewed today: <strong>{reviewsCompleted}</strong>
+            Reviewed today:{" "}
+            <strong>
+              {view.reviewed} of {view.target}
+            </strong>
           </p>
         </div>
         <LearningNote>
-          {discoveryIsNext
-            ? "Come back to see which words are ready. There’s no need to finish everything at once."
-            : "Start with what you remember. It’s fine to get things wrong."}
+          {discoveryIsNext ? (
+            nextOpportunity ? (
+              <span>
+                Next review:{" "}
+                <time
+                  dateTime={goal!.nextReviewAt}
+                  title={nextOpportunity.exact}
+                  aria-label={`${nextOpportunity.label}. ${nextOpportunity.exact}`}
+                >
+                  {nextOpportunity.label}
+                </time>
+                . There’s no need to finish everything at once.
+              </span>
+            ) : (
+              "Come back to see which words are ready. There’s no need to finish everything at once."
+            )
+          ) : (
+            "Start with what you remember. It’s fine to get things wrong."
+          )}
         </LearningNote>
       </section>
 
@@ -250,7 +299,9 @@ export default async function HomePage() {
             Today’s goal
           </h2>
           <p className="goal-status" data-status={mission.status}>
-            {MISSION_STATUS[mission.status]}
+            {view.complete
+              ? "✓ Reviews complete"
+              : MISSION_STATUS[mission.status]}
           </p>
         </div>
         <dl className="goal-rows">
@@ -276,9 +327,10 @@ export default async function HomePage() {
           ))}
         </dl>
         {mission.status === "open" &&
-        !currentLesson &&
+        !view.active &&
         dueReviewWords === 0 &&
-        reviewsCompleted < mission.reviewTarget ? (
+        !view.complete &&
+        view.reviewed < view.target ? (
           <details className="text-sm text-neutral-600">
             <summary className="min-h-11 cursor-pointer content-center font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
               About reviews
