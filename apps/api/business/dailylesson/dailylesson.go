@@ -165,9 +165,14 @@ func project(st *state) *Session {
 		out.Status = "completed"
 	} else if len(st.Queue) > 0 {
 		step := st.Words[st.Queue[0]].Public
-		if step.Kind != "gap_choice" {
+		if step.Kind != "gap_choice" && step.Kind != "picture_choice" {
 			step.PronunciationMeaningID = st.Words[st.Queue[0]].MeaningID
 			step.PronunciationRevision = meaningidentity.Revision(step.PronunciationMeaningID, step.WordText, step.PartOfSpeech, st.Words[st.Queue[0]].Definition)
+		} else {
+			// A target pronunciation identity would identify the matching
+			// picture option. Also strip any identity in older frozen steps.
+			step.PronunciationMeaningID = ""
+			step.PronunciationRevision = ""
 		}
 		out.CurrentStep = &step
 	}
@@ -544,9 +549,7 @@ func (s *Service) build(ctx context.Context, tx *sql.Tx, u uuid.UUID, now time.T
 		if e = s.mixQuestion(ctx, tx, w, i); e != nil {
 			return nil, e
 		}
-		h := sha256.Sum256([]byte(w.Public.ID))
-		j := int(h[0]) % len(w.Public.Choices)
-		w.Public.Choices[0], w.Public.Choices[j] = w.Public.Choices[j], w.Public.Choices[0]
+		positionChoices(w.Public.Choices, w.AnswerID, w.Public.ID)
 		st.Queue = append(st.Queue, i)
 	}
 	return st, nil
@@ -810,4 +813,19 @@ func refreshCredits(ctx context.Context, tx *sql.Tx, st *state, now time.Time) e
  WHERE d.user_id=$1 AND d.daily_session_id=$2
  AND EXISTS(SELECT 1 FROM jsonb_array_elements(s.state->'Words') w WHERE w->>'MeaningID'=d.meaning_id::text AND w->>'UserWordID'=a.user_word_id::text)
  AND d.local_date=($3 AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=$1),'UTC'))::date`, st.UserID, st.ID.String(), now).Scan(&st.CreditedToday)
+}
+
+// positionChoices freezes the position once when building a new question.
+func positionChoices(choices []Choice, answerID, stepID string) {
+	// Mixed sets may place the target anywhere. Normalize its starting index
+	// before the four-way hash bucket, so every target can occupy every slot.
+	for i := range choices {
+		if choices[i].ID == answerID {
+			choices[0], choices[i] = choices[i], choices[0]
+			break
+		}
+	}
+	h := sha256.Sum256([]byte(stepID))
+	j := int(h[0]) % len(choices)
+	choices[0], choices[j] = choices[j], choices[0]
 }

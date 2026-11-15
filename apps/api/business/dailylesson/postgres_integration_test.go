@@ -182,6 +182,11 @@ func TestPostgreSQLDailyLessonAuthorityOnceDailyCreditResumeAndExport(t *testing
 	require.NoError(t, e)
 	require.Contains(t, string(export), "\"dailyLessons\"")
 	require.Contains(t, string(export), "\"dailyReviewSuccesses\"")
+	var exported struct {
+		DailyReviewEffort []json.RawMessage `json:"dailyReviewEffort"`
+	}
+	require.NoError(t, json.Unmarshal(export, &exported))
+	require.Len(t, exported.DailyReviewEffort, 2, "export includes both wrong and correct effort")
 	require.NotContains(t, string(export), "AnswerID")
 	require.NotContains(t, string(export), "idempotency_key")
 }
@@ -328,7 +333,8 @@ func TestPostgreSQLDailyLessonDailyReceiptLocalDateHintAndPurge(t *testing.T) {
 	require.EqualValues(t, 1, counters.DailyLessonSessions)
 	require.Positive(t, counters.DailyLessonActions)
 	require.EqualValues(t, 1, counters.DailyReviewSuccesses)
-	for _, table := range []string{"daily_lesson_sessions", "daily_lesson_actions", "daily_review_successes", "review_attempts", "user_words"} {
+	require.EqualValues(t, 1, counters.DailyReviewEffort)
+	for _, table := range []string{"daily_lesson_sessions", "daily_lesson_actions", "daily_review_successes", "daily_review_effort", "review_attempts", "user_words"} {
 		require.NoError(t, f.db.QueryRow("SELECT count(*) FROM "+table+" WHERE user_id=$1", f.u).Scan(&n))
 		require.Zero(t, n)
 	}
