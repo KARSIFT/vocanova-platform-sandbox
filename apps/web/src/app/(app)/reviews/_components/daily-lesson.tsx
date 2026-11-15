@@ -30,7 +30,11 @@ const primary =
   "vn-btn vn-btn-primary text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 const secondary =
   "vn-btn vn-btn-secondary text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
-const NO_DUE_DETAIL = "No words are due. Discover a word to start learning.";
+// Exact known no-due responses only: a generic 409 may be an uncertain start.
+const NO_DUE_DETAILS = new Set([
+  "No words are due. Discover a word to start learning.",
+  "No required reviews are available. Check today’s goal or choose additional review.",
+]);
 
 interface CompletionCheck {
   sessionId: string;
@@ -305,10 +309,12 @@ export function DailyLessonPlayer({
         !startAcknowledged &&
         cause instanceof ApiResponseError &&
         cause.status === 409 &&
-        cause.body?.detail === NO_DUE_DETAIL
+        NO_DUE_DETAILS.has(cause.body?.detail ?? "")
       ) {
-        // This exact rejection rolls back without consuming the start key.
-        // Reconcile once; an ambiguous Start error must still replay its key.
+        // This definitive rejection did not commit. Clear its key even if the
+        // following read fails, so Load saved progress remains a read and a
+        // fresh Start gets a new key. Ambiguous failures still replay theirs.
+        startKey.current = null;
         try {
           const { data } = await createApiClient().getCurrentDailyLesson();
           setDueCount(data.dueCount);
@@ -811,6 +817,7 @@ export function DailyLessonPlayer({
                       : "Automatic"
                   }
                   automaticExact={nextReviewDate?.exact}
+                  timeZone={goal?.timeZone}
                   disabled={busy || uncertain || conflict}
                   onChange={setNextReview}
                   nextAction={continueButton}

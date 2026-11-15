@@ -1,6 +1,7 @@
 import type {
   CurrentUser,
   DailyLesson,
+  DailyReviewGoal,
   DailyMission,
   KnowledgeMap,
   KnowledgeMapItem,
@@ -67,6 +68,12 @@ import {
   getFirstMeaningSaveControl,
 } from "../e2e/situation-word-navigation";
 
+import {
+  reviewedTodayEvidence,
+  reviewedTodayIncrease,
+  type ReviewedTodayProgress,
+} from "./review-progress";
+
 const SESSION_COOKIE_ENV = "E2E_SESSION_COOKIE";
 const CSRF_COOKIE_ENV = "E2E_CSRF_TOKEN";
 // Deployed staging names are authoritative mint metadata. Require the exact
@@ -87,10 +94,6 @@ const CSRF_COOKIE_NAME = requiredCookieName(
 // records why it stopped short of the caught-up state.
 const MAX_REVIEW_CARDS = 8;
 
-type ReviewedTodayProgress = {
-  reviewed: number;
-  target: number;
-};
 // VOC-063-T01: bounded step-7 re-read when the first /home load may be stale.
 // Four attempts (initial + three retries) with 1.5s between failures keeps the
 // loop under ~5s of deliberate waiting, well inside the staging journey timeout.
@@ -539,42 +542,33 @@ async function readReviewedTodayProgress(
     process.env.STAGING_API_BASE_URL ?? "https://api-staging.vocanova.site",
     "api-staging.vocanova.site",
   );
-  const mission = await readStagingState<DailyMission>(
-    page,
-    apiOrigin,
-    "/api/v1/daily-mission",
-  );
+  const [mission, current] = await Promise.all([
+    readStagingState<DailyMission>(page, apiOrigin, "/api/v1/daily-mission"),
+    readStagingState<{goal?: DailyReviewGoal}>(page, apiOrigin, "/api/v1/daily-lessons/current"),
+  ]);
+  const evidence = reviewedTodayEvidence(mission, current.goal);
   const counter = page
     .getByRole("region", { name: "Review words", exact: true })
     .getByText(/^Reviewed today:/);
-  await expect(counter).toHaveText(
-    `Reviewed today: ${mission.reviewsCompleted}`,
-  );
-  const reviewed = mission.reviewsCompleted;
-  const target = mission.reviewTarget;
-  expect(Number.isFinite(reviewed)).toBe(true);
-  expect(target).toBeGreaterThan(0);
-  return { reviewed, target };
+  await expect(counter).toHaveText(evidence.homeLabel);
+  return evidence;
 }
 
-async function readReviewedTodayCount(page: Page): Promise<number> {
-  const { reviewed } = await readReviewedTodayProgress(page);
-  return reviewed;
+async function readReviewedTodayCount(page: Page, baseline: ReviewedTodayProgress): Promise<number> {
+  const current = await readReviewedTodayProgress(page);
+  expect(current.localDate, "A learner-local date change invalidates the baseline").toBe(baseline.localDate);
+  expect(current.target, "The daily target stays frozen").toBe(baseline.target);
+  return current.reviewed;
 }
 
 async function readReviewedTodayCountAfterReviews(
   page: Page,
   testInfo: TestInfo,
-  reviewedBefore: number,
+  baseline: ReviewedTodayProgress,
   reviewedCards: number,
-  reviewTarget: number,
 ): Promise<number> {
-  // reviews_completed caps at review_target; extra submissions after the
-  // completing review do not raise the home counter (VOC-082-T01).
-  const minimumExpected = Math.min(
-    reviewedBefore + reviewedCards,
-    reviewTarget,
-  );
+  const reviewedBefore = baseline.reviewed;
+  const {minimumExpected} = reviewedTodayIncrease(baseline, baseline, reviewedCards);
   const attemptValues: number[] = [];
 
   for (
@@ -583,10 +577,12 @@ async function readReviewedTodayCountAfterReviews(
     attempt++
   ) {
     await page.goto("/home");
-    const reviewedAfter = await readReviewedTodayCount(page);
+    const current = await readReviewedTodayProgress(page);
+    const {reached} = reviewedTodayIncrease(baseline, current, reviewedCards);
+    const reviewedAfter = current.reviewed;
     attemptValues.push(reviewedAfter);
 
-    if (reviewedAfter >= minimumExpected) {
+    if (reached) {
       const countsSummary =
         `reviewedBefore=${reviewedBefore}, reviewedCards=${reviewedCards}, ` +
         `reviewedAfter=${reviewedAfter}, minimumExpected=${minimumExpected}`;
@@ -1012,9 +1008,9 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       ).toBeVisible();
     });
 
-    const { reviewed: reviewedBefore, target: reviewTarget } =
-      await test.step("2. read the daily-mission baseline", async () =>
-        readReviewedTodayProgress(page));
+    const reviewBaseline = await test.step("2. read raw goal effort and capped mission baseline", async () =>
+      readReviewedTodayProgress(page));
+    const reviewedBefore = reviewBaseline.reviewed;
 
     await test.step("2a. explore Daily Conversation without learning mutations", async () => {
       await verifyContextPracticeJourney(page);
@@ -1038,13 +1034,13 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         "Refuse assessment outside the designated synthetic account.",
       ).toBe(true);
       await verifyRealKnowledgeMap(page, apiOrigin);
-      expect(await readReviewedTodayCount(page)).toBe(reviewedBefore);
+      expect(await readReviewedTodayCount(page, reviewBaseline)).toBe(reviewedBefore);
     });
 
     await test.step("2c. follow a confirmed discovery save to its exact writing meaning", async () => {
       await prepareEligibleReview(page, apiOrigin, true);
       await page.goto("/home");
-      expect(await readReviewedTodayCount(page)).toBe(reviewedBefore);
+      expect(await readReviewedTodayCount(page, reviewBaseline)).toBe(reviewedBefore);
     });
 
     let openedWordPath = "";
@@ -1251,12 +1247,11 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       const reviewedAfter = await readReviewedTodayCountAfterReviews(
         page,
         testInfo,
-        reviewedBefore,
+        reviewBaseline,
         reviewedCards,
-        reviewTarget,
       );
       expect(reviewedAfter).toBeGreaterThanOrEqual(
-        Math.min(reviewedBefore + reviewedCards, reviewTarget),
+        reviewedBefore + reviewedCards,
       );
     });
 

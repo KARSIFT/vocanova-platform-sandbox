@@ -55,7 +55,7 @@ govern whether a live session uses those modes.
 - Independent task review found and verified fixes for picture identity leakage,
   answer-position bias/public-ID derivation, false discovery save confirmation
   and Home's stale overnight snapshot.
-- Full local API suite with disposable PostgreSQL 16: **2,752 test/subtest
+- Full local API suite with disposable PostgreSQL 16: **2,753 test/subtest
   events passed, zero failures/skips**, 33 packages; explicit local Go 1.26.10.
   Exact repository Go 1.26.5 remains a separate hosted CI gate.
 - Final production web build passed. Initial final Chrome matrix: **60 passed**,
@@ -66,7 +66,7 @@ govern whether a live session uses those modes.
   in a 15-case follow-up that also passed six visual/axe walkthroughs. No timeout
   increases or rule exclusions were introduced.
 
-- Final client tests: **63 passed**; web/helper tests after staging-harness extensions: **343 passed**; application
+- Final client tests: **63 passed**; web/helper tests after staging-harness extensions: **352 passed**; application
   and browser TypeScript checks passed. Workspace, formatting and web/package lint
   checks passed. Foundation checks: **333/337**, with the four documented macOS
   GNU-sed/Bash-coproc/browser-fixture failures; the new bounded inventory checks
@@ -84,3 +84,26 @@ not prove provider quality, real account authentication delivery, learner
 effectiveness or actual screen-reader speech. Database tests establish the
 tested persistence/transaction properties on a disposable local database, not
 production durability.
+
+## Integrated review follow-up
+
+Final whole-branch review identified and verified repair targets for canonical
+no-due recovery, cross-tab account identity, and DST draft wording. Discovery PUT
+now requires the independently verified rendered account ID and rejects a
+mismatched authenticated requester before any mutation, including retries after
+an optional initial preference-read failure. Current and legacy recognized
+no-due rejections recover through confirmed reads without reusing a rejected
+Start key; uncertain starts retain their exact keys. Draft interval labels now
+use the prospective saved duration in the learner timezone, including today/two
+local dates later around DST, without changing scheduling values.
+
+The staging counter gate now compares Home with the API's uncapped effort count,
+checks the mission's capped count separately, and requires fresh correctly graded
+cards even after goal completion. Fourteen seed helpers and five progress helpers
+cover strict canonical resolution and an 18-to-20 effort increase with target15.
+A real-link prefetch regression completed three local Chrome repeats: after a
+second tab confirms a newer position, clicking the prefetched generic link reads
+fresh data. This bounded negative reproduction does not establish all cache cases.
+
+Focused rebuilt browser verification of this repair wave passed 17/17; full
+post-wave engine and hosted checks remain separate release evidence.

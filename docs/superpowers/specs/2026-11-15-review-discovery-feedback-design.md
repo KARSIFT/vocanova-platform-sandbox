@@ -173,7 +173,10 @@ Persist last successfully displayed discovery position as a bounded account
 preference: catalog version, band/rank and active/revisit intent. Generic discovery
 entry resumes it; explicit valid links take priority. Preserve exact revisits of
 already saved/known words. Re-read current server state and validate catalog/rank
-before resuming. Isolate accounts, include export/deletion implications, and
+before resuming. Bind writes to an independently verified rendered account via
+required `expectedAccountId`, checked against the authenticated requester before
+mutation. Retry never replaces that owner; a sign-in change requires generic
+discovery reload. Isolate accounts, include export/deletion implications, and
 debounce/coalesce navigation writes so opening discovery stays responsive.
 Persistence failure leaves navigation usable with honest retry behavior, without
 writing learning progress. Concurrent tabs need deterministic last-confirmed

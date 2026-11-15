@@ -1,16 +1,21 @@
 import type { SavedDiscoveryPosition } from "./discovery-position";
 type Value = Omit<SavedDiscoveryPosition, "revision">;
-type Status = "saving" | "saved" | "error" | "conflict";
+type Status = "saving" | "saved" | "error" | "conflict" | "account-changed";
 interface Transport {
   read: () => Promise<number>;
-  write: (value: Value & { expectedRevision: number }) => Promise<number>;
+  write: (
+    value: Value & { expectedRevision: number; expectedAccountId: string },
+  ) => Promise<number>;
   status: (status: Status) => void;
   conflict: (error: unknown) => boolean;
+  accountChanged: (error: unknown) => boolean;
 }
 const identity = (value: Value) => JSON.stringify(value);
 
 /** Per-mounted-account queue: coalesce navigation and serialize revision writes. */
 export class DiscoveryPositionWriter {
+  private accountId: string;
+  private accountChanged = false;
   private revision: number | null;
   private transport: Transport;
   private selected: Value | null = null;
@@ -19,7 +24,12 @@ export class DiscoveryPositionWriter {
   private running = false;
   private disposed = false;
   private blocked = false;
-  constructor(revision: number | null, transport: Transport) {
+  constructor(
+    accountId: string,
+    revision: number | null,
+    transport: Transport,
+  ) {
+    this.accountId = accountId;
     this.revision = revision;
     this.transport = transport;
   }
@@ -52,6 +62,7 @@ export class DiscoveryPositionWriter {
         this.revision = await this.transport.write({
           ...value,
           expectedRevision: this.revision!,
+          expectedAccountId: this.accountId,
         });
         if (this.disposed) return;
         this.confirmed = identity(value);
@@ -60,15 +71,20 @@ export class DiscoveryPositionWriter {
     } catch (error) {
       if (this.disposed) return;
       this.blocked = true;
+      this.accountChanged = this.transport.accountChanged(error);
       this.transport.status(
-        this.transport.conflict(error) ? "conflict" : "error",
+        this.accountChanged
+          ? "account-changed"
+          : this.transport.conflict(error)
+            ? "conflict"
+            : "error",
       );
     } finally {
       this.running = false;
     }
   }
   async retry() {
-    if (this.disposed || this.running) return;
+    if (this.disposed || this.running || this.accountChanged) return;
     this.blocked = false;
     this.revision = null;
     // The failed write may have committed. After re-reading its revision, write

@@ -17,7 +17,7 @@ import (
 )
 
 func TestPositionValidation(t *testing.T) {
-	good := Update{CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4330, Active: true}
+	good := Update{ExpectedAccountID: uuid.New(), CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4330, Active: true}
 	require.NoError(t, good.Validate())
 	for _, invalid := range []Update{
 		{CatalogVersion: "old", Band: 44, Rank: 4330},
@@ -26,6 +26,7 @@ func TestPositionValidation(t *testing.T) {
 		{CatalogVersion: knowledgecatalog.CatalogVersion, Band: 101, Rank: 10001},
 		{CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4330, ExpectedRevision: -1},
 	} {
+		invalid.ExpectedAccountID = good.ExpectedAccountID
 		require.ErrorIs(t, invalid.Validate(), ErrInvalid)
 	}
 }
@@ -96,7 +97,7 @@ func TestPostgreSQLPositionIsolationCASAndDeletedAccount(t *testing.T) {
 		return value
 	}
 	before := export(uid)
-	update := Update{CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4330, Active: true}
+	update := Update{ExpectedAccountID: uid, CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4330, Active: true}
 	p, err = svc.Put(ctx, uid, update)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, p.Revision)
@@ -107,6 +108,24 @@ func TestPostgreSQLPositionIsolationCASAndDeletedAccount(t *testing.T) {
 	delete(before, "discoveryPosition")
 	delete(after, "discoveryPosition")
 	require.Equal(t, before, after, "position changes no exported learning progress or settings")
+
+	// A stale page retains A as its owner even when the authenticated request is B.
+	// Both have revision 1, so a revision-only fence would accept this overwrite.
+	otherPosition, err := svc.Put(ctx, other, Update{ExpectedAccountID: other, CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4334})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, otherPosition.Revision)
+	stale := Update{ExpectedAccountID: uid, CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4331, ExpectedRevision: 1}
+	for range 2 {
+		_, err = svc.Put(ctx, other, stale)
+		require.ErrorIs(t, err, ErrAccountChanged)
+		_, err = repo.Put(ctx, other, stale)
+		require.ErrorIs(t, err, ErrAccountChanged)
+	}
+	unchanged, err := svc.Get(ctx, other)
+	require.NoError(t, err)
+	require.Equal(t, otherPosition, unchanged)
+	_, err = db.ExecContext(ctx, `DELETE FROM user_discovery_positions WHERE user_id=$1`, other)
+	require.NoError(t, err)
 	// Lost-response replay succeeds without increment, but other stale intent fails.
 	replay, err := svc.Put(ctx, uid, update)
 	require.NoError(t, err)
@@ -124,7 +143,7 @@ func TestPostgreSQLPositionIsolationCASAndDeletedAccount(t *testing.T) {
 		wg.Add(1)
 		go func(rank int) {
 			defer wg.Done()
-			_, e := svc.Put(ctx, uid, Update{CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: rank, Active: true, ExpectedRevision: 1})
+			_, e := svc.Put(ctx, uid, Update{ExpectedAccountID: uid, CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: rank, Active: true, ExpectedRevision: 1})
 			errors <- e
 		}(rank)
 	}
@@ -148,9 +167,9 @@ func TestPostgreSQLPositionIsolationCASAndDeletedAccount(t *testing.T) {
 	require.NoError(t, err)
 	_, err = svc.Get(ctx, uid)
 	require.ErrorIs(t, err, ErrNotFound)
-	_, err = svc.Put(ctx, uid, Update{CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4334, ExpectedRevision: 2})
+	_, err = svc.Put(ctx, uid, Update{ExpectedAccountID: uid, CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4334, ExpectedRevision: 2})
 	require.ErrorIs(t, err, ErrNotFound)
-	_, err = svc.Put(ctx, other, Update{CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4330})
+	_, err = svc.Put(ctx, other, Update{ExpectedAccountID: other, CatalogVersion: knowledgecatalog.CatalogVersion, Band: 44, Rank: 4330})
 	require.NoError(t, err)
 	counters, err := accountRepo.AnonymizeUserData(ctx, uid)
 	require.NoError(t, err)

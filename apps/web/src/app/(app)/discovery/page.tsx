@@ -47,9 +47,13 @@ export default async function DiscoveryPage({
   let changedElsewhere = false;
   let savedPosition: SavedDiscoveryPosition | null = null;
   let resumed = false;
+  let accountId: string | null = null;
   let positionRevision: number | null = null;
   try {
     const client = await createServerApiClient();
+    // Capture the rendered owner independently of the optional preference read.
+    // All server requests use this request's cookie snapshot.
+    accountId = (await client.getCurrentUser()).data.id ?? null;
     try {
       savedPosition = (await client.getDiscoveryPosition()).data.position;
       positionRevision = savedPosition?.revision ?? 0;
@@ -129,7 +133,8 @@ export default async function DiscoveryPage({
     );
   return (
     <Discovery
-      key={`${data.catalogVersion}:${returnTo}:${data.currentBand.number}:${initialRank}`}
+      key={`${accountId}:${data.catalogVersion}:${returnTo}:${data.currentBand.number}:${initialRank}`}
+      accountId={accountId}
       initialData={data}
       initialRank={initialRank}
       initiallyActive={active}

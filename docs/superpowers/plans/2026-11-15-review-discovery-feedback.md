@@ -56,7 +56,7 @@
 
 **Owner/files:** discovery implementer: `apps/web/src/app/(app)/discovery/**`, reusable map mini-grid extracted from `knowledge-map/map-view.tsx`, new `apps/api/business/discoveryposition/**`, `apps/api/app/api/discovery_position.go` plus tests, migration `20261115110000_discovery_position.sql`, relevant export/deletion integration additions. New browser test `discovery-owner-feedback.spec.ts`. No production/openapi registration/API-client/shared mock edits; send root exact wiring patch.
 
-**Interfaces:** GET/PUT `/api/v1/discovery-position`, requester scoped and no-store; PUT CSRF protected, body `{catalogVersion,band,rank,active,expectedRevision}`; response `{position: null | {catalogVersion,band,rank,active,revision}}`; stale revision409. Position is optional preference and never learning credit. Root adds client methods and route registration.
+**Interfaces:** GET/PUT `/api/v1/discovery-position`, requester scoped and no-store; PUT CSRF protected, body `{catalogVersion,band,rank,active,expectedRevision,expectedAccountId}`; response `{position: null | {catalogVersion,band,rank,active,revision}}`; stale revision409. Position is optional preference and never learning credit. Root adds client methods and route registration.
 
 - [x] Add RED regressions for4330→Home→genericdiscovery, explicit-link precedence, account isolation, known-word exact revisit and stale preference writes.
 - [x] Move Previous word below card, keep range/word selection above; preserve locks and cross-band behavior.

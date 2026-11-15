@@ -99,6 +99,8 @@ export interface DiscoveryPosition {
 }
 
 export interface DiscoveryPositionUpdate {
+  /** Account verified when this discovery view was rendered; never replaced on retry. */
+  expectedAccountId: string;
   catalogVersion: string;
   band: number;
   rank: number;

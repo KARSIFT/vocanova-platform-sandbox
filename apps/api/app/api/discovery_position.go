@@ -47,6 +47,8 @@ func RegisterDiscoveryPosition(api huma.API, svc *discoveryposition.Service, aut
 }
 func mapDiscoveryPositionError(err error) error {
 	switch {
+	case errors.Is(err, discoveryposition.ErrAccountChanged):
+		return huma.Error403Forbidden("Discovery account changed; reload discovery")
 	case errors.Is(err, discoveryposition.ErrInvalid):
 		return huma.Error400BadRequest("Invalid discovery position")
 	case errors.Is(err, discoveryposition.ErrNotFound):

@@ -1127,7 +1127,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (await handleDiscoveryPosition({ req, res, url, cookies, state: getSessionState(cookies), jsonResponse, readJsonBody, checkCsrf, logLine })) return;
+  if (await handleDiscoveryPosition({ req, res, url, cookies, accountId: getFixtureUser(cookies).id, state: getSessionState(cookies), jsonResponse, readJsonBody, checkCsrf, logLine })) return;
 
   if (
     await handleDailyDiscovery({

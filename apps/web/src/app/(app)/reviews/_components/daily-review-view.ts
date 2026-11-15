@@ -99,3 +99,22 @@ export function reviewGoalDayChanged(
     return false;
   }
 }
+
+/** Match the API's preserved elapsed-day contract, then label in learner time. */
+export function draftReviewDate(
+  interval: `${number}d`,
+  timeZone?: string,
+  now = new Date(),
+): { label: string; exact: string } | undefined {
+  const days = Number(interval.slice(0, -1));
+  if (
+    ![1, 3, 7, 14, 30, 60, 120].includes(days) ||
+    !Number.isFinite(now.getTime())
+  )
+    return undefined;
+  return relativeReviewDate(
+    new Date(now.getTime() + days * 86_400_000).toISOString(),
+    timeZone,
+    now,
+  );
+}

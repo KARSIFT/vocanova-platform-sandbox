@@ -177,6 +177,7 @@ export function Discovery({
   initiallyActive = false,
   initiallyRevisiting = false,
   initialPositionRevision = null,
+  accountId,
   initiallyResumed = false,
 }: {
   initialData: KnowledgeMapData;
@@ -184,6 +185,7 @@ export function Discovery({
   initiallyActive?: boolean;
   initiallyRevisiting?: boolean;
   initialPositionRevision?: number | null;
+  accountId: string | null;
   initiallyResumed?: boolean;
 }) {
   const [data, setData] = useState(initialData);
@@ -233,6 +235,7 @@ export function Discovery({
   const navigationLocked =
     busy || navigating || conflict || Boolean(pending.current);
   const positionPreference = useDiscoveryPosition({
+    accountId,
     catalogVersion: data.catalogVersion,
     band,
     rank: displayedRank,
@@ -915,10 +918,17 @@ export function Discovery({
             ? "Your place is saved."
             : positionPreference.status === "saving"
               ? "Saving your place…"
-              : positionPreference.status === "conflict"
-                ? "Your saved place changed in another tab. This word is still open here."
-                : "Your place could not be saved. You can keep discovering."}
+              : positionPreference.status === "account-changed"
+                ? "Your account changed. Reload discovery to save your place for this account."
+                : positionPreference.status === "conflict"
+                  ? "Your saved place changed in another tab. This word is still open here."
+                  : "Your place could not be saved. You can keep discovering."}
         </StatusMessage>
+        {positionPreference.status === "account-changed" && (
+          <a className={styles.back} href="/discovery">
+            Reload discovery
+          </a>
+        )}
         {(positionPreference.status === "error" ||
           positionPreference.status === "conflict") && (
           <button

@@ -36,6 +36,7 @@ describe("VocanovaClient", () => {
       signal: controller.signal,
     });
     const body = {
+      expectedAccountId: "00000000-0000-0000-0000-000000000001",
       catalogVersion: "english-10000-v1",
       band: 44,
       rank: 4330,

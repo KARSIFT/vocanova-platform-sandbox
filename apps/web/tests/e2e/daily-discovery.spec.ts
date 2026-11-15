@@ -11,7 +11,7 @@ async function chooseReviewDate(page: Page, choice: "7d" | "known") {
   await page
     .getByRole("menu", { name: "Next review", exact: true })
     .getByRole("menuitemradio", {
-      name: choice === "7d" ? "In 1 week" : "I know this word",
+      name: choice === "7d" ? /^In 1 week\s*\. / : "I know this word",
       exact: true,
     })
     .click();
@@ -412,7 +412,7 @@ test("no-due reconciliation resumes an active session even when the fresh due co
         status: 409,
         contentType: "application/problem+json",
         body: JSON.stringify({
-          detail: "No words are due. Discover a word to start learning.",
+          detail: "No required reviews are available. Check today’s goal or choose additional review.",
         }),
       }),
     { times: 1 },
@@ -443,7 +443,7 @@ test("no-due reconciliation resumes an active session even when the fresh due co
   ).toHaveCount(0);
 });
 
-test("failed no-due reconciliation preserves the exact start key for a later acknowledged retry", async ({
+test("failed canonical no-due reconciliation releases the rejected key for a fresh Start", async ({
   page,
 }) => {
   await learner(page, 1);
@@ -456,7 +456,7 @@ test("failed no-due reconciliation preserves the exact start key for a later ack
         status: 409,
         contentType: "application/problem+json",
         body: JSON.stringify({
-          detail: "No words are due. Discover a word to start learning.",
+          detail: "No required reviews are available. Check today’s goal or choose additional review.",
         }),
       });
     else await route.continue();
@@ -487,7 +487,7 @@ test("failed no-due reconciliation preserves the exact start key for a later ack
   ).toBeFocused();
   expect(keys).toHaveLength(2);
   expect(keys[0]).toBeTruthy();
-  expect(keys[1]).toBe(keys[0]);
+  expect(keys[1]).not.toBe(keys[0]);
 });
 
 for (const failure of [
@@ -1434,14 +1434,14 @@ for (const theme of ["light", "dark"] as const) {
     await expect(automatic).toBeFocused();
     await page.keyboard.press("ArrowDown");
     await expect(
-      menu.getByRole("menuitemradio", { name: "Tomorrow", exact: true }),
+      menu.getByRole("menuitemradio", { name: /^Tomorrow\s*\. / }),
     ).toBeFocused();
     await expect(automatic).toHaveAttribute("aria-checked", "true");
     await page.keyboard.press("Enter");
     await expect(menu).toHaveCount(0);
     await expect(schedule).toBeFocused();
     await expect(schedule).toHaveAccessibleName(
-      "Show this word again: Tomorrow",
+      /^Show this word again: Tomorrow\. .+$/,
     );
     await expect(page.getByText("Next review: Tomorrow", { exact: true })).toHaveText("Next review: Tomorrow");
     // The focused trigger communicates the selection without a second live
@@ -1465,7 +1465,7 @@ for (const theme of ["light", "dark"] as const) {
       .click({ position: { x: 2, y: 2 } });
     await expect(menu).toHaveCount(0);
     await expect(schedule).toHaveAccessibleName(
-      "Show this word again: Tomorrow",
+      /^Show this word again: Tomorrow\. .+$/,
     );
     await schedule.click();
     await automatic.click();
@@ -1813,3 +1813,147 @@ test.describe("review schedule learner calendar", () => {
     expect(errors).toEqual([]);
   });
 });
+
+test("canonical no-due rejection with failed reconciliation recovers by GET without another Start", async ({
+  page,
+}) => {
+  await learner(page, 1);
+  await page.goto("/reviews");
+  await expect(
+    page.getByRole("button", { name: "Start review", exact: true }),
+  ).toBeVisible();
+  // Exercise the actual synthetic API with a second actor while this page
+  // retains its earlier one-word due snapshot.
+  let other = await otherActorPost(page, "/api/v1/daily-lessons");
+  other = await otherActorPost(
+    page,
+    `/api/v1/daily-lessons/${other.id}/actions`,
+    {
+      action: "answer",
+      choiceId: "meaning-a",
+      stepId: other.currentStep!.id,
+      expectedRevision: other.revision,
+      clientActionId: randomUUID(),
+    },
+  );
+  other = await otherActorPost(
+    page,
+    `/api/v1/daily-lessons/${other.id}/actions`,
+    {
+      action: "continue",
+      stepId: other.currentStep!.id,
+      expectedRevision: other.revision,
+      clientActionId: randomUUID(),
+    },
+  );
+  expect(other.status).toBe("completed");
+  let starts = 0;
+  let reads = 0;
+  page.on("request", request => {
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/v1/daily-lessons" && request.method() === "POST") starts++;
+    if (path === "/api/v1/daily-lessons/current") reads++;
+  });
+  await page.route("**/api/v1/daily-lessons/current", route => route.fulfill({
+    status: 503, contentType: "application/problem+json",
+    body: JSON.stringify({detail:"Remaining words unavailable."}),
+  }), {times:1});
+  const rejected = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/api/v1/daily-lessons",
+  );
+  await page.getByRole("button", { name: "Start review", exact: true }).click();
+  expect((await rejected).status()).toBe(409);
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Remaining words unavailable.");
+  await page.getByRole("button", {name:"Load saved progress",exact:true}).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "All available reviews finished",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Discover words", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+  expect(starts).toBe(1);
+  expect(reads).toBe(2);
+});
+
+test("legacy no-due reconciliation resumes an active session even when the fresh due count is zero", async ({
+  page,
+}) => {
+  await learner(page, 1);
+  await page.goto("/reviews");
+  const active = await otherActorPost(page, "/api/v1/daily-lessons");
+  // A concurrent actor can create a saved session after the rejected Start.
+  // This bounded transport case supplies that real fixture session with zero
+  // currently due words; its snapshot still needs to remain resumable.
+  await page.route(
+    "**/api/v1/daily-lessons",
+    (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/problem+json",
+        body: JSON.stringify({
+          detail: "No words are due. Discover a word to start learning.",
+        }),
+      }),
+    { times: 1 },
+  );
+  await page.route(
+    "**/api/v1/daily-lessons/current",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ session: active, dueCount: 0 }),
+      }),
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "Start review", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review word 1", exact: true }),
+  ).toBeFocused();
+  await expect(page).toHaveURL(
+    new RegExp(`/review/session\\?lesson=${active.id}$`),
+  );
+  await expect(page.getByRole("radio")).toHaveCount(4);
+  await expect(
+    page.getByRole("heading", {
+      name: /^(?:You’re ready for new words|All available reviews finished|Today’s review complete)$/,
+      exact: true,
+    }),
+  ).toHaveCount(0);
+});
+
+
+for (const draft of [
+ { now:"2026-03-08T04:30:00Z", localDate:"2026-03-07", label:"In 2 days", exact:/March 9, 2026/ },
+ { now:"2026-11-01T04:30:00Z", localDate:"2026-11-01", label:"Today", exact:/November 1, 2026/ },
+]) {
+ test(`draft 1d schedule uses the learner calendar across DST: ${draft.label}`, async ({page,baseURL}) => {
+  await page.clock.install({time:new Date(draft.now)});
+  await start(page,1);
+  await page.context().addCookies([
+   {name:"e2e_review_timezone",value:"America/New_York",url:baseURL!},
+   {name:"e2e_review_local_date",value:draft.localDate,url:baseURL!},
+  ]);
+  await page.getByRole("radio",{name:"definition for review word 1",exact:true}).check();
+  await page.getByRole("button",{name:"Check answer",exact:true}).click();
+  const schedule=reviewSchedule(page);
+  await schedule.click();
+  // Index 1 is the preserved 1d duration; both its menu name and selected
+  // trigger include the exact prospective local date.
+  const oneDay=page.getByRole("menu",{name:"Next review",exact:true}).getByRole("menuitemradio").nth(1);
+  await expect(oneDay).toContainText(draft.label);
+  await expect(oneDay).toHaveAccessibleName(draft.exact);
+  await oneDay.click();
+  await expect(schedule.locator(".review-schedule-value")).toHaveText(draft.label);
+  await expect(schedule).toHaveAccessibleName(draft.exact);
+  const committed=page.waitForRequest(request=>request.method()==="POST" && /\/daily-lessons\/[^/]+\/actions$/.test(new URL(request.url()).pathname));
+  await page.getByRole("button",{name:"Continue",exact:true}).click();
+  expect((await committed).postDataJSON().nextReview).toBe("1d");
+ });
+}

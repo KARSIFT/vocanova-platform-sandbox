@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	ErrInvalid  = errors.New("invalid discovery position")
-	ErrConflict = errors.New("discovery position changed")
-	ErrNotFound = errors.New("active learner not found")
+	ErrAccountChanged = errors.New("discovery account changed")
+	ErrInvalid        = errors.New("invalid discovery position")
+	ErrConflict       = errors.New("discovery position changed")
+	ErrNotFound       = errors.New("active learner not found")
 )
 
 type Position struct {
@@ -23,15 +24,16 @@ type Position struct {
 	Revision       int64  `json:"revision" minimum:"1"`
 }
 type Update struct {
-	CatalogVersion   string `json:"catalogVersion" minLength:"1" maxLength:"64"`
-	Band             int    `json:"band" minimum:"1" maximum:"100"`
-	Rank             int    `json:"rank" minimum:"1" maximum:"10000"`
-	Active           bool   `json:"active"`
-	ExpectedRevision int64  `json:"expectedRevision" minimum:"0"`
+	ExpectedAccountID uuid.UUID `json:"expectedAccountId" format:"uuid"`
+	CatalogVersion    string    `json:"catalogVersion" minLength:"1" maxLength:"64"`
+	Band              int       `json:"band" minimum:"1" maximum:"100"`
+	Rank              int       `json:"rank" minimum:"1" maximum:"10000"`
+	Active            bool      `json:"active"`
+	ExpectedRevision  int64     `json:"expectedRevision" minimum:"0"`
 }
 
 func (u Update) Validate() error {
-	if u.CatalogVersion != knowledgecatalog.CatalogVersion || u.Rank < 1 || u.Rank > knowledgecatalog.TotalWords || u.Band != (u.Rank-1)/knowledgecatalog.BandSize+1 || u.ExpectedRevision < 0 {
+	if u.ExpectedAccountID == uuid.Nil || u.CatalogVersion != knowledgecatalog.CatalogVersion || u.Rank < 1 || u.Rank > knowledgecatalog.TotalWords || u.Band != (u.Rank-1)/knowledgecatalog.BandSize+1 || u.ExpectedRevision < 0 {
 		return ErrInvalid
 	}
 	return nil
@@ -56,6 +58,11 @@ func (s *Service) Put(ctx context.Context, user uuid.UUID, u Update) (*Position,
 	}
 	if err := u.Validate(); err != nil {
 		return nil, err
+	}
+	// The request identity is immutable: this comparison and the write use the
+	// same authenticated owner, without a separate identity preflight.
+	if u.ExpectedAccountID != user {
+		return nil, ErrAccountChanged
 	}
 	return s.repo.Put(ctx, user, u)
 }

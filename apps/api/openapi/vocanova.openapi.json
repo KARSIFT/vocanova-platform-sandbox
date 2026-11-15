@@ -6941,6 +6941,10 @@
             "minLength": 1,
             "type": "string"
           },
+          "expectedAccountId": {
+            "format": "uuid",
+            "type": "string"
+          },
           "expectedRevision": {
             "format": "int64",
             "minimum": 0,
@@ -6954,6 +6958,7 @@
           }
         },
         "required": [
+          "expectedAccountId",
           "catalogVersion",
           "band",
           "rank",

@@ -306,7 +306,6 @@ export async function handleDailyDiscovery({
       return send(200, active);
     }
     const additional = url.searchParams.get("additional") === "true";
-    if (goal().complete && !additional) return send(409, { detail: "Today's review goal is complete." });
     const words = dueWords().items.slice(0, additional ? state.dailyGoalTarget : goal().remaining);
     if (!words.length) {
       jsonResponse(
@@ -314,7 +313,7 @@ export async function handleDailyDiscovery({
         409,
         {
           status: 409,
-          detail: "No words are due. Discover a word to start learning.",
+          detail: "No required reviews are available. Check today’s goal or choose additional review.",
         },
         { "Content-Type": "application/problem+json" },
       );

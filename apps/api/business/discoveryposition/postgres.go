@@ -51,6 +51,9 @@ func (r *PostgreSQLRepository) Put(ctx context.Context, user uuid.UUID, u Update
 	if err := u.Validate(); err != nil {
 		return nil, err
 	}
+	if u.ExpectedAccountID != user {
+		return nil, ErrAccountChanged
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err

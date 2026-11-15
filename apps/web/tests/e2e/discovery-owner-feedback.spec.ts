@@ -72,3 +72,44 @@ test("optional position failures leave navigation usable and allow explicit retr
  await page.getByRole("button",{name:"Save this place again",exact:true}).click();
  await expect(page.getByRole("status",{name:"Discovery position"})).toHaveText("Your place is saved.");
 });
+
+
+for (const optionalReadFails of [false, true]) {
+ test(`stale discovery tab cannot save or retry into a switched account (optional read fails: ${optionalReadFails})`, async ({page, context, baseURL}) => {
+  const cookies = (session: string, alternate: boolean) => [
+   {name: "vocanova_session", value: session, url: baseURL!},
+   {name: "e2e_user_id", value: alternate ? "alternate" : "default", url: baseURL!},
+   {name: "e2e_position_read_failure", value: optionalReadFails ? "1" : "0", url: baseURL!},
+  ];
+  await context.addCookies(cookies(`switch-a-${randomUUID()}`, false));
+  let failedReads = 0;
+  page.on("response", response => {
+    if (new URL(response.url()).pathname === "/api/v1/discovery-position" && response.request().method() === "GET" && response.status() === 503) failedReads++;
+  });
+  await page.goto("/discovery?band=44&word=4330&active=1&revisit=1");
+  await expect(page.getByRole("status", {name: "Discovery position"})).toContainText(optionalReadFails ? "could not be saved" : "Your place is saved.");
+  if (optionalReadFails) expect(failedReads).toBeGreaterThan(0);
+  const other = await context.newPage();
+  await context.addCookies(cookies(`switch-b-${randomUUID()}`, true));
+  await context.addCookies([{name:"e2e_position_read_failure",value:"0",url:baseURL!}]);
+  await other.goto("/discovery?band=12&word=1150&active=1&revisit=1");
+  await expect(other.getByRole("status", {name: "Discovery position"})).toHaveText("Your place is saved.");
+  // Read through the observed API origin; this is the same browser cookie jar.
+  const apiURL = new URL("/api/v1/discovery-position", process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`).href;
+  const before = await other.evaluate(async url => (await (await fetch(url, {credentials:"include"})).json()).position, apiURL);
+  const rejected = page.waitForResponse(response => new URL(response.url()).pathname === "/api/v1/discovery-position" && response.request().method() === "PUT");
+  await page.getByRole("button", {name:"Previous word",exact:true}).click();
+  if (optionalReadFails) await page.getByRole("button", {name:"Save this place again",exact:true}).click();
+  const response = await rejected;
+  const after = await other.evaluate(async url => (await (await fetch(url, {credentials:"include"})).json()).position, apiURL);
+  expect(after).toEqual(before);
+  expect(response.status()).toBe(403);
+  expect(response.request().postDataJSON().expectedAccountId).toBe("00000000-0000-0000-0000-000000000001");
+  await expect(page.getByRole("status",{name:"Discovery position"})).toContainText("Your account changed");
+  await expect(page.getByRole("button",{name:"Save this place again",exact:true})).toHaveCount(0);
+  await expect(page.getByRole("link",{name:"Reload discovery",exact:true})).toBeVisible();
+  await page.getByRole("button", {name:"Previous word",exact:true}).click();
+  await expect(page.getByRole("status",{name:"Discovery position"})).toContainText("Your account changed");
+  await other.close();
+ });
+}

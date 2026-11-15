@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { dailyReviewView, relativeReviewDate, reviewGoalDayChanged } from "../../src/app/(app)/reviews/_components/daily-review-view";
+import { draftReviewDate, dailyReviewView, relativeReviewDate, reviewGoalDayChanged } from "../../src/app/(app)/reviews/_components/daily-review-view";
 
 describe("authoritative daily review view", () => {
   it("uses a target of 15 without replacing effort with successful answers", () => {
@@ -62,5 +62,22 @@ describe("overnight goal freshness", () => {
   it("ignores malformed legacy dates and zones", () => {
     assert.equal(reviewGoalDayChanged({ localDate: "bad", timeZone: "UTC" }), false);
     assert.equal(reviewGoalDayChanged({ localDate: "2026-11-15", timeZone: "invalid" }), false);
+  });
+});
+
+
+describe("draft schedule preserves elapsed durations across DST", () => {
+  it("labels spring 1d as two calendar dates later with an exact date", () => {
+    const draft = draftReviewDate("1d", "America/New_York", new Date("2026-03-08T04:30:00Z"));
+    assert.equal(draft?.label, "In 2 days");
+    assert.match(draft!.exact, /March 9, 2026/);
+  });
+  it("labels autumn 1d as today with an exact date", () => {
+    const draft = draftReviewDate("1d", "America/New_York", new Date("2026-11-01T04:30:00Z"));
+    assert.equal(draft?.label, "Today");
+    assert.match(draft!.exact, /November 1, 2026/);
+  });
+  it("does not invent a calendar label without a learner timezone", () => {
+    assert.equal(draftReviewDate("1d", undefined), undefined);
   });
 });
