@@ -33,13 +33,13 @@ async function seed(page: Page, count: number) {
 }
 const completed = (page: Page) =>
   page.getByRole("heading", {
-    name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+    name: /^(?:Review saved|Review set complete|You’ve finished your review|All available reviews finished|Today’s review complete)$/,
     level: 1,
   });
 const actions = "**/api/v1/daily-lessons/*/actions";
 
 test.describe("Review completion summary", () => {
-  test("counts 51 words across bounded lessons only after confirmations", async ({
+  test("counts 51 words in a goal-sized lesson only after confirmations", async ({
     page,
   }) => {
     test.setTimeout(90_000);
@@ -53,18 +53,12 @@ test.describe("Review completion summary", () => {
         }),
       ).toBeVisible();
       await answerReviewWord(page, `definition for review word ${index}`);
-      if (index % 10 === 0 || index === 51) {
+      if (index === 51) {
         await expect(completed(page)).toBeFocused();
-        await expect(
-          page.getByText(
-            `${index === 51 ? 1 : 10} ${index === 51 ? "word" : "words"} remembered for today.`,
-            { exact: true },
-          ),
-        ).toBeVisible();
-        if (index < 51)
-          await page
-            .getByRole("button", { name: "Keep reviewing", exact: true })
-            .click();
+        await expect(page.getByText("51 of 51 words reviewed today", { exact: true })).toBeVisible();
+      } else {
+        await expect(completed(page)).toHaveCount(0);
+        await expect(page.getByText(`${index} of 51 words reviewed today`, { exact: true })).toBeVisible();
       }
     }
     await page.goto("/home");
@@ -72,7 +66,7 @@ test.describe("Review completion summary", () => {
       page
         .getByRole("region", { name: "Review words", exact: true })
         .getByText(/^Reviewed today:/),
-    ).toHaveText("Reviewed today: 51");
+    ).toHaveText("Reviewed today: 51 of 51");
   });
 
   test("does not count a rejected answer before its successful keyboard retry", async ({
@@ -125,7 +119,7 @@ test.describe("Review completion summary", () => {
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(completed(page)).toBeFocused();
     await expect(
-      page.getByText("1 word remembered for today.", { exact: true }),
+      page.getByText("1 of 20 words reviewed today", { exact: true }),
     ).toBeVisible();
   });
 
@@ -152,7 +146,7 @@ test.describe("Review completion summary", () => {
     await page.getByRole("button", { name: "Retry same answer" }).click();
     await expect(completed(page)).toBeFocused();
     await expect(
-      page.getByText("1 word remembered for today.", { exact: true }),
+      page.getByText("1 of 20 words reviewed today", { exact: true }),
     ).toBeVisible();
   });
 

@@ -14,9 +14,11 @@ import { deviceSpeech } from "@/lib/speech";
 export function StartDailyLessonButton({
   className,
   label = "Start today’s lesson",
+  additional = false,
 }: {
   className?: string;
   label?: string;
+  additional?: boolean;
 }) {
   const router = useRouter();
   const key = useRef<string | null>(null);
@@ -34,9 +36,13 @@ export function StartDailyLessonButton({
     try {
       const token = await getOrRefreshCSRFToken();
       if (!token) throw new Error("session not ready");
-      const { data } = await createApiClient().startDailyLesson(key.current, {
-        headers: { "X-CSRF-Token": token },
-      });
+      const { data } = await createApiClient().startDailyLesson(
+        key.current,
+        {
+          headers: { "X-CSRF-Token": token },
+        },
+        { additional },
+      );
       router.push(`/review/session?lesson=${encodeURIComponent(data.id)}`);
     } catch (cause) {
       if (cause instanceof ApiResponseError && cause.status === 409) {

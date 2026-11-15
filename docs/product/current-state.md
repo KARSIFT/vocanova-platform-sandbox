@@ -1,5 +1,13 @@
 # Vocanova current product state
 
+## Review and discovery owner feedback — 15 November 2026
+
+The [delivery record](review-discovery-feedback-2026-11-15.md) covers effort-based
+daily review goals, bounded mixed question modes, post-answer meanings/pictures,
+relative schedules, authenticated root routing, richer range selection and durable
+exact-word discovery resume. Implementation/testing evidence is separate from
+the consolidated PR's eventual hosted checks and deployment identity.
+
 ## Shared component consistency — 14 November 2026
 
 The [component delivery](component-consistency-2026-11-14.md) consolidates ordinary

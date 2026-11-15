@@ -53,6 +53,24 @@ export async function handleDailyDiscovery({
   state.mapReceipts ??= new Map();
   state.dailyDeferredMeaningIds ??= new Set();
   state.dailyReviewSchedules ??= new Map();
+  state.dailyEffortWordIds ??= new Set();
+  const requestedTarget = Number(cookies.e2e_daily_review_target);
+  state.dailyGoalTarget ??= Number.isInteger(requestedTarget) && requestedTarget >= 5 && requestedTarget <= 100
+    ? requestedTarget : state.settings.dailyReviewTarget;
+  const localDate = /^\d{4}-\d{2}-\d{2}$/u.test(cookies.e2e_review_local_date ?? "")
+    ? cookies.e2e_review_local_date
+    : new Intl.DateTimeFormat("en-CA", { timeZone: cookies.e2e_review_timezone || "UTC", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  if (state.dailyGoalLocalDate && state.dailyGoalLocalDate !== localDate) state.dailyEffortWordIds.clear();
+  state.dailyGoalLocalDate = localDate;
+  const goal = () => ({
+    localDate,
+    timeZone: cookies.e2e_review_timezone || "UTC",
+    target: state.dailyGoalTarget,
+    reviewed: Math.min(state.dailyGoalTarget, state.dailyEffortWordIds.size),
+    remaining: Math.max(0, state.dailyGoalTarget - state.dailyEffortWordIds.size),
+    complete: state.dailyEffortWordIds.size >= state.dailyGoalTarget,
+    ...(state.dailyReviewSchedules.size ? { nextReviewAt: [...state.dailyReviewSchedules.values()].map(value => value.nextReviewAt).filter(Boolean).sort()[0] } : {}),
+  });
   // The complete-map case avoids 10,000 setup writes while keeping its range
   // metadata and individual word states consistent. Ordinary tests use CAS.
   const completeMap = cookies.e2e_knowledge_map === "complete";
@@ -220,10 +238,11 @@ export async function handleDailyDiscovery({
     if (cookies.e2e_daily_lesson_auth === "expired")
       return send(401, { detail: "Session expired" });
     return send(200, {
+      goal: goal(),
       session:
-        [...state.dailySessions.values()].find(
+        ((active) => active ? { ...active, goal: goal() } : null)([...state.dailySessions.values()].find(
           (s) => s.status === "in_progress",
-        ) ?? null,
+        )),
       dueCount: dueWords().totalCount,
     });
   }
@@ -232,7 +251,7 @@ export async function handleDailyDiscovery({
   );
   if (req.method === "GET" && sessionMatch)
     return state.dailySessions.has(sessionMatch[1])
-      ? send(200, state.dailySessions.get(sessionMatch[1]))
+      ? send(200, { ...state.dailySessions.get(sessionMatch[1]), goal: goal() })
       : send(404, { detail: "Lesson not found" });
   if (req.method !== "POST") return send(404, { detail: "Not found" });
   if (!checkCsrf(req, cookies, res, logLine)) return true;
@@ -286,14 +305,15 @@ export async function handleDailyDiscovery({
       state.dailyStartReceipts.set(key, active.id);
       return send(200, active);
     }
-    const words = dueWords().items.slice(0, 10);
+    const additional = url.searchParams.get("additional") === "true";
+    const words = dueWords().items.slice(0, additional ? state.dailyGoalTarget : goal().remaining);
     if (!words.length) {
       jsonResponse(
         res,
         409,
         {
           status: 409,
-          detail: "No words are due. Discover a word to start learning.",
+          detail: "No required reviews are available. Check today’s goal or choose additional review.",
         },
         { "Content-Type": "application/problem+json" },
       );
@@ -301,6 +321,7 @@ export async function handleDailyDiscovery({
     }
     const now = new Date().toISOString();
     const session = {
+      goal: goal(),
       attribution,
       id: randomUUID(),
       status: "in_progress",
@@ -388,6 +409,7 @@ export async function handleDailyDiscovery({
     const correct = body.action === "answer" && body.choiceId === "meaning-a";
     state.dailyDeferredMeaningIds.add(word.meaningId);
     if (body.action === "answer") {
+      if (!body.wasHintUsed) state.dailyEffortWordIds.add(word.wordId ?? word.meaningId);
       session.questionsAnswered += 1;
       if (correct && !retries.has(word.meaningId))
         session.firstAnswersCorrect += 1;
@@ -423,6 +445,7 @@ export async function handleDailyDiscovery({
     session.canContinue = true;
   } else return send(400, { detail: "Invalid action" });
   session.revision += 1;
+  session.goal = goal();
   session.updatedAt = new Date().toISOString();
   const result = structuredClone(session);
   state.dailyReceipts.set(key, { fingerprint, result });

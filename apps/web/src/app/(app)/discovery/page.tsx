@@ -9,6 +9,11 @@ import {
   validBand,
   type KnowledgeMapData,
 } from "../knowledge-map/models";
+import {
+  explicitDiscoverySelection,
+  resumableDiscoveryPosition,
+  type SavedDiscoveryPosition,
+} from "./discovery-position";
 import { Discovery } from "./discovery";
 import { DiscoveryFinished } from "./discovery-finished";
 import styles from "../knowledge-map/workspace.module.css";
@@ -19,10 +24,17 @@ export default async function DiscoveryPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = await searchParams;
-  const band = validBand(query.band);
-  const active = query.active === "1";
+  let band = validBand(query.band);
+  let active = query.active === "1";
   const revisit = query.revisit === "1";
-  const requestedRank = typeof query.word === "string" ? Number(query.word) : 0;
+  let requestedRank = typeof query.word === "string" ? Number(query.word) : 0;
+  if (
+    !query.band &&
+    Number.isInteger(requestedRank) &&
+    requestedRank >= 1 &&
+    requestedRank <= 10000
+  )
+    band = Math.floor((requestedRank - 1) / 100) + 1;
   const returnQuery = new URLSearchParams();
   if (typeof query.band === "string") returnQuery.set("band", query.band);
   if (typeof query.word === "string") returnQuery.set("word", query.word);
@@ -33,12 +45,49 @@ export default async function DiscoveryPage({
   let initialRank: number | undefined;
   let explicitlySelected = false;
   let changedElsewhere = false;
+  let savedPosition: SavedDiscoveryPosition | null = null;
+  let resumed = false;
+  let accountId: string | null = null;
+  let positionRevision: number | null = null;
   try {
     const client = await createServerApiClient();
-    const current = (await client.getKnowledgeMap(band)).data;
-    const explicitWord = revisit
-      ? current.currentBand.items.find((word) => word.rank === requestedRank)
-      : undefined;
+    // Capture the rendered owner independently of the optional preference read.
+    // All server requests use this request's cookie snapshot.
+    accountId = (await client.getCurrentUser()).data.id ?? null;
+    try {
+      savedPosition = (await client.getDiscoveryPosition()).data.position;
+      positionRevision = savedPosition?.revision ?? 0;
+    } catch (error) {
+      if (error instanceof ApiResponseError && error.status === 401)
+        throw error;
+      // A navigation preference outage must not prevent discovery.
+    }
+    const explicit = explicitDiscoverySelection(query);
+    const savedBand = savedPosition?.band;
+    if (
+      !explicit &&
+      savedBand &&
+      Number.isInteger(savedBand) &&
+      savedBand >= 1 &&
+      savedBand <= 100
+    )
+      band = savedBand;
+    let current = (await client.getKnowledgeMap(band)).data;
+    const resume = !explicit
+      ? resumableDiscoveryPosition(savedPosition, current)
+      : null;
+    if (resume) {
+      resumed = true;
+      requestedRank = resume.rank;
+      active = resume.active;
+    } else if (!explicit && band !== 1) {
+      band = 1;
+      current = (await client.getKnowledgeMap(band)).data;
+    }
+    const explicitWord =
+      revisit || Boolean(resume)
+        ? current.currentBand.items.find((word) => word.rank === requestedRank)
+        : undefined;
     const target = explicitWord ? null : nextDiscoveryTarget(current);
     data =
       target && target.band !== band
@@ -84,11 +133,14 @@ export default async function DiscoveryPage({
     );
   return (
     <Discovery
-      key={`${data.catalogVersion}:${returnTo}:${data.currentBand.number}:${initialRank}`}
+      key={`${accountId}:${data.catalogVersion}:${returnTo}:${data.currentBand.number}:${initialRank}`}
+      accountId={accountId}
       initialData={data}
       initialRank={initialRank}
       initiallyActive={active}
       initiallyRevisiting={explicitlySelected}
+      initialPositionRevision={positionRevision}
+      initiallyResumed={resumed}
     />
   );
 }

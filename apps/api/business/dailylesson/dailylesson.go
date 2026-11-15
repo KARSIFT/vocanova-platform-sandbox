@@ -4,18 +4,22 @@ package dailylesson
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/meaningmedia"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/meaningidentity"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/revieweligibility"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"io"
+	"math/big"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -29,21 +33,35 @@ var (
 	ErrContentUnavailable = errors.New("meaning choices unavailable")
 )
 
+type DailyReviewGoal struct {
+	LocalDate    string     `json:"localDate"`
+	TimeZone     string     `json:"timeZone"`
+	Target       int        `json:"target"`
+	Reviewed     int        `json:"reviewed"`
+	Remaining    int        `json:"remaining"`
+	Complete     bool       `json:"complete"`
+	NextReviewAt *time.Time `json:"nextReviewAt,omitempty"`
+}
+
 type DailyLessonChoice struct {
-	ID   string `json:"id"`
-	Text string `json:"text"`
+	Image *meaningmedia.Image `json:"image,omitempty"`
+	ID    string              `json:"id"`
+	Text  string              `json:"text"`
 }
 type DailyLessonStep struct {
+	Context                string   `json:"context,omitempty"`
 	PronunciationMeaningID string   `json:"pronunciationMeaningId,omitempty" doc:"Selected meaning used only to resolve pronunciation; no answer key."`
 	PronunciationRevision  string   `json:"pronunciationRevision,omitempty"`
 	ID                     string   `json:"id"`
-	Kind                   string   `json:"kind" enum:"meaning_choice"`
+	Kind                   string   `json:"kind" enum:"meaning_choice,picture_choice,gap_choice"`
 	WordText               string   `json:"wordText"`
 	WordSlug               string   `json:"wordSlug"`
 	PartOfSpeech           string   `json:"partOfSpeech"`
 	Choices                []Choice `json:"choices"`
 }
 type DailyLessonFeedback struct {
+	WordSlug         string     `json:"wordSlug,omitempty"`
+	MeaningRevision  string     `json:"meaningRevision,omitempty"`
 	StepID           string     `json:"stepId"`
 	Correct          bool       `json:"correct"`
 	Answer           string     `json:"answer"`
@@ -59,6 +77,7 @@ type DailyLessonFeedback struct {
 	ReviewStep       *int       `json:"reviewStep,omitempty"`
 }
 type DailyLessonSession struct {
+	Goal                *DailyReviewGoal             `json:"goal,omitempty"`
 	Attribution         knowledgecatalog.Attribution `json:"attribution"`
 	ID                  string                       `json:"id"`
 	Status              string                       `json:"status" enum:"in_progress,completed"`
@@ -76,8 +95,9 @@ type DailyLessonSession struct {
 	CompletedAt         *time.Time                   `json:"completedAt,omitempty"`
 }
 type DailyLessonCurrent struct {
-	Session  *Session `json:"session"`
-	DueCount int      `json:"dueCount"`
+	Goal     *DailyReviewGoal `json:"goal,omitempty"`
+	Session  *Session         `json:"session"`
+	DueCount int              `json:"dueCount"`
 }
 type DailyLessonAction struct {
 	StepID           string `json:"stepId" minLength:"1" maxLength:"100"`
@@ -99,6 +119,8 @@ type Action = DailyLessonAction
 
 type word struct {
 	UserWordID, MeaningID, WordID string
+	WordText                      string
+	WordSlug                      string
 	ReviewCount                   int
 	Public                        Step
 	AnswerID, Definition          string
@@ -106,6 +128,8 @@ type word struct {
 	KnowledgeUpdatedAt            *time.Time
 }
 type state struct {
+	Goal                                                                            *DailyReviewGoal
+	Additional                                                                      bool
 	ID, UserID                                                                      uuid.UUID
 	Words                                                                           []word
 	Queue                                                                           []int
@@ -139,13 +163,20 @@ func fingerprint(v any) string {
 // historical sessions that allowed multiple uses of a canonical word. New session
 // selection already contains one use per canonical word.
 func project(st *state) *Session {
-	out := &Session{Attribution: knowledgecatalog.SourceAttribution(), ID: st.ID.String(), Status: "in_progress", Revision: st.Revision, CompletedWords: st.CompletedWords, TotalWords: len(st.Words), FirstAnswersCorrect: st.FirstAnswersCorrect, QuestionsAnswered: st.QuestionsAnswered, CreditedToday: st.CreditedToday, Feedback: st.Feedback, CanContinue: st.Feedback != nil, CreatedAt: st.CreatedAt, UpdatedAt: st.UpdatedAt, CompletedAt: st.CompletedAt}
+	out := &Session{Goal: st.Goal, Attribution: knowledgecatalog.SourceAttribution(), ID: st.ID.String(), Status: "in_progress", Revision: st.Revision, CompletedWords: st.CompletedWords, TotalWords: len(st.Words), FirstAnswersCorrect: st.FirstAnswersCorrect, QuestionsAnswered: st.QuestionsAnswered, CreditedToday: st.CreditedToday, Feedback: st.Feedback, CanContinue: st.Feedback != nil, CreatedAt: st.CreatedAt, UpdatedAt: st.UpdatedAt, CompletedAt: st.CompletedAt}
 	if st.CompletedAt != nil {
 		out.Status = "completed"
 	} else if len(st.Queue) > 0 {
 		step := st.Words[st.Queue[0]].Public
-		step.PronunciationMeaningID = st.Words[st.Queue[0]].MeaningID
-		step.PronunciationRevision = meaningidentity.Revision(step.PronunciationMeaningID, step.WordText, step.PartOfSpeech, st.Words[st.Queue[0]].Definition)
+		if step.Kind != "gap_choice" && step.Kind != "picture_choice" {
+			step.PronunciationMeaningID = st.Words[st.Queue[0]].MeaningID
+			step.PronunciationRevision = meaningidentity.Revision(step.PronunciationMeaningID, step.WordText, step.PartOfSpeech, st.Words[st.Queue[0]].Definition)
+		} else {
+			// A target pronunciation identity would identify the matching
+			// picture option. Also strip any identity in older frozen steps.
+			step.PronunciationMeaningID = ""
+			step.PronunciationRevision = ""
+		}
 		out.CurrentStep = &step
 	}
 	return out
@@ -172,19 +203,28 @@ func lockUser(ctx context.Context, tx *sql.Tx, u uuid.UUID) error {
 	return e
 }
 func (s *Service) Get(ctx context.Context, u, id uuid.UUID) (*Session, error) {
-	tx, e := s.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	tx, e := s.db.BeginTx(ctx, nil)
 	if e != nil {
 		return nil, e
 	}
 	defer tx.Rollback()
+	if e = lockUser(ctx, tx, u); e != nil {
+		return nil, e
+	}
+	now := s.clock.Now().UTC()
+	goal, e := s.goal(ctx, tx, u, now)
+	if e != nil {
+		return nil, e
+	}
 	st, e := scan(tx.QueryRowContext(ctx, "SELECT s.state FROM daily_lesson_sessions s JOIN users u ON u.id=s.user_id WHERE s.user_id=$1 AND s.id=$2 AND u.status='active' AND u.deleted_at IS NULL", u, id))
 	if e != nil {
 		return nil, e
 	}
-	if e = pruneQueue(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+	st.Goal = goal
+	if e = pruneQueue(ctx, tx, st, now); e != nil {
 		return nil, e
 	}
-	if e = refreshCredits(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+	if e = refreshCredits(ctx, tx, st, now); e != nil {
 		return nil, e
 	}
 	return project(st), tx.Commit()
@@ -246,6 +286,17 @@ func pruneQueue(ctx context.Context, tx *sql.Tx, st *state, now time.Time) error
 		queue = append(queue, index)
 		seen[key] = true
 	}
+	// Existing snapshots retain denominator and question identity. When the
+	// required allowance is exhausted, unasked excess cards become passive skips.
+	if st.Goal != nil && !st.Additional {
+		allowance := st.Goal.Remaining
+		if st.Feedback != nil {
+			allowance++
+		}
+		if len(queue) > allowance {
+			queue = queue[:allowance]
+		}
+	}
 	st.Queue = queue
 	pending := map[string]bool{}
 	for _, index := range queue {
@@ -264,11 +315,19 @@ func pruneQueue(ctx context.Context, tx *sql.Tx, st *state, now time.Time) error
 }
 
 func (s *Service) Current(ctx context.Context, u uuid.UUID) (*Current, error) {
-	tx, e := s.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	tx, e := s.db.BeginTx(ctx, nil)
 	if e != nil {
 		return nil, e
 	}
 	defer tx.Rollback()
+	if e = lockUser(ctx, tx, u); e != nil {
+		return nil, e
+	}
+	now := s.clock.Now().UTC()
+	goal, e := s.goal(ctx, tx, u, now)
+	if e != nil {
+		return nil, e
+	}
 	var active bool
 	if e = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND status='active' AND deleted_at IS NULL)", u).Scan(&active); e != nil {
 		return nil, e
@@ -276,20 +335,21 @@ func (s *Service) Current(ctx context.Context, u uuid.UUID) (*Current, error) {
 	if !active {
 		return nil, ErrNotFound
 	}
-	out := &Current{}
+	out := &Current{Goal: goal}
 	st, e := scan(tx.QueryRowContext(ctx, "SELECT state FROM daily_lesson_sessions WHERE user_id=$1 AND status='in_progress'", u))
 	if e == nil {
-		if e = pruneQueue(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+		st.Goal = goal
+		if e = pruneQueue(ctx, tx, st, now); e != nil {
 			return nil, e
 		}
-		if e = refreshCredits(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+		if e = refreshCredits(ctx, tx, st, now); e != nil {
 			return nil, e
 		}
 		out.Session = project(st)
 	} else if !errors.Is(e, ErrNotFound) {
 		return nil, e
 	}
-	if e = tx.QueryRowContext(ctx, "SELECT count(*)"+dueSQL(), u, s.clock.Now().UTC()).Scan(&out.DueCount); e != nil {
+	if e = tx.QueryRowContext(ctx, "SELECT count(*)"+dueSQL(), u, now).Scan(&out.DueCount); e != nil {
 		return nil, e
 	}
 	return out, tx.Commit()
@@ -347,6 +407,12 @@ func record(ctx context.Context, tx *sql.Tx, st *state, op, key, client, fp stri
 	return e
 }
 func (s *Service) Start(ctx context.Context, u uuid.UUID, key string) (*Session, error) {
+	return s.start(ctx, u, key, false)
+}
+func (s *Service) StartAdditional(ctx context.Context, u uuid.UUID, key string) (*Session, error) {
+	return s.start(ctx, u, key, true)
+}
+func (s *Service) start(ctx context.Context, u uuid.UUID, key string, additional bool) (*Session, error) {
 	if u == uuid.Nil || !validKey(key) {
 		return nil, ErrInvalid
 	}
@@ -359,14 +425,23 @@ func (s *Service) Start(ctx context.Context, u uuid.UUID, key string) (*Session,
 		return nil, e
 	}
 	fp := fingerprint(struct{}{})
+	if additional {
+		fp = fingerprint(struct{ Additional bool }{true})
+	}
 	if out, ok, e := receipt(ctx, tx, u, "start", key, key, fp, uuid.Nil); e != nil {
 		return nil, e
 	} else if ok {
 		return out, tx.Commit()
 	}
+	now := s.clock.Now().UTC()
+	goal, e := s.goal(ctx, tx, u, now)
+	if e != nil {
+		return nil, e
+	}
 	st, e := scan(tx.QueryRowContext(ctx, "SELECT state FROM daily_lesson_sessions WHERE user_id=$1 AND status='in_progress' FOR UPDATE", u))
 	if e == nil {
-		if e = pruneQueue(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+		st.Goal = goal
+		if e = pruneQueue(ctx, tx, st, now); e != nil {
 			return nil, e
 		}
 		if st.CompletedAt != nil {
@@ -374,22 +449,23 @@ func (s *Service) Start(ctx context.Context, u uuid.UUID, key string) (*Session,
 			if e = save(ctx, tx, previous); e != nil {
 				return nil, e
 			}
-			st, e = s.build(ctx, tx, u, s.clock.Now().UTC())
+			st, e = s.build(ctx, tx, u, now, goal, additional)
 			if errors.Is(e, ErrNoDue) {
 				st, e = previous, nil
 			}
 		}
 	}
 	if errors.Is(e, ErrNotFound) {
-		st, e = s.build(ctx, tx, u, s.clock.Now().UTC())
+		st, e = s.build(ctx, tx, u, now, goal, additional)
 	}
 	if e != nil {
 		return nil, e
 	}
-	if e = pruneQueue(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+	st.Goal = goal
+	if e = pruneQueue(ctx, tx, st, now); e != nil {
 		return nil, e
 	}
-	if e = refreshCredits(ctx, tx, st, s.clock.Now().UTC()); e != nil {
+	if e = refreshCredits(ctx, tx, st, now); e != nil {
 		return nil, e
 	}
 	if e = save(ctx, tx, st); e != nil {
@@ -400,12 +476,19 @@ func (s *Service) Start(ctx context.Context, u uuid.UUID, key string) (*Session,
 	}
 	return project(st), tx.Commit()
 }
-func (s *Service) build(ctx context.Context, tx *sql.Tx, u uuid.UUID, now time.Time) (*state, error) {
-	rows, e := tx.QueryContext(ctx, `SELECT uw.id,uw.meaning_id,cw.id,cw.text,cw.normalized_text,wm.part_of_speech,wm.short_definition,uw.total_review_count`+dueSQL()+` ORDER BY COALESCE(uw.next_review_at,'-infinity'::timestamptz),uw.id LIMIT 10`, u, now)
+func (s *Service) build(ctx context.Context, tx *sql.Tx, u uuid.UUID, now time.Time, goal *DailyReviewGoal, additional bool) (*state, error) {
+	limit := goal.Remaining
+	if additional {
+		limit = goal.Target
+	}
+	if limit == 0 {
+		return nil, ErrNoDue
+	}
+	rows, e := tx.QueryContext(ctx, `SELECT uw.id,uw.meaning_id,cw.id,cw.text,cw.normalized_text,wm.part_of_speech,wm.short_definition,uw.total_review_count`+dueSQL()+` ORDER BY COALESCE(uw.next_review_at,'-infinity'::timestamptz),uw.id LIMIT $3`, u, now, limit)
 	if e != nil {
 		return nil, e
 	}
-	st := &state{ID: uuid.New(), UserID: u, CreatedAt: now, UpdatedAt: now, Words: []word{}, Queue: []int{}}
+	st := &state{Goal: goal, Additional: additional, ID: uuid.New(), UserID: u, CreatedAt: now, UpdatedAt: now, Words: []word{}, Queue: []int{}}
 	for rows.Next() {
 		var w word
 		var text, slug, pos string
@@ -413,6 +496,8 @@ func (s *Service) build(ctx context.Context, tx *sql.Tx, u uuid.UUID, now time.T
 			rows.Close()
 			return nil, e
 		}
+		w.WordText = text
+		w.WordSlug = strings.ReplaceAll(slug, " ", "-")
 		w.Public = Step{ID: uuid.NewString(), Kind: "meaning_choice", WordText: text, WordSlug: strings.ReplaceAll(slug, " ", "-"), PartOfSpeech: pos, Choices: []Choice{}}
 		st.Words = append(st.Words, w)
 	}
@@ -461,12 +546,15 @@ func (s *Service) build(ctx context.Context, tx *sql.Tx, u uuid.UUID, now time.T
 			w.Public.Choices = append(w.Public.Choices, Choice{ID: uuid.NewString(), Text: definitions[j]})
 			definitions = append(definitions[:j], definitions[j+1:]...)
 		}
-		if len(w.Public.Choices) < 3 {
+		if len(w.Public.Choices) != 4 {
 			return nil, ErrContentUnavailable
 		}
-		h := sha256.Sum256([]byte(w.Public.ID))
-		j := int(h[0]) % len(w.Public.Choices)
-		w.Public.Choices[0], w.Public.Choices[j] = w.Public.Choices[j], w.Public.Choices[0]
+		if e = s.mixQuestion(ctx, tx, w, i); e != nil {
+			return nil, e
+		}
+		if e = freezeChoiceOrder(w, rand.Reader); e != nil {
+			return nil, e
+		}
 		st.Queue = append(st.Queue, i)
 	}
 	return st, nil
@@ -502,6 +590,11 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 	// One locked action owns one server time, including its nested audit,
 	// schedule, local-day credit, final queue pruning and immutable response.
 	now := s.clock.Now().UTC()
+	goal, e := s.goal(ctx, tx, u, now)
+	if e != nil {
+		return nil, e
+	}
+	st.Goal = goal
 	if e = pruneQueue(ctx, tx, st, now); e != nil {
 		return nil, e
 	}
@@ -509,6 +602,10 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 		return nil, ErrConflict
 	}
 	w := &st.Words[st.Queue[0]]
+	if w.WordText == "" {
+		w.WordText = w.Public.WordText
+		w.WordSlug = w.Public.WordSlug
+	}
 	if a.StepID != w.Public.ID {
 		return nil, ErrConflict
 	}
@@ -590,7 +687,7 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 			}
 		}
 		skipped := a.Action == "skip" || reason != ""
-		fb := &Feedback{StepID: w.Public.ID, Correct: correct && !skipped, Answer: w.Definition, Explanation: "", MeaningID: w.MeaningID, WordText: w.Public.WordText, Skipped: skipped, Reason: reason, CorrectChoiceID: w.AnswerID}
+		fb := &Feedback{WordSlug: w.WordSlug, MeaningRevision: meaningidentity.Revision(w.MeaningID, w.WordText, w.Public.PartOfSpeech, w.Definition), StepID: w.Public.ID, Correct: correct && !skipped, Answer: w.Definition, Explanation: "", MeaningID: w.MeaningID, WordText: w.WordText, Skipped: skipped, Reason: reason, CorrectChoiceID: w.AnswerID}
 		if a.Action == "answer" && reason == "" {
 			fb.SelectedChoiceID = a.ChoiceID
 		}
@@ -644,8 +741,14 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 		}
 		st.Feedback = fb
 	}
+	goal, e = s.goal(ctx, tx, u, now)
+	st.Goal = goal
+	if e != nil {
+		return nil, e
+	}
 	st.Revision++
 	st.UpdatedAt = now
+	st.Goal = goal
 	if e = pruneQueue(ctx, tx, st, now); e != nil {
 		return nil, e
 	}
@@ -715,4 +818,31 @@ func refreshCredits(ctx context.Context, tx *sql.Tx, st *state, now time.Time) e
  WHERE d.user_id=$1 AND d.daily_session_id=$2
  AND EXISTS(SELECT 1 FROM jsonb_array_elements(s.state->'Words') w WHERE w->>'MeaningID'=d.meaning_id::text AND w->>'UserWordID'=a.user_word_id::text)
  AND d.local_date=($3 AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=$1),'UTC'))::date`, st.UserID, st.ID.String(), now).Scan(&st.CreditedToday)
+}
+
+// positionChoices freezes the position once when building a new question.
+func positionChoices(choices []Choice, answerID string, slot int) {
+	// Mixed sets may place the target anywhere. Normalize its starting index
+	// before the private destination draw, so every target can occupy every slot.
+	for i := range choices {
+		if choices[i].ID == answerID {
+			choices[0], choices[i] = choices[i], choices[0]
+			break
+		}
+	}
+	choices[0], choices[slot] = choices[slot], choices[0]
+}
+
+// freezeChoiceOrder draws independently of public IDs once during construction.
+// Only the resulting opaque choice order is persisted; reads never call this.
+func freezeChoiceOrder(w *word, randomness io.Reader) error {
+	if len(w.Public.Choices) != 4 {
+		return ErrContentUnavailable
+	}
+	slot, err := rand.Int(randomness, big.NewInt(int64(len(w.Public.Choices))))
+	if err != nil {
+		return err
+	}
+	positionChoices(w.Public.Choices, w.AnswerID, int(slot.Int64()))
+	return nil
 }

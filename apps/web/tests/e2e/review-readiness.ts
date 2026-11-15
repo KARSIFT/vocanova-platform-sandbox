@@ -7,7 +7,7 @@ export function getTerminalReviewHeading(page: Page): Locator {
     .getByRole("heading", { name: "You’re ready for new words", level: 1 })
     .or(
       page.getByRole("heading", {
-        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        name: /^(?:Review saved|Review set complete|You’ve finished your review|All available reviews finished|Today’s review complete)$/,
         level: 1,
       }),
     );

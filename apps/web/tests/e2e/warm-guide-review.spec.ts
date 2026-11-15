@@ -173,7 +173,12 @@ for (const theme of ["light", "dark"] as const) {
   test(`incorrect feedback keeps its identity and actual schedule through completion (${theme})`, async ({
     page,
   }) => {
+    await page.clock.install({ time: new Date("2026-10-16T12:00:00Z") });
     await seed(page, 1, theme);
+    await page.context().addCookies([
+      { name: "e2e_review_timezone", value: "UTC", url: test.info().project.use.baseURL! },
+      { name: "e2e_review_local_date", value: "2026-10-16", url: test.info().project.use.baseURL! },
+    ]);
     await page.goto("/review");
     const started = page.waitForResponse(
       (response) =>
@@ -248,20 +253,20 @@ for (const theme of ["light", "dark"] as const) {
     const schedule = page.getByRole("button", {
       name: /^Show this word again:/,
     });
-    const dateLabel = new Intl.DateTimeFormat("en", {
-      month: "short",
-      day: "numeric",
-      timeZone: await page.evaluate(
-        () => Intl.DateTimeFormat().resolvedOptions().timeZone,
-      ),
-    }).format(new Date("2026-10-18T22:30:00.000Z"));
     await expect(schedule).toHaveAccessibleName(
-      `Show this word again: Automatic · ${dateLabel}`,
+      "Show this word again: Automatic · In 2 days. October 18, 2026 at 10:30 PM UTC",
     );
+    await expect(schedule.getByText("In 2 days", { exact: true })).toBeVisible();
     await schedule.click();
     await page
-      .getByRole("menuitemradio", { name: "In 7 days", exact: true })
+      .getByRole("menuitemradio", {
+        name: /^In 1 week\s*\. October 23, 2026 at 12:00 PM UTC$/,
+      })
       .click();
+    await expect(schedule.getByText("In 1 week", { exact: true })).toBeVisible();
+    await expect(schedule).toHaveAccessibleName(
+      "Show this word again: In 1 week. October 23, 2026 at 12:00 PM UTC",
+    );
     const continued = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
@@ -286,18 +291,23 @@ for (const theme of ["light", "dark"] as const) {
       continuedBody.clientActionId,
     );
     expect(continuedBody.clientActionId).not.toBe(body.clientActionId);
-    expect(await completeResponse.json()).toMatchObject({
+    const completed = (await completeResponse.json()) as DailyLesson;
+    expect(completed).toMatchObject({
       id: initial.id,
       status: "completed",
       firstAnswersCorrect: 0,
       creditedToday: 0,
+      goal: { reviewed: 1, target: 20, remaining: 19, complete: false },
     });
     await expect(
       page.getByRole("heading", {
-        name: "You’ve finished your review",
+        name: "All available reviews finished",
         exact: true,
       }),
     ).toBeFocused();
+    await expect(
+      page.getByText("1 of 20 words reviewed today", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByText("0 correct on the first try.", { exact: true }),
     ).toBeVisible();
@@ -308,13 +318,40 @@ for (const theme of ["light", "dark"] as const) {
         }),
       )
       .toBeVisible({ timeout: 1500 });
-    await expect
-      .soft(
-        page.getByText("Come back to see which words are ready.", {
-          exact: true,
-        }),
-      )
-      .toBeVisible({ timeout: 1500 });
+    expect(completed.goal).toMatchObject({
+      timeZone: "UTC",
+      nextReviewAt: expect.any(String),
+    });
+    const nextReviewAt = completed.goal!.nextReviewAt!;
+    expect(Number.isFinite(new Date(nextReviewAt).getTime())).toBe(true);
+    const exactNextReview = new Intl.DateTimeFormat("en", {
+      timeZone: "UTC",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).format(new Date(nextReviewAt));
+    const nextReviewTime = page.getByRole("main").locator("time");
+    await expect(nextReviewTime).toBeVisible();
+    await expect(nextReviewTime).toHaveAttribute("datetime", nextReviewAt);
+    const relativeNextReview = await nextReviewTime.evaluate(
+      (element) => element.firstChild?.textContent?.trim() ?? "",
+    );
+    expect(relativeNextReview).toMatch(
+      /^(?:Today|Tomorrow|In [1-9]\d* (?:days?|weeks?|months?))$/,
+    );
+    await expect(nextReviewTime).toHaveText(
+      `${relativeNextReview}. ${exactNextReview}`,
+    );
+    const scheduleAccessibility = await nextReviewTime.ariaSnapshot();
+    expect(scheduleAccessibility).toContain(relativeNextReview);
+    expect(scheduleAccessibility).toContain(exactNextReview);
+    await expect(nextReviewTime.locator("..")).toContainText("Next review:");
+    await expect(
+      page.getByText("Come back to see which words are ready.", { exact: true }),
+    ).toHaveCount(0);
     await expect(
       page
         .getByRole("main")

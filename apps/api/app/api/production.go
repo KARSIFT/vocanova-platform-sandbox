@@ -20,6 +20,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/dailylesson"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/dictionary"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/discoveryposition"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
@@ -885,6 +886,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	RegisterAchievements(api, achievements.NewService(achievements.NewPostgreSQLRepository(db)))
 	RegisterReviews(api, reviewsSvc, authSvc)
 	RegisterDailyLessons(api, dailylesson.NewService(db, reviewsRepo, clk), authSvc)
+	RegisterDiscoveryPosition(api, discoveryposition.NewService(discoveryposition.NewPostgreSQLRepository(db)), authSvc)
 	RegisterKnowledgeMap(api, knowledgecatalog.NewService(knowledgecatalog.NewPostgreSQLRepository(db), clk), authSvc, meaningmedia.NewService(db))
 	RegisterAIFeedback(api, aifeedbackSvc, authSvc)
 	RegisterMissions(api, missionsSvc)

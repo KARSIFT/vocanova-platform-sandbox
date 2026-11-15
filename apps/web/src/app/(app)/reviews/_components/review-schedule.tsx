@@ -3,31 +3,30 @@
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import type { DailyLessonAction } from "@vocanova/api-client";
 
+import { draftReviewDate } from "./daily-review-view";
+
 type ReviewChoice = NonNullable<DailyLessonAction["nextReview"]>;
-const intervals: { value: ReviewChoice; label: string }[] = [
-  { value: "1d", label: "In 1 day" },
-  { value: "3d", label: "In 3 days" },
-  { value: "7d", label: "In 7 days" },
-  { value: "14d", label: "In 14 days" },
-  { value: "30d", label: "In 30 days" },
-  { value: "60d", label: "In 60 days" },
-  { value: "120d", label: "In 120 days" },
-];
+const intervals = ["1d", "3d", "7d", "14d", "30d", "60d", "120d"] as const;
 
 /** A local schedule choice. Only Continue sends it to the server. */
 export function ReviewSchedule({
   value,
   automaticLabel,
+  automaticExact,
+  timeZone,
   disabled,
   onChange,
   nextAction,
 }: {
   value: ReviewChoice;
   automaticLabel: string;
+  automaticExact?: string;
+  timeZone?: string;
   disabled: boolean;
   onChange: (value: ReviewChoice) => void;
   nextAction: RefObject<HTMLButtonElement | null>;
 }) {
+  const [now, setNow] = useState(() => new Date());
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(0);
   const container = useRef<HTMLDivElement>(null);
@@ -35,9 +34,20 @@ export function ReviewSchedule({
   const options = useRef<(HTMLButtonElement | null)[]>([]);
   const menuId = useId();
   const choices = [
-    { value: "automatic" as const, label: automaticLabel },
-    ...intervals,
-    { value: "known" as const, label: "I know this word" },
+    {
+      value: "automatic" as const,
+      label: automaticLabel,
+      exact: automaticExact,
+    },
+    ...intervals.map((interval) => ({
+      value: interval,
+      // Legacy responses without a zone can promise elapsed time, not a date.
+      ...(draftReviewDate(interval, timeZone, now) ?? {
+        label: `In ${Number(interval.slice(0, -1)) * 24} hours`,
+        exact: undefined,
+      }),
+    })),
+    { value: "known" as const, label: "I know this word", exact: undefined },
   ];
   const selected = Math.max(
     0,
@@ -47,6 +57,11 @@ export function ReviewSchedule({
     value === "automatic"
       ? automaticLabel.replace(/^Automatic · /u, "")
       : choices[selected]!.label;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (disabled) setOpen(false);
@@ -74,6 +89,7 @@ export function ReviewSchedule({
     if (returnFocus) trigger.current?.focus();
   }
   function show() {
+    setNow(new Date());
     setFocused(selected);
     setOpen(true);
   }
@@ -90,7 +106,8 @@ export function ReviewSchedule({
         ref={trigger}
         type="button"
         className="review-schedule-trigger"
-        aria-label={`Show this word again: ${choices[selected]!.label}`}
+        aria-label={`Show this word again: ${choices[selected]!.label}${choices[selected]!.exact ? `. ${choices[selected]!.exact}` : ""}`}
+        title={choices[selected]!.exact}
         aria-haspopup="menu"
         aria-expanded={open && !disabled}
         aria-controls={open && !disabled ? menuId : undefined}
@@ -116,7 +133,7 @@ export function ReviewSchedule({
           <path d="m5 8 5 5 5-5" />
         </svg>
       </button>
-      <span className="sr-only" aria-live="polite" aria-atomic="true">
+      <span className="sr-only">
         {`Next review: ${choices[selected]!.label}`}
       </span>
       {open && !disabled && (
@@ -176,7 +193,12 @@ export function ReviewSchedule({
                 close(true);
               }}
             >
-              <span>{choice.label}</span>
+              <span>
+                {choice.label}
+                {choice.exact && (
+                  <span className="sr-only">. {choice.exact}</span>
+                )}
+              </span>
               <svg
                 aria-hidden="true"
                 viewBox="0 0 20 20"

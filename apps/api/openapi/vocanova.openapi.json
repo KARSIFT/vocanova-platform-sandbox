@@ -654,6 +654,9 @@
           "id": {
             "type": "string"
           },
+          "image": {
+            "$ref": "#/components/schemas/Image"
+          },
           "text": {
             "type": "string"
           }
@@ -679,6 +682,9 @@
           "dueCount": {
             "format": "int64",
             "type": "integer"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/DailyReviewGoal"
           },
           "session": {
             "$ref": "#/components/schemas/DailyLessonSession"
@@ -711,6 +717,9 @@
           "meaningId": {
             "type": "string"
           },
+          "meaningRevision": {
+            "type": "string"
+          },
           "nextReviewAt": {
             "format": "date-time",
             "type": "string"
@@ -729,6 +738,9 @@
             "type": "boolean"
           },
           "stepId": {
+            "type": "string"
+          },
+          "wordSlug": {
             "type": "string"
           },
           "wordText": {
@@ -791,6 +803,9 @@
             "format": "int64",
             "type": "integer"
           },
+          "goal": {
+            "$ref": "#/components/schemas/DailyReviewGoal"
+          },
           "id": {
             "type": "string"
           },
@@ -848,12 +863,17 @@
               "null"
             ]
           },
+          "context": {
+            "type": "string"
+          },
           "id": {
             "type": "string"
           },
           "kind": {
             "enum": [
-              "meaning_choice"
+              "meaning_choice",
+              "picture_choice",
+              "gap_choice"
             ],
             "type": "string"
           },
@@ -972,6 +992,45 @@
           "status",
           "graceApplied",
           "streak"
+        ],
+        "type": "object"
+      },
+      "DailyReviewGoal": {
+        "additionalProperties": false,
+        "properties": {
+          "complete": {
+            "type": "boolean"
+          },
+          "localDate": {
+            "type": "string"
+          },
+          "nextReviewAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "remaining": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "reviewed": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "target": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "timeZone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "localDate",
+          "timeZone",
+          "target",
+          "reviewed",
+          "remaining",
+          "complete"
         ],
         "type": "object"
       },
@@ -2606,6 +2665,9 @@
           "meaningId": {
             "type": "string"
           },
+          "meaningRevision": {
+            "type": "string"
+          },
           "nextReviewAt": {
             "type": "string"
           },
@@ -2623,6 +2685,9 @@
             "type": "boolean"
           },
           "stepId": {
+            "type": "string"
+          },
+          "wordSlug": {
             "type": "string"
           },
           "wordText": {
@@ -2735,6 +2800,38 @@
         ],
         "type": "object"
       },
+      "PersonalDataDailyReviewEffortDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "type": "string"
+          },
+          "dailySessionId": {
+            "type": "string"
+          },
+          "localDate": {
+            "type": "string"
+          },
+          "meaningId": {
+            "type": "string"
+          },
+          "reviewAttemptId": {
+            "type": "string"
+          },
+          "wordId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "wordId",
+          "meaningId",
+          "localDate",
+          "reviewAttemptId",
+          "dailySessionId",
+          "createdAt"
+        ],
+        "type": "object"
+      },
       "PersonalDataDailyReviewSuccessDTO": {
         "additionalProperties": false,
         "properties": {
@@ -2765,6 +2862,44 @@
           "createdAt"
         ],
         "type": "object"
+      },
+      "PersonalDataDiscoveryPositionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "band": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "catalogVersion": {
+            "type": "string"
+          },
+          "rank": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "catalogVersion",
+          "band",
+          "rank",
+          "active",
+          "revision",
+          "updatedAt"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
       },
       "PersonalDataExportDTO": {
         "additionalProperties": false,
@@ -2814,6 +2949,15 @@
               "null"
             ]
           },
+          "dailyReviewEffort": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataDailyReviewEffortDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "dailyReviewSuccesses": {
             "items": {
               "$ref": "#/components/schemas/PersonalDataDailyReviewSuccessDTO"
@@ -2822,6 +2966,9 @@
               "array",
               "null"
             ]
+          },
+          "discoveryPosition": {
+            "$ref": "#/components/schemas/PersonalDataDiscoveryPositionDTO"
           },
           "exportedAt": {
             "format": "date-time",
@@ -2928,6 +3075,8 @@
           }
         },
         "required": [
+          "discoveryPosition",
+          "dailyReviewEffort",
           "wordLists",
           "storySessions",
           "learningPreferences",
@@ -4325,6 +4474,42 @@
         "required": [
           "meaningId",
           "addedAt"
+        ],
+        "type": "object"
+      },
+      "Position": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "band": {
+            "format": "int64",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "catalogVersion": {
+            "type": "string"
+          },
+          "rank": {
+            "format": "int64",
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "revision": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "catalogVersion",
+          "band",
+          "rank",
+          "active",
+          "revision"
         ],
         "type": "object"
       },
@@ -6730,6 +6915,58 @@
         ],
         "type": "object"
       },
+      "Update": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/Update.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "band": {
+            "format": "int64",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "catalogVersion": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "expectedAccountId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expectedRevision": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "rank": {
+            "format": "int64",
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expectedAccountId",
+          "catalogVersion",
+          "band",
+          "rank",
+          "active",
+          "expectedRevision"
+        ],
+        "type": "object"
+      },
       "UpdateLearningPreferencesInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -8125,6 +8362,15 @@
         "operationId": "StartDailyLesson",
         "parameters": [
           {
+            "explode": false,
+            "in": "query",
+            "name": "additional",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
             "in": "header",
             "name": "Idempotency-Key",
             "required": true,
@@ -8405,6 +8651,202 @@
         "summary": "Read a locally bundled English dictionary entry without saving or grading it",
         "tags": [
           "Discovery"
+        ]
+      }
+    },
+    "/api/v1/discovery-position": {
+      "get": {
+        "operationId": "GetDiscoveryPosition",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "position": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/Position"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Read your optional discovery position",
+        "tags": [
+          "Learning"
+        ]
+      },
+      "put": {
+        "operationId": "PutDiscoveryPosition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "position": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/Position"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "position"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Save your optional discovery position",
+        "tags": [
+          "Learning"
         ]
       }
     },

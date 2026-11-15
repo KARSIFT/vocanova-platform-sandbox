@@ -97,7 +97,7 @@ test("staging onboarding helper waits for delayed completion and lets the app re
     page
       .getByRole("region", { name: "Review words", exact: true })
       .getByText(/^Reviewed today:/),
-  ).toHaveText("Reviewed today: 0");
+  ).toHaveText("Reviewed today: 0 of 15");
 });
 
 test("staging onboarding helper rejects a failed save and preserves the retry form", async ({

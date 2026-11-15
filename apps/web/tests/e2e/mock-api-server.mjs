@@ -108,6 +108,7 @@ import { handlePersonalLists } from "./personal-lists-fixture.mjs";
 import { handleStoryFeatures } from "./stories-fixture.mjs";
 import { handleLearningFeatures } from "./learning-features-fixture.mjs";
 import { handleDailyDiscovery } from "./daily-discovery-fixture.mjs";
+import { handleDiscoveryPosition } from "./discovery-position-fixture.mjs";
 import {
   dailyConversationFixture,
   dailyConversationWords,
@@ -537,7 +538,7 @@ function buildDailyMission(
   return {
     ...state.dailyMission,
     reviewTarget,
-    reviewsCompleted: state.reviewedCount,
+    reviewsCompleted: Math.min(reviewTarget, state.dailyEffortWordIds?.size ?? state.reviewedCount),
     streak,
   };
 }
@@ -899,10 +900,11 @@ const server = createServer(async (req, res) => {
     // (packages/api-client/src/index.ts) - Idempotency-Key was
     // missing here initially and only surfaced once a mutation that
     // actually uses it (save word) ran in CI, the same silent
-    // "blocked by CORS policy" failure pattern as the first gap.
+    // "blocked by CORS policy" failure pattern as the first gap. Lighthouse
+    // also forwards its two fixture-selection headers on browser mutations.
     res.setHeader(
       "Access-Control-Allow-Headers",
-      "Content-Type, X-CSRF-Token, Idempotency-Key",
+      "Content-Type, X-CSRF-Token, Idempotency-Key, X-Lighthouse-T09-Screen, X-Lighthouse-T09-Layout",
     );
     res.writeHead(204);
     res.end();
@@ -1125,6 +1127,8 @@ const server = createServer(async (req, res) => {
     jsonResponse(res, 401, { error: "unauthorized" });
     return;
   }
+
+  if (await handleDiscoveryPosition({ req, res, url, cookies, accountId: getFixtureUser(cookies).id, state: getSessionState(cookies), jsonResponse, readJsonBody, checkCsrf, logLine })) return;
 
   if (
     await handleDailyDiscovery({

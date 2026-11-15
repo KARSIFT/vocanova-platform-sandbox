@@ -386,8 +386,11 @@ for (const theme of ["light", "dark"] as const) {
 }
 
 
-test("a cached teaching picture remounts without a stale loading state", async ({ page }) => {
+test("a cached teaching picture remounts without a stale loading state", async ({ page, context }) => {
+  // This preview belongs to the public landing page; signed-in root opens Home.
+  await context.clearCookies({ name: "vocanova_session" });
   await page.goto("/");
+  await expect(page).toHaveURL(/\/$/);
   const preview = page.getByRole("region", { name: "Learning example" });
   const picture = preview.getByTestId("meaning-picture");
   const image = picture.getByRole("img");

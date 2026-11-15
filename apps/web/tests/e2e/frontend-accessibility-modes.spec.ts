@@ -109,7 +109,9 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await reflow(page);
       await page.getByRole("button", { name: "Continue", exact: true }).press("Enter");
-      await expect(page.getByRole("heading", { name: /^(?:Review saved|Review set complete|You’ve finished your review)$/ })).toBeFocused();
+      await expect(page.getByRole("heading", { name: "All available reviews finished", exact: true })).toBeFocused();
+      await expect(page.getByText("1 of 20 words reviewed today", { exact: true })).toBeVisible();
+      await expect(page.getByText("1 correct on the first try.", { exact: true })).toBeVisible();
     });
 
     test("composed Unicode profile text stays local until explicit save", async ({ page }, info) => {

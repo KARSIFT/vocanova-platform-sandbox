@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/dailylesson"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/wordknowledge"
 	"github.com/google/uuid"
@@ -32,7 +34,9 @@ func TestPostgreSQLKnownSavedWordDueConsistencyAcrossLearnerSurfaces(t *testing.
 	_, err = db.ExecContext(ctx, `INSERT INTO user_words(id,user_id,meaning_id,status,source,review_step,total_review_count,correct_review_count,next_review_at,added_at,created_at,updated_at) VALUES($1,$2,$3,'reviewing','manual',3,5,4,$4,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, saved, user, meaning, time.Now().Add(-time.Hour))
 	require.NoError(t, err)
 	learn := learning.NewPostgreSQLRepository(db)
-	review := reviews.NewPostgreSQLRepository(db, nil)
+	gam := gamification.NewService(gamification.NewRepository(db))
+	mis := missions.NewService(missions.NewRepository(db), gam)
+	review := reviews.NewPostgreSQLRepository(db, nil, reviews.WithGamificationService(gam), reviews.WithMissionsService(mis))
 	catalog := knowledgecatalog.NewService(knowledgecatalog.NewPostgreSQLRepository(db), nil)
 	daily := dailylesson.NewService(db, review, nil)
 	check := func(wantDue int) {
@@ -121,7 +125,9 @@ func TestPostgreSQLWrongAndSkipRestoreDueConsistencyAcrossLearnerSurfaces(t *tes
 				require.NoError(t, err)
 			}
 			learn := learning.NewPostgreSQLRepository(db)
-			review := reviews.NewPostgreSQLRepository(db, nil)
+			gam := gamification.NewService(gamification.NewRepository(db))
+			mis := missions.NewService(missions.NewRepository(db), gam)
+			review := reviews.NewPostgreSQLRepository(db, nil, reviews.WithGamificationService(gam), reviews.WithMissionsService(mis))
 			catalog := knowledgecatalog.NewService(knowledgecatalog.NewPostgreSQLRepository(db), nil)
 			daily := dailylesson.NewService(db, review, nil)
 			check := func(wantDue int) knowledgecatalog.Item {

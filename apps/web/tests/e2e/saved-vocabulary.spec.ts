@@ -94,9 +94,15 @@ test.describe("Saved vocabulary library", () => {
     await answerReviewWord(page, "to make liquid flow into a container");
     await expect(
       page.getByRole("heading", {
-        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        name: "All available reviews finished",
         exact: true,
       }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("1 of 20 words reviewed today", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("1 correct on the first try.", { exact: true }),
     ).toBeVisible();
     await page.goto("/words");
     await expect(
@@ -108,8 +114,10 @@ test.describe("Saved vocabulary library", () => {
       .getByRole("link", { name: "Open pour details and sentence practice" })
       .click();
     await expect(page).toHaveURL(/\/words\/uw-/);
-    await expect(page.getByText("Learning", { exact: true })).toBeVisible();
-    await expect(page.getByText("New", { exact: true })).toHaveCount(0);
+    const detail = page.getByRole("main");
+    await expect(detail.getByRole("heading", { name: "pour", level: 1 })).toBeVisible();
+    await expect(detail.getByText("Learning", { exact: true })).toBeVisible();
+    await expect(detail.getByText("New", { exact: true })).toHaveCount(0);
     await openOptionalWriting(page);
     await expect(
       page.getByRole("textbox", { name: "Write a sentence using pour" }),

@@ -11,7 +11,7 @@ async function chooseReviewDate(page: Page, choice: "7d" | "known") {
   await page
     .getByRole("menu", { name: "Next review", exact: true })
     .getByRole("menuitemradio", {
-      name: choice === "7d" ? "In 7 days" : "I know this word",
+      name: choice === "7d" ? /^In 1 week\s*\. / : "I know this word",
       exact: true,
     })
     .click();
@@ -27,13 +27,14 @@ async function openRangeWords(page: Page) {
     await summary.click();
 }
 
-async function learner(page: Page, count = 2) {
+async function learner(page: Page, count = 2, target = 20) {
   const baseURL = test.info().project.use.baseURL;
   if (!baseURL) throw new Error("A local test base URL is required");
   await page.context().addCookies([
     { name: "vocanova_session", value: `daily-${randomUUID()}`, url: baseURL },
     { name: "vocanova_csrf", value: "daily-browser-csrf", url: baseURL },
     { name: "e2e_review_fixture_count", value: String(count), url: baseURL },
+    { name: "e2e_daily_review_target", value: String(target), url: baseURL },
   ]);
 }
 async function assessRangeOne(page: Page, keepUnseen: number[] = [], band = 1) {
@@ -72,8 +73,8 @@ async function assessRangeOne(page: Page, keepUnseen: number[] = [], band = 1) {
   expect(confirmed.status()).toBe(200);
   return (await confirmed.json()) as KnowledgeMap;
 }
-async function start(page: Page, count = 2) {
-  await learner(page, count);
+async function start(page: Page, count = 2, target = 20) {
+  await learner(page, count, target);
   await page.goto("/reviews");
   await page.getByRole("button", { name: "Start review", exact: true }).click();
   await expect(
@@ -149,12 +150,12 @@ test("Home starts once, choices stay stable through refresh, completion has a du
   await correct(page, 2);
   await expect(
     page.getByRole("heading", {
-      name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+      name: /^(?:Review saved|Review set complete|You’ve finished your review|All available reviews finished|Today’s review complete)$/,
       exact: true,
     }),
   ).toBeFocused();
   await expect(
-    page.getByText("2 words remembered for today.", { exact: true }),
+    page.getByText("2 of 20 words reviewed today", { exact: true }),
   ).toBeVisible();
   await page
     .getByRole("link", { name: "Back to Home", exact: true })
@@ -164,7 +165,7 @@ test("Home starts once, choices stay stable through refresh, completion has a du
     page
       .getByRole("region", { name: "Review words", exact: true })
       .getByText(/^Reviewed today:/),
-  ).toHaveText("Reviewed today: 2");
+  ).toHaveText("Reviewed today: 2 of 20");
   const nextStep = page.getByRole("region", { name: "Review words", exact: true });
   await expect(nextStep.getByText("No reviews due", { exact: true })).toBeVisible();
   await expect(nextStep.getByRole("heading", { name: "Discover new words", exact: true })).toBeVisible();
@@ -172,7 +173,7 @@ test("Home starts once, choices stay stable through refresh, completion has a du
   await page.goto(lessonUrl);
   await expect(
     page.getByRole("heading", {
-      name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+      name: /^(?:Review saved|Review set complete|You’ve finished your review|All available reviews finished|Today’s review complete)$/,
       exact: true,
     }),
   ).toBeVisible();
@@ -206,7 +207,7 @@ test("completion waits for the confirmed remaining words before offering another
     await checking;
     await expect(
       page.getByRole("heading", {
-        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        name: /^(?:Review saved|Review set complete|You’ve finished your review|All available reviews finished|Today’s review complete)$/,
         exact: true,
       }),
     ).toBeFocused();
@@ -252,7 +253,7 @@ test("completion waits for the confirmed remaining words before offering another
   }
 });
 
-test("completion offers Next only after a positive remaining-word read and uses a fresh start key", async ({
+test("completion offers optional extra review only after a remaining-word read and uses a fresh start key", async ({
   page,
 }) => {
   const keys: Array<string | undefined> = [];
@@ -263,7 +264,7 @@ test("completion offers Next only after a positive remaining-word read and uses 
     )
       keys.push(request.headers()["idempotency-key"]);
   });
-  await start(page, 11);
+  await start(page, 11, 10);
   for (let word = 1; word < 10; word++) await correct(page, word);
   await page
     .getByRole("radio", { name: "definition for review word 10", exact: true })
@@ -286,14 +287,14 @@ test("completion offers Next only after a positive remaining-word read and uses 
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await checking;
     await expect(
-      page.getByRole("button", { name: "Keep reviewing", exact: true }),
+      page.getByRole("button", { name: "Review more words", exact: true }),
     ).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "Discover words", exact: true }),
     ).toHaveCount(0);
     release();
     const next = page.getByRole("button", {
-      name: "Keep reviewing",
+      name: "Review more words",
       exact: true,
     });
     await expect(next).toBeEnabled();
@@ -385,7 +386,7 @@ test("a definitive no-due start reconciles another actor finishing the last word
   expect((await rejected).status()).toBe(409);
   await expect(
     page.getByRole("heading", {
-      name: "You’re ready for new words",
+      name: "All available reviews finished",
       exact: true,
     }),
   ).toBeVisible();
@@ -411,7 +412,7 @@ test("no-due reconciliation resumes an active session even when the fresh due co
         status: 409,
         contentType: "application/problem+json",
         body: JSON.stringify({
-          detail: "No words are due. Discover a word to start learning.",
+          detail: "No required reviews are available. Check today’s goal or choose additional review.",
         }),
       }),
     { times: 1 },
@@ -436,13 +437,13 @@ test("no-due reconciliation resumes an active session even when the fresh due co
   await expect(page.getByRole("radio")).toHaveCount(4);
   await expect(
     page.getByRole("heading", {
-      name: "You’re ready for new words",
+      name: /^(?:You’re ready for new words|All available reviews finished|Today’s review complete)$/,
       exact: true,
     }),
   ).toHaveCount(0);
 });
 
-test("failed no-due reconciliation preserves the exact start key for a later acknowledged retry", async ({
+test("failed canonical no-due reconciliation releases the rejected key for a fresh Start", async ({
   page,
 }) => {
   await learner(page, 1);
@@ -455,7 +456,7 @@ test("failed no-due reconciliation preserves the exact start key for a later ack
         status: 409,
         contentType: "application/problem+json",
         body: JSON.stringify({
-          detail: "No words are due. Discover a word to start learning.",
+          detail: "No required reviews are available. Check today’s goal or choose additional review.",
         }),
       });
     else await route.continue();
@@ -476,7 +477,7 @@ test("failed no-due reconciliation preserves the exact start key for a later ack
   );
   await expect(
     page.getByRole("heading", {
-      name: "You’re ready for new words",
+      name: /^(?:You’re ready for new words|All available reviews finished|Today’s review complete)$/,
       exact: true,
     }),
   ).toHaveCount(0);
@@ -486,7 +487,7 @@ test("failed no-due reconciliation preserves the exact start key for a later ack
   ).toBeFocused();
   expect(keys).toHaveLength(2);
   expect(keys[0]).toBeTruthy();
-  expect(keys[1]).toBe(keys[0]);
+  expect(keys[1]).not.toBe(keys[0]);
 });
 
 for (const failure of [
@@ -539,7 +540,7 @@ for (const failure of [
     await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
     await expect(
       page.getByRole("heading", {
-        name: "You’re ready for new words",
+        name: /^(?:You’re ready for new words|All available reviews finished|Today’s review complete)$/,
         exact: true,
       }),
     ).toHaveCount(0);
@@ -559,10 +560,10 @@ for (const failure of [
 test("saved-progress recovery acknowledges a lost Start before a later Next uses a new key", async ({
   page,
 }) => {
-  await learner(page, 11);
+  await learner(page, 11, 10);
   await page.goto("/reviews");
   const keys: Array<string | undefined> = [];
-  await page.route("**/api/v1/daily-lessons", async (route) => {
+  await page.route(/\/api\/v1\/daily-lessons(?:\?.*)?$/u, async (route) => {
     keys.push(route.request().headers()["idempotency-key"]);
     if (keys.length === 1) {
       await route.fetch();
@@ -583,7 +584,7 @@ test("saved-progress recovery acknowledges a lost Start before a later Next uses
   expect(keys[1]).toBe(keys[0]);
   for (let word = 1; word <= 10; word++) await correct(page, word);
   await page
-    .getByRole("button", { name: "Keep reviewing", exact: true })
+    .getByRole("button", { name: "Review more words", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Review word 11", exact: true }),
@@ -723,12 +724,12 @@ test("saved-progress recovery reads beyond an immutable Start receipt after anot
     .click();
   await expect(
     page.getByRole("heading", {
-      name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+      name: /^(?:Review saved|Review set complete|You’ve finished your review|All available reviews finished|Today’s review complete)$/,
       exact: true,
     }),
   ).toBeFocused();
   await expect(
-    page.getByText("1 word remembered for today.", { exact: true }),
+    page.getByText("1 of 20 words reviewed today", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Discover words", exact: true }),
@@ -739,7 +740,7 @@ test("saved-progress recovery reads beyond an immutable Start receipt after anot
   expect(keys[1]).toBe(keys[0]);
 });
 
-test("a mistake earns no credit, keeps the chosen answer on refresh, and is deferred beyond today", async ({
+test("a mistake earns effort without successful recall, keeps its choice on refresh, and is deferred beyond today", async ({
   page,
 }) => {
   await start(page);
@@ -759,12 +760,12 @@ test("a mistake earns no credit, keeps the chosen answer on refresh, and is defe
   await correct(page, 2);
   await expect(
     page.getByRole("heading", {
-      name: "You’ve finished your review",
+      name: "All available reviews finished",
       exact: true,
     }),
   ).toBeVisible();
   await expect(
-    page.getByText("1 word remembered for today.", { exact: true }),
+    page.getByText("2 of 20 words reviewed today", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText("1 correct on the first try.", { exact: true }),
@@ -809,7 +810,7 @@ test("an unconfirmed answer freezes its exact intent and retries without duplica
   expect(attempts[1]).toEqual(attempts[0]);
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(
-    page.getByText("1 word remembered for today.", { exact: true }),
+    page.getByText("1 of 20 words reviewed today", { exact: true }),
   ).toBeVisible();
 });
 
@@ -823,7 +824,7 @@ test("explicit skip is explained honestly and does not claim a remembered word",
   ).toBeVisible();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(
-    page.getByText("0 words remembered for today.", { exact: true }),
+    page.getByText("0 of 20 words reviewed today", { exact: true }),
   ).toBeVisible();
 });
 
@@ -1352,10 +1353,10 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByText("Level 2 of 8", { exact: true })).toBeVisible();
     const schedule = reviewSchedule(page);
     await expect(schedule).toHaveAccessibleName(
-      /^Show this word again: Automatic · [A-Z][a-z]{2} \d{1,2}$/,
+      /^Show this word again: Automatic · (Today|Tomorrow|In \d+ (days|weeks?|months?))\. .+$/,
     );
     await expect(schedule.locator(".review-schedule-value")).toHaveText(
-      /^[A-Z][a-z]{2} \d{1,2}$/u,
+      /^(Today|Tomorrow|In \d+ (days|weeks?|months?))$/u,
     );
     expect(
       await schedule
@@ -1433,20 +1434,19 @@ for (const theme of ["light", "dark"] as const) {
     await expect(automatic).toBeFocused();
     await page.keyboard.press("ArrowDown");
     await expect(
-      menu.getByRole("menuitemradio", { name: "In 1 day", exact: true }),
+      menu.getByRole("menuitemradio", { name: /^Tomorrow\s*\. / }),
     ).toBeFocused();
     await expect(automatic).toHaveAttribute("aria-checked", "true");
     await page.keyboard.press("Enter");
     await expect(menu).toHaveCount(0);
     await expect(schedule).toBeFocused();
     await expect(schedule).toHaveAccessibleName(
-      "Show this word again: In 1 day",
+      /^Show this word again: Tomorrow\. .+$/,
     );
-    await expect(
-      page.locator('[aria-live="polite"]').filter({
-        hasText: /^Next review: In 1 day$/,
-      }),
-    ).toHaveText("Next review: In 1 day");
+    await expect(page.getByText("Next review: Tomorrow", { exact: true })).toHaveText("Next review: Tomorrow");
+    // The focused trigger communicates the selection without a second live
+    // announcement competing with the checked-answer status.
+    await expect(page.locator('[aria-live="polite"]').filter({ hasText: /^Next review:/ })).toHaveCount(0);
     await schedule.press("Enter");
     await page.keyboard.press("Escape");
     await expect(menu).toHaveCount(0);
@@ -1465,7 +1465,7 @@ for (const theme of ["light", "dark"] as const) {
       .click({ position: { x: 2, y: 2 } });
     await expect(menu).toHaveCount(0);
     await expect(schedule).toHaveAccessibleName(
-      "Show this word again: In 1 day",
+      /^Show this word again: Tomorrow\. .+$/,
     );
     await schedule.click();
     await automatic.click();
@@ -1518,7 +1518,7 @@ test("manual review date survives confirmed reload and exact continuation retry"
     .click();
   await expect(
     page.getByRole("heading", {
-      name: "You’ve finished your review",
+      name: "All available reviews finished",
       exact: true,
     }),
   ).toBeVisible();
@@ -1533,21 +1533,21 @@ test("manual review date survives confirmed reload and exact continuation retry"
   // Streaming can retain an inactive copy outside the accessible main. Keep
   // the assertion on the real screen and still reject duplicate visible copy.
   await expect(
-    page.getByText("1 word remembered for today.", { exact: true }).filter({ visible: true }),
+    page.getByText("1 of 20 words reviewed today", { exact: true }).filter({ visible: true }),
   ).toHaveCount(1);
   await expect(
-    page.getByRole("main").getByText("1 word remembered for today.", { exact: true }),
+    page.getByRole("main").getByText("1 of 20 words reviewed today", { exact: true }),
   ).toBeVisible();
   await page.goto("/home");
   await expect(
     page
       .getByRole("region", { name: "Review words", exact: true })
       .getByText(/^Reviewed today:/),
-  ).toHaveText("Reviewed today: 1");
+  ).toHaveText("Reviewed today: 1 of 20");
 });
 
 for (const nextReview of ["known", "7d"] as const) {
-  test(`${nextReview} after a wrong answer finishes that word without earned review credit`, async ({
+  test(`${nextReview} after a wrong answer preserves effort without successful-answer credit`, async ({
     page,
   }) => {
     await start(page, 1);
@@ -1582,14 +1582,14 @@ for (const nextReview of ["known", "7d"] as const) {
     });
     await expect(
       page.getByRole("heading", {
-        name: "You’ve finished your review",
+        name: "All available reviews finished",
         exact: true,
       }),
     ).toBeVisible();
     const after = await (
       await page.request.get(`${api}/api/v1/daily-mission`)
     ).json();
-    expect(after.reviewsCompleted).toBe(before.reviewsCompleted);
+    expect(after.reviewsCompleted).toBe(before.reviewsCompleted + 1);
     const afterProgress = await (
       await page.request.get(`${api}/api/v1/progress`)
     ).json();
@@ -1631,7 +1631,7 @@ test("legacy saved review feedback omits unsupported manual scheduling", async (
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(
     page.getByRole("heading", {
-      name: "You’ve finished your review",
+      name: "All available reviews finished",
       exact: true,
     }),
   ).toBeVisible();
@@ -1682,7 +1682,7 @@ test("Home separates actual practice path progress from due reviews", async ({
     review.getByRole("button", { name: "Start review", exact: true }),
   ).toBeVisible();
   await expect(review.getByText(/^Reviewed today:/)).toHaveText(
-    "Reviewed today: 0",
+    "Reviewed today: 0 of 20",
   );
   await expect(
     path.getByRole("heading", { name: "Today’s practice", exact: true }),
@@ -1707,7 +1707,7 @@ test("Home separates actual practice path progress from due reviews", async ({
   await correct(page, 2);
   await page.goto("/home");
   await expect(review.getByText(/^Reviewed today:/)).toHaveText(
-    "Reviewed today: 2",
+    "Reviewed today: 2 of 20",
   );
   await expect(
     path.getByText("1 lesson completed", { exact: true }),
@@ -1772,9 +1772,9 @@ test("guided discovery retains its server-resolved range before Start", async ({
   await expect(page).toHaveURL(/\/discover\?band=41#range-words$/);
 });
 
-test.describe("review schedule device calendar", () => {
+test.describe("review schedule learner calendar", () => {
   test.use({ timezoneId: "Asia/Tehran" });
-  test("late UTC review dates use the local calendar after reload without hydration errors", async ({
+  test("stored learner timezone wins over the device calendar after reload without hydration errors", async ({
     page,
   }) => {
     const errors: string[] = [];
@@ -1786,8 +1786,10 @@ test.describe("review schedule device calendar", () => {
       )
         errors.push(message.text());
     });
+    await page.clock.install({ time: new Date("2026-10-18T12:00:00Z") });
     await start(page, 1);
     await page.context().addCookies([
+      { name: "e2e_review_timezone", value: "America/New_York", url: test.info().project.use.baseURL! },
       {
         name: "e2e_daily_review_at",
         value: "2026-10-18T22:30:00.000Z",
@@ -1802,12 +1804,156 @@ test.describe("review schedule device calendar", () => {
       .click();
     const automatic = reviewSchedule(page);
     await expect(automatic).toHaveAccessibleName(
-      "Show this word again: Automatic · Oct 19",
+      "Show this word again: Automatic · Today. October 18, 2026 at 6:30 PM EDT",
     );
     await page.reload();
     await expect(automatic).toHaveAccessibleName(
-      "Show this word again: Automatic · Oct 19",
+      "Show this word again: Automatic · Today. October 18, 2026 at 6:30 PM EDT",
     );
     expect(errors).toEqual([]);
   });
 });
+
+test("canonical no-due rejection with failed reconciliation recovers by GET without another Start", async ({
+  page,
+}) => {
+  await learner(page, 1);
+  await page.goto("/reviews");
+  await expect(
+    page.getByRole("button", { name: "Start review", exact: true }),
+  ).toBeVisible();
+  // Exercise the actual synthetic API with a second actor while this page
+  // retains its earlier one-word due snapshot.
+  let other = await otherActorPost(page, "/api/v1/daily-lessons");
+  other = await otherActorPost(
+    page,
+    `/api/v1/daily-lessons/${other.id}/actions`,
+    {
+      action: "answer",
+      choiceId: "meaning-a",
+      stepId: other.currentStep!.id,
+      expectedRevision: other.revision,
+      clientActionId: randomUUID(),
+    },
+  );
+  other = await otherActorPost(
+    page,
+    `/api/v1/daily-lessons/${other.id}/actions`,
+    {
+      action: "continue",
+      stepId: other.currentStep!.id,
+      expectedRevision: other.revision,
+      clientActionId: randomUUID(),
+    },
+  );
+  expect(other.status).toBe("completed");
+  let starts = 0;
+  let reads = 0;
+  page.on("request", request => {
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/v1/daily-lessons" && request.method() === "POST") starts++;
+    if (path === "/api/v1/daily-lessons/current") reads++;
+  });
+  await page.route("**/api/v1/daily-lessons/current", route => route.fulfill({
+    status: 503, contentType: "application/problem+json",
+    body: JSON.stringify({detail:"Remaining words unavailable."}),
+  }), {times:1});
+  const rejected = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/api/v1/daily-lessons",
+  );
+  await page.getByRole("button", { name: "Start review", exact: true }).click();
+  expect((await rejected).status()).toBe(409);
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Remaining words unavailable.");
+  await page.getByRole("button", {name:"Load saved progress",exact:true}).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "All available reviews finished",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Discover words", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+  expect(starts).toBe(1);
+  expect(reads).toBe(2);
+});
+
+test("legacy no-due reconciliation resumes an active session even when the fresh due count is zero", async ({
+  page,
+}) => {
+  await learner(page, 1);
+  await page.goto("/reviews");
+  const active = await otherActorPost(page, "/api/v1/daily-lessons");
+  // A concurrent actor can create a saved session after the rejected Start.
+  // This bounded transport case supplies that real fixture session with zero
+  // currently due words; its snapshot still needs to remain resumable.
+  await page.route(
+    "**/api/v1/daily-lessons",
+    (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/problem+json",
+        body: JSON.stringify({
+          detail: "No words are due. Discover a word to start learning.",
+        }),
+      }),
+    { times: 1 },
+  );
+  await page.route(
+    "**/api/v1/daily-lessons/current",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ session: active, dueCount: 0 }),
+      }),
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "Start review", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review word 1", exact: true }),
+  ).toBeFocused();
+  await expect(page).toHaveURL(
+    new RegExp(`/review/session\\?lesson=${active.id}$`),
+  );
+  await expect(page.getByRole("radio")).toHaveCount(4);
+  await expect(
+    page.getByRole("heading", {
+      name: /^(?:You’re ready for new words|All available reviews finished|Today’s review complete)$/,
+      exact: true,
+    }),
+  ).toHaveCount(0);
+});
+
+
+for (const draft of [
+ { now:"2026-03-08T04:30:00Z", localDate:"2026-03-07", label:"In 2 days", exact:/March 9, 2026/ },
+ { now:"2026-11-01T04:30:00Z", localDate:"2026-11-01", label:"Today", exact:/November 1, 2026/ },
+]) {
+ test(`draft 1d schedule uses the learner calendar across DST: ${draft.label}`, async ({page,baseURL}) => {
+  await page.clock.install({time:new Date(draft.now)});
+  await start(page,1);
+  await page.context().addCookies([
+   {name:"e2e_review_timezone",value:"America/New_York",url:baseURL!},
+   {name:"e2e_review_local_date",value:draft.localDate,url:baseURL!},
+  ]);
+  await page.getByRole("radio",{name:"definition for review word 1",exact:true}).check();
+  await page.getByRole("button",{name:"Check answer",exact:true}).click();
+  const schedule=reviewSchedule(page);
+  await schedule.click();
+  // Index 1 is the preserved 1d duration; both its menu name and selected
+  // trigger include the exact prospective local date.
+  const oneDay=page.getByRole("menu",{name:"Next review",exact:true}).getByRole("menuitemradio").nth(1);
+  await expect(oneDay).toContainText(draft.label);
+  await expect(oneDay).toHaveAccessibleName(draft.exact);
+  await oneDay.click();
+  await expect(schedule.locator(".review-schedule-value")).toHaveText(draft.label);
+  await expect(schedule).toHaveAccessibleName(draft.exact);
+  const committed=page.waitForRequest(request=>request.method()==="POST" && /\/daily-lessons\/[^/]+\/actions$/.test(new URL(request.url()).pathname));
+  await page.getByRole("button",{name:"Continue",exact:true}).click();
+  expect((await committed).postDataJSON().nextReview).toBe("1d");
+ });
+}

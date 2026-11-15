@@ -15,6 +15,77 @@ import {
 } from "./index.js";
 
 describe("VocanovaClient", () => {
+  it("reads and conditionally updates the requester's discovery position", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      credentials: "include",
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), init });
+        return Response.json({ position: null });
+      },
+    });
+    const positionClient = client as unknown as {
+      getDiscoveryPosition(
+        init?: RequestInit,
+      ): Promise<{ data: { position: null } }>;
+      putDiscoveryPosition(body: unknown, init?: RequestInit): Promise<unknown>;
+    };
+    const controller = new AbortController();
+    const read = await positionClient.getDiscoveryPosition({
+      signal: controller.signal,
+    });
+    const body = {
+      expectedAccountId: "00000000-0000-0000-0000-000000000001",
+      catalogVersion: "english-10000-v1",
+      band: 44,
+      rank: 4330,
+      active: true,
+      expectedRevision: 0,
+    };
+    await positionClient.putDiscoveryPosition(body, {
+      headers: { "X-CSRF-Token": "synthetic-position" },
+    });
+    assert.equal(read.data.position, null);
+    assert.equal(new URL(calls[0]!.url).pathname, "/api/v1/discovery-position");
+    assert.equal(calls[0]!.init?.method, "GET");
+    assert.equal(calls[0]!.init?.body, undefined);
+    assert.equal(calls[0]!.init?.signal, controller.signal);
+    assert.equal(calls[1]!.init?.method, "PUT");
+    assert.deepEqual(JSON.parse(calls[1]!.init?.body as string), body);
+    assert.equal(
+      new Headers(calls[1]!.init?.headers).get("X-CSRF-Token"),
+      "synthetic-position",
+    );
+    assert.equal(calls[1]!.init?.credentials, "include");
+    assert.ok(!calls[1]!.url.includes("4330"));
+  });
+  it("starts additional review only when the caller explicitly requests it", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), init });
+        return Response.json({ id: "session" });
+      },
+    });
+    await client.startDailyLesson("ordinary");
+    await Reflect.apply(client.startDailyLesson, client, [
+      "additional",
+      { headers: { "X-CSRF-Token": "synthetic" } },
+      { additional: true },
+    ]);
+    assert.equal(new URL(calls[0]!.url).searchParams.has("additional"), false);
+    assert.equal(new URL(calls[1]!.url).searchParams.get("additional"), "true");
+    assert.equal(
+      new Headers(calls[1]!.init?.headers).get("Idempotency-Key"),
+      "additional",
+    );
+    assert.equal(
+      new Headers(calls[1]!.init?.headers).get("X-CSRF-Token"),
+      "synthetic",
+    );
+  });
   it("reads bounded meaning-image IDs with authenticated request options", async () => {
     let calledUrl = "";
     let calledInit: RequestInit | undefined;

@@ -23,7 +23,7 @@ test("optional writing after a lesson restores its unfinished draft on a same-us
   await answerReviewWord(page, "to make liquid flow into a container");
   await expect(
     page.getByRole("heading", {
-      name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+      name: /^(?:Review saved|Review set complete|You’ve finished your review|All available reviews finished|Today’s review complete)$/,
       exact: true,
     }),
   ).toBeVisible();

@@ -308,6 +308,7 @@ func TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema(t *testing.T) 
 		"DELETE FROM ai_feedback_attempts AS attempt",
 		"DELETE FROM daily_lesson_actions",
 		"DELETE FROM daily_review_successes",
+		"DELETE FROM daily_review_effort",
 		"DELETE FROM daily_lesson_sessions",
 		"DELETE FROM review_attempts WHERE user_id = \\$1 OR user_word_id IN",
 		"DELETE FROM learner_sentences WHERE user_id = \\$1",
@@ -323,6 +324,7 @@ func TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema(t *testing.T) 
 		"DELETE FROM user_word_list_members WHERE list_id IN",
 		"DELETE FROM user_word_lists WHERE user_id = \\$1",
 		"DELETE FROM user_learning_preferences WHERE user_id = \\$1",
+		"DELETE FROM user_discovery_positions WHERE user_id = \\$1",
 		"DELETE FROM practice_mistake_resolutions WHERE user_id = \\$1",
 		"DELETE FROM practice_actions WHERE user_id = \\$1",
 		"DELETE FROM practice_sessions WHERE user_id = \\$1",
@@ -361,6 +363,8 @@ func TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema(t *testing.T) 
 	assert.Equal(t, int64(1), counters.WordListMembers)
 	assert.Equal(t, int64(1), counters.WordLists)
 	assert.Equal(t, int64(1), counters.LearningPreferences)
+	assert.Equal(t, int64(1), counters.DiscoveryPositions)
+	assert.Equal(t, int64(1), counters.DailyReviewEffort)
 	assert.Equal(t, int64(1), counters.WordKnowledge)
 	assert.Equal(t, int64(1), counters.WordKnowledgeActions)
 	assert.Equal(t, int64(1), counters.LessonActions)
@@ -400,7 +404,7 @@ func TestPostgreSQLRepositoryAnonymizeUserDataRollsBack(t *testing.T) {
 	mock.ExpectExec("DELETE FROM ai_feedback_attempts AS attempt").
 		WithArgs(uid).
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	for _, table := range []string{"daily_lesson_actions", "daily_review_successes", "daily_lesson_sessions"} {
+	for _, table := range []string{"daily_lesson_actions", "daily_review_successes", "daily_review_effort", "daily_lesson_sessions"} {
 		mock.ExpectExec("DELETE FROM " + table).WithArgs(uid).WillReturnResult(sqlmock.NewResult(0, 0))
 	}
 	mock.ExpectExec("DELETE FROM review_attempts WHERE user_id = \\$1 OR user_word_id IN").

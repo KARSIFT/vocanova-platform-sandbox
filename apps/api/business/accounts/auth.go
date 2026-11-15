@@ -140,6 +140,8 @@ type AnonymizationCounters struct {
 	DailyLessonActions   int64
 	DailyLessonSessions  int64
 	DailyReviewSuccesses int64
+	DailyReviewEffort    int64
+	DiscoveryPositions   int64
 	StoryActions         int64
 	StorySessions        int64
 	WordListActions      int64

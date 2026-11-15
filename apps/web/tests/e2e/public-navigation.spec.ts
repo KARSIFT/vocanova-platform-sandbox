@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { pressTab } from "./keyboard-navigation.js";
 
-test("a remembered browser can return from the landing page without signing in again", async ({ page, context, baseURL }) => {
+test("a remembered browser enters Home from the root without signing in again", async ({ page, context, baseURL }) => {
   await context.addCookies([{
     name: "vocanova_session",
     value: randomUUID(),
@@ -12,8 +12,8 @@ test("a remembered browser can return from the landing page without signing in a
   }]);
 
   await page.goto("/");
-  await page.getByRole("link", { name: "Start learning", exact: true }).click();
   await expect(page).toHaveURL(`${baseURL}/home`);
+  await expect(page.getByRole("link", { name: "Start learning", exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
 
   await page.goto("/signin?returnTo=%2Fprogress");

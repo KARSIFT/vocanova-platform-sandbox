@@ -30,6 +30,7 @@ test("current delivery registers only the reviewed learning feature boundaries",
     "/api/v1/achievements",
     "/api/v1/knowledge-map",
     "/api/v1/knowledge-map/decisions",
+    "/api/v1/discovery-position",
     "/api/v1/daily-lessons",
     "/api/v1/daily-lessons/current",
     "/api/v1/daily-lessons/{sessionId}",
@@ -46,6 +47,7 @@ test("current delivery registers only the reviewed learning feature boundaries",
     "pronunciation",
     "meaningmedia",
     "learnerdefinitions",
+    "discoveryposition",
   ])
     assert.equal(isRegisteredBusinessModule(module), true, module);
   for (const schema of [
@@ -66,6 +68,8 @@ test("current delivery registers only the reviewed learning feature boundaries",
 test("registered feature families do not admit invented routes, modules, or schemas", () => {
   for (const route of [
     "/api/v1/invented-feature",
+    "/api/v1/discovery-position/admin",
+    "/api/v1/discovery-position/other-user",
     "/api/v1/lessons/{lessonKey}/publish",
     "/api/v1/lesson-sessions/{sessionId}/rewards",
     "/api/v1/practice-sessions/{sessionId}/mastery",
@@ -272,6 +276,7 @@ test("learning route sources and exact migration table inventories remain bounde
     "stories.go",
     "daily_lessons.go",
     "knowledge_map.go",
+    "discovery_position.go",
     "pronunciation.go",
     "meaningmedia.go",
   ]) {
@@ -295,6 +300,8 @@ test("learning route sources and exact migration table inventories remain bounde
     "20261020170000_meaning_image_assets.sql",
     "20261107140000_pronunciation_catalog_jobs.sql",
     "20261108120000_pronunciation_signal_recovery.sql",
+    "20261115100000_daily_review_effort.sql",
+    "20261115110000_discovery_position.sql",
   ]) {
     assert.equal(isRegisteredMigrationFile(migration), true, migration);
     const source = readFileSync(

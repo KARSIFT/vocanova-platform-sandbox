@@ -12,6 +12,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/dailylesson"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/dictionary"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/discoveryposition"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
@@ -153,6 +154,7 @@ func NewContractAPI() huma.API {
 	)
 	RegisterReviews(contractAPI, reviewsSvc, svc)
 	RegisterDailyLessons(contractAPI, dailylesson.NewService(nil, reviews.NewPostgreSQLRepository(nil, clock.Real{}), clock.Real{}), svc)
+	RegisterDiscoveryPosition(contractAPI, discoveryposition.NewService(discoveryposition.NewPostgreSQLRepository(nil)), svc)
 	RegisterKnowledgeMap(contractAPI, knowledgecatalog.NewService(knowledgecatalog.NewPostgreSQLRepository(nil), clock.Real{}), svc)
 
 	// Register AI feedback routes for OpenAPI generation using the mock provider.

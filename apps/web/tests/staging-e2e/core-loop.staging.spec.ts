@@ -1,6 +1,7 @@
 import type {
   CurrentUser,
   DailyLesson,
+  DailyReviewGoal,
   DailyMission,
   KnowledgeMap,
   KnowledgeMapItem,
@@ -59,12 +60,19 @@ import {
   MAX_REVIEW_SEED_CANDIDATES,
   REVIEW_SEED_BANDS,
   reviewedMeaningAnswer,
+  reviewedGapAnswer,
   reviewSeedActions,
 } from "./review-seed";
 import {
   chooseSituationWordLink,
   getFirstMeaningSaveControl,
 } from "../e2e/situation-word-navigation";
+
+import {
+  reviewedTodayEvidence,
+  reviewedTodayIncrease,
+  type ReviewedTodayProgress,
+} from "./review-progress";
 
 const SESSION_COOKIE_ENV = "E2E_SESSION_COOKIE";
 const CSRF_COOKIE_ENV = "E2E_CSRF_TOKEN";
@@ -86,10 +94,6 @@ const CSRF_COOKIE_NAME = requiredCookieName(
 // records why it stopped short of the caught-up state.
 const MAX_REVIEW_CARDS = 8;
 
-type ReviewedTodayProgress = {
-  reviewed: number;
-  target: number;
-};
 // VOC-063-T01: bounded step-7 re-read when the first /home load may be stale.
 // Four attempts (initial + three retries) with 1.5s between failures keeps the
 // loop under ~5s of deliberate waiting, well inside the staging journey timeout.
@@ -138,11 +142,23 @@ function requiredCookieName(name: string, expected: string): string {
 
 // Reads use Node fetch so failed Playwright APIRequestContext diagnostics never
 // retain authenticated headers. No writes, redirects, fixtures or response logs.
+function readStagingState<T>(
+  page: Page,
+  apiOrigin: string,
+  path: string,
+): Promise<T>;
+function readStagingState<T>(
+  page: Page,
+  apiOrigin: string,
+  path: string,
+  allowMissingCanonicalWord: true,
+): Promise<T | null>;
 async function readStagingState<T>(
   page: Page,
   apiOrigin: string,
   path: string,
-): Promise<T> {
+  allowMissingCanonicalWord = false,
+): Promise<T | null> {
   try {
     const url = new URL(path, apiOrigin);
     if (url.origin !== apiOrigin || !url.pathname.startsWith("/api/v1/"))
@@ -160,6 +176,12 @@ async function readStagingState<T>(
       redirect: "error",
       signal: AbortSignal.timeout(20_000),
     });
+    if (
+      response.status === 404 &&
+      allowMissingCanonicalWord &&
+      url.pathname.startsWith("/api/v1/canonical-words/")
+    )
+      return null;
     if (response.status !== 200) throw new Error("Staging read failed");
     return (await response.json()) as T;
   } catch {
@@ -520,42 +542,33 @@ async function readReviewedTodayProgress(
     process.env.STAGING_API_BASE_URL ?? "https://api-staging.vocanova.site",
     "api-staging.vocanova.site",
   );
-  const mission = await readStagingState<DailyMission>(
-    page,
-    apiOrigin,
-    "/api/v1/daily-mission",
-  );
+  const [mission, current] = await Promise.all([
+    readStagingState<DailyMission>(page, apiOrigin, "/api/v1/daily-mission"),
+    readStagingState<{goal?: DailyReviewGoal}>(page, apiOrigin, "/api/v1/daily-lessons/current"),
+  ]);
+  const evidence = reviewedTodayEvidence(mission, current.goal);
   const counter = page
     .getByRole("region", { name: "Review words", exact: true })
     .getByText(/^Reviewed today:/);
-  await expect(counter).toHaveText(
-    `Reviewed today: ${mission.reviewsCompleted}`,
-  );
-  const reviewed = mission.reviewsCompleted;
-  const target = mission.reviewTarget;
-  expect(Number.isFinite(reviewed)).toBe(true);
-  expect(target).toBeGreaterThan(0);
-  return { reviewed, target };
+  await expect(counter).toHaveText(evidence.homeLabel);
+  return evidence;
 }
 
-async function readReviewedTodayCount(page: Page): Promise<number> {
-  const { reviewed } = await readReviewedTodayProgress(page);
-  return reviewed;
+async function readReviewedTodayCount(page: Page, baseline: ReviewedTodayProgress): Promise<number> {
+  const current = await readReviewedTodayProgress(page);
+  expect(current.localDate, "A learner-local date change invalidates the baseline").toBe(baseline.localDate);
+  expect(current.target, "The daily target stays frozen").toBe(baseline.target);
+  return current.reviewed;
 }
 
 async function readReviewedTodayCountAfterReviews(
   page: Page,
   testInfo: TestInfo,
-  reviewedBefore: number,
+  baseline: ReviewedTodayProgress,
   reviewedCards: number,
-  reviewTarget: number,
 ): Promise<number> {
-  // reviews_completed caps at review_target; extra submissions after the
-  // completing review do not raise the home counter (VOC-082-T01).
-  const minimumExpected = Math.min(
-    reviewedBefore + reviewedCards,
-    reviewTarget,
-  );
+  const reviewedBefore = baseline.reviewed;
+  const {minimumExpected} = reviewedTodayIncrease(baseline, baseline, reviewedCards);
   const attemptValues: number[] = [];
 
   for (
@@ -564,10 +577,12 @@ async function readReviewedTodayCountAfterReviews(
     attempt++
   ) {
     await page.goto("/home");
-    const reviewedAfter = await readReviewedTodayCount(page);
+    const current = await readReviewedTodayProgress(page);
+    const {reached} = reviewedTodayIncrease(baseline, current, reviewedCards);
+    const reviewedAfter = current.reviewed;
     attemptValues.push(reviewedAfter);
 
-    if (reviewedAfter >= minimumExpected) {
+    if (reached) {
       const countsSummary =
         `reviewedBefore=${reviewedBefore}, reviewedCards=${reviewedCards}, ` +
         `reviewedAfter=${reviewedAfter}, minimumExpected=${minimumExpected}`;
@@ -806,7 +821,7 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
     const readiness = await waitForReviewReadiness(page, 120_000);
     if (readiness === "terminal") {
       const next = page.getByRole("button", {
-        name: "Keep reviewing",
+        name: /^(?:Keep reviewing|Review more words)$/,
         exact: true,
         disabled: false,
       });
@@ -815,25 +830,32 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
         exact: true,
       });
       const error = page.getByRole("main").getByRole("alert");
+      const remaining = await readStagingState<{
+        session: DailyLesson | null;
+        dueCount: number;
+      }>(page, apiOrigin, "/api/v1/daily-lessons/current");
       // The completion heading arrives before the authoritative remaining-word
-      // read settles. Neither a stale nor disabled Next button proves readiness.
-      await expect(next.or(caughtUp).or(error).first()).toBeVisible({
+      // read settles. Goal completion already shows Discover words while that
+      // read is pending; confirmed due words require the explicit extra-review
+      // control, so today's completed goal cannot make the gate vacuous.
+      await expect(
+        (remaining.dueCount > 0 ? next : caughtUp).or(error).first(),
+      ).toBeVisible({
         timeout: 120_000,
       });
       if (await error.isVisible())
         throw new Error(
           "The completed lesson could not confirm its next action.",
         );
-      if (await next.isVisible()) {
+      if (remaining.dueCount > 0) {
         await next.click();
         continue;
       }
       return false;
     }
-    const word = await page
+    const heading = page
       .getByRole("main")
-      .getByRole("heading", { level: 1 })
-      .innerText();
+      .getByRole("heading", { level: 1 });
     const current = await readStagingState<{
       session: DailyLesson | null;
       dueCount: number;
@@ -841,20 +863,35 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
     const step = current.session?.currentStep;
     if (
       !step ||
-      step.wordText !== word ||
       current.session?.id !== new URL(page.url()).searchParams.get("lesson")
     )
       throw new Error(
         "The visible review question does not match the authoritative saved lesson. Refuse to guess an answer.",
       );
-    const canonical = await readStagingState<WordDetailResponse>(
-      page,
-      apiOrigin,
-      `/api/v1/canonical-words/${encodeURIComponent(step.wordSlug)}`,
+    await expect(heading).toHaveText(
+      step.kind === "gap_choice" ? "Complete the sentence" : step.wordText,
     );
-    const answer = reviewedMeaningAnswer(step, canonical.word);
+    if (step.kind === "gap_choice") {
+      expect(step.context, "Gap questions must publish their frozen context.").toBeTruthy();
+      await expect(
+        page.getByRole("main").getByText(step.context!, { exact: true }),
+      ).toBeVisible();
+    }
+    const readWord = async (slug: string) =>
+      (
+        await readStagingState<WordDetailResponse>(
+          page,
+          apiOrigin,
+          `/api/v1/canonical-words/${encodeURIComponent(slug)}`,
+          true,
+        )
+      )?.word ?? null;
+    const canonical = step.kind === "gap_choice" ? null : await readWord(step.wordSlug);
+    const answer = step.kind === "gap_choice"
+      ? await reviewedGapAnswer(step, readWord)
+      : canonical ? reviewedMeaningAnswer(step, canonical) : null;
     if (!answer) {
-      // A stale frozen definition cannot be guessed from an edited live word.
+      // Stale or ambiguous frozen content cannot be guessed from a live word.
       // Skip without grading and continue the bounded search for a safe card.
       await page
         .getByRole("button", { name: "Skip for now", exact: true })
@@ -862,7 +899,7 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
       continue;
     }
     const option = page.getByRole("radio", {
-      name: answer.definition,
+      name: answer.choiceText,
       exact: true,
     });
     await expect(option).toHaveValue(answer.choiceId);
@@ -870,9 +907,12 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
     const graded = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
-        /\/api\/v1\/daily-lessons\/[^/]+\/actions$/.test(
-          new URL(response.url()).pathname,
-        ),
+        new URL(response.url()).origin === apiOrigin &&
+        new URL(response.url()).pathname ===
+          `/api/v1/daily-lessons/${encodeURIComponent(current.session!.id)}/actions` &&
+        response.request().postDataJSON()?.stepId === step.id &&
+        response.request().postDataJSON()?.action === "answer" &&
+        response.request().postDataJSON()?.choiceId === answer.choiceId,
     );
     await page
       .getByRole("button", { name: "Check answer", exact: true })
@@ -880,8 +920,10 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
     const response = await graded;
     expect(response.ok()).toBe(true);
     const lesson = (await response.json()) as DailyLesson;
+    expect(lesson.id).toBe(current.session!.id);
     expect(lesson.feedback).toBeTruthy();
     const feedback = lesson.feedback!;
+    expect(feedback.stepId).toBe(step.id);
     if (!feedback.skipped) {
       expect(
         feedback.meaningId === answer.meaningId,
@@ -966,9 +1008,9 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       ).toBeVisible();
     });
 
-    const { reviewed: reviewedBefore, target: reviewTarget } =
-      await test.step("2. read the daily-mission baseline", async () =>
-        readReviewedTodayProgress(page));
+    const reviewBaseline = await test.step("2. read raw goal effort and capped mission baseline", async () =>
+      readReviewedTodayProgress(page));
+    const reviewedBefore = reviewBaseline.reviewed;
 
     await test.step("2a. explore Daily Conversation without learning mutations", async () => {
       await verifyContextPracticeJourney(page);
@@ -992,13 +1034,13 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         "Refuse assessment outside the designated synthetic account.",
       ).toBe(true);
       await verifyRealKnowledgeMap(page, apiOrigin);
-      expect(await readReviewedTodayCount(page)).toBe(reviewedBefore);
+      expect(await readReviewedTodayCount(page, reviewBaseline)).toBe(reviewedBefore);
     });
 
     await test.step("2c. follow a confirmed discovery save to its exact writing meaning", async () => {
       await prepareEligibleReview(page, apiOrigin, true);
       await page.goto("/home");
-      expect(await readReviewedTodayCount(page)).toBe(reviewedBefore);
+      expect(await readReviewedTodayCount(page, reviewBaseline)).toBe(reviewedBefore);
     });
 
     let openedWordPath = "";
@@ -1205,12 +1247,11 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       const reviewedAfter = await readReviewedTodayCountAfterReviews(
         page,
         testInfo,
-        reviewedBefore,
+        reviewBaseline,
         reviewedCards,
-        reviewTarget,
       );
       expect(reviewedAfter).toBeGreaterThanOrEqual(
-        Math.min(reviewedBefore + reviewedCards, reviewTarget),
+        reviewedBefore + reviewedCards,
       );
     });
 
