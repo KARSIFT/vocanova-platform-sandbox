@@ -157,7 +157,7 @@ func TestPostgreSQLDailyLessonAuthorityOnceDailyCreditResumeAndExport(t *testing
 	require.Zero(t, s.CreditedToday)
 	var mission int
 	require.NoError(t, f.db.QueryRow("SELECT reviews_completed FROM daily_mission_snapshots WHERE user_id=$1", f.u).Scan(&mission))
-	require.Zero(t, mission)
+	require.Equal(t, 1, mission)
 	s = f.next(t, s)
 	s = f.answer(t, s, true)
 	require.True(t, s.Feedback.Correct)
@@ -177,7 +177,7 @@ func TestPostgreSQLDailyLessonAuthorityOnceDailyCreditResumeAndExport(t *testing
 	require.NoError(t, f.db.QueryRow("SELECT count(*) FROM user_words WHERE user_id=$1 AND next_review_at<$2", f.u, f.now.Add(24*time.Hour)).Scan(&due))
 	require.Zero(t, due)
 	require.NoError(t, f.db.QueryRow("SELECT reviews_completed FROM daily_mission_snapshots WHERE user_id=$1", f.u).Scan(&mission))
-	require.Equal(t, 1, mission)
+	require.Equal(t, 2, mission)
 	export, e := accounts.NewPostgreSQLRepository(f.db).ExportPersonalData(ctx, f.u)
 	require.NoError(t, e)
 	require.Contains(t, string(export), "\"dailyLessons\"")
@@ -187,6 +187,7 @@ func TestPostgreSQLDailyLessonAuthorityOnceDailyCreditResumeAndExport(t *testing
 }
 func TestPostgreSQLDailyLessonConcurrentReplayStaleAndRemoved(t *testing.T) {
 	f := setup(t, 1)
+	f.db.SetMaxOpenConns(5)
 	s, e := f.svc.Start(t.Context(), f.u, "start")
 	require.NoError(t, e)
 	st := f.state(t, s)
@@ -208,6 +209,8 @@ func TestPostgreSQLDailyLessonConcurrentReplayStaleAndRemoved(t *testing.T) {
 	var n int
 	require.NoError(t, f.db.QueryRow("SELECT count(*) FROM review_attempts WHERE user_id=$1", f.u).Scan(&n))
 	require.Equal(t, 1, n)
+	require.NoError(t, f.db.QueryRow("SELECT count(*) FROM daily_review_effort WHERE user_id=$1", f.u).Scan(&n))
+	require.Equal(t, 1, n)
 	_, e = f.svc.Act(t.Context(), f.u, st.ID, Action{StepID: a.StepID, ExpectedRevision: 0, ClientActionID: "different", Action: "answer", ChoiceID: a.ChoiceID}, "different")
 	require.ErrorIs(t, e, ErrConflict)
 	a.ChoiceID = "wrong"
@@ -219,6 +222,8 @@ func TestPostgreSQLDailyLessonConcurrentReplayStaleAndRemoved(t *testing.T) {
 }
 func TestPostgreSQLDailyLessonStaleWordAndChunkBoundary(t *testing.T) {
 	f := setup(t, 12)
+	_, err := f.db.Exec("UPDATE user_settings SET daily_review_target=10 WHERE user_id=$1", f.u)
+	require.NoError(t, err)
 	s, e := f.svc.Start(t.Context(), f.u, "start")
 	require.NoError(t, e)
 	require.Equal(t, 10, s.TotalWords)
@@ -241,7 +246,7 @@ func TestPostgreSQLDailyLessonStaleWordAndChunkBoundary(t *testing.T) {
 	require.Equal(t, 2, current.DueCount)
 	chunk, e := f.svc.Start(t.Context(), f.u, "next-chunk")
 	require.NoError(t, e)
-	require.Equal(t, 2, chunk.TotalWords)
+	require.Equal(t, 1, chunk.TotalWords, "only one word remains toward today's target")
 	require.NotEqual(t, s.ID, chunk.ID)
 }
 func TestPostgreSQLDailyLessonRollbackAndKnown(t *testing.T) {
@@ -262,7 +267,7 @@ func TestPostgreSQLDailyLessonRollbackAndKnown(t *testing.T) {
 	_, e = f.svc.Act(t.Context(), f.u, st.ID, a, "force-rollback")
 	require.Error(t, e)
 	require.True(t, strings.Contains(e.Error(), "forced test rollback"))
-	for _, table := range []string{"review_attempts", "daily_review_successes", "daily_mission_snapshots", "confidence_point_ledger"} {
+	for _, table := range []string{"review_attempts", "daily_review_successes", "daily_review_effort", "confidence_point_ledger"} {
 		var n int
 		require.NoError(t, f.db.QueryRow("SELECT count(*) FROM "+table+" WHERE user_id=$1", f.u).Scan(&n))
 		require.Zero(t, n, table)
@@ -488,16 +493,16 @@ func TestPostgreSQLDailyLessonEditorialSynonymsCannotBecomeWrongOptions(t *testi
 			require.NoError(t, e)
 			_, e = f.db.Exec("UPDATE canonical_words SET text=$2,normalized_text=$2 WHERE id=$1", refs[1].w, pair[1])
 			require.NoError(t, e)
-			// Three distinct editorial definitions refer to the same potential synonym.
-			for i := 2; i <= 3; i++ {
+			// Two distinct editorial definitions refer to the same potential synonym.
+			for i := 2; i <= 2; i++ {
 				_, e = f.db.Exec("UPDATE word_meanings SET word_id=$2,meaning_order=$3 WHERE id=$1", refs[i].m, refs[1].w, i)
 				require.NoError(t, e)
 			}
 			s, e := f.svc.Start(t.Context(), f.u, "aliases")
 			require.NoError(t, e)
-			require.Len(t, s.CurrentStep.Choices, 3, "only the correct meaning and two unrelated alternatives remain")
+			require.Len(t, s.CurrentStep.Choices, 4, "only the correct meaning and three unrelated alternatives remain")
 			for _, choice := range s.CurrentStep.Choices {
-				for i := 1; i <= 3; i++ {
+				for i := 1; i <= 2; i++ {
 					require.NotEqual(t, refs[i].definition, choice.Text)
 				}
 			}
@@ -968,6 +973,12 @@ func TestPostgreSQLReviewOncePerCanonicalWordForCorrectWrongAndSkip(t *testing.T
 			_, err = f.review.SubmitReview(ctx, reviews.SubmitReviewRequest{UserID: f.u, UserWordID: other, MeaningID: otherMeaning, PromptType: reviews.PromptTypeSelfCheck, Result: reviews.ResultIncorrect, Rating: reviews.RatingAgain, AnsweredAt: f.now.Add(-24 * time.Hour), ClientAttemptID: "different-use", IdempotencyKey: "different-use", AllowSessionRetry: true})
 			require.ErrorIs(t, err, reviews.ErrNotDue)
 			var count int
+			require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM daily_review_effort WHERE user_id=$1`, f.u).Scan(&count))
+			if action == "skip" {
+				require.Zero(t, count)
+			} else {
+				require.Equal(t, 1, count)
+			}
 			require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM review_attempts WHERE user_id=$1`, f.u).Scan(&count))
 			require.Equal(t, 1, count)
 			require.NoError(t, f.db.QueryRow(`SELECT count(*) FROM daily_review_successes WHERE user_id=$1`, f.u).Scan(&count))

@@ -12,6 +12,7 @@ import (
 type DailyLessonOutput struct{ Body dailylesson.Session }
 type CurrentDailyLessonOutput struct{ Body dailylesson.Current }
 type StartDailyLessonInput struct {
+	Additional     bool   `query:"additional" default:"false"`
 	IdempotencyKey string `header:"Idempotency-Key" required:"true" minLength:"1" maxLength:"128"`
 }
 type GetDailyLessonInput struct {
@@ -34,7 +35,11 @@ func RegisterDailyLessons(api huma.API, svc *dailylesson.Service, authSvc *auth.
 		return &CurrentDailyLessonOutput{Body: *out}, nil
 	})
 	huma.Register(api, huma.Operation{OperationID: "StartDailyLesson", Method: http.MethodPost, Path: "/api/v1/daily-lessons", Summary: "Start or resume a lesson from your actual due saved meanings", Tags: []string{"Daily lessons"}, Responses: responses, Middlewares: []func(huma.Context, func(huma.Context)){private, RequireAuth(), CSRFMiddleware(authSvc)}}, func(ctx context.Context, in *StartDailyLessonInput) (*DailyLessonOutput, error) {
-		out, e := svc.Start(ctx, RequesterUserID(ctx), in.IdempotencyKey)
+		start := svc.Start
+		if in.Additional {
+			start = svc.StartAdditional
+		}
+		out, e := start(ctx, RequesterUserID(ctx), in.IdempotencyKey)
 		if e != nil {
 			return nil, mapDailyLessonError(e)
 		}
@@ -64,7 +69,7 @@ func mapDailyLessonError(e error) error {
 	case errors.Is(e, dailylesson.ErrConflict):
 		return huma.Error409Conflict("This lesson changed. Reload it to continue.")
 	case errors.Is(e, dailylesson.ErrNoDue):
-		return huma.Error409Conflict("No words are due. Discover a word to start learning.")
+		return huma.Error409Conflict("No required reviews are available. Check today’s goal or choose additional review.")
 	case errors.Is(e, dailylesson.ErrContentUnavailable):
 		return huma.Error503ServiceUnavailable("Meaning choices are unavailable. Try again.")
 	default:

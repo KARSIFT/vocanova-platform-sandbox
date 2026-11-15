@@ -531,9 +531,21 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 		}
 		credited = n == 1
 	}
+	effortCredited := false
+	if !skipped && !req.WasHintUsed && req.verifiedSessionID != uuid.Nil {
+		result, e := tx.ExecContext(ctx, `INSERT INTO daily_review_effort(user_id,word_id,meaning_id,local_date,review_attempt_id,daily_session_id,created_at) SELECT $1,word_id,$2,$3,$4,$5,$6 FROM word_meanings WHERE id=$2 ON CONFLICT(user_id,word_id,local_date) DO NOTHING`, req.UserID, req.MeaningID, snap.LocalDate, attemptID, req.verifiedSessionID, now)
+		if e != nil {
+			return e
+		}
+		n, e := result.RowsAffected()
+		if e != nil {
+			return e
+		}
+		effortCredited = n == 1
+	}
 	newReviewsCompleted, err := r.missions.IncrementReviewsCompleted(
 		ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone,
-		resolved.DailyReviewTarget, correct, skipped, credited,
+		resolved.DailyReviewTarget, correct, skipped, effortCredited,
 	)
 	if err != nil {
 		return fmt.Errorf("increment reviews completed: %w", err)
@@ -567,66 +579,8 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 		}
 	}
 
-	// If the review target is met for the first time today, transition
-	// the snapshot to completed, record the +10 daily-mission-completion
-	// award, and let the streak reconciliation know the day completed
-	// (so it advances the streak and may earn a grace day).
-	missionCompletedNow := false
-	if newReviewsCompleted >= snap.ReviewTarget && snap.Status == missions.StatusOpen {
-		completed, err := r.missions.MarkSnapshotCompleted(ctx, tx, req.UserID, snap.LocalDate, now)
-		if err != nil {
-			return fmt.Errorf("mark snapshot completed: %w", err)
-		}
-		if completed {
-			missionCompletedNow = true
-			balance, err := r.gamification.CurrentBalanceTx(ctx, tx, req.UserID)
-			if err != nil {
-				return fmt.Errorf("get latest point balance: %w", err)
-			}
-			localDateKey := snap.LocalDate.Format("2006-01-02")
-			if _, _, _, err := r.gamification.GrantPoint(
-				ctx, tx, req.UserID,
-				gamification.RewardKindDailyMissionDone, nil,
-				gamification.DailyMissionCompletedKey(req.UserID.String(), localDateKey),
-				balance, now, nil,
-			); err != nil {
-				return fmt.Errorf("grant daily mission point: %w", err)
-			}
-			if err := r.missions.RecordConfidencePointChange(
-				ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone, gamification.RewardDailyMissionDone,
-			); err != nil {
-				return fmt.Errorf("increment points earned: %w", err)
-			}
-		}
-	}
-
-	// Streak reconciliation: lazy, no queue/cron (DOC-06 §15), computed
-	// from the recent snapshot history. Reads happen on the caller's tx
-	// (consistent read) and any grace-day ledger writes happen here too.
-	snaps, err := r.fetchStreakSnapshotsTx(ctx, tx, req.UserID)
-	if err != nil {
-		return fmt.Errorf("fetch streak snapshots: %w", err)
-	}
-	reconciliation, err := r.gamification.ReconcileAndAdvance(
-		ctx, tx, req.UserID, now, resolved.Timezone,
-		snaps, missionCompletedNow,
-	)
-	if err != nil {
-		return fmt.Errorf("reconcile streak: %w", err)
-	}
-	if reconciliation.GraceDayUsed != nil && reconciliation.GraceDayUsedID != nil && reconciliation.YesterdayProtectedLocalDate != nil {
-		protected, err := r.missions.MarkSnapshotProtected(
-			ctx, tx, req.UserID, *reconciliation.YesterdayProtectedLocalDate, *reconciliation.GraceDayUsedID, resolved.Timezone,
-			snap.ReviewTarget,
-		)
-		if err != nil {
-			return fmt.Errorf("mark grace-protected snapshot: %w", err)
-		}
-		if !protected {
-			return errors.New("mark grace-protected snapshot: missed snapshot was not updated")
-		}
-	}
-	return nil
+	snap.ReviewsCompleted = newReviewsCompleted
+	return r.missions.CompleteReviewGoalTx(ctx, tx, req.UserID, resolved, snap, now)
 }
 
 // reviewRewardKind maps a (result, rating) pair to the per-event reward
@@ -663,47 +617,6 @@ func reviewRewardKind(result, rating string) (correct, skipped bool, kind gamifi
 		return false, true, "", true
 	}
 	return false, false, "", false
-}
-
-// fetchStreakSnapshotsTx reads the recent daily_mission_snapshots history
-// for the user (a 14-day window is sufficient for streak reconciliation)
-// inside the caller's tx so the read is consistent with the writes just
-// performed by the P4 wiring block.
-func (r *PostgreSQLRepository) fetchStreakSnapshotsTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) ([]gamification.StreakSnapshot, error) {
-	rows, err := tx.QueryContext(ctx,
-		`SELECT local_date, status, completed_at, grace_applied, grace_day_id
-		 FROM daily_mission_snapshots
-		 WHERE user_id = $1
-		 ORDER BY local_date DESC
-		 LIMIT $2`,
-		userID, 14,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("fetch streak snapshots: %w", err)
-	}
-	defer rows.Close()
-	var out []gamification.StreakSnapshot
-	for rows.Next() {
-		var s gamification.StreakSnapshot
-		var completedAt sql.NullTime
-		var graceDayID *uuid.UUID
-		if err := rows.Scan(&s.LocalDate, &s.Status, &completedAt, &s.GraceApplied, &graceDayID); err != nil {
-			return nil, fmt.Errorf("scan streak snapshot: %w", err)
-		}
-		if completedAt.Valid {
-			t := completedAt.Time
-			s.CompletedAt = &t
-		}
-		if graceDayID != nil {
-			id := graceDayID.String()
-			s.GraceDayID = &id
-		}
-		out = append(out, s)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("scan streak snapshots rows: %w", err)
-	}
-	return out, nil
 }
 
 func (r *PostgreSQLRepository) fetchAttemptByClientAttemptID(ctx context.Context, tx *sql.Tx, userID uuid.UUID, clientAttemptID string) (*ReviewAttempt, error) {
@@ -804,4 +717,17 @@ func postgresTimestamp(t time.Time) time.Time {
 	t = t.UTC()
 	microseconds := math.RoundToEven(float64(t.Nanosecond()) / float64(time.Second) * 1_000_000)
 	return t.Truncate(time.Second).Add(time.Duration(microseconds) * time.Microsecond)
+}
+
+// ReconcileDailyGoalTx shares the review transaction's settings and mission
+// policy with daily lesson reads. The caller must hold the active user lock.
+func (r *PostgreSQLRepository) ReconcileDailyGoalTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, now time.Time) (*missions.DailyMissionSnapshot, error) {
+	if !r.HasP4Wiring() {
+		return nil, errors.New("daily review rewards unavailable")
+	}
+	resolved, err := r.gamification.GetSettingsTx(ctx, tx, userID, "")
+	if err != nil {
+		return nil, err
+	}
+	return r.missions.ReconcileReviewEffortTx(ctx, tx, userID, resolved, now)
 }

@@ -200,6 +200,7 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 	// 2c. IncrementReviewsCompleted: UPDATE daily_mission_snapshots
 	// RETURNING reviews_completed, then INSERT into daily_activity_summaries.
 	mock.ExpectExec("INSERT INTO daily_review_successes").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("INSERT INTO daily_review_effort").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("UPDATE daily_mission_snapshots").
 		WithArgs(userID, day, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"reviews_completed"}).AddRow(1))
@@ -332,6 +333,7 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 		))
 	// IncrementReviewsCompleted: 19 -> 20 (target met).
 	mock.ExpectExec("INSERT INTO daily_review_successes").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("INSERT INTO daily_review_effort").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("UPDATE daily_mission_snapshots").
 		WithArgs(userID, day, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"reviews_completed"}).AddRow(20))
@@ -659,6 +661,7 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 			gamification.MissionPolicyVersion, "completed", now, false, nil,
 		))
 	mock.ExpectExec("INSERT INTO daily_review_successes").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("INSERT INTO daily_review_effort").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("UPDATE daily_mission_snapshots").
 		WithArgs(userID, day, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"reviews_completed"}).AddRow(20))

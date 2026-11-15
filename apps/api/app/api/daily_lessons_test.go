@@ -5,6 +5,8 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/dailylesson"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
@@ -15,6 +17,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestDailyLessonAPIProtectsAllRoutes(t *testing.T) {
@@ -83,8 +86,29 @@ func TestDailyLessonCurrentSuccessfulResponseIsNeverCached(t *testing.T) {
 	api := humachi.New(chi.NewMux(), huma.DefaultConfig("Daily private", "test"))
 	api.UseMiddleware(withHumaContext)
 	api.UseMiddleware(AuthMiddleware(a))
-	RegisterDailyLessons(api, dailylesson.NewService(db, nil, nil), a)
+	gam := gamification.NewService(gamification.NewRepository(db))
+	mis := missions.NewService(missions.NewRepository(db), gam)
+	review := reviews.NewPostgreSQLRepository(db, nil, reviews.WithGamificationService(gam), reviews.WithMissionsService(mis))
+	RegisterDailyLessons(api, dailylesson.NewService(db, review, nil), a)
 	mock.ExpectBegin()
+
+	mock.ExpectQuery("SELECT id FROM users").WithArgs(u).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(u))
+	mock.ExpectQuery("SELECT user_id, timezone, daily_review_target").WithArgs(u).WillReturnRows(sqlmock.NewRows([]string{"user_id", "timezone", "daily_review_target", "review_interval_preset", "notifications_enabled", "marketing_emails_enabled", "app_language"}).AddRow(u, "UTC", 15, "vocanova_default", false, false, "en"))
+	day := time.Now().UTC().Truncate(24 * time.Hour)
+	snapshotRows := func() *sqlmock.Rows {
+		return sqlmock.NewRows([]string{"id", "user_id", "local_date", "timezone", "review_target", "reviews_completed", "new_word_target", "new_words_completed", "sentence_practice_target", "sentence_practices_completed", "policy_version", "status", "completed_at", "grace_applied", "grace_day_id"}).AddRow(uuid.New(), u, day, "UTC", 15, 0, nil, nil, nil, nil, gamification.MissionPolicyVersion, "open", nil, false, nil)
+	}
+	mock.ExpectQuery("INSERT INTO daily_mission_snapshots").WillReturnRows(snapshotRows())
+	mock.ExpectExec("INSERT INTO daily_review_effort").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery("UPDATE daily_mission_snapshots").WillReturnRows(sqlmock.NewRows([]string{"reviews_completed"}).AddRow(0))
+	mock.ExpectQuery("SELECT local_date, status, completed_at, grace_applied, grace_day_id FROM daily_mission_snapshots").WillReturnRows(sqlmock.NewRows([]string{"local_date", "status", "completed_at", "grace_applied", "grace_day_id"}))
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE").WillReturnRows(sqlmock.NewRows([]string{"balance"}).AddRow(0))
+	mock.ExpectQuery("SELECT user_id, current_streak_count").WillReturnRows(sqlmock.NewRows([]string{"user_id", "current_streak_count", "longest_streak_count", "last_completed_local_date", "last_activity_local_date", "timezone", "status", "created_at", "updated_at"}))
+	mock.ExpectExec("INSERT INTO streak_states").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT id, user_id, local_date").WillReturnRows(snapshotRows())
+	mock.ExpectQuery("SELECT count.* FROM daily_review_effort").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+	mock.ExpectQuery("SELECT min").WillReturnRows(sqlmock.NewRows([]string{"next_review_at"}).AddRow(nil))
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(u).WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
 	mock.ExpectQuery("SELECT state FROM daily_lesson_sessions").WithArgs(u).WillReturnRows(sqlmock.NewRows([]string{"state"}))
 	mock.ExpectQuery("SELECT count").WithArgs(u, sqlmock.AnyArg()).WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))

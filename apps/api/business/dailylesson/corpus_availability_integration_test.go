@@ -81,11 +81,11 @@ func TestPostgreSQLFullCatalogHasEnoughDailyLessonChoices(t *testing.T) {
 		} else if counts[rank] == minimum {
 			minimumWords = append(minimumWords, words[rank])
 		}
-		if counts[rank] < 2 {
+		if counts[rank] < 3 {
 			failures = append(failures, fmt.Sprintf("%d:%s has %d safe distractors", rank, words[rank], counts[rank]))
 		}
 	}
-	require.Empty(t, failures, "each target needs correct answer plus at least two alternatives")
+	require.Empty(t, failures, "each target needs correct answer plus three alternatives")
 	t.Logf("Checked all %d real targets; minimum safe distractors after production pool + alias guard: %d", len(words), minimum)
 	t.Logf("Minimum words: %v; short target availability: %v", minimumWords, shortCounts)
 }
