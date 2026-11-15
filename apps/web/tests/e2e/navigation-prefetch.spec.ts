@@ -182,6 +182,17 @@ test("a prominent link shows its destination's loading state at once", async ({
   page,
 }) => {
   await signIn(page);
+  // Observe before Home loads: on desktop the link can prefetch immediately,
+  // before the explicit scroll used for the smaller viewports.
+  const practicePrefetch = page.waitForResponse((response) => {
+    const request = response.request();
+    const headers = request.headers();
+    return (
+      new URL(response.url()).pathname === "/practice" &&
+      headers.rsc === "1" &&
+      headers["next-router-prefetch"] === "1"
+    );
+  });
   await page.goto("/home");
   const practice = page
     .getByRole("navigation", { name: "Explore your English" })
@@ -189,6 +200,9 @@ test("a prominent link shows its destination's loading state at once", async ({
   // Viewport prefetch happens when the link is on screen (below the fold on
   // small phones), as it is when a learner reaches it.
   await practice.scrollIntoViewIfNeeded();
+  const prefetched = await practicePrefetch;
+  expect(prefetched.status()).toBe(200);
+  expect(await prefetched.finished()).toBeNull();
   await settle(page);
   // From now on every server read is slow, including the identity check; only
   // the loading state prefetched on view can appear immediately.

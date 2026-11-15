@@ -48,42 +48,29 @@ govern whether a live session uses those modes.
 
 ## Verification record
 
-- Baseline: 302 web/helper tests and focused API packages passed before changes.
-- New behavior was reproduced RED before the relevant fixes: authenticated root,
-  additional-review intent, position transport, export DTO, review/discovery UI,
-  midnight Home refresh and persistence confirmation races.
-- Independent task review found and verified fixes for picture identity leakage,
-  answer-position bias/public-ID derivation, false discovery save confirmation
-  and Home's stale overnight snapshot.
-- Full local API suite with disposable PostgreSQL 16: **2,753 test/subtest
-  events passed, zero failures/skips**, 33 packages; explicit local Go 1.26.10.
-  Exact repository Go 1.26.5 remains a separate hosted CI gate.
-- Final production web build passed. Initial final Chrome matrix: **60 passed**,
-  zero failures/skips/retries across 360px, 430px and desktop, including both
-  themes, keyboard/200% text, unfiltered axe scans and screenshots.
-- Earlier compatibility run: 189 passed, nine obsolete label assertions failed;
-  those exact assertions were updated to the approved labels and all nine passed
-  in a 15-case follow-up that also passed six visual/axe walkthroughs. No timeout
-  increases or rule exclusions were introduced.
+- Full local API suite with disposable PostgreSQL16: **2,753 passing test/subtest
+  events, zero failures/skips**, 33 test-bearing packages; explicit local Go1.26.10.
+  Hosted Go1.26.5 subsequently passed 33 package checks and 360 targeted PostgreSQL
+  checks, with zero failures/skips in the verbose targeted group.
+- API client **63** and web/helper **352** tests passed, as did application/browser
+  types, lint, formatting and the production build. Linux hosted foundation checks
+  passed **337/337**; the local macOS harness retains its four documented
+  GNU-sed/Bash-coproc/browser-fixture limitations.
+- The final integrated local Chrome selection passed **453/453** with zero
+  failures/skips/retries across 360px, 430px and desktop. It includes the complete
+  set of observed journey compatibility failures, both themes, keyboard/200% text,
+  unfiltered axe scans, fallback fonts and eight window heights. The compiled
+  source manifest stayed unchanged during the run.
+- Independent task, whole-branch and scoped follow-up reviews cleared the repaired
+  findings. Current-head hosted browser counts, retry/scope dispositions,
+  Lighthouse reports, merge identity and real release checks are maintained in the
+  [consolidated PR](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1527).
 
-- Final client tests: **63 passed**; web/helper tests after staging-harness extensions: **352 passed**; application
-  and browser TypeScript checks passed. Workspace, formatting and web/package lint
-  checks passed. Foundation checks: **333/337**, with the four documented macOS
-  GNU-sed/Bash-coproc/browser-fixture failures; the new bounded inventory checks
-  passed 13/13 and Linux CI must pass the full harness.
-- Firefox initially passed 58/60 cases and exposed focused feedback partly behind
-  the fixed action rail at 360px. A geometry regression reproduced the defect;
-  feedback now focuses without native scrolling and centers in view. Both failing
-  themes passed the focused regression with unfiltered axe and native keyboard
-  clearance checks. This is a source repair, not an axe exclusion or scan-position
-  normalization. The full repaired Firefox matrix subsequently passed 60/60 with zero skips or retries. Other final engine checks remain separate evidence.
-
-Remaining exact-head engine, hosted CI/review and rollout results are recorded by
-the consolidated PR. Synthetic fixtures establish UI interaction only. They do
-not prove provider quality, real account authentication delivery, learner
-effectiveness or actual screen-reader speech. Database tests establish the
-tested persistence/transaction properties on a disposable local database, not
-production durability.
+Synthetic fixtures establish UI interaction, not provider quality, real account
+authentication delivery, learner effectiveness or actual screen-reader speech.
+Database tests establish the exercised transaction properties on disposable
+PostgreSQL, not production durability. A successful PR alone is not a claim that
+the entire product is finished.
 
 ## Integrated review follow-up
 
@@ -105,12 +92,6 @@ A real-link prefetch regression completed three local Chrome repeats: after a
 second tab confirms a newer position, clicking the prefetched generic link reads
 fresh data. This bounded negative reproduction does not establish all cache cases.
 
-Focused rebuilt browser verification of this repair wave passed 17/17. The full
-post-wave local matrix then passed **282 Chrome, 192 Firefox and 192 WebKit**
-cases across 360px, 430px and desktop: **666 passed, zero failures/skips/retries**.
-The compiled web/client source manifest remained unchanged throughout these runs.
-Hosted checks and real rollout remain separate release evidence.
-
 The first hosted synthetic recovery rehearsal exposed a schema-dump comparison
 failure in the new discovery constraint: PostgreSQL expands a mixed BETWEEN/AND
 expression and flattens its grouping on restore. The new, unmerged migration now
@@ -120,5 +101,23 @@ sole two-parenthesis difference. The fresh GREEN dump/restore has identical sche
 hashes, matching rows/sequences and integrity checks, and verified cleanup. Extra
 source/target checks accepted ranks 1/100/101/10000 with correct bands and rejected
 0/10001/mismatched bands under the original named constraint. Discovery/migration
-Go follow-up passed 129 test/subtest events with no failures/skips. Exact-head
-hosted recovery still must pass after the fix.
+Go follow-up passed 129 test/subtest events with no failures/skips. Hosted recovery
+subsequently matched all54 tables/schema/sequences and rejected seven injected
+faults at their expected stages, with verified cleanup.
+
+The full browser inventory also required older journey tests to adopt exact
+reviewed/target counts, goal-aware terminal states, authenticated root routing,
+Journey-only attribution and explicit extra-review intent. Their interaction,
+count, geometry and accessibility assertions remain active. A completed-prefetch
+barrier makes the warm navigation test's setup explicit while retaining its
+700ms loading criterion; it is not a claim of a new application performance fix.
+
+Actual presentation regressions were repaired too: feedback focus now respects
+both persistent bars and complete preceding click targets within real scroll
+limits, and text-choice correctness markers retain their own row so 200% text
+does not split ordinary answer words. Exact completion dates are text content
+inside native time elements, alongside the visible relative label, rather than
+an ignored author name; the [W3C naming guidance](https://www.w3.org/WAI/ARIA/apg/practices/names-and-descriptions/)
+marks the time role as unsuitable for author naming. A regression checks the
+server timestamp, independently formatted exact date and exposed accessibility
+tree. No axe rules, relevant assertions or thresholds were disabled.

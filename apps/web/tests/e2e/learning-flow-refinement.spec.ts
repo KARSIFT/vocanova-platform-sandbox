@@ -50,13 +50,14 @@ test("keeps lesson completion simple and optional writing available afterward", 
   await answerReviewWord(page, "to make liquid flow into a container");
   await expect(
     page.getByRole("heading", {
-      name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+      name: "All available reviews finished",
       exact: true,
     }),
   ).toBeVisible();
   await expect(
-    page.getByText("1 word remembered for today.", { exact: true }),
+    page.getByText("1 of 20 words reviewed today", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByText("1 correct on the first try.", { exact: true })).toBeVisible();
   await expect(page.getByRole("textbox")).toHaveCount(0);
   await page.goto("/words/uw-mean-pour");
   await openOptionalWriting(page);

@@ -3,12 +3,12 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const apiURL = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
 
-async function activate(page: Page, link: Locator, href: string, heading: string) {
+async function activate(page: Page, link: Locator, href: string, heading: string, destination = href) {
   await expect(link).toHaveAttribute("href", href);
   await link.focus();
   await expect(link).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(new URL(href, test.info().project.use.baseURL!).toString());
+  await expect(page).toHaveURL(new URL(destination, test.info().project.use.baseURL!).toString());
   await expect(page.getByRole("main").getByRole("heading", { name: heading, level: 1, exact: true })).toBeVisible();
 }
 
@@ -120,13 +120,13 @@ for (const theme of ["light", "dark"] as const) {
       await visit(page, "/auth/email-change?token=test-token", "Confirm your new email");
       await expect(page.getByRole("status")).toContainText("Your sign-in email is now");
       await activate(page, page.getByRole("link", { name: "Return to account settings", exact: true }), "/settings/account", "Account");
-      for (const [name, href, heading] of [
-        ["Go to account settings", "/settings/account", "Account"],
-        ["Back to home", "/", "Learn the words you will actually use."],
+      for (const [name, href, heading, destination] of [
+        ["Go to account settings", "/settings/account", "Account", "/settings/account"],
+        ["Back to home", "/", "Today", "/home"],
       ] as const) {
         await visit(page, "/auth/email-change?token=invalid-token", "Confirm your new email");
         await expect(page.getByRole("main").getByRole("alert")).toContainText("invalid or has expired");
-        await activate(page, page.getByRole("link", { name, exact: true }), href, heading);
+        await activate(page, page.getByRole("link", { name, exact: true }), href, heading, destination);
       }
     });
 

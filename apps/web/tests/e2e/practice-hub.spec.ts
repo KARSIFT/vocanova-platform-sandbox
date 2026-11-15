@@ -298,6 +298,9 @@ test("Practice keeps scheduled count truthful after today's review target is com
   });
   expect(response.ok()).toBe(true);
   let lesson = await response.json();
+  const requiredLessonId = lesson.id;
+  expect(lesson.totalWords).toBe(5);
+  expect(lesson.goal).toMatchObject({target: 5, reviewed: 0, remaining: 5, complete: false});
   for (let index = 0; index < 5; index++) {
     for (const action of ["answer", "continue"] as const) {
       const id = randomUUID();
@@ -319,19 +322,46 @@ test("Practice keeps scheduled count truthful after today's review target is com
     }
   }
 
+  expect(lesson.status).toBe("completed");
+  expect(lesson.completedWords).toBe(5);
+  expect(lesson.goal).toMatchObject({target: 5, reviewed: 5, remaining: 0, complete: true});
+  const browserStarts: string[] = [];
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (request.method() === "POST" && url.pathname === "/api/v1/daily-lessons")
+      browserStarts.push(url.search);
+  });
+
   await page.goto("/practice");
   const main = page.getByRole("main");
   await expect(
     main.getByText("2 words are due for review.", { exact: true }),
   ).toBeVisible();
-  // A daily habit target does not conceal still-due words or an active lesson.
+  // Due work stays visible after the required goal. Entering reviews must not
+  // silently create another required set; the learner explicitly chooses extra work.
   await main.getByRole("link", { name: "Start review", exact: true }).click();
+  await expect(main.getByRole("heading", { name: "Today’s review complete", exact: true })).toBeVisible();
+  await expect(main.getByText("5 of 5 words reviewed today. Discover a new word or try today’s practice.", { exact: true })).toBeVisible();
+  await expect(main.getByRole("link", { name: "Discover words", exact: true })).toHaveAttribute("href", "/discovery");
+  await expect(main.getByRole("radio")).toHaveCount(0);
+  expect(browserStarts).toEqual([]);
+  const extraStarted = page.waitForResponse(result => result.request().method() === "POST" && new URL(result.url()).pathname === "/api/v1/daily-lessons");
+  await main.getByRole("button", { name: "Review more words", exact: true }).click();
+  const extraResponse = await extraStarted;
+  expect(extraResponse.status()).toBe(200);
+  const extra = await extraResponse.json();
+  expect(extra.id).not.toBe(requiredLessonId);
+  expect(extra.totalWords).toBe(2);
+  expect(extra.completedWords).toBe(0);
+  expect(extra.goal).toMatchObject({target: 5, reviewed: 5, remaining: 0, complete: true});
+  expect(browserStarts).toEqual(["?additional=true"]);
   await expect(
     main.getByRole("heading", { name: "Review word 6", exact: true }),
   ).toBeVisible();
   await expect(
     main.getByRole("progressbar", { name: "Review progress" }),
-  ).toHaveAttribute("value", "5");
+  ).toHaveAttribute("value", "0");
+  await expect(main.getByRole("progressbar", { name: "Review progress" })).toHaveAttribute("max", "2");
 });
 
 test("Practice distinguishes unavailable lessons from an empty catalog without hiding other activities", async ({

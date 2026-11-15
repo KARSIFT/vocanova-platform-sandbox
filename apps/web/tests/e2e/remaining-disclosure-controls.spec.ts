@@ -75,7 +75,7 @@ for (const theme of ["light", "dark"] as const) {
       await checkLayout(page);
     });
 
-    test("word sources remain reachable from discovery and disclose on Journey and review", async ({ page }) => {
+    test("word sources remain reachable from discovery and Journey without interrupting review", async ({ page }) => {
       for (const path of ["/discover", "/discovery", "/reviews"]) {
         await page.goto(path);
         if (path === "/discovery") {
@@ -86,6 +86,11 @@ for (const theme of ["light", "dark"] as const) {
         if (path === "/reviews") {
           await startReviewLesson(page);
           await expect(page.getByRole("radio").first()).toBeVisible();
+          await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+          await expect(disclosure(page, "Word sources")).toHaveCount(0);
+          await expect(page.getByText("Word sources", { exact: true })).toHaveCount(0);
+          await checkLayout(page);
+          continue;
         }
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         const sources = disclosure(page, "Word sources");

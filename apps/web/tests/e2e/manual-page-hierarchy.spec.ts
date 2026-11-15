@@ -48,7 +48,9 @@ for (const theme of ["light", "dark"] as const) {
       await expect(main.getByRole("heading", { name: "Progress", exact: true })).toBeVisible();
     });
 
-    test("landing content reflows at the desktop threshold with enlarged text", async ({ page }, info) => {
+    test("landing content reflows at the desktop threshold with enlarged text", async ({ page, context }, info) => {
+      // This case audits the anonymous landing page; verified learners enter Home.
+      await context.clearCookies({ name: "vocanova_session" });
       await page.setViewportSize({ width: 1024, height: 900 });
       await page.goto("/");
       const title = page.getByRole("heading", { level: 1 });

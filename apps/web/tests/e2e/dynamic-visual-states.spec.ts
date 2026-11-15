@@ -89,7 +89,9 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.getByRole("status").filter({ hasText: /^Correct/ })).toBeVisible();
       await capture(page, info, `review-correct-${theme}`);
       await page.getByRole("button", { name: "Continue", exact: true }).click();
-      await expect(page.getByRole("heading", { name: /^(?:Review saved|Review set complete|You’ve finished your review)$/ })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "All available reviews finished", exact: true })).toBeVisible();
+      await expect(page.getByText("1 of 20 words reviewed today", { exact: true })).toBeVisible();
+      await expect(page.getByText("1 correct on the first try.", { exact: true })).toBeVisible();
       await capture(page, info, `review-complete-${theme}`);
     });
 

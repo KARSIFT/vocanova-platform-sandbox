@@ -162,7 +162,10 @@ for (const theme of ["light", "dark"] as const) {
       context,
       baseURL,
     }, info) => {
+      await page.clock.install({ time: new Date("2026-10-16T12:00:00Z") });
       await context.addCookies([
+        { name: "e2e_review_timezone", value: "UTC", url: baseURL! },
+        { name: "e2e_review_local_date", value: "2026-10-16", url: baseURL! },
         { name: "vocanova_session", value: randomUUID(), url: baseURL! },
         { name: "vocanova_csrf", value: randomUUID(), url: baseURL! },
         { name: "vocanova_theme", value: theme, url: baseURL! },
@@ -208,23 +211,18 @@ for (const theme of ["light", "dark"] as const) {
         }),
         "The first answer word must remain readable without forced splitting",
       ).toBe(1);
-      const date = new Intl.DateTimeFormat("en", {
-        month: "short",
-        day: "numeric",
-        timeZone: await page.evaluate(
-          () => Intl.DateTimeFormat().resolvedOptions().timeZone,
-        ),
-      }).format(new Date("2026-10-18T22:30:00.000Z"));
       const schedule = page.getByRole("button", {
-        name: `Show this word again: Automatic · ${date}`,
+        name: "Show this word again: Automatic · In 2 days. October 18, 2026 at 10:30 PM UTC",
         exact: true,
       });
       await expectReadableControl(page, schedule, [
         schedule.getByText("Next review", { exact: true }),
-        schedule.getByText(date, { exact: true }),
+        schedule.getByText("In 2 days", { exact: true }),
       ]);
       const next = page.getByRole("button", { name: "Continue", exact: true });
-      await expectReadableControl(page, next, [next]);
+      // Continue is the last page control now that attribution lives on Journey.
+      // Verify native return through its preceding schedule, not browser chrome.
+      await expectReadableControl(page, next, [next], true);
       const [scheduleBounds, continueBounds] = await Promise.all([
         schedule.boundingBox(),
         next.boundingBox(),

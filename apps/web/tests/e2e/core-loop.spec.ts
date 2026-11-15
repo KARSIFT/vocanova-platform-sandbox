@@ -220,7 +220,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
       page
         .getByRole("region", { name: "Review words", exact: true })
         .getByText(/^Reviewed today:/),
-    ).toHaveText("Reviewed today: 0");
+    ).toHaveText("Reviewed today: 0 of 15");
 
     // ----- 3. Discover.
     await page.goto("/courses");
@@ -319,14 +319,15 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await answerReviewWord(page, "to make liquid flow into a container");
     await expect(
       page.getByRole("heading", {
-        name: /^(?:Review saved|Review set complete|You’ve finished your review)$/,
+        name: "All available reviews finished",
         exact: true,
         level: 1,
       }),
     ).toBeFocused();
     await expect(
-      page.getByText("1 word remembered for today.", { exact: true }),
+      page.getByText("1 of 15 words reviewed today", { exact: true }),
     ).toBeVisible();
+    await expect(page.getByText("1 correct on the first try.", { exact: true })).toBeVisible();
     await expect(page.getByRole("textbox")).toHaveCount(0);
     // Writing is a deliberate personal tool, separate from today's recall.
     await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
@@ -422,7 +423,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
       page
         .getByRole("region", { name: "Review words", exact: true })
         .getByText(/^Reviewed today:/),
-    ).toHaveText("Reviewed today: 1");
+    ).toHaveText("Reviewed today: 1 of 15");
 
     // Home leads with discovery and the saved word; writing stays optional.
     await expect(

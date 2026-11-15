@@ -191,7 +191,7 @@ for (const theme of ["light", "dark"] as const) {
         panel.getByText(/Come back to see which words are ready\./),
       ).toBeVisible();
       await expect(
-        panel.getByText("Reviewed today: 0", { exact: true }),
+        panel.getByText("Reviewed today: 0 of 20", { exact: true }),
       ).toBeVisible();
       await expect(
         panel.getByText(/mastered|review complete|tomorrow/i),

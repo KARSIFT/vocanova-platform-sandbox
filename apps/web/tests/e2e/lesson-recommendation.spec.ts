@@ -96,7 +96,7 @@ for (const theme of ["light", "dark"] as const) {
           page
             .getByRole("region", { name: "Review words", exact: true })
             .getByText(/^Reviewed today:/),
-        ).toHaveText("Reviewed today: 0");
+        ).toHaveText("Reviewed today: 0 of 20");
       }
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       expect(

@@ -121,7 +121,14 @@ export function DailyLessonChoices({
               {option.text}
             </span>
             {correctChoiceId === option.id && (
-              <span className="ml-auto font-bold" aria-label="Correct answer">
+              <span
+                className={
+                  pictureMode
+                    ? "ml-auto font-bold"
+                    : "basis-full text-right font-bold"
+                }
+                aria-label="Correct answer"
+              >
                 ✓
               </span>
             )}

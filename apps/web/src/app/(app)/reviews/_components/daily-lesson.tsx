@@ -199,6 +199,68 @@ export function DailyLessonPlayer({
         block: "center",
         behavior: "instant",
       });
+      const region = feedbackRegion.current;
+      if (region) {
+        const bounds = region.getBoundingClientRect();
+        const headerBottom =
+          document.querySelector("header")?.getBoundingClientRect().bottom ?? 0;
+        const railTop =
+          continueButton.current
+            ?.closest('[aria-label="Session actions"]')
+            ?.getBoundingClientRect().top ?? window.innerHeight;
+        const controls = Array.from(
+          region
+            .closest("form")
+            ?.querySelectorAll<HTMLElement>(
+              "button:not(:disabled), summary, a[href]",
+            ) ?? [],
+        )
+          .map((element) => element.getBoundingClientRect())
+          .filter(
+            (rect) =>
+              rect.width > 0 && rect.height > 0 && rect.bottom <= bounds.top,
+          );
+        if (
+          controls.some(
+            (rect) => rect.top < headerBottom && rect.bottom > headerBottom,
+          )
+        ) {
+          // End-of-document clamping can leave an earlier control under the
+          // sticky header. Prefer revealing it without covering the feedback;
+          // otherwise place it wholly above the header. This runs only for
+          // the programmatic feedback focus, not ordinary learner scrolling.
+          const minimum = Math.max(
+            -window.scrollY,
+            bounds.bottom - (railTop - 8),
+          );
+          const maximum = Math.min(
+            document.documentElement.scrollHeight -
+              window.innerHeight -
+              window.scrollY,
+            bounds.top - (headerBottom + 8),
+          );
+          const reveals = controls
+            .map((rect) => rect.top - headerBottom - 8)
+            .filter((delta) => delta < 0)
+            .sort((a, b) => Math.abs(a) - Math.abs(b));
+          const hides = controls
+            .map((rect) => rect.bottom - headerBottom)
+            .filter((delta) => delta > 0)
+            .sort((a, b) => a - b);
+          const delta = [...reveals, ...hides].find(
+            (candidate) =>
+              candidate >= minimum &&
+              candidate <= maximum &&
+              controls.every(
+                (rect) =>
+                  rect.bottom - candidate <= headerBottom ||
+                  rect.top - candidate >= headerBottom,
+              ),
+          );
+          if (delta !== undefined)
+            window.scrollBy({ top: delta, behavior: "instant" });
+        }
+      }
     }
     priorStep.current = step?.id;
   }, [session, step?.id, feedback]);
@@ -597,9 +659,9 @@ export function DailyLessonPlayer({
                 <time
                   dateTime={goal!.nextReviewAt}
                   title={nextOpportunity.exact}
-                  aria-label={`${nextOpportunity.label}. ${nextOpportunity.exact}`}
                 >
-                  {nextOpportunity.label}
+                  <span>{nextOpportunity.label}</span>
+                  <span className="sr-only">. {nextOpportunity.exact}</span>
                 </time>
                 .
               </p>
