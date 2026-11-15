@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 
 for (const theme of ["light", "dark"] as const) {
   test(`discovery resumes exact 4330 from Home and explicit links win in ${theme}`, async ({ page, baseURL }) => {
+    // Lighthouse injects this header into all requests, including save preflights.
+    await page.context().setExtraHTTPHeaders({ "X-Lighthouse-T09-Screen": "discovery", "X-Lighthouse-T09-Layout": "mobile-360" });
     await page.context().addCookies([
       { name: "vocanova_session", value: `position-${randomUUID()}`, url: baseURL! },
       { name: "vocanova_theme", value: theme, url: baseURL! },

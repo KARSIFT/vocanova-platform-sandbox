@@ -900,10 +900,11 @@ const server = createServer(async (req, res) => {
     // (packages/api-client/src/index.ts) - Idempotency-Key was
     // missing here initially and only surfaced once a mutation that
     // actually uses it (save word) ran in CI, the same silent
-    // "blocked by CORS policy" failure pattern as the first gap.
+    // "blocked by CORS policy" failure pattern as the first gap. Lighthouse
+    // also forwards its two fixture-selection headers on browser mutations.
     res.setHeader(
       "Access-Control-Allow-Headers",
-      "Content-Type, X-CSRF-Token, Idempotency-Key",
+      "Content-Type, X-CSRF-Token, Idempotency-Key, X-Lighthouse-T09-Screen, X-Lighthouse-T09-Layout",
     );
     res.writeHead(204);
     res.end();
