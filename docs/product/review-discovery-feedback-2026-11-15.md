@@ -9,18 +9,18 @@ deployment outcomes belong to the consolidated delivery PR and release handoff.
 
 ## Learner behavior
 
-| Owner feedback | Result |
-| --- | --- |
-| Signed-in landing page still says Sign in | Root identity routing sends verified learners to Home or unfinished onboarding; guests retain the landing page. |
-| Word sources interrupt review | Full attribution stays on Journey rather than the exercise; source/license data is retained. |
-| Teach meanings and pictures after an answer | Checked feedback retains its frozen definition and loads exact-revision artwork plus actual optional alternate meanings without blocking Continue. |
-| Show relative review intervals | Tomorrow, days, weeks and months use the saved schedule and stored learner timezone; exact dates remain accessible. |
-| Review repeats after the daily goal | A canonical word counts once per local day after a checked answer, including wrong answers. Daily completion shows a tick, makes discovery primary and keeps additional review optional. |
-| Goal 15 still produces a 10-word set | New required sets use the remaining confirmed allowance; fewer eligible words are described honestly. Legacy sessions retain frozen identities and denominators. |
-| Previous word is mixed with range selection | It is beneath the word card as a secondary control, retaining cross-range navigation and save locks. |
-| Range picker is too sparse | Rows reuse a compact 100-word preview and readable counts; each row is one selectable control with aggregate fallback for older responses. |
-| Discovery forgets the last word | Requester-owned CAS position storage resumes exact words on generic entry, including known/saved revisits. Explicit links win; failures/conflicts expose retry without false saved confirmation. |
-| Vary question types | Frozen four-picture, definition and sentence-gap choices share one server-graded attempt/schedule; unavailable content falls back to text. |
+| Owner feedback                              | Result                                                                                                                                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Signed-in landing page still says Sign in   | Root identity routing sends verified learners to Home or unfinished onboarding; guests retain the landing page.                                                                                  |
+| Word sources interrupt review               | Full attribution stays on Journey rather than the exercise; source/license data is retained.                                                                                                     |
+| Teach meanings and pictures after an answer | Checked feedback retains its frozen definition and loads exact-revision artwork plus actual optional alternate meanings without blocking Continue.                                               |
+| Show relative review intervals              | Tomorrow, days, weeks and months use the saved schedule and stored learner timezone; exact dates remain accessible.                                                                              |
+| Review repeats after the daily goal         | A canonical word counts once per local day after a checked answer, including wrong answers. Daily completion shows a tick, makes discovery primary and keeps additional review optional.         |
+| Goal 15 still produces a 10-word set        | New required sets use the remaining confirmed allowance; fewer eligible words are described honestly. Legacy sessions retain frozen identities and denominators.                                 |
+| Previous word is mixed with range selection | It is beneath the word card as a secondary control, retaining cross-range navigation and save locks.                                                                                             |
+| Range picker is too sparse                  | Rows reuse a compact 100-word preview and readable counts; each row is one selectable control with aggregate fallback for older responses.                                                       |
+| Discovery forgets the last word             | Requester-owned CAS position storage resumes exact words on generic entry, including known/saved revisits. Explicit links win; failures/conflicts expose retry without false saved confirmation. |
+| Vary question types                         | Frozen four-picture, definition and sentence-gap choices share one server-graded attempt/schedule; unavailable content falls back to text.                                                       |
 
 ## Assessment and content boundaries
 
@@ -105,5 +105,20 @@ A real-link prefetch regression completed three local Chrome repeats: after a
 second tab confirms a newer position, clicking the prefetched generic link reads
 fresh data. This bounded negative reproduction does not establish all cache cases.
 
-Focused rebuilt browser verification of this repair wave passed 17/17; full
-post-wave engine and hosted checks remain separate release evidence.
+Focused rebuilt browser verification of this repair wave passed 17/17. The full
+post-wave local matrix then passed **282 Chrome, 192 Firefox and 192 WebKit**
+cases across 360px, 430px and desktop: **666 passed, zero failures/skips/retries**.
+The compiled web/client source manifest remained unchanged throughout these runs.
+Hosted checks and real rollout remain separate release evidence.
+
+The first hosted synthetic recovery rehearsal exposed a schema-dump comparison
+failure in the new discovery constraint: PostgreSQL expands a mixed BETWEEN/AND
+expression and flattens its grouping on restore. The new, unmerged migration now
+uses equivalent explicit inclusive comparisons; the constraint name, semantics
+and strict schema comparator are retained. Isolated RED reproduction captured the
+sole two-parenthesis difference. The fresh GREEN dump/restore has identical schema
+hashes, matching rows/sequences and integrity checks, and verified cleanup. Extra
+source/target checks accepted ranks 1/100/101/10000 with correct bands and rejected
+0/10001/mismatched bands under the original named constraint. Discovery/migration
+Go follow-up passed 129 test/subtest events with no failures/skips. Exact-head
+hosted recovery still must pass after the fix.

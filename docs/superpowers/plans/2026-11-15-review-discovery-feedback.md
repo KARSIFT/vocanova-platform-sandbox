@@ -50,7 +50,7 @@
 - [x] Render all3question kinds accessibly: four pictures with all-text fallback, four text definitions, gap with four word choices; no target reveal for gaps, stable Check/Continue and recovery.
 - [x] Remove exercise attribution, load canonical other meanings and exact-revision picture only after checked correct/wrong answer; test optional-read failure, stale responses, single meaning and reload. Keep Continue available and one feedback announcement.
 - [x] Add timezone-aware relative schedule helper and tests covering tomorrow/weeks/months/DST; retain exact date as accessible detail and existing persisted interval choices.
-- [ ] Verify lint/types/helper tests and coordinated browser matrix360/430/desktop, light/dark/keyboard/200%text. Root commits accepted changes after review.
+- [x] Verify lint/types/helper tests and coordinated browser matrix360/430/desktop, light/dark/keyboard/200%text. Root commits accepted changes after review.
 
 ### Task 3: Discovery navigation, range previews and account resume
 
@@ -71,15 +71,14 @@
 - [x] Reproduce authenticated-root marketing behavior with middleware test; implement root identity routing preserving anonymous page, onboarding, expired cookies and recoverable upstream outage. Run middleware regressions.
 - [x] Apply agent-reported interfaces to API client/routes/generated OpenAPI; extend tests for additional flag/position/goal/choice contract and backwards compatibility.
 - [x] Update shared synthetic fixtures for new server semantics without weakening actual assertions; add stricter real staging checks for effort-based target and mixed-mode availability where actual approved content exists.
-- [ ] Coordinate frozen install/build, disposable PostgreSQL full API suite, client/web unit tests, lint/typecheck/e2e types and relevant whole browser matrix, screenshot/axe/keyboard review. Record exact pass/fail/skip/retry counts and limitations.
-
+- [x] Coordinate frozen install/build, disposable PostgreSQL full API suite, client/web unit tests, lint/typecheck/e2e types and relevant whole browser matrix, screenshot/axe/keyboard review. Record exact pass/fail/skip/retry counts and limitations.
 
 ### Task 5: Independent review, one PR and release
 
 **Owner/files:** root/reviewers: full branch diff, product/design acceptance docs, private handoff; workflow configuration remains unchanged unless evidenced necessary.
 
-- [ ] Independently review each task's spec and code; fix findings with targeted RED/GREEN evidence. Review full branch for auth/account isolation, goal/streak/rewards, question content/answer leaks and media failure modes.
-- [ ] Update spec status and product implementation/acceptance map with actual results. Commit local changes in logical slices on one branch; push one draft/hold PR targetingmain and request short Claude review.
+- [x] Independently review each task's spec and code; fix findings with targeted RED/GREEN evidence. Review full branch for auth/account isolation, goal/streak/rewards, question content/answer leaks and media failure modes.
+- [x] Update spec status and product implementation/acceptance map with actual results. Commit local changes in logical slices on one branch; push one draft/hold PR targetingmain and request short Claude review.
 - [ ] Inspect exact-head applicable CI/review results, including actual browser/Lighthouse reports and retries. Ready/unhold only after accepted results; normal merge queue, verify merged tree equals accepted head.
 - [ ] Strict staging all actual4cases with no failures/skips/retries, exact merged version/SHA/health; then dispatch canonical production workflow once with origin-cutover=skip.
 - [ ] Verify actual production smoke30PASS0FAIL0SKIP separately from existing owner-waivedINS11findings; independently verify4version endpoints/2APIhealth/pairedtimestamps. Update PR/handoff, stop owned servers and report deployed links/version with limitations.
