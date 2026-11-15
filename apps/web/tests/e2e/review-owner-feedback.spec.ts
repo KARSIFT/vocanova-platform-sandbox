@@ -253,10 +253,31 @@ for (const theme of ["light", "dark"] as const) {
       await expect(teaching.getByRole("img")).toBeVisible();
       await expect.poll(() => teaching.getByRole("img").evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
       await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
+      const focusedFeedback = page.getByRole("status").filter({ hasText: /^Correct/ });
+      await expect(focusedFeedback).toBeFocused();
+      const feedbackBounds = (await focusedFeedback.boundingBox())!;
+      const headerBounds = (await page.getByRole("banner").boundingBox())!;
+      const railBounds = (await page.getByRole("region", { name: "Session actions", exact: true }).boundingBox())!;
+      expect(feedbackBounds.y).toBeGreaterThanOrEqual(headerBounds.y + headerBounds.height + 8);
+      expect(feedbackBounds.y + feedbackBounds.height).toBeLessThanOrEqual(railBounds.y - 8);
       const feedbackScan = await scanForAxeViolations(page);
       expect(feedbackScan.criticalOrSerious, formatViolations(feedbackScan.criticalOrSerious).join("\n")).toEqual([]);
       await page.screenshot({ path: testInfo.outputPath(`${theme}-${kinds[mode]}-checked-viewport.png`) });
       await page.screenshot({ path: testInfo.outputPath(`${theme}-${kinds[mode]}-checked-full.png`), fullPage: true });
+      if (kinds[mode] === "picture_choice") {
+        // Native reverse Tab from checked feedback must return to the text
+        // fallback and audio toggle without leaving either under sticky chrome.
+        await page.keyboard.press("Shift+Tab");
+        await expect(page.getByRole("button", { name: "Use text options", exact: true })).toBeFocused();
+        await page.keyboard.press("Shift+Tab");
+        const audio = page.getByRole("button", { name: "Automatic audio off", exact: true });
+        await expect(audio).toBeFocused();
+        const audioBounds = (await audio.boundingBox())!;
+        expect(audioBounds.height).toBeGreaterThanOrEqual(44);
+        expect(audioBounds.y).toBeGreaterThanOrEqual(headerBounds.y + headerBounds.height + 8);
+        expect(audioBounds.y + audioBounds.height).toBeLessThanOrEqual(railBounds.y - 8);
+        expect((await scanForAxeViolations(page)).criticalOrSerious).toEqual([]);
+      }
       if (mode < kinds.length - 1) await page.getByRole("button", { name: "Continue", exact: true }).click();
     }
   });

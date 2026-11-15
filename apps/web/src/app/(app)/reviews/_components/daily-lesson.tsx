@@ -187,7 +187,15 @@ export function DailyLessonPlayer({
     focusResponse.current = false;
     if (priorStep.current !== step?.id || session?.status === "completed")
       heading.current?.focus();
-    else if (feedback) feedbackRegion.current?.focus();
+    else if (feedback) {
+      // Native focus scrolling ignores the fixed action rail. Center the
+      // checked meaning so its text stays clear of both persistent bars.
+      feedbackRegion.current?.focus({ preventScroll: true });
+      feedbackRegion.current?.scrollIntoView({
+        block: "center",
+        behavior: "instant",
+      });
+    }
     priorStep.current = step?.id;
   }, [session, step?.id, feedback]);
 
