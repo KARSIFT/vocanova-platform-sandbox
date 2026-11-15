@@ -12,6 +12,7 @@ import { LearningIntro, LearningNote } from "@/ui/learning-guide";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DiscoveryFinished } from "./discovery-finished";
+import { useDiscoveryPosition } from "./use-discovery-position";
 import { DiscoveryNavigation } from "./discovery-navigation";
 import { DiscoveryWordDetails } from "./discovery-word-details";
 import {
@@ -175,11 +176,15 @@ export function Discovery({
   initialRank,
   initiallyActive = false,
   initiallyRevisiting = false,
+  initialPositionRevision = null,
+  initiallyResumed = false,
 }: {
   initialData: KnowledgeMapData;
   initialRank: number;
   initiallyActive?: boolean;
   initiallyRevisiting?: boolean;
+  initialPositionRevision?: number | null;
+  initiallyResumed?: boolean;
 }) {
   const [data, setData] = useState(initialData);
   const [rank, setRank] = useState(initialRank);
@@ -213,6 +218,7 @@ export function Discovery({
   const lock = useRef(false);
   const speechOwner = useRef(Symbol("discovery"));
   const lastSpoken = useRef("");
+  const suppressResumeAudio = useRef(initiallyResumed);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const item = revisit
@@ -226,6 +232,14 @@ export function Discovery({
   const displayedRevision = item?.meaningRevision;
   const navigationLocked =
     busy || navigating || conflict || Boolean(pending.current);
+  const positionPreference = useDiscoveryPosition({
+    catalogVersion: data.catalogVersion,
+    band,
+    rank: displayedRank,
+    active: started,
+    revision: initialPositionRevision,
+    enabled: !restoring && !navigationLocked && !done,
+  });
   // Preload the same candidate a confirmed choice would display, including wrap.
   const upcoming = nextUnseenInRange(data, displayedRank ?? 0);
   const confirmedSave =
@@ -445,6 +459,10 @@ export function Discovery({
     const identity = `${displayedRank}:${displayedMeaning}`;
     if (lastSpoken.current !== identity) {
       lastSpoken.current = identity;
+      if (suppressResumeAudio.current) {
+        suppressResumeAudio.current = false;
+        return;
+      }
       if (!muted)
         deviceSpeech.play(
           speechOwner.current,
@@ -726,7 +744,6 @@ export function Discovery({
         data={data}
         rank={item.rank}
         locked={navigationLocked}
-        onPrevious={previousWord}
         onRange={navigateToRange}
         onWord={(nextRank) => navigateToWord(band, nextRank)}
       />
@@ -880,8 +897,39 @@ export function Discovery({
             </StatusMessage>
           )}
           {savedMeaning}
+          <div className="mt-5">
+            <button
+              type="button"
+              className={styles.back}
+              disabled={navigationLocked || item.rank <= 1}
+              onClick={previousWord}
+            >
+              Previous word
+            </button>
+          </div>
         </>
       )}
+      <div className="mt-4 text-sm text-muted">
+        <StatusMessage as="p" role="status" aria-label="Discovery position">
+          {positionPreference.status === "saved"
+            ? "Your place is saved."
+            : positionPreference.status === "saving"
+              ? "Saving your place…"
+              : positionPreference.status === "conflict"
+                ? "Your saved place changed in another tab. This word is still open here."
+                : "Your place could not be saved. You can keep discovering."}
+        </StatusMessage>
+        {(positionPreference.status === "error" ||
+          positionPreference.status === "conflict") && (
+          <button
+            type="button"
+            className={styles.back}
+            onClick={positionPreference.retry}
+          >
+            Save this place again
+          </button>
+        )}
+      </div>
       {started && (
         <DiscoveryWordDetails
           key={`${item.meaningId}:${item.meaningRevision ?? ""}`}

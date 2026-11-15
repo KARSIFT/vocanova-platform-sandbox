@@ -211,3 +211,27 @@
   padding: 1rem 0.25rem;
   color: var(--color-neutral-700);
 }
+
+.rangeOption {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+.rangePreview {
+  display: block;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex: none;
+}
+.rangeName {
+  display: block;
+  font-weight: 650;
+}
+.rangeCounts {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--color-neutral-700);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}

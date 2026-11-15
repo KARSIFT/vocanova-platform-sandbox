@@ -1,5 +1,7 @@
 "use client";
 
+import { RangeMiniGrid } from "../knowledge-map/range-mini-grid";
+import { rangeProgressLabel } from "../knowledge-map/range-preview-model";
 import { StatusMessage } from "@/ui/status-message";
 import { TextInput } from "@/ui/controls";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
@@ -21,14 +23,12 @@ export function DiscoveryNavigation({
   data,
   rank,
   locked,
-  onPrevious,
   onRange,
   onWord,
 }: {
   data: KnowledgeMapData;
   rank: number;
   locked: boolean;
-  onPrevious: () => void;
   onRange: (band: number) => void;
   onWord: (rank: number) => void;
 }) {
@@ -81,14 +81,6 @@ export function DiscoveryNavigation({
   return (
     <>
       <div className={styles.controls}>
-        <button
-          type="button"
-          className={`${workspace.secondary} ${styles.previous}`}
-          onClick={onPrevious}
-          disabled={locked || rank <= 1}
-        >
-          Previous word
-        </button>
         <button
           type="button"
           className={styles.rangeTrigger}
@@ -190,7 +182,9 @@ export function DiscoveryNavigation({
                       >
                         <button
                           type="button"
-                          className={styles.option}
+                          className={`${styles.option} ${styles.rangeOption}`}
+                          aria-label={rangeLabel(range)}
+                          aria-describedby={`discovery-range-counts-${range.number}`}
                           aria-current={
                             range.number === band ? "true" : undefined
                           }
@@ -200,7 +194,20 @@ export function DiscoveryNavigation({
                             onRange(range.number);
                           }}
                         >
-                          {rangeLabel(range)}
+                          <span className={styles.rangePreview}>
+                            <RangeMiniGrid band={range} />
+                          </span>
+                          <span>
+                            <span className={styles.rangeName}>
+                              {rangeLabel(range)}
+                            </span>
+                            <span
+                              id={`discovery-range-counts-${range.number}`}
+                              className={styles.rangeCounts}
+                            >
+                              {rangeProgressLabel(range, " · ", "already know")}
+                            </span>
+                          </span>
                         </button>
                       </li>
                     ))

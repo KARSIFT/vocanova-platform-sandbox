@@ -1,5 +1,7 @@
 import { ActionLink } from "@/ui/controls";
 import type { CSSProperties } from "react";
+import { RangeMiniGrid } from "./range-mini-grid";
+import { learnedCount, rangeProgressLabel } from "./range-preview-model";
 import Link from "@/ui/link";
 import {
   earlierDiscoveryBand,
@@ -22,51 +24,6 @@ function legacyFill(band: Band): CSSProperties | undefined {
     "--known": `${(band.knownCount / band.totalWords) * 100}%`,
     "--learning": `${(band.learningCount / band.totalWords) * 100}%`,
   } as CSSProperties;
-}
-
-function learnedCount(band: Band) {
-  if (band.learningCount === 0) return 0;
-  // Older responses counted all saved words together.
-  if (!band.wordStates) return undefined;
-  return band.wordStates.match(/m/g)?.length ?? 0;
-}
-
-function progressLabel(band: Band, separator: string, knownLabel: string) {
-  const learned = learnedCount(band);
-  const counts = [`${band.knownCount} ${knownLabel}`];
-  if (learned === undefined) {
-    counts.push(`${band.learningCount} saved`);
-  } else {
-    counts.push(`${band.learningCount - learned} learning`);
-    if (learned > 0) counts.push(`${learned} learned`);
-  }
-  counts.push(`${band.unseenCount} new`);
-  return counts.join(separator);
-}
-
-/** One path per tracked status keeps 10,000 marks out of the DOM. */
-function AtlasGrid({ band }: { band: Band }) {
-  if (!band.wordStates && band.unseenCount < band.totalWords) return null;
-  const paths = { k: "", l: "", m: "" };
-  for (const [index, code] of Array.from(band.wordStates ?? "").entries()) {
-    if (code !== "k" && code !== "l" && code !== "m") continue;
-    const x = (index % 10) * 10 + 1;
-    const y = Math.floor(index / 10) * 10 + 1;
-    paths[code] += `M${x} ${y}h8v8h-8z`;
-  }
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      className={styles.atlasGrid}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect width="100" height="100" fill="url(#word-atlas-unseen)" />
-      {paths.k ? <path data-state="known" d={paths.k} /> : null}
-      {paths.l ? <path data-state="learning" d={paths.l} /> : null}
-      {paths.m ? <path data-state="learned" d={paths.m} /> : null}
-    </svg>
-  );
 }
 
 function rangeLabel(band: Pick<Band, "startRank" | "endRank">) {
@@ -110,7 +67,7 @@ export function RangeCard({ data }: { data: KnowledgeMapData }) {
       </div>
       {summary ? (
         <p className={styles.rangeCounts}>
-          {progressLabel(summary, " · ", "known")}
+          {rangeProgressLabel(summary, " · ", "known")}
         </p>
       ) : null}
       {/* One mark per word in rank order; the counts above carry the meaning. */}
@@ -222,30 +179,6 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
           {(data.totalWords - known - saved).toLocaleString()} new
         </li>
       </ul>
-      <svg
-        className={styles.atlasDefinitions}
-        width="0"
-        height="0"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <defs>
-          <pattern
-            id="word-atlas-unseen"
-            width="10"
-            height="10"
-            patternUnits="userSpaceOnUse"
-          >
-            <rect
-              x="1"
-              y="1"
-              width="8"
-              height="8"
-              className={styles.atlasUnseen}
-            />
-          </pattern>
-        </defs>
-      </svg>
       {/* Wide screens: every square is a link of at least 44px. */}
       <AtlasKeys className={styles.atlasWide}>
         <nav aria-label="Word ranges" className={styles.atlas}>
@@ -262,10 +195,10 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
                   href={`/discovery?band=${item.number}&active=1`}
                   className={styles.atlasCell}
                   aria-current={item.number === band ? "true" : undefined}
-                  aria-label={`Words ${item.startRank} to ${item.endRank}, ${progressLabel(item, ", ", "already know")}`}
+                  aria-label={`Words ${item.startRank} to ${item.endRank}, ${rangeProgressLabel(item, ", ", "already know")}`}
                   style={legacyFill(item)}
                 >
-                  <AtlasGrid band={item} />
+                  <RangeMiniGrid band={item} />
                 </Link>
               ))}
             </div>
@@ -304,7 +237,7 @@ export function WordAtlas({ data }: { data: KnowledgeMapData }) {
                   data-current={item.number === band ? "true" : undefined}
                   style={legacyFill(item)}
                 >
-                  <AtlasGrid band={item} />
+                  <RangeMiniGrid band={item} />
                 </span>
               ))}
             </div>
