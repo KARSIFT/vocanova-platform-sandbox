@@ -1,4 +1,4 @@
-h1:CxG0evde7aGS4ZO9tOjot+VWzI1XmrKVbZHeij3b9ro=
+h1:HgA3vPerSRepWjLs8emjENiSswswefSvPwBjW9HA1q8=
 20260724210000_identity_foundation.sql h1:kCE91pYCtOUccWkoJGp8Ow1N7oOWjxAvGcPQtSIC17k=
 20260724210001_oauth_state.sql h1:8UfSmhz20WitPSfl/I/KlApBO0VK39xYS053oC3IEiU=
 20260725100000_voc026_p1_content_tables.sql h1:rTIXQ0O1B1X6fu82HtnYS3xb0KU3yYQO/kJmui0C9j8=
@@ -49,3 +49,5 @@ h1:CxG0evde7aGS4ZO9tOjot+VWzI1XmrKVbZHeij3b9ro=
 20261020170000_meaning_image_assets.sql h1:EU1+n+1tM6S8Ug29/rvNc45rctwHn/uTi8rfVRbkDgM=
 20261107140000_pronunciation_catalog_jobs.sql h1:RNGPugMf+u3rvJgm69jBFCFh83U93L03vibgDIObxk4=
 20261108120000_pronunciation_signal_recovery.sql h1:TomQNfBJt4Mc3UwobZ+FvflGVuiglRilZkfUIC6O/3A=
+20261115100000_daily_review_effort.sql h1:oE6jqrig+g9fHIhNJ4E2ZvbfVXC/sx738YHqdJDd98Y=
+20261115110000_discovery_position.sql h1:rvC14/R8SzaI0wo4Fr+pbl2ZBe1HmX2AAbwXawtwHjg=

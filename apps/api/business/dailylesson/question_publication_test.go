@@ -1,6 +1,8 @@
 package dailylesson
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -35,22 +37,51 @@ func TestPictureProjectionDoesNotPublishTargetIdentityOutsideChoices(t *testing.
 }
 
 func TestChoicePlacementSupportsEveryAnswerStartingIndexAndDestination(t *testing.T) {
-	// Fixed step IDs exercise each hash bucket. This is an exhaustive permutation
-	// property for four starting indices, not a randomized distribution assertion.
-	seeds := []string{"slot-9", "slot-0", "slot-1", "slot-11"}
+	// Exhaust every starting index and private destination without relying on
+	// statistical randomness or any public question identifier.
 	destinations := []int{0, 1, 2, 3}
 	for initial := 0; initial < 4; initial++ {
-		for n, seed := range seeds {
-			t.Run(fmt.Sprintf("from_%d_%s", initial, seed), func(t *testing.T) {
+		for _, slot := range destinations {
+			t.Run(fmt.Sprintf("from_%d_to_%d", initial, slot), func(t *testing.T) {
 				choices := []Choice{{ID: "a"}, {ID: "b"}, {ID: "c"}, {ID: "d"}}
 				answer := choices[initial].ID
-				positionChoices(choices, answer, seed)
-				require.Equal(t, answer, choices[destinations[n]].ID)
+				positionChoices(choices, answer, slot)
+				require.Equal(t, answer, choices[slot].ID)
 				replay := []Choice{{ID: "a"}, {ID: "b"}, {ID: "c"}, {ID: "d"}}
-				positionChoices(replay, answer, seed)
+				positionChoices(replay, answer, slot)
 				require.Equal(t, choices, replay)
 				require.ElementsMatch(t, []string{"a", "b", "c", "d"}, []string{choices[0].ID, choices[1].ID, choices[2].ID, choices[3].ID})
 			})
 		}
 	}
+}
+
+func TestChoicePlacementUsesPrivateEntropyForEveryKind(t *testing.T) {
+	const publicID = "same-public-step-id"
+	publicHash := sha256.Sum256([]byte(publicID))
+	hashSlot := int(publicHash[0]) % 4
+	for _, kind := range []string{"meaning_choice", "picture_choice", "gap_choice"} {
+		for slot := 0; slot < 4; slot++ {
+			t.Run(fmt.Sprintf("%s_private_%d", kind, slot), func(t *testing.T) {
+				w := word{AnswerID: "b", Public: Step{ID: publicID, Kind: kind, Choices: []Choice{{ID: "a"}, {ID: "b"}, {ID: "c"}, {ID: "d"}}}}
+				require.NoError(t, freezeChoiceOrder(&w, bytes.NewReader([]byte{byte(slot)})))
+				require.Equal(t, "b", w.Public.Choices[slot].ID)
+				if slot != hashSlot {
+					require.NotEqual(t, "b", w.Public.Choices[hashSlot].ID, "public step hash cannot determine the answer")
+				}
+				raw, err := json.Marshal(state{Words: []word{w}, Queue: []int{0}})
+				require.NoError(t, err)
+				var reloaded state
+				require.NoError(t, json.Unmarshal(raw, &reloaded))
+				require.Equal(t, w.Public.Choices, project(&reloaded).CurrentStep.Choices, "reload uses persisted order without drawing again")
+			})
+		}
+	}
+}
+
+func TestChoicePlacementEntropyFailureDoesNotPublishFallbackOrder(t *testing.T) {
+	w := word{AnswerID: "b", Public: Step{ID: "public", Choices: []Choice{{ID: "a"}, {ID: "b"}, {ID: "c"}, {ID: "d"}}}}
+	before := append([]Choice{}, w.Public.Choices...)
+	require.Error(t, freezeChoiceOrder(&w, bytes.NewReader(nil)))
+	require.Equal(t, before, w.Public.Choices)
 }

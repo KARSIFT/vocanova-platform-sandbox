@@ -12,6 +12,7 @@ import { THEME_COOKIE_NAME } from "./lib/theme-preference";
 
 export const config = {
   matcher: [
+    "/",
     "/login",
     "/signin",
     "/onboarding",
@@ -105,7 +106,11 @@ function connectionErrorResponse(
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname, search, searchParams } = request.nextUrl;
+  const isRoot = pathname === "/";
   const isSignIn = pathname === "/login" || pathname === "/signin";
+  if (isRoot && !request.cookies.get(SESSION_COOKIE_NAME)?.value) {
+    return NextResponse.next();
+  }
   if (
     isSignIn &&
     (!request.cookies.get(SESSION_COOKIE_NAME)?.value ||
@@ -119,7 +124,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   const destination = isSignIn
     ? normalizeReturnTo(searchParams.get("returnTo"))
-    : `${pathname}${search}`;
+    : isRoot
+      ? "/home"
+      : `${pathname}${search}`;
 
   const apiBaseURL = getApiBaseURL();
   // Only this tier's own credentials reach the API; see lib/cookies.ts.
@@ -154,7 +161,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       routePath: pathname,
       status: meResponse.status,
     });
-    if (isSignIn) return NextResponse.next();
+    if (isSignIn || isRoot) {
+      return NextResponse.next({
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
     const returnTo = new URLSearchParams({ returnTo: destination });
     return NextResponse.redirect(new URL(`/login?${returnTo}`, request.url));
   }
@@ -191,7 +202,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return connectionErrorResponse(request, destination);
   }
 
-  if (isSignIn) {
+  if (isSignIn || isRoot) {
     return NextResponse.redirect(
       new URL(
         onboardingStatus === "completed" ? destination : "/onboarding",

@@ -80,7 +80,35 @@ export interface KnowledgeMapDecisionResult {
   due: boolean;
 }
 
+export interface DailyReviewGoal {
+  localDate: string;
+  timeZone: string;
+  target: number;
+  reviewed: number;
+  remaining: number;
+  complete: boolean;
+  nextReviewAt?: string;
+}
+
+export interface DiscoveryPosition {
+  catalogVersion: string;
+  band: number;
+  rank: number;
+  active: boolean;
+  revision: number;
+}
+
+export interface DiscoveryPositionUpdate {
+  catalogVersion: string;
+  band: number;
+  rank: number;
+  active: boolean;
+  expectedRevision: number;
+}
+
 export interface DailyLesson {
+  /** Present on effort-based daily review APIs; older snapshots remain readable. */
+  goal?: DailyReviewGoal;
   attribution: VocabularyAttribution;
   id: string;
   status: "in_progress" | "completed";
@@ -92,13 +120,14 @@ export interface DailyLesson {
   creditedToday: number;
   currentStep: {
     id: string;
-    kind: "meaning_choice";
+    kind: "meaning_choice" | "picture_choice" | "gap_choice";
+    context?: string;
     wordText: string;
     wordSlug: string;
     partOfSpeech: string;
     pronunciationMeaningId?: string;
     pronunciationRevision?: string;
-    choices: { id: string; text: string }[];
+    choices: { id: string; text: string; image?: MeaningImage }[];
   } | null;
   feedback: {
     stepId: string;
@@ -106,6 +135,8 @@ export interface DailyLesson {
     answer: string;
     explanation: string;
     meaningId: string;
+    meaningRevision?: string;
+    wordSlug?: string;
     wordText: string;
     credited: boolean;
     skipped: boolean;
@@ -1111,6 +1142,15 @@ export interface PersonalDataGuidedLesson extends PersonalDataSessionProgress {
  * data-shaped rather than internal API DTOs so additions remain backward
  * compatible. It never contains credentials, hidden prompts, or abuse data. */
 export interface PersonalDataExport {
+  discoveryPosition?: (DiscoveryPosition & { updatedAt: string }) | null;
+  dailyReviewEffort?: Array<{
+    wordId: string;
+    meaningId: string;
+    localDate: string;
+    reviewAttemptId: string;
+    dailySessionId: string;
+    createdAt: string;
+  }>;
   schemaVersion: string;
   exportedAt?: string;
   profile: Record<string, unknown>;
@@ -1864,8 +1904,41 @@ export class VocanovaClient {
     return { data: await response.json(), response };
   }
 
+  async getDiscoveryPosition(init?: RequestInit): Promise<{
+    data: { position: DiscoveryPosition | null };
+    response: Response;
+  }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/discovery-position",
+      undefined,
+      { cache: "no-store", ...init },
+    );
+    return { data: await response.json(), response };
+  }
+
+  async putDiscoveryPosition(
+    body: DiscoveryPositionUpdate,
+    init?: RequestInit,
+  ): Promise<{
+    data: { position: DiscoveryPosition | null };
+    response: Response;
+  }> {
+    const response = await this.request(
+      "PUT",
+      "/api/v1/discovery-position",
+      body,
+      init,
+    );
+    return { data: await response.json(), response };
+  }
+
   async getCurrentDailyLesson(init?: RequestInit): Promise<{
-    data: { session: DailyLesson | null; dueCount: number };
+    data: {
+      session: DailyLesson | null;
+      dueCount: number;
+      goal?: DailyReviewGoal;
+    };
     response: Response;
   }> {
     const response = await this.request(
@@ -1880,12 +1953,15 @@ export class VocanovaClient {
   async startDailyLesson(
     idempotencyKey: string,
     init?: RequestInit,
+    options?: { additional?: boolean },
   ): Promise<{ data: DailyLesson; response: Response }> {
     const headers = new Headers(init?.headers);
     headers.set("Idempotency-Key", idempotencyKey);
     const response = await this.request(
       "POST",
-      "/api/v1/daily-lessons",
+      options?.additional
+        ? "/api/v1/daily-lessons?additional=true"
+        : "/api/v1/daily-lessons",
       {},
       { ...init, headers },
     );

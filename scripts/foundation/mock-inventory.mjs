@@ -112,6 +112,7 @@ export function isRegisteredAPIPath(apiPath) {
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/dictionary$/, // Read-only bundled dictionary lookup.
     /^\/api\/v1\/knowledge-map(?:\/decisions)?$/,
+    /^\/api\/v1\/discovery-position$/,
     /^\/api\/v1\/daily-lessons(?:\/current)?$/,
     new RegExp(`^/api/v1/daily-lessons/${sessionId}(?:/actions)?$`),
     /^\/api\/v1\/auth(?:\/|$)/,
@@ -163,6 +164,7 @@ export function isRegisteredBusinessModule(name) {
     "dictionary", // Immutable local reading aid; no learner schema or mutation.
     "knowledgecatalog",
     "dailylesson",
+    "discoveryposition", // Requester-owned bounded navigation preference; no learning credit.
     "learning",
     "reviews",
     "aifeedback",
@@ -281,11 +283,15 @@ const allowedMigrationFiles = new Set([
   "20261020170000_meaning_image_assets.sql",
   "20261107140000_pronunciation_catalog_jobs.sql",
   "20261108120000_pronunciation_signal_recovery.sql",
+  "20261115100000_daily_review_effort.sql",
+  "20261115110000_discovery_position.sql",
 ]);
 export function isRegisteredMigrationFile(name) {
   return allowedMigrationFiles.has(name);
 }
 const featureMigrationTables = new Map([
+  ["20261115100000_daily_review_effort.sql", ["daily_review_effort"]],
+  ["20261115110000_discovery_position.sql", ["user_discovery_positions"]],
   // Recovery alters the existing jobs ledger; introducing tables is not approved.
   ["20261108120000_pronunciation_signal_recovery.sql", []],
   [

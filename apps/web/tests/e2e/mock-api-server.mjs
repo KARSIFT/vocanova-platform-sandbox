@@ -108,6 +108,7 @@ import { handlePersonalLists } from "./personal-lists-fixture.mjs";
 import { handleStoryFeatures } from "./stories-fixture.mjs";
 import { handleLearningFeatures } from "./learning-features-fixture.mjs";
 import { handleDailyDiscovery } from "./daily-discovery-fixture.mjs";
+import { handleDiscoveryPosition } from "./discovery-position-fixture.mjs";
 import {
   dailyConversationFixture,
   dailyConversationWords,
@@ -537,7 +538,7 @@ function buildDailyMission(
   return {
     ...state.dailyMission,
     reviewTarget,
-    reviewsCompleted: state.reviewedCount,
+    reviewsCompleted: Math.min(reviewTarget, state.dailyEffortWordIds?.size ?? state.reviewedCount),
     streak,
   };
 }
@@ -1125,6 +1126,8 @@ const server = createServer(async (req, res) => {
     jsonResponse(res, 401, { error: "unauthorized" });
     return;
   }
+
+  if (await handleDiscoveryPosition({ req, res, url, cookies, state: getSessionState(cookies), jsonResponse, readJsonBody, checkCsrf, logLine })) return;
 
   if (
     await handleDailyDiscovery({

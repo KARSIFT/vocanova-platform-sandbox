@@ -28,6 +28,8 @@ type CreatePersonalDataExportOutput struct {
 // deliberately not a map or a database row: adding a database column cannot
 // make it downloadable without a conscious DTO and SQL-projection change.
 type PersonalDataExportDTO struct {
+	DiscoveryPosition       *PersonalDataDiscoveryPositionDTO   `json:"discoveryPosition"`
+	DailyReviewEffort       []PersonalDataDailyReviewEffortDTO  `json:"dailyReviewEffort"`
 	WordLists               []PersonalDataWordListDTO           `json:"wordLists"`
 	StorySessions           []PersonalDataStorySessionDTO       `json:"storySessions"`
 	LearningPreferences     *PersonalDataLearningPreferencesDTO `json:"learningPreferences"`
@@ -49,6 +51,25 @@ type PersonalDataExportDTO struct {
 	ConfidencePointLedger   []PersonalDataConfidenceLedgerDTO   `json:"confidencePointLedger"`
 	GraceDayLedger          []PersonalDataGraceLedgerDTO        `json:"graceDayLedger"`
 	StreakState             *PersonalDataStreakDTO              `json:"streakState"`
+}
+
+type PersonalDataDiscoveryPositionDTO struct {
+	_              struct{} `nullable:"true"`
+	CatalogVersion string   `json:"catalogVersion"`
+	Band           int      `json:"band"`
+	Rank           int      `json:"rank"`
+	Active         bool     `json:"active"`
+	Revision       int      `json:"revision"`
+	UpdatedAt      string   `json:"updatedAt"`
+}
+
+type PersonalDataDailyReviewEffortDTO struct {
+	WordID          string `json:"wordId"`
+	MeaningID       string `json:"meaningId"`
+	LocalDate       string `json:"localDate"`
+	ReviewAttemptID string `json:"reviewAttemptId"`
+	DailySessionID  string `json:"dailySessionId"`
+	CreatedAt       string `json:"createdAt"`
 }
 
 // Learning-history DTOs enumerate only the repository's learner-visible
@@ -182,9 +203,11 @@ type PersonalDataDailyActionDTO struct {
 	NextReview  *string `json:"nextReview,omitempty"`
 }
 
-// Daily feedback receipts contain a stable meaningId but no wordSlug. Export
-// their recorded fields without reconstructing a current routing key.
+// Export recorded feedback identities as saved. Older receipts can omit the
+// revision/routing key; never reconstruct them from current catalog content.
 type PersonalDataDailyFeedbackDTO struct {
+	MeaningRevision  string   `json:"meaningRevision,omitempty"`
+	WordSlug         string   `json:"wordSlug,omitempty"`
 	_                struct{} `nullable:"true"`
 	StepID           string   `json:"stepId"`
 	Correct          bool     `json:"correct"`

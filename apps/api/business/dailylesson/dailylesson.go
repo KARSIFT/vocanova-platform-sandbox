@@ -4,6 +4,7 @@ package dailylesson
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -17,6 +18,8 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/revieweligibility"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"io"
+	"math/big"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -549,7 +552,9 @@ func (s *Service) build(ctx context.Context, tx *sql.Tx, u uuid.UUID, now time.T
 		if e = s.mixQuestion(ctx, tx, w, i); e != nil {
 			return nil, e
 		}
-		positionChoices(w.Public.Choices, w.AnswerID, w.Public.ID)
+		if e = freezeChoiceOrder(w, rand.Reader); e != nil {
+			return nil, e
+		}
 		st.Queue = append(st.Queue, i)
 	}
 	return st, nil
@@ -816,16 +821,28 @@ func refreshCredits(ctx context.Context, tx *sql.Tx, st *state, now time.Time) e
 }
 
 // positionChoices freezes the position once when building a new question.
-func positionChoices(choices []Choice, answerID, stepID string) {
+func positionChoices(choices []Choice, answerID string, slot int) {
 	// Mixed sets may place the target anywhere. Normalize its starting index
-	// before the four-way hash bucket, so every target can occupy every slot.
+	// before the private destination draw, so every target can occupy every slot.
 	for i := range choices {
 		if choices[i].ID == answerID {
 			choices[0], choices[i] = choices[i], choices[0]
 			break
 		}
 	}
-	h := sha256.Sum256([]byte(stepID))
-	j := int(h[0]) % len(choices)
-	choices[0], choices[j] = choices[j], choices[0]
+	choices[0], choices[slot] = choices[slot], choices[0]
+}
+
+// freezeChoiceOrder draws independently of public IDs once during construction.
+// Only the resulting opaque choice order is persisted; reads never call this.
+func freezeChoiceOrder(w *word, randomness io.Reader) error {
+	if len(w.Public.Choices) != 4 {
+		return ErrContentUnavailable
+	}
+	slot, err := rand.Int(randomness, big.NewInt(int64(len(w.Public.Choices))))
+	if err != nil {
+		return err
+	}
+	positionChoices(w.Public.Choices, w.AnswerID, int(slot.Int64()))
+	return nil
 }
