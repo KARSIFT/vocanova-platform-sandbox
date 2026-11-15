@@ -377,6 +377,6 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
       page
         .getByRole("region", { name: "Review words", exact: true })
         .getByText(/^Reviewed today:/),
-    ).toHaveText("Reviewed today: 0");
+    ).toHaveText("Reviewed today: 0 of 20");
   });
 });

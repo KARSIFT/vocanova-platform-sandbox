@@ -202,7 +202,8 @@ test("a prominent link shows its destination's loading state at once", async ({
   await practice.scrollIntoViewIfNeeded();
   const prefetched = await practicePrefetch;
   expect(prefetched.status()).toBe(200);
-  expect(await prefetched.finished()).toBeNull();
+  // A selected RSC prefetch can remain open or be superseded. Its EOF is not
+  // the readiness oracle: require acknowledgement, then test the actual loader.
   await settle(page);
   // From now on every server read is slow, including the identity check; only
   // the loading state prefetched on view can appear immediately.

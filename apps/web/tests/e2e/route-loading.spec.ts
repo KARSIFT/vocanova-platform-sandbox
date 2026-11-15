@@ -236,7 +236,7 @@ test("Home keeps Review ready while only the personal practice read is slow", as
     }),
   ).toHaveAttribute("value", "0");
   await expect(review.getByText(/^Reviewed today:/)).toHaveText(
-    "Reviewed today: 0",
+    "Reviewed today: 0 of 20",
   );
 });
 

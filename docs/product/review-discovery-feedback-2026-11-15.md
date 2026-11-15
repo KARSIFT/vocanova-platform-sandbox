@@ -88,9 +88,10 @@ The staging counter gate now compares Home with the API's uncapped effort count,
 checks the mission's capped count separately, and requires fresh correctly graded
 cards even after goal completion. Fourteen seed helpers and five progress helpers
 cover strict canonical resolution and an 18-to-20 effort increase with target15.
-A real-link prefetch regression completed three local Chrome repeats: after a
-second tab confirms a newer position, clicking the prefetched generic link reads
-fresh data. This bounded negative reproduction does not establish all cache cases.
+A real-link regression observes an acknowledged hover prefetch before a second
+tab confirms a newer position, then requires a fresh navigation response and the
+new word with a confirmed save. It does not establish completed cache
+materialization before that update or universal absence of stale-cache cases.
 
 The first hosted synthetic recovery rehearsal exposed a schema-dump comparison
 failure in the new discovery constraint: PostgreSQL expands a mixed BETWEEN/AND
@@ -108,9 +109,13 @@ faults at their expected stages, with verified cleanup.
 The full browser inventory also required older journey tests to adopt exact
 reviewed/target counts, goal-aware terminal states, authenticated root routing,
 Journey-only attribution and explicit extra-review intent. Their interaction,
-count, geometry and accessibility assertions remain active. A completed-prefetch
-barrier makes the warm navigation test's setup explicit while retaining its
+count, geometry and accessibility assertions remain active. An acknowledged RSC
+prefetch makes the warm navigation test's setup explicit while retaining its
 700ms loading criterion; it is not a claim of a new application performance fix.
+A selected prefetch response may remain unfinished while a later request succeeds,
+so HTTP EOF is not used as the learner-readiness oracle. Discovery checks the
+actual fresh navigation, displayed word and confirmed save; cached diagnostics
+cannot mask an original timeout.
 
 Actual presentation regressions were repaired too: feedback focus now respects
 both persistent bars and complete preceding click targets within real scroll
