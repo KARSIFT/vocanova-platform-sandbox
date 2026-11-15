@@ -1,6 +1,8 @@
 # Review and discovery feedback — 15 November 2026
 
-Status: design for owner review; no implementation or deployment claimed.
+Status: approved by the owner on 15 November 2026 for one PR, merge and deployment.
+Implementation and acceptance are tracked in the linked plan and product record;
+this specification alone does not establish release success.
 
 ## Intent and decisions
 

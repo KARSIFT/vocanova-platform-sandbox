@@ -1,5 +1,6 @@
 // Real staging only. No local mock, email, third-party signup or owner account.
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { expect, test, type BrowserContext } from "@playwright/test";
 import type { CurrentUser, WordDetailResponse, SentenceFeedbackResult } from "@vocanova/api-client";
 
@@ -9,6 +10,17 @@ const EMAIL = "smoke-test-bot@synthetic.vocanova.invalid";
 const MEANING = "329c4ec9-6562-568e-9e71-9134da2f0d8d";
 const SESSION = "vocanova_staging_session";
 const CSRF = "vocanova_staging_csrf";
+const CANONICAL_PATHS = {
+  parcel: "/api/v1/canonical-words/parcel",
+  menu: "/api/v1/canonical-words/menu",
+  "key-card": "/api/v1/canonical-words/key-card",
+  appetizer: "/api/v1/canonical-words/appetizer",
+  gate: "/api/v1/canonical-words/gate",
+} as const;
+const STAGING_READ_PATHS = new Set<string>([
+  "/api/v1/me",
+  ...Object.values(CANONICAL_PATHS),
+]);
 
 // The service deduplicates equivalent user/meaning/sentence requests even with
 // a new idempotency key. A workflow invocation therefore needs distinct authored
@@ -43,9 +55,10 @@ test.beforeEach(async ({ context, baseURL }) => {
 });
 
 // Node fetch keeps credentials out of Playwright's retained API-call diagnostics.
-// This helper only permits two fixed read endpoints; errors contain no bodies.
-async function readStaging<T>(context: BrowserContext, path: "/api/v1/me" | "/api/v1/canonical-words/menu"): Promise<T> {
+// Only fixed identity and reviewed-content endpoints; errors contain no bodies.
+async function readStaging<T>(context: BrowserContext, path: "/api/v1/me" | typeof CANONICAL_PATHS[keyof typeof CANONICAL_PATHS]): Promise<T> {
   try {
+    if (!STAGING_READ_PATHS.has(path)) throw new Error("Outside acceptance scope");
     const cookies = (await context.cookies(API)).filter((cookie) => cookie.name === SESSION || cookie.name === CSRF);
     const response = await fetch(`${API}${path}`, {
       headers: { Cookie: cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ") },
@@ -159,22 +172,85 @@ test("fresh AI generation returns the expected verdict and browser export contai
   expect(forbidden).toBe(0);
 });
 
-test("configured canonical image loads and decodes from its approved public CDN", async ({ page, context }) => {
-  const word = await readStaging<WordDetailResponse>(context, "/api/v1/canonical-words/menu");
-  const asset = word.word.meanings.find((meaning) => meaning.id === MEANING)?.image;
-  test.skip(!asset, "Acceptance gap: this staging meaning has no configured approved image; CDN delivery is unverified.");
-  if (!asset) return;
-  const expectedURL = `https://images.vocanova.site/meanings/${MEANING}/${asset.meaningRevision}/${asset.sha256}.webp`;
-  expect(asset.imageUrl === expectedURL).toBe(true);
-  let imageStatus: number | undefined;
-  page.on("response", (response) => { if (response.url() === expectedURL) imageStatus = response.status(); });
-  await page.goto(`/vocabulary/menu#meaning-${MEANING}`);
-  const image = page.locator("img").filter({ visible: true }).and(page.locator(`img[src="${expectedURL}"]`));
-  await expect(image).toBeVisible();
-  expect(await image.evaluate(async (node) => {
-    const image = node as HTMLImageElement;
-    await image.decode();
-    return image.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
-  })).toBe(true);
-  expect(imageStatus).toBe(200);
+test("reviewed picture bank loads approved public CDN assets and authored gap contexts match canonical content", async ({ page, context }) => {
+  // This proves live metadata/assets and authored content eligibility, not that
+  // a mixed session was selected for this account. PostgreSQL covers grading.
+  const runtime = JSON.parse(await readFile(
+    new URL("../../src/lib/meaning-pictures.runtime.json", import.meta.url), "utf8",
+  )) as Record<string, { alt: string; meaningRevision: string }>;
+  // Exact meanings from dailylesson/mixed_questions.go's reviewed picture set.
+  const pictures = [
+    { slug: "parcel", text: "parcel", meaningId: "0b593408-6679-5fb8-a21c-b73a525c76e5" },
+    { slug: "menu", text: "menu", meaningId: MEANING },
+    { slug: "key-card", text: "key card", meaningId: "d990ce6e-4756-52e0-96e8-9926442963f2" },
+    { slug: "appetizer", text: "appetizer", meaningId: "2534b539-a80f-5001-b9a4-27a5e0679539" },
+  ] as const;
+  const canonical = new Map<string, WordDetailResponse["word"]>();
+  for (const picture of pictures) {
+    const { word } = await readStaging<WordDetailResponse>(context, CANONICAL_PATHS[picture.slug]);
+    canonical.set(picture.slug, word);
+    expect(word.slug).toBe(picture.slug);
+    expect(word.text).toBe(picture.text);
+    const matches = word.meanings.filter((meaning) => meaning.id === picture.meaningId);
+    expect(matches).toHaveLength(1);
+    const meaning = matches[0]!;
+    const committed = runtime[picture.meaningId];
+    expect(committed, "Every reviewed picture must exist in the committed runtime manifest.").toBeDefined();
+    expect(meaning.partOfSpeech).toBe("noun");
+    expect(meaning.meaningRevision).toBe(committed!.meaningRevision);
+    const asset = meaning.image;
+    expect(asset, "All four reviewed picture options require approved staging image metadata.").toBeDefined();
+    const sha256 = createHash("sha256").update(await readFile(
+      new URL(`../../public/images/meanings/${picture.meaningId}.webp`, import.meta.url),
+    )).digest("hex");
+    const expectedURL = `https://images.vocanova.site/meanings/${picture.meaningId}/${committed!.meaningRevision}/${sha256}.webp`;
+    expect(asset!.meaningId).toBe(picture.meaningId);
+    expect(asset!.meaningRevision).toBe(committed!.meaningRevision);
+    expect(asset!.sha256).toBe(sha256);
+    expect(asset!.alt).toBe(committed!.alt);
+    expect(asset!.imageUrl).toBe(expectedURL);
+    const delivered = page.waitForResponse((response) => response.url() === expectedURL);
+    await page.goto(`/vocabulary/${picture.slug}#meaning-${picture.meaningId}`);
+    const image = page.locator(`[id="meaning-${picture.meaningId}"] img[src="${expectedURL}"]`).filter({ visible: true });
+    await expect(image).toBeVisible();
+    expect(await image.evaluate(async (node) => {
+      const image = node as HTMLImageElement;
+      await image.decode();
+      return image.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
+    })).toBe(true);
+    expect((await delivered).status()).toBe(200);
+  }
+
+  // These exact active examples/revisions are the two pinned gap targets in
+  // dailylesson/mixed_questions.go, not examples generated during acceptance.
+  const gaps = [
+    {
+      slug: "gate", text: "gate", meaningId: "6a61d337-80e7-5d50-bc61-8b45b6a054a1",
+      revision: "112a5a995ccdcaa2b3b3b231a0dcc165926b98b4732daf032eae37e0d0170a0b",
+      example: "Our flight leaves from gate twelve.",
+      context: "Our flight leaves from _____ twelve.",
+    },
+    {
+      slug: "key-card", text: "key card", meaningId: "d990ce6e-4756-52e0-96e8-9926442963f2",
+      revision: "068a52d16045d06ce7f8e5fe0575add338bd96df5e76aee46359ecf350d6fa7d",
+      example: "My key card stopped working.",
+      context: "My _____ stopped working.",
+    },
+  ] as const;
+  for (const gap of gaps) {
+    const word = canonical.get(gap.slug) ?? (
+      await readStaging<WordDetailResponse>(context, CANONICAL_PATHS[gap.slug])
+    ).word;
+    expect(word.slug).toBe(gap.slug);
+    expect(word.text).toBe(gap.text);
+    const matches = word.meanings.filter((meaning) => meaning.id === gap.meaningId);
+    expect(matches).toHaveLength(1);
+    const meaning = matches[0]!;
+    expect(meaning.partOfSpeech).toBe("noun");
+    expect(meaning.meaningRevision).toBe(gap.revision);
+    expect(meaning.examples.some((example) => example.exampleText === gap.example),
+      "The exact reviewed gap example must be present in active canonical content.").toBe(true);
+    expect(gap.example.split(gap.text)).toHaveLength(2);
+    expect(gap.example.replace(gap.text, "_____")).toBe(gap.context);
+  }
 });

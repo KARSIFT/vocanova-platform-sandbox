@@ -59,6 +59,7 @@ import {
   MAX_REVIEW_SEED_CANDIDATES,
   REVIEW_SEED_BANDS,
   reviewedMeaningAnswer,
+  reviewedGapAnswer,
   reviewSeedActions,
 } from "./review-seed";
 import {
@@ -138,11 +139,23 @@ function requiredCookieName(name: string, expected: string): string {
 
 // Reads use Node fetch so failed Playwright APIRequestContext diagnostics never
 // retain authenticated headers. No writes, redirects, fixtures or response logs.
+function readStagingState<T>(
+  page: Page,
+  apiOrigin: string,
+  path: string,
+): Promise<T>;
+function readStagingState<T>(
+  page: Page,
+  apiOrigin: string,
+  path: string,
+  allowMissingCanonicalWord: true,
+): Promise<T | null>;
 async function readStagingState<T>(
   page: Page,
   apiOrigin: string,
   path: string,
-): Promise<T> {
+  allowMissingCanonicalWord = false,
+): Promise<T | null> {
   try {
     const url = new URL(path, apiOrigin);
     if (url.origin !== apiOrigin || !url.pathname.startsWith("/api/v1/"))
@@ -160,6 +173,12 @@ async function readStagingState<T>(
       redirect: "error",
       signal: AbortSignal.timeout(20_000),
     });
+    if (
+      response.status === 404 &&
+      allowMissingCanonicalWord &&
+      url.pathname.startsWith("/api/v1/canonical-words/")
+    )
+      return null;
     if (response.status !== 200) throw new Error("Staging read failed");
     return (await response.json()) as T;
   } catch {
@@ -806,7 +825,7 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
     const readiness = await waitForReviewReadiness(page, 120_000);
     if (readiness === "terminal") {
       const next = page.getByRole("button", {
-        name: "Keep reviewing",
+        name: /^(?:Keep reviewing|Review more words)$/,
         exact: true,
         disabled: false,
       });
@@ -815,25 +834,32 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
         exact: true,
       });
       const error = page.getByRole("main").getByRole("alert");
+      const remaining = await readStagingState<{
+        session: DailyLesson | null;
+        dueCount: number;
+      }>(page, apiOrigin, "/api/v1/daily-lessons/current");
       // The completion heading arrives before the authoritative remaining-word
-      // read settles. Neither a stale nor disabled Next button proves readiness.
-      await expect(next.or(caughtUp).or(error).first()).toBeVisible({
+      // read settles. Goal completion already shows Discover words while that
+      // read is pending; confirmed due words require the explicit extra-review
+      // control, so today's completed goal cannot make the gate vacuous.
+      await expect(
+        (remaining.dueCount > 0 ? next : caughtUp).or(error).first(),
+      ).toBeVisible({
         timeout: 120_000,
       });
       if (await error.isVisible())
         throw new Error(
           "The completed lesson could not confirm its next action.",
         );
-      if (await next.isVisible()) {
+      if (remaining.dueCount > 0) {
         await next.click();
         continue;
       }
       return false;
     }
-    const word = await page
+    const heading = page
       .getByRole("main")
-      .getByRole("heading", { level: 1 })
-      .innerText();
+      .getByRole("heading", { level: 1 });
     const current = await readStagingState<{
       session: DailyLesson | null;
       dueCount: number;
@@ -841,20 +867,35 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
     const step = current.session?.currentStep;
     if (
       !step ||
-      step.wordText !== word ||
       current.session?.id !== new URL(page.url()).searchParams.get("lesson")
     )
       throw new Error(
         "The visible review question does not match the authoritative saved lesson. Refuse to guess an answer.",
       );
-    const canonical = await readStagingState<WordDetailResponse>(
-      page,
-      apiOrigin,
-      `/api/v1/canonical-words/${encodeURIComponent(step.wordSlug)}`,
+    await expect(heading).toHaveText(
+      step.kind === "gap_choice" ? "Complete the sentence" : step.wordText,
     );
-    const answer = reviewedMeaningAnswer(step, canonical.word);
+    if (step.kind === "gap_choice") {
+      expect(step.context, "Gap questions must publish their frozen context.").toBeTruthy();
+      await expect(
+        page.getByRole("main").getByText(step.context!, { exact: true }),
+      ).toBeVisible();
+    }
+    const readWord = async (slug: string) =>
+      (
+        await readStagingState<WordDetailResponse>(
+          page,
+          apiOrigin,
+          `/api/v1/canonical-words/${encodeURIComponent(slug)}`,
+          true,
+        )
+      )?.word ?? null;
+    const canonical = step.kind === "gap_choice" ? null : await readWord(step.wordSlug);
+    const answer = step.kind === "gap_choice"
+      ? await reviewedGapAnswer(step, readWord)
+      : canonical ? reviewedMeaningAnswer(step, canonical) : null;
     if (!answer) {
-      // A stale frozen definition cannot be guessed from an edited live word.
+      // Stale or ambiguous frozen content cannot be guessed from a live word.
       // Skip without grading and continue the bounded search for a safe card.
       await page
         .getByRole("button", { name: "Skip for now", exact: true })
@@ -862,7 +903,7 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
       continue;
     }
     const option = page.getByRole("radio", {
-      name: answer.definition,
+      name: answer.choiceText,
       exact: true,
     });
     await expect(option).toHaveValue(answer.choiceId);
@@ -870,9 +911,12 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
     const graded = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
-        /\/api\/v1\/daily-lessons\/[^/]+\/actions$/.test(
-          new URL(response.url()).pathname,
-        ),
+        new URL(response.url()).origin === apiOrigin &&
+        new URL(response.url()).pathname ===
+          `/api/v1/daily-lessons/${encodeURIComponent(current.session!.id)}/actions` &&
+        response.request().postDataJSON()?.stepId === step.id &&
+        response.request().postDataJSON()?.action === "answer" &&
+        response.request().postDataJSON()?.choiceId === answer.choiceId,
     );
     await page
       .getByRole("button", { name: "Check answer", exact: true })
@@ -880,8 +924,10 @@ async function reviewOneCard(page: Page, apiOrigin: string): Promise<boolean> {
     const response = await graded;
     expect(response.ok()).toBe(true);
     const lesson = (await response.json()) as DailyLesson;
+    expect(lesson.id).toBe(current.session!.id);
     expect(lesson.feedback).toBeTruthy();
     const feedback = lesson.feedback!;
+    expect(feedback.stepId).toBe(step.id);
     if (!feedback.skipped) {
       expect(
         feedback.meaningId === answer.meaningId,

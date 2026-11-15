@@ -33,11 +33,11 @@
 
 **Interfaces:** Add `DailyReviewGoal` with JSON `localDate`, `target`, `reviewed`, `remaining`, `complete`, optional `nextReviewAt`; expose `goal` on current/session responses. Keep legacy fields. Add `additional` boolean query parameter to POST daily-lessons; service `StartAdditional` or compatible optional argument supports deliberate extra review without breaking existing Start callers. Step kind union becomes `meaning_choice,picture_choice,gap_choice`; choices retain `id,text` with optional `image` matching existing MeaningImage DTO; step gains optional `context` for sentence gap. Option IDs and private answer remain frozen. Publish exact interfaces immediately to root/frontend.
 
-- [ ] Add PostgreSQL regressions demonstrating goal15 starts15, wrong answers earn distinct-word effort but no successful-answer XP, skip earns no credit, concurrent/replayed/sibling answers count once; run baseline and record expected RED.
-- [ ] Implement durable unique effort credit with atomic mission/reward/streak integration; reconcile only current local day from verified existing attempts, never rewrite completed past days. Preserve success records.
-- [ ] Project one goal across Current/Get/Start/Act; use remaining allowance for new sessions, preserve old snapshots/replay responses, handle overnight sessions and explicit additional review.
-- [ ] Add frozen picture/gap snapshots and real eligible approved catalog cases; test all4options, ambiguous/absent content fallback, revision mismatch, reload and answer grading before implementation. Reuse existing reviewed examples and approved images; no provider generation.
-- [ ] Run focused Go and PostgreSQL tests with no relevant skips; include due<target, target changes mid-day, optional additional review, actual next due timestamp, historical session compatibility and midnight transitions. Root commits accepted changes after review.
+- [x] Add PostgreSQL regressions demonstrating goal15 starts15, wrong answers earn distinct-word effort but no successful-answer XP, skip earns no credit, concurrent/replayed/sibling answers count once; run baseline and record expected RED.
+- [x] Implement durable unique effort credit with atomic mission/reward/streak integration; reconcile only current local day from verified existing attempts, never rewrite completed past days. Preserve success records.
+- [x] Project one goal across Current/Get/Start/Act; use remaining allowance for new sessions, preserve old snapshots/replay responses, handle overnight sessions and explicit additional review.
+- [x] Add frozen picture/gap snapshots and real eligible approved catalog cases; test all4options, ambiguous/absent content fallback, revision mismatch, reload and answer grading before implementation. Reuse existing reviewed examples and approved images; no provider generation.
+- [x] Run focused Go and PostgreSQL tests with no relevant skips; include due<target, target changes mid-day, optional additional review, actual next due timestamp, historical session compatibility and midnight transitions. Root commits accepted changes after review.
 
 ### Task 2: Review/Home UI, post-answer teaching and relative scheduling
 
@@ -45,11 +45,11 @@
 
 **Consumes:** Task1 goal/step types; root updates API client. `startDailyLesson(key, init?)` accepts additional via query through a dedicated optional argument agreed with root; existing callers remain source-compatible.
 
-- [ ] Add regressions for goal15 count, wrong-answer completion, completed-session truthiness, all-available vs goal-complete, optional extra review; record RED before production edits (root coordinates browser build/run).
-- [ ] Consume confirmed goal and session status on Home/player/completion, display tick and move daily-complete primary action to discovery/practice. Do not calculate effort from client answers or force due dates tomorrow.
-- [ ] Render all3question kinds accessibly: four pictures with all-text fallback, four text definitions, gap with four word choices; no target reveal for gaps, stable Check/Continue and recovery.
-- [ ] Remove exercise attribution, load canonical other meanings and exact-revision picture only after checked correct/wrong answer; test optional-read failure, stale responses, single meaning and reload. Keep Continue available and one feedback announcement.
-- [ ] Add timezone-aware relative schedule helper and tests covering tomorrow/weeks/months/DST; retain exact date as accessible detail and existing persisted interval choices.
+- [x] Add regressions for goal15 count, wrong-answer completion, completed-session truthiness, all-available vs goal-complete, optional extra review; record RED before production edits (root coordinates browser build/run).
+- [x] Consume confirmed goal and session status on Home/player/completion, display tick and move daily-complete primary action to discovery/practice. Do not calculate effort from client answers or force due dates tomorrow.
+- [x] Render all3question kinds accessibly: four pictures with all-text fallback, four text definitions, gap with four word choices; no target reveal for gaps, stable Check/Continue and recovery.
+- [x] Remove exercise attribution, load canonical other meanings and exact-revision picture only after checked correct/wrong answer; test optional-read failure, stale responses, single meaning and reload. Keep Continue available and one feedback announcement.
+- [x] Add timezone-aware relative schedule helper and tests covering tomorrow/weeks/months/DST; retain exact date as accessible detail and existing persisted interval choices.
 - [ ] Verify lint/types/helper tests and coordinated browser matrix360/430/desktop, light/dark/keyboard/200%text. Root commits accepted changes after review.
 
 ### Task 3: Discovery navigation, range previews and account resume
@@ -58,20 +58,21 @@
 
 **Interfaces:** GET/PUT `/api/v1/discovery-position`, requester scoped and no-store; PUT CSRF protected, body `{catalogVersion,band,rank,active,expectedRevision}`; response `{position: null | {catalogVersion,band,rank,active,revision}}`; stale revision409. Position is optional preference and never learning credit. Root adds client methods and route registration.
 
-- [ ] Add RED regressions for4330→Home→genericdiscovery, explicit-link precedence, account isolation, known-word exact revisit and stale preference writes.
-- [ ] Move Previous word below card, keep range/word selection above; preserve locks and cross-band behavior.
-- [ ] Extract self-contained miniature100word visualization, add readable range counts, one selectable row; test legacy fallback and state agreement.
-- [ ] Implement validated account position storage/read/CAS update and export/deletion coverage; preserve explicit deep links, fresh server state, optional persistence failure and Back/Forward.
-- [ ] Run focused Go tests and helper/type/lint checks; coordinate browser evidence with root rather than start conflicting servers. Root commits accepted changes after review.
+- [x] Add RED regressions for4330→Home→genericdiscovery, explicit-link precedence, account isolation, known-word exact revisit and stale preference writes.
+- [x] Move Previous word below card, keep range/word selection above; preserve locks and cross-band behavior.
+- [x] Extract self-contained miniature100word visualization, add readable range counts, one selectable row; test legacy fallback and state agreement.
+- [x] Implement validated account position storage/read/CAS update and export/deletion coverage; preserve explicit deep links, fresh server state, optional persistence failure and Back/Forward.
+- [x] Run focused Go tests and helper/type/lint checks; coordinate browser evidence with root rather than start conflicting servers. Root commits accepted changes after review.
 
 ### Task 4: Integration, authenticated root and shared contracts
 
 **Owner/files:** root: `apps/web/src/middleware.ts`, its tests, `packages/api-client/src/index.ts`/tests, `apps/api/app/api/{production,openapi}.go`, generated API contracts, shared mock fixture and combined browser/staging tests, Help source link as needed.
 
-- [ ] Reproduce authenticated-root marketing behavior with middleware test; implement root identity routing preserving anonymous page, onboarding, expired cookies and recoverable upstream outage. Run middleware regressions.
-- [ ] Apply agent-reported interfaces to API client/routes/generated OpenAPI; extend tests for additional flag/position/goal/choice contract and backwards compatibility.
-- [ ] Update shared synthetic fixtures for new server semantics without weakening actual assertions; add stricter real staging checks for effort-based target and mixed-mode availability where actual approved content exists.
+- [x] Reproduce authenticated-root marketing behavior with middleware test; implement root identity routing preserving anonymous page, onboarding, expired cookies and recoverable upstream outage. Run middleware regressions.
+- [x] Apply agent-reported interfaces to API client/routes/generated OpenAPI; extend tests for additional flag/position/goal/choice contract and backwards compatibility.
+- [x] Update shared synthetic fixtures for new server semantics without weakening actual assertions; add stricter real staging checks for effort-based target and mixed-mode availability where actual approved content exists.
 - [ ] Coordinate frozen install/build, disposable PostgreSQL full API suite, client/web unit tests, lint/typecheck/e2e types and relevant whole browser matrix, screenshot/axe/keyboard review. Record exact pass/fail/skip/retry counts and limitations.
+
 
 ### Task 5: Independent review, one PR and release
 

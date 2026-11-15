@@ -1,9 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import type { DailyLesson, MeaningImage } from "@vocanova/api-client";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
+import { pressTab } from "./keyboard-navigation";
 
 const attribution = { title: "Word sources", sourceUrl: "https://wordnet.princeton.edu/", licenseUrl: "https://wordnet.princeton.edu/license-and-commercial-use", wordnetLicense: "WordNet" };
 const revision = "a".repeat(64);
@@ -265,17 +266,44 @@ for (const theme of ["light", "dark"] as const) {
       await page.screenshot({ path: testInfo.outputPath(`${theme}-${kinds[mode]}-checked-viewport.png`) });
       await page.screenshot({ path: testInfo.outputPath(`${theme}-${kinds[mode]}-checked-full.png`), fullPage: true });
       if (kinds[mode] === "picture_choice") {
-        // Native reverse Tab from checked feedback must return to the text
-        // fallback and audio toggle without leaving either under sticky chrome.
-        await page.keyboard.press("Shift+Tab");
-        await expect(page.getByRole("button", { name: "Use text options", exact: true })).toBeFocused();
-        await page.keyboard.press("Shift+Tab");
+        // Use native full-navigation keys on every engine. Sequential focus
+        // from a negative-tabindex status can begin at different anchors.
+        const fallback = page.getByRole("button", { name: "Use text options", exact: true });
         const audio = page.getByRole("button", { name: "Automatic audio off", exact: true });
-        await expect(audio).toBeFocused();
-        const audioBounds = (await audio.boundingBox())!;
-        expect(audioBounds.height).toBeGreaterThanOrEqual(44);
-        expect(audioBounds.y).toBeGreaterThanOrEqual(headerBounds.y + headerBounds.height + 8);
-        expect(audioBounds.y + audioBounds.height).toBeLessThanOrEqual(railBounds.y - 8);
+        const visited: string[] = [];
+        let sawFallback = false;
+        let sawAudio = false;
+        const assertClearTarget = async (target: Locator) => {
+          await expect(target).toBeFocused();
+          const bounds = (await target.boundingBox())!;
+          expect(bounds.width).toBeGreaterThanOrEqual(44);
+          expect(bounds.height).toBeGreaterThanOrEqual(44);
+          expect(bounds.y).toBeGreaterThanOrEqual(headerBounds.y + headerBounds.height + 8);
+          expect(bounds.y + bounds.height).toBeLessThanOrEqual(railBounds.y - 8);
+          expect(await target.evaluate((element) => {
+            const rect = element.getBoundingClientRect();
+            const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+            return !!hit && element.contains(hit);
+          })).toBe(true);
+        };
+        for (let step = 0; step < 24; step++) {
+          await pressTab(page, { backwards: true });
+          visited.push(await page.evaluate(() => {
+            const element = document.activeElement;
+            return `${element?.tagName}: ${element?.getAttribute("aria-label") ?? element?.textContent?.trim().slice(0, 60)}`;
+          }));
+          if (await fallback.evaluate((element) => element === document.activeElement)) {
+            await assertClearTarget(fallback);
+            sawFallback = true;
+          }
+          if (sawFallback && await audio.evaluate((element) => element === document.activeElement)) {
+            await assertClearTarget(audio);
+            sawAudio = true;
+            break;
+          }
+        }
+        expect(sawFallback, `Reverse-Tab sequence: ${visited.join(" → ")}`).toBe(true);
+        expect(sawAudio, `Reverse-Tab sequence: ${visited.join(" → ")}`).toBe(true);
         expect((await scanForAxeViolations(page)).criticalOrSerious).toEqual([]);
       }
       if (mode < kinds.length - 1) await page.getByRole("button", { name: "Continue", exact: true }).click();
