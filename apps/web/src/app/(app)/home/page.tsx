@@ -1,3 +1,4 @@
+import { HomeReviewFreshness } from "./_components/home-review-freshness";
 import { StatusMessage } from "@/ui/status-message";
 import { ActionLink } from "@/ui/controls";
 import { getPrimaryDefinition } from "@/lib/word-definition";
@@ -291,6 +292,15 @@ export default async function HomePage() {
             "Start with what you remember. It’s fine to get things wrong."
           )}
         </LearningNote>
+        <HomeReviewFreshness
+          goal={goal}
+          dueCount={dueReviewWords}
+          session={
+            currentLesson
+              ? { id: currentLesson.id, status: currentLesson.status }
+              : null
+          }
+        />
       </section>
 
       <section aria-labelledby="today-goal-heading" className="today-goal">
