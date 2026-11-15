@@ -27,11 +27,13 @@ export class DiscoveryPositionWriter {
     if (this.disposed) return;
     this.selected = value;
     clearTimeout(this.timer);
-    if (this.confirmed === identity(value)) {
+    // Failed or stale writes remain uncertain until an explicit retry. An old
+    // confirmation cannot hide that uncertainty or the control that resolves it.
+    if (this.blocked) return;
+    if (!this.running && this.confirmed === identity(value)) {
       this.transport.status("saved");
       return;
     }
-    if (this.blocked) return;
     this.transport.status("saving");
     this.timer = setTimeout(() => void this.flush(), 180);
   }
@@ -69,6 +71,9 @@ export class DiscoveryPositionWriter {
     if (this.disposed || this.running) return;
     this.blocked = false;
     this.revision = null;
+    // The failed write may have committed. After re-reading its revision, write
+    // the selected destination again rather than trusting an older confirmation.
+    this.confirmed = "";
     this.transport.status("saving");
     await this.flush();
   }
