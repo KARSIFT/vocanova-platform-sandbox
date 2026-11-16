@@ -1353,7 +1353,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByText("Level 2 of 8", { exact: true })).toBeVisible();
     const schedule = reviewSchedule(page);
     await expect(schedule).toHaveAccessibleName(
-      /^Show this word again: Automatic · (Today|Tomorrow|In \d+ (days|weeks?|months?))\. .+$/,
+      /^Show this word again: (Today|Tomorrow|In \d+ (days|weeks?|months?))\. .+$/,
     );
     await expect(schedule.locator(".review-schedule-value")).toHaveText(
       /^(Today|Tomorrow|In \d+ (days|weeks?|months?))$/u,
@@ -1400,10 +1400,10 @@ for (const theme of ["light", "dark"] as const) {
     });
     await schedule.press("ArrowDown");
     const menu = page.getByRole("menu", { name: "Next review", exact: true });
-    const automatic = menu.getByRole("menuitemradio", { name: /^Automatic ·/ });
+    const automatic = menu.getByRole("menuitemradio", { checked: true });
     await expect(automatic).toBeFocused();
     await expect(automatic).toHaveAttribute("aria-checked", "true");
-    await expect(menu.getByRole("menuitemradio")).toHaveCount(9);
+    await expect(menu.getByRole("menuitemradio")).toHaveCount(8);
     const menuBounds = (await menu.boundingBox())!;
     expect(menuBounds.x).toBeGreaterThanOrEqual(0);
     expect(menuBounds.y).toBeGreaterThanOrEqual(0);
@@ -1434,16 +1434,16 @@ for (const theme of ["light", "dark"] as const) {
     await expect(automatic).toBeFocused();
     await page.keyboard.press("ArrowDown");
     await expect(
-      menu.getByRole("menuitemradio", { name: /^Tomorrow\s*\. / }),
+      menu.getByRole("menuitemradio", { name: /^In 3 days\s*\. / }),
     ).toBeFocused();
     await expect(automatic).toHaveAttribute("aria-checked", "true");
     await page.keyboard.press("Enter");
     await expect(menu).toHaveCount(0);
     await expect(schedule).toBeFocused();
     await expect(schedule).toHaveAccessibleName(
-      /^Show this word again: Tomorrow\. .+$/,
+      /^Show this word again: In 3 days\. .+$/,
     );
-    await expect(page.getByText("Next review: Tomorrow", { exact: true })).toHaveText("Next review: Tomorrow");
+    await expect(page.getByText("Next review: In 3 days", { exact: true })).toHaveText("Next review: In 3 days");
     // The focused trigger communicates the selection without a second live
     // announcement competing with the checked-answer status.
     await expect(page.locator('[aria-live="polite"]').filter({ hasText: /^Next review:/ })).toHaveCount(0);
@@ -1465,7 +1465,7 @@ for (const theme of ["light", "dark"] as const) {
       .click({ position: { x: 2, y: 2 } });
     await expect(menu).toHaveCount(0);
     await expect(schedule).toHaveAccessibleName(
-      /^Show this word again: Tomorrow\. .+$/,
+      /^Show this word again: In 3 days\. .+$/,
     );
     await schedule.click();
     await automatic.click();
@@ -1495,7 +1495,7 @@ test("manual review date survives confirmed reload and exact continuation retry"
   await page.reload();
   const schedule = reviewSchedule(page);
   await expect(schedule).toHaveAccessibleName(
-    /^Show this word again: Automatic/,
+    /^Show this word again: (Today|Tomorrow|In \d+ (days|weeks?|months?))\. .+$/,
   );
   await chooseReviewDate(page, "7d");
   const attempts: { key: string | undefined; body: string | null }[] = [];
@@ -1804,11 +1804,11 @@ test.describe("review schedule learner calendar", () => {
       .click();
     const automatic = reviewSchedule(page);
     await expect(automatic).toHaveAccessibleName(
-      "Show this word again: Automatic · Today. October 18, 2026 at 6:30 PM EDT",
+      "Show this word again: Today. October 18, 2026 at 6:30 PM EDT",
     );
     await page.reload();
     await expect(automatic).toHaveAccessibleName(
-      "Show this word again: Automatic · Today. October 18, 2026 at 6:30 PM EDT",
+      "Show this word again: Today. October 18, 2026 at 6:30 PM EDT",
     );
     expect(errors).toEqual([]);
   });

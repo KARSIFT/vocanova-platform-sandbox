@@ -139,16 +139,17 @@ type state struct {
 	CompletedAt                                                                     *time.Time
 }
 type Service struct {
-	db      *sql.DB
-	reviews *reviews.PostgreSQLRepository
-	clock   clock.Clock
+	db              *sql.DB
+	reviews         *reviews.PostgreSQLRepository
+	clock           clock.Clock
+	questionEntropy io.Reader
 }
 
 func NewService(db *sql.DB, r *reviews.PostgreSQLRepository, c clock.Clock) *Service {
 	if c == nil {
 		c = clock.Real{}
 	}
-	return &Service{db: db, reviews: r, clock: c}
+	return &Service{db: db, reviews: r, clock: c, questionEntropy: rand.Reader}
 }
 func validKey(s string) bool {
 	return strings.TrimSpace(s) != "" && len(s) <= 128 && utf8.ValidString(s) && !strings.ContainsRune(s, 0)

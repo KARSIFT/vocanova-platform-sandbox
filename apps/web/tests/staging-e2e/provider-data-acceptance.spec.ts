@@ -16,6 +16,8 @@ const CANONICAL_PATHS = {
   "key-card": "/api/v1/canonical-words/key-card",
   appetizer: "/api/v1/canonical-words/appetizer",
   gate: "/api/v1/canonical-words/gate",
+  debris: "/api/v1/canonical-words/debris",
+  wit: "/api/v1/canonical-words/wit",
 } as const;
 const STAGING_READ_PATHS = new Set<string>([
   "/api/v1/me",
@@ -219,6 +221,44 @@ test("reviewed picture bank loads approved public CDN assets and authored gap co
       return image.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
     })).toBe(true);
     expect((await delivered).status()).toBe(200);
+  }
+
+  // These production-feedback words are outside the former four-picture bank.
+  // Bind to the committed catalog revision and verify the delivered bytes; this
+  // establishes live eligibility/decoding, not independent visual-quality review.
+  const broaderPictures = [
+    { slug: "debris", meaningId: "f4617c8f-4c44-547d-8087-6964e6ad03bf", revision: "391e5a057a50152a4ba2cc4983ad654edd04276c8a953424af81798552605b32" },
+    { slug: "wit", meaningId: "7abe4a99-3baf-59bc-9e14-0d8787a3f240", revision: "78c3f31f9bcf40df7ed35b5342e9509bc1b7f0d1216eb2143c41438159800cce" },
+  ] as const;
+  for (const picture of broaderPictures) {
+    const { word } = await readStaging<WordDetailResponse>(context, CANONICAL_PATHS[picture.slug]);
+    expect(word.slug).toBe(picture.slug);
+    expect(word.text).toBe(picture.slug);
+    const matches = word.meanings.filter((meaning) => meaning.id === picture.meaningId);
+    expect(matches).toHaveLength(1);
+    const meaning = matches[0]!;
+    expect(meaning.partOfSpeech).toBe("noun");
+    expect(meaning.meaningRevision).toBe(picture.revision);
+    const asset = meaning.image;
+    expect(asset, "Catalog-wide picture selection requires this current approved publication.").toBeDefined();
+    expect(asset!.meaningId).toBe(picture.meaningId);
+    expect(asset!.meaningRevision).toBe(picture.revision);
+    expect(asset!.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(asset!.alt.trim().length).toBeGreaterThan(0);
+    const expectedURL = `https://images.vocanova.site/meanings/${picture.meaningId}/${picture.revision}/${asset!.sha256}.webp`;
+    expect(asset!.imageUrl).toBe(expectedURL);
+    const delivered = page.waitForResponse((response) => response.url() === expectedURL);
+    await page.goto(`/vocabulary/${picture.slug}#meaning-${picture.meaningId}`);
+    const image = page.locator(`[id="meaning-${picture.meaningId}"] img[src="${expectedURL}"]`).filter({ visible: true });
+    await expect(image).toBeVisible();
+    expect(await image.evaluate(async (node) => {
+      const image = node as HTMLImageElement;
+      await image.decode();
+      return image.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
+    })).toBe(true);
+    const response = await delivered;
+    expect(response.status()).toBe(200);
+    expect(createHash("sha256").update(await response.body()).digest("hex")).toBe(asset!.sha256);
   }
 
   // These exact active examples/revisions are the two pinned gap targets in

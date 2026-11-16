@@ -254,7 +254,7 @@ for (const theme of ["light", "dark"] as const) {
       name: /^Show this word again:/,
     });
     await expect(schedule).toHaveAccessibleName(
-      "Show this word again: Automatic · In 2 days. October 18, 2026 at 10:30 PM UTC",
+      "Show this word again: In 2 days. October 18, 2026 at 10:30 PM UTC",
     );
     await expect(schedule.getByText("In 2 days", { exact: true })).toBeVisible();
     await schedule.click();

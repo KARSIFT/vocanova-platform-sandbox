@@ -1,5 +1,12 @@
 # Vocanova current product state
 
+## Review variety and goal continuity — 16 November 2026
+
+The [follow-up record](review-variety-followup-2026-11-16.md) addresses the
+schedule popup, a single daily-goal progress scale across frozen review sets,
+and broader randomized picture/sentence/definition questions. Verification and
+deployment evidence remain separate from implementation.
+
 ## Review and discovery owner feedback — 15 November 2026
 
 The [delivery record](review-discovery-feedback-2026-11-15.md) covers effort-based

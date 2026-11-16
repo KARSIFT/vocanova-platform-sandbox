@@ -360,8 +360,9 @@ test("Practice keeps scheduled count truthful after today's review target is com
   ).toBeVisible();
   await expect(
     main.getByRole("progressbar", { name: "Review progress" }),
-  ).toHaveAttribute("value", "0");
-  await expect(main.getByRole("progressbar", { name: "Review progress" })).toHaveAttribute("max", "2");
+  ).toHaveAttribute("value", "5");
+  // The explicit extra set keeps today’s confirmed goal as the progress scale.
+  await expect(main.getByRole("progressbar", { name: "Review progress" })).toHaveAttribute("max", "5");
 });
 
 test("Practice distinguishes unavailable lessons from an empty catalog without hiding other activities", async ({

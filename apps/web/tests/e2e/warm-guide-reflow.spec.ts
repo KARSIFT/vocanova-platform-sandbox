@@ -212,7 +212,7 @@ for (const theme of ["light", "dark"] as const) {
         "The first answer word must remain readable without forced splitting",
       ).toBe(1);
       const schedule = page.getByRole("button", {
-        name: "Show this word again: Automatic · In 2 days. October 18, 2026 at 10:30 PM UTC",
+        name: "Show this word again: In 2 days. October 18, 2026 at 10:30 PM UTC",
         exact: true,
       });
       await expectReadableControl(page, schedule, [
