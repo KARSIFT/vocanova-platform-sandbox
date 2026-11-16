@@ -538,7 +538,8 @@ export function DailyLessonPlayer({
         </p>
         {session && (
           <span className="text-sm font-semibold tabular-nums text-neutral-600">
-            {session.completedWords} / {session.totalWords}
+            {goal ? view.reviewed : session.completedWords} /{" "}
+            {goal ? view.target : session.totalWords}
           </span>
         )}
       </div>
@@ -552,8 +553,8 @@ export function DailyLessonPlayer({
         <progress
           aria-label="Review progress"
           className="mb-5 h-2 w-full accent-primary-700"
-          max={Math.max(1, session.totalWords)}
-          value={session.completedWords}
+          max={Math.max(1, goal ? view.target : session.totalWords)}
+          value={goal ? view.reviewed : session.completedWords}
         />
       )}
 
@@ -879,6 +880,7 @@ export function DailyLessonPlayer({
                       : "Automatic"
                   }
                   automaticExact={nextReviewDate?.exact}
+                  automaticAt={feedback.nextReviewAt}
                   timeZone={goal?.timeZone}
                   disabled={busy || uncertain || conflict}
                   onChange={setNextReview}
