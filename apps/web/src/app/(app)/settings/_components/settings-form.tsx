@@ -222,7 +222,7 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
     <form
       onSubmit={handleSubmit}
       aria-label="Practice settings"
-      className="mt-[var(--spacing-lg)] space-y-[var(--spacing-lg)] rounded-[0.9rem] border border-neutral-200 bg-white p-[var(--spacing-md)] sm:p-[var(--spacing-lg)]"
+      className="space-y-[var(--spacing-lg)] rounded-[1.25rem] border border-neutral-200 bg-white p-[var(--spacing-md)] sm:p-[var(--spacing-lg)]"
     >
       {restored ? (
         <StatusMessage as="p" tone="info" role="status" className="text-sm">
@@ -280,18 +280,16 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
         <div
           role="radiogroup"
           aria-label="Review rhythm preset"
-          className="space-y-[var(--spacing-sm)]"
+          className="divide-y divide-neutral-200 rounded-xl border border-neutral-200"
         >
           {REVIEW_INTERVAL_PRESETS.map((preset) => {
             const checked = state.reviewIntervalPreset === preset.value;
             return (
               <label
                 key={preset.value}
-                className={`flex min-h-[var(--spacing-2xl)] items-start gap-[var(--spacing-sm)] rounded-md border p-[var(--spacing-md)] transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] ${
-                  checked
-                    ? "border-primary-600 bg-primary-50"
-                    : "border-neutral-200 bg-white hover:border-primary-300"
-                } cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700`}
+                className={`flex min-h-[var(--spacing-2xl)] items-start gap-3 px-3 py-2.5 first:rounded-t-xl last:rounded-b-xl focus-within:relative focus-within:z-10 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-primary-700 ${
+                  checked ? "bg-primary-50" : "hover:bg-neutral-50"
+                } cursor-pointer`}
               >
                 <input
                   type="radio"
@@ -299,7 +297,7 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
                   value={preset.value}
                   checked={checked}
                   onChange={() => patch("reviewIntervalPreset", preset.value)}
-                  className="mt-[var(--spacing-xs)] size-4 accent-primary-600"
+                  className="mt-[var(--spacing-xs)] size-4 shrink-0 accent-primary-600"
                 />
                 <span className="flex flex-col">
                   <span className="text-base font-medium text-neutral-900">
@@ -326,24 +324,20 @@ export function SettingsForm({ initialSettings, userId }: SettingsFormProps) {
           App language
         </legend>
         <p className="text-base text-neutral-700">
-          English is the only language Vocanova is offered in today. We will add
-          more languages as we translate the app.
+          Vocanova is currently available in English.
         </p>
-        <label className="flex min-h-[var(--spacing-2xl)] cursor-pointer items-start gap-[var(--spacing-sm)] rounded-md border border-primary-600 bg-primary-50 p-[var(--spacing-md)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700">
+        <label className="flex min-h-[var(--spacing-2xl)] cursor-pointer items-start gap-[var(--spacing-sm)] rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700">
           <input
             type="radio"
             name="appLanguage"
             value="en"
             checked={state.appLanguage === "en"}
             onChange={() => patch("appLanguage", "en")}
-            className="mt-[var(--spacing-xs)] size-4 accent-primary-600"
+            className="mt-[var(--spacing-xs)] size-4 shrink-0 accent-primary-600"
           />
           <span className="flex flex-col">
             <span className="text-base font-medium text-neutral-900">
               English
-            </span>
-            <span className="text-sm text-neutral-700">
-              Selected — Vocanova&apos;s only supported language right now.
             </span>
           </span>
         </label>
@@ -520,8 +514,8 @@ function ToggleRow({
   onChange,
 }: ToggleRowProps) {
   return (
-    <div className="flex items-start justify-between gap-[var(--spacing-md)] rounded-md border border-neutral-200 bg-white p-[var(--spacing-md)]">
-      <div>
+    <div className="vn-list vn-list-row">
+      <div className="min-w-0 flex-[1_1_12rem]">
         <label htmlFor={id} className="text-base font-medium text-neutral-900">
           {label}
         </label>

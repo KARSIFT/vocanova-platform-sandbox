@@ -1,0 +1,52 @@
+.story {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem 1.5rem;
+  padding: var(--spacing-md);
+  overflow-wrap: anywhere;
+}
+
+.storyActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+
+@media (min-width: 48rem) {
+  .story {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 15rem);
+    padding: var(--spacing-lg);
+  }
+
+  .storyActions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.dialogue {
+  overflow: hidden;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 1rem;
+  background: var(--color-white);
+}
+
+.dialogueLine {
+  padding: var(--spacing-md);
+  overflow-wrap: anywhere;
+  scroll-margin-block: 1rem;
+}
+
+.dialogueLine + .dialogueLine {
+  border-top: 1px solid var(--color-neutral-200);
+}
+
+.dialogueLine[data-current] {
+  background: var(--color-primary-50);
+}
+
+.dialogueLine:focus-visible {
+  outline-offset: -2px;
+}

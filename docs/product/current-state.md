@@ -1,5 +1,12 @@
 # Vocanova current product state
 
+## Stageshow interface refactor — 22 November 2026
+
+The [interface refactor record](stageshow-ui-refactor-2026-11-22.md) maps the
+shared page, list, disclosure, and session treatments across the public and
+signed-in application. It records local visual verification separately from
+release and learner evidence.
+
 ## Review variety and goal continuity — 16 November 2026
 
 The [follow-up record](review-variety-followup-2026-11-16.md) addresses the

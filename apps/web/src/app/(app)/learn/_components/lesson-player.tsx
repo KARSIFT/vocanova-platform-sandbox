@@ -18,6 +18,7 @@ import { MeaningPicture } from "@/ui/meaning-picture";
 import { ListenButton } from "@/ui/pronunciation";
 import { Surface } from "@/ui/surface";
 import { SessionActions } from "@/ui/session";
+import styles from "../../practice/_components/session-layout.module.css";
 import { LessonAudio } from "./lesson-audio";
 import { LessonReviewSave } from "./lesson-review-save";
 
@@ -211,10 +212,10 @@ export function LessonPlayer({
   return (
     <div className="pb-[7rem]">
       {session && (
-        <div className="mb-6">
-          <div className="mb-2 flex justify-between gap-3 text-sm text-neutral-700">
-            <span>{session.title}</span>
-            <span className="shrink-0">
+        <div className={styles.progress}>
+          <div className={styles.progressDetails}>
+            <span className={styles.progressTitle}>{session.title}</span>
+            <span className={styles.progressCount}>
               {session.completedSteps} of {session.totalSteps} steps
             </span>
           </div>
@@ -222,21 +223,17 @@ export function LessonPlayer({
             aria-label="Lesson progress"
             value={session.completedSteps}
             max={session.totalSteps}
-            className="h-2 w-full accent-primary-700"
+            className={styles.progressTrack}
           />
         </div>
       )}
 
       {!session ? (
-        <Surface>
+        <Surface className={styles.task}>
           <p className="text-sm font-semibold text-primary-700">
             Learn, remember, use
           </p>
-          <h1
-            ref={heading}
-            tabIndex={-1}
-            className="mt-2 text-3xl font-bold tracking-tight text-neutral-900"
-          >
+          <h1 ref={heading} tabIndex={-1} className="page-title mt-2">
             {lesson.title}
           </h1>
           <p className="mt-3 text-lg text-neutral-700">{lesson.description}</p>
@@ -257,7 +254,7 @@ export function LessonPlayer({
           </p>
         </Surface>
       ) : session.status === "completed" ? (
-        <Surface>
+        <Surface className={styles.task}>
           <p className="text-sm font-semibold text-primary-700">
             {lesson.situationTitle}
           </p>
@@ -278,11 +275,11 @@ export function LessonPlayer({
           <p className="mt-3 text-sm text-neutral-600">
             Want to remember these? Save the meanings you want to review.
           </p>
-          <ul className="my-6 divide-y divide-neutral-200">
+          <ul className="my-5 divide-y divide-neutral-200 border-y border-neutral-200">
             {session.words.map((word) => (
               <li key={word.meaningId} className="py-4">
                 <Link
-                  className="inline-flex min-h-11 items-center text-lg font-semibold text-primary-700"
+                  className="vn-text-link headword text-lg"
                   href={`/vocabulary/${encodeURIComponent(word.wordSlug)}#meaning-${word.meaningId}`}
                 >
                   {word.wordText}
@@ -317,8 +314,8 @@ export function LessonPlayer({
           </div>
         </Surface>
       ) : step ? (
-        <Surface key={step.id} className="flex min-h-[32rem] flex-col">
-          <div className="flex-1">
+        <Surface key={step.id} className={styles.task}>
+          <div>
             <p className="text-sm font-semibold text-primary-700">
               {step.kind === "teach"
                 ? "Meet a word"
@@ -342,11 +339,7 @@ export function LessonPlayer({
                 />
               </div>
             ) : (
-              <h1
-                ref={heading}
-                tabIndex={-1}
-                className="mt-2 text-2xl font-bold leading-snug text-neutral-900"
-              >
+              <h1 ref={heading} tabIndex={-1} className="page-title mt-2">
                 {step.prompt}
               </h1>
             )}
@@ -385,9 +378,7 @@ export function LessonPlayer({
                 </div>
                 {step.word.usageNote && (
                   <details className="mt-4 border-t border-neutral-200">
-                    <summary className="min-h-11 cursor-pointer py-3 font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-                      Usage tip
-                    </summary>
+                    <summary className="vn-summary py-3">Usage tip</summary>
                     <p className="rounded-xl bg-secondary-50 p-4 text-neutral-800">
                       {step.word.usageNote}
                     </p>
@@ -453,14 +444,11 @@ export function LessonPlayer({
                   >
                     <fieldset
                       disabled={locked || session.canContinue}
-                      className="grid gap-3"
+                      className={styles.choices}
                     >
                       <legend className="sr-only">Answer choices</legend>
                       {step.choices.map((choice) => (
-                        <label
-                          key={choice.id}
-                          className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border p-4 text-neutral-900 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${displayedChoice === choice.id ? "border-primary-600 bg-primary-50" : "border-neutral-300 bg-white"} ${locked || session.canContinue ? "cursor-default" : ""}`}
-                        >
+                        <label key={choice.id} className={styles.choice}>
                           <input
                             type="radio"
                             name={answerFormId}
@@ -470,15 +458,7 @@ export function LessonPlayer({
                             onChange={() => setSelectedChoice(choice.id)}
                             className="h-5 w-5 shrink-0 accent-primary-700"
                           />
-                          <span className="grow">{choice.text}</span>
-                          {displayedChoice === choice.id && (
-                            <span
-                              aria-hidden="true"
-                              className="text-sm font-semibold text-primary-800"
-                            >
-                              Selected
-                            </span>
-                          )}
+                          <span className="min-w-0 grow">{choice.text}</span>
                         </label>
                       ))}
                     </fieldset>
@@ -494,7 +474,8 @@ export function LessonPlayer({
                 ref={feedback}
                 tabIndex={-1}
                 role="status"
-                className={`mt-5 rounded-xl border p-4 ${session.feedback.correct ? "border-primary-200 bg-primary-50" : "border-secondary-200 bg-secondary-50"}`}
+                className={styles.feedback}
+                data-correct={session.feedback.correct}
               >
                 <h2 className="font-semibold text-neutral-900">
                   {session.feedback.correct

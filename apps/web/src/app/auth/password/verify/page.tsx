@@ -1,8 +1,6 @@
 "use client";
 
-import { Button } from "@/ui/controls";
-
-import Link from "@/ui/link";
+import { ActionLink, Button } from "@/ui/controls";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 
@@ -10,7 +8,6 @@ import { ApiResponseError } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { AuthShell } from "@/ui/auth-shell";
-import { Surface } from "@/ui/surface";
 
 function VerifyPasswordSignupContent() {
   const token = useSearchParams().get("token") ?? "";
@@ -79,52 +76,49 @@ function VerifyPasswordSignupContent() {
             ? retryMessage
             : "This verification link is invalid, expired, or has already been used.";
   return (
-    <AuthShell>
-      <Surface className="w-full space-y-[var(--spacing-md)]">
-        <h1 className="text-2xl font-semibold text-neutral-900">
-          Verify your email
-        </h1>
-        <p
-          role={status === "error" || status === "retry" ? "alert" : "status"}
-          aria-live="polite"
-          className={`text-base ${status === "error" || status === "retry" ? "text-red-700" : "text-neutral-700"}`}
+    <AuthShell title="Verify your email">
+      <p
+        role={status === "error" || status === "retry" ? "alert" : "status"}
+        aria-live="polite"
+        className={`text-base ${status === "error" || status === "retry" ? "text-red-700" : "text-neutral-700"}`}
+      >
+        {message}
+      </p>
+      {status === "ready" || status === "verifying" || status === "retry" ? (
+        <Button
+          ref={retryButton}
+          type="button"
+          onClick={() => void verifyEmail()}
+          disabled={status === "verifying"}
+          aria-busy={status === "verifying"}
+          className="justify-self-start"
         >
-          {message}
-        </p>
-        {status === "ready" || status === "verifying" || status === "retry" ? (
-          <Button
-            ref={retryButton}
-            type="button"
-            onClick={() => void verifyEmail()}
-            disabled={status === "verifying"}
-            aria-busy={status === "verifying"}
-          >
-            {status === "verifying"
-              ? "Verifying..."
-              : status === "retry"
-                ? "Retry verification"
-                : "Verify email"}
-          </Button>
-        ) : null}
-        {status === "done" ? (
-          <Link
-            ref={signInLink}
-            href="/login"
-            className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
-            Sign in
-          </Link>
-        ) : null}
-        {status === "error" ? (
-          <Link
-            ref={signupLink}
-            href="/signup"
-            className="font-semibold text-primary-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
-            Create account
-          </Link>
-        ) : null}
-      </Surface>
+          {status === "verifying"
+            ? "Verifying..."
+            : status === "retry"
+              ? "Retry verification"
+              : "Verify email"}
+        </Button>
+      ) : null}
+      {status === "done" ? (
+        <ActionLink
+          ref={signInLink}
+          href="/login"
+          className="justify-self-start"
+        >
+          Sign in
+        </ActionLink>
+      ) : null}
+      {status === "error" ? (
+        <ActionLink
+          ref={signupLink}
+          href="/signup"
+          variant="secondary"
+          className="justify-self-start"
+        >
+          Create account
+        </ActionLink>
+      ) : null}
     </AuthShell>
   );
 }
@@ -133,8 +127,10 @@ export default function VerifyPasswordSignupPage() {
   return (
     <Suspense
       fallback={
-        <AuthShell>
-          <p className="text-base text-neutral-700">Loading verification...</p>
+        <AuthShell title="Verify your email">
+          <p role="status" className="text-base text-neutral-700">
+            Loading verification...
+          </p>
         </AuthShell>
       }
     >

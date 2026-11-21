@@ -8,7 +8,7 @@ import {
 } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { PageContainer } from "@/ui/surface";
+import { PageContainer, PageHeader } from "@/ui/surface";
 
 import { RemoveSavedWordButton } from "./_components/remove-saved-word-button";
 import { ReloadSavedWordsButton } from "./_components/reload-saved-words-button";
@@ -31,12 +31,8 @@ const stageLabels: Record<string, string> = {
   ignored: "Ignored",
   archived: "Archived",
 };
-const inputStyle =
-  "mt-2 min-h-12 w-full min-w-0 rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
-const actionStyle =
-  "vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
-const linkStyle =
-  "inline-flex min-h-12 items-center font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
+const inputStyle = "mt-2 min-w-0";
+const linkStyle = "vn-text-link";
 
 interface SavedWordsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -93,23 +89,20 @@ export default async function SavedWordsPage({
     data?.totalCount === 0 && !filtered && view === "empty";
 
   return (
-    <PageContainer>
-      <div className="flex flex-wrap items-start justify-between gap-[var(--spacing-md)]">
-        <div>
-          <h1 className="page-title">Saved vocabulary</h1>
-          <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-            Revisit words, practice them in a sentence, or remove what you no
-            longer need.
-          </p>
-        </div>
-        {!emptyCollection && (
-          <ActionLink variant="secondary" href="/discover">
-            Discover new words
-          </ActionLink>
-        )}
-      </div>
+    <PageContainer width="standard">
+      <PageHeader
+        title="Saved vocabulary"
+        lede="Revisit your words and practice using them in sentences."
+        actions={
+          !emptyCollection && (
+            <Link className={linkStyle} href="/discover">
+              Discover new words
+            </Link>
+          )
+        }
+      />
 
-      <Link href="/lists" className={`${linkStyle} my-3`}>
+      <Link href="/lists" className={linkStyle}>
         Organize meanings in personal lists
       </Link>
 
@@ -119,7 +112,7 @@ export default async function SavedWordsPage({
           action="/words"
           role="search"
           aria-label="Saved vocabulary filters"
-          className="my-6 rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5"
+          className="vn-list mt-3 mb-6 p-4 sm:p-5"
         >
           <label
             htmlFor="saved-word-query"
@@ -142,7 +135,7 @@ export default async function SavedWordsPage({
           >
             Find a word or a part of its meaning. Use up to 100 characters.
           </p>
-          <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
             <label className="min-w-0 font-semibold text-neutral-900">
               Review stage
               <Select
@@ -168,7 +161,11 @@ export default async function SavedWordsPage({
               />
               Due for review now
             </label>
-            <Button variant="primary" type="submit" className={actionStyle}>
+            <Button
+              variant="primary"
+              type="submit"
+              className="justify-self-start"
+            >
               Apply filters
             </Button>
           </div>
@@ -186,7 +183,7 @@ export default async function SavedWordsPage({
       )}
 
       {invalidQuery || invalidFilters || rejectedFilters ? (
-        <section aria-labelledby="saved-filters-invalid" className="py-6">
+        <section aria-labelledby="saved-filters-invalid" className="vn-empty">
           <h2
             id="saved-filters-invalid"
             className="text-xl font-semibold text-neutral-900"
@@ -205,7 +202,7 @@ export default async function SavedWordsPage({
           </StatusMessage>
         </section>
       ) : invalidCursor ? (
-        <section aria-labelledby="saved-page-changed" className="py-6">
+        <section aria-labelledby="saved-page-changed" className="vn-empty">
           <h2
             id="saved-page-changed"
             className="text-xl font-semibold text-neutral-900"
@@ -221,7 +218,7 @@ export default async function SavedWordsPage({
           </Link>
         </section>
       ) : !data ? (
-        <section aria-labelledby="saved-unavailable" className="py-6">
+        <section aria-labelledby="saved-unavailable" className="vn-empty">
           <h2
             id="saved-unavailable"
             className="text-xl font-semibold text-neutral-900"
@@ -234,7 +231,7 @@ export default async function SavedWordsPage({
           <ReloadSavedWordsButton />
         </section>
       ) : view === "empty" && filtered ? (
-        <section aria-labelledby="saved-no-matches" className="py-6">
+        <section aria-labelledby="saved-no-matches" className="vn-empty">
           <h2
             id="saved-no-matches"
             className="text-xl font-semibold text-neutral-900"
@@ -249,7 +246,7 @@ export default async function SavedWordsPage({
           </Link>
         </section>
       ) : view === "empty" ? (
-        <section className="flex flex-col items-center justify-center py-[var(--spacing-2xl)] text-center">
+        <section className="vn-empty mt-3 border-t border-neutral-200">
           <h2 className="text-xl font-semibold text-neutral-900">
             Your vocabulary starts here
           </h2>
@@ -267,7 +264,7 @@ export default async function SavedWordsPage({
           </ActionLink>
         </section>
       ) : view === "exhausted" ? (
-        <section className="py-[var(--spacing-2xl)] text-center">
+        <section className="vn-empty">
           <h2 className="text-xl font-semibold text-neutral-900">
             You&apos;ve reached the end
           </h2>
@@ -290,21 +287,15 @@ export default async function SavedWordsPage({
             {filtered ? "matching" : "saved"}{" "}
             {data.totalCount === 1 ? "meaning" : "meanings"}.
           </StatusMessage>
-          <ul
-            aria-label="Saved vocabulary results"
-            className="mt-[var(--spacing-lg)] grid grid-cols-1 gap-[var(--spacing-md)] md:grid-cols-2"
-          >
+          <ul aria-label="Saved vocabulary results" className="vn-list mt-3">
             {items.map((savedWord) => {
               const statusLabel =
                 stageLabels[savedWord.reviewState] ?? "Stage unavailable";
               return (
-                <li
-                  key={savedWord.userWordId}
-                  className="flex flex-col justify-between gap-[var(--spacing-md)] rounded-[1.25rem] border border-neutral-200 bg-white p-[var(--spacing-lg)]"
-                >
-                  <div>
+                <li key={savedWord.userWordId} className="vn-list-row">
+                  <div className="min-w-0 flex-[1_1_20rem] [overflow-wrap:anywhere]">
                     <div className="flex flex-wrap items-baseline gap-[var(--spacing-xs)]">
-                      <h2 className="headword text-2xl">
+                      <h2 className="headword text-xl">
                         <Link
                           href={`/words/${savedWord.userWordId}`}
                           className="rounded-sm hover:text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
@@ -322,16 +313,22 @@ export default async function SavedWordsPage({
                         savedWord.learnerDefinition,
                       )}
                     </p>
-                    {statusLabel ? (
-                      <p className="mt-[var(--spacing-sm)] text-sm font-semibold text-primary-700">
+                    <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+                      <p className="font-semibold text-neutral-700">
                         {statusLabel}
                       </p>
-                    ) : null}
-                    <p className="mt-1 text-sm text-neutral-700">
-                      {savedWord.due ? "Due now" : "Not due now"}
-                    </p>
+                      <p
+                        className={
+                          savedWord.due
+                            ? "font-semibold text-primary-700"
+                            : "text-neutral-600"
+                        }
+                      >
+                        {savedWord.due ? "Due now" : "Not due now"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-sm)]">
+                  <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2">
                     <ActionLink
                       variant="secondary"
                       href={`/words/${savedWord.userWordId}`}

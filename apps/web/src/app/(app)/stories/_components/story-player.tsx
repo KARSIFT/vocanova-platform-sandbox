@@ -14,6 +14,8 @@ import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { Surface } from "@/ui/surface";
 import { SessionActions } from "@/ui/session";
+import sessionStyles from "../../practice/_components/session-layout.module.css";
+import styles from "../stories.module.css";
 import {
   primaryAction,
   secondaryAction,
@@ -170,24 +172,24 @@ export function StoryPlayer({
   }
   return (
     <div className="pb-[7rem]">
-      <p className="mb-2 mt-3 text-sm font-semibold text-primary-700">
-        {session.situation} · A2–B1
-      </p>
-      <p className="text-sm text-neutral-700">
-        {session.completedSteps} of {session.totalSteps} steps completed
-      </p>
-      <progress
-        className="mb-5 mt-2 h-2 w-full accent-primary-700"
-        aria-label="Story progress"
-        value={session.completedSteps}
-        max={session.totalSteps}
-      />
-      <Surface>
-        <h1
-          ref={heading}
-          tabIndex={-1}
-          className="text-3xl font-bold tracking-tight text-neutral-900"
-        >
+      <div className={sessionStyles.progress}>
+        <div className={sessionStyles.progressDetails}>
+          <p className={sessionStyles.progressTitle}>
+            {session.situation} · A2–B1
+          </p>
+          <p className={sessionStyles.progressCount}>
+            {session.completedSteps} of {session.totalSteps} steps completed
+          </p>
+        </div>
+        <progress
+          className={sessionStyles.progressTrack}
+          aria-label="Story progress"
+          value={session.completedSteps}
+          max={session.totalSteps}
+        />
+      </div>
+      <Surface className={sessionStyles.task}>
+        <h1 ref={heading} tabIndex={-1} className="page-title">
           {session.status === "completed" ? "Story complete" : session.title}
         </h1>
         {session.status === "completed" ? (
@@ -230,13 +232,14 @@ export function StoryPlayer({
         <p className="mt-3 text-sm text-neutral-600">
           Audio is optional. You can read every line.
         </p>
-        <ol aria-label="Story dialogue" className="mt-5 space-y-4">
+        <ol aria-label="Story dialogue" className={`${styles.dialogue} mt-5`}>
           {session.visibleLines.map((line, index) => (
             <li
               key={line.id}
               ref={line.id === step?.line?.id ? currentLine : undefined}
               tabIndex={line.id === step?.line?.id ? -1 : undefined}
-              className="rounded-xl bg-neutral-50 p-4"
+              className={styles.dialogueLine}
+              data-current={line.id === step?.line?.id ? true : undefined}
             >
               <p className="text-sm font-semibold text-primary-700">
                 {line.speaker}
@@ -260,7 +263,10 @@ export function StoryPlayer({
               void submit("answer");
             }}
           >
-            <fieldset disabled={locked || !!checked?.correct}>
+            <fieldset
+              className={sessionStyles.choices}
+              disabled={locked || !!checked?.correct}
+            >
               <legend
                 ref={currentQuestion}
                 tabIndex={-1}
@@ -269,10 +275,7 @@ export function StoryPlayer({
                 {step.prompt}
               </legend>
               {step.choices?.map((option) => (
-                <label
-                  key={option.id}
-                  className={`mb-3 flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border p-4 text-neutral-900 ${choice === option.id ? "border-primary-600 bg-primary-50" : "border-neutral-300 bg-white"}`}
-                >
+                <label key={option.id} className={sessionStyles.choice}>
                   <input
                     type="radio"
                     name="story-choice"
@@ -282,15 +285,7 @@ export function StoryPlayer({
                     aria-label={option.text}
                     className="h-5 w-5 shrink-0 accent-primary-700"
                   />
-                  <span className="grow">{option.text}</span>
-                  {choice === option.id && (
-                    <span
-                      aria-hidden="true"
-                      className="text-sm font-semibold text-primary-800"
-                    >
-                      Selected
-                    </span>
-                  )}
+                  <span className="min-w-0 grow">{option.text}</span>
                 </label>
               ))}
             </fieldset>
@@ -301,7 +296,8 @@ export function StoryPlayer({
             ref={feedback}
             tabIndex={-1}
             role="status"
-            className={`mt-4 rounded-xl border p-4 text-neutral-900 ${checked.correct ? "border-primary-300 bg-primary-50" : "border-secondary-300 bg-secondary-50"}`}
+            className={sessionStyles.feedback}
+            data-correct={checked.correct}
           >
             <p className="font-bold">
               {checked.correct ? "That's right." : "Let's try that again."}
@@ -385,8 +381,8 @@ export function StoryPlayer({
             {notice}
           </StatusMessage>
         )}
-        <StoryVocabularyHelp vocabulary={session.vocabulary} />
       </Surface>
+      <StoryVocabularyHelp vocabulary={session.vocabulary} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import Link from "@/ui/link";
 
 import { BrandMark } from "@/ui/brand-mark";
 import { LearningPreview } from "@/ui/learning-preview";
+import styles from "./public-page.module.css";
 
 export const metadata: Metadata = {
   title: "Vocanova — English for the moments that matter",
@@ -22,54 +23,29 @@ const benefits = [
 
 export default function Page() {
   return (
-    <main className="min-h-screen bg-[var(--vn-canvas)] text-neutral-900">
-      <div className="mx-auto flex min-h-screen w-full max-w-[76rem] flex-col px-[var(--spacing-md)] sm:px-[var(--spacing-xl)]">
-        <header className="flex min-h-20 flex-wrap items-center justify-between gap-3 border-b border-neutral-200 py-3">
-          <Link
-            href="/"
-            aria-label="VocaNova home"
-            className="inline-flex min-h-11 items-center gap-[var(--spacing-sm)] rounded-md"
-          >
+    <main className={styles.canvas}>
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <Link href="/" aria-label="VocaNova home" className={styles.brand}>
             <BrandMark />
           </Link>
-          <ActionLink
-            variant="secondary"
-            href="/login"
-            className="text-sm transition-colors"
-          >
+          <ActionLink variant="secondary" href="/login" className="text-sm">
             Sign in
           </ActionLink>
         </header>
 
-        {/* Rem-sized tracks wrap with enlarged text as well as the viewport. */}
-        <section className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-center gap-10 py-8 lg:gap-20 lg:py-14">
-          <div className="max-w-[42rem]">
-            <p className="inline-flex items-center gap-2 rounded-full border border-secondary-200 bg-secondary-50 px-3 py-1 text-sm font-semibold text-secondary-800">
-              <span
-                aria-hidden="true"
-                className="size-1.5 rounded-full bg-secondary-500"
-              />
-              Practical English, made personal
-            </p>
-            <h1 className="mt-4 text-[clamp(2.6rem,5.2vw,4.6rem)] font-bold leading-[1.02] tracking-[-0.045em] text-balance">
+        <section className={styles.hero} aria-labelledby="landing-heading">
+          <div className={styles.heroCopy}>
+            <h1 id="landing-heading" className={styles.heroTitle}>
               Learn the words you will actually use.
             </h1>
-            <p className="mt-6 max-w-[38rem] text-lg leading-8 text-neutral-700 sm:text-xl">
+            <p className={styles.heroDescription}>
               VocaNova gives each useful word a real setting, then helps you
               return to it, use it, and make it yours.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <ActionLink
-                variant="primary"
-                href="/login"
-                className="text-base text-white transition-colors"
-              >
-                Start learning
-              </ActionLink>
-              <a
-                href="#how-it-works"
-                className="inline-flex min-h-12 items-center justify-center rounded-full px-5 text-base font-semibold text-primary-800 hover:bg-primary-50"
-              >
+            <div className={styles.heroActions}>
+              <ActionLink href="/login">Start learning</ActionLink>
+              <a href="#how-it-works" className={styles.textLink}>
                 How it works
               </a>
             </div>
@@ -81,50 +57,22 @@ export default function Page() {
         <section
           id="how-it-works"
           aria-labelledby="how-it-works-heading"
-          className="border-t border-neutral-200 py-12 lg:py-16"
+          className={styles.howItWorks}
         >
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,30rem),1fr))] gap-8 lg:gap-16">
-            <div className="max-w-[24rem]">
-              <p className="text-sm font-semibold text-primary-700">
-                A daily learning loop
-              </p>
-              <h2
-                id="how-it-works-heading"
-                className="mt-3 text-3xl font-bold leading-tight tracking-[-0.03em] [overflow-wrap:anywhere]"
-              >
-                A little practice, with a clear purpose.
-              </h2>
-            </div>
-            <ol className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))]">
-              {benefits.map(([label, copy], index) => (
-                <li
-                  key={label}
-                  className="flex min-w-0 flex-wrap gap-4 rounded-[1.25rem] border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:block"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`grid size-9 shrink-0 place-items-center rounded-xl text-sm font-bold ${index === 1 ? "bg-secondary-100 text-secondary-800" : "bg-primary-50 text-primary-800"}`}
-                  >
-                    {index + 1}
-                  </span>
-                  <div>
-                    <h3 className="text-lg font-bold text-neutral-900 sm:mt-4">
-                      {label}
-                    </h3>
-                    <p className="mt-1 text-sm leading-6 text-neutral-600">
-                      {copy}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
+          <h2 id="how-it-works-heading" className={styles.sectionTitle}>
+            A little practice, with a clear purpose.
+          </h2>
+          <ol className={styles.learningLoop} role="list">
+            {benefits.map(([label, copy]) => (
+              <li key={label}>
+                <h3>{label}</h3>
+                <p>{copy}</p>
+              </li>
+            ))}
+          </ol>
         </section>
-        <footer className="border-t border-neutral-200 py-5">
-          <Link
-            href="/help"
-            className="inline-flex min-h-11 items-center font-semibold text-primary-700 underline underline-offset-4"
-          >
+        <footer className={styles.footer}>
+          <Link href="/help" className={styles.textLink}>
             Help and support
           </Link>
         </footer>

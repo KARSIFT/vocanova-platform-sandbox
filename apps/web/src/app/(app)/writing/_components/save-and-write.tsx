@@ -216,7 +216,7 @@ export function SaveAndWrite({
     );
   }
   return (
-    <div className="mt-4 rounded-xl bg-neutral-50 p-4">
+    <div className="mt-4 border-l-2 border-neutral-300 pl-4">
       <p className="max-w-prose text-neutral-700">
         Save this meaning to write with it here. It also joins your saved
         vocabulary for review.
@@ -227,7 +227,7 @@ export function SaveAndWrite({
           onClick={() => void save()}
           disabled={busy}
           aria-busy={busy}
-          className={`${actionStyle} mt-4`}
+          className={`${actionStyle} mt-3`}
         >
           {busy ? "Saving…" : "Save and write"}
         </button>

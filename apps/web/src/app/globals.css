@@ -126,178 +126,6 @@ progress::-moz-progress-bar {
   max-width: 42rem;
 }
 
-.auth-shell {
-  display: grid;
-  min-height: 100vh;
-  background: var(--vn-canvas);
-}
-
-.auth-panel {
-  display: flex;
-  width: min(100%, 38rem);
-  margin-inline: auto;
-  flex-direction: column;
-  justify-content: center;
-  padding: 2rem 1.25rem;
-}
-
-.auth-brand {
-  display: inline-flex;
-  width: fit-content;
-  align-items: center;
-  gap: 0.65rem;
-  margin-bottom: 1.75rem;
-  border-radius: 0.5rem;
-}
-
-.auth-form {
-  width: 100%;
-  max-width: 28rem;
-}
-
-.auth-panel-wide {
-  width: min(100%, 44rem);
-}
-
-.auth-panel-wide .auth-form {
-  max-width: 36rem;
-}
-
-.auth-context {
-  display: none;
-}
-
-@media (min-width: 64rem) {
-  .auth-shell {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
-  }
-  .auth-context {
-    position: relative;
-    isolation: isolate;
-    display: flex;
-    overflow: hidden;
-    align-items: stretch;
-    background: linear-gradient(160deg, #1d4ed8 0%, #1e3a8a 62%, #172554 100%);
-    color: #eff6ff;
-    padding: clamp(2rem, 5vw, 4.5rem);
-  }
-  .auth-context::before {
-    position: absolute;
-    z-index: -1;
-    top: -10rem;
-    right: -8rem;
-    width: 28rem;
-    height: 28rem;
-    border-radius: 999px;
-    background: radial-gradient(
-      circle,
-      rgb(196 181 253 / 0.28) 0%,
-      rgb(196 181 253 / 0) 70%
-    );
-    content: "";
-  }
-  .auth-context-inner {
-    display: flex;
-    width: 100%;
-    max-width: 30rem;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2.25rem;
-    margin-inline: auto;
-  }
-  .auth-context-mark > span {
-    display: inline-block;
-    margin-bottom: 1rem;
-    border-radius: 999px;
-    background: rgb(255 255 255 / 0.12);
-    padding: 0.25rem 0.75rem;
-    color: #ddd6fe;
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-  .auth-context-mark strong {
-    display: block;
-    font-size: clamp(2.25rem, 3.6vw, 3.5rem);
-    font-weight: 700;
-    letter-spacing: -0.035em;
-    line-height: 1.05;
-  }
-  .auth-context-mark p {
-    max-width: 25rem;
-    margin: 1.25rem 0 0;
-    color: #c7d2fe;
-    font-size: 1.05rem;
-    line-height: 1.6;
-  }
-  .auth-word-card {
-    border: 1px solid rgb(255 255 255 / 0.16);
-    border-radius: 1.25rem;
-    background: rgb(255 255 255 / 0.08);
-    padding: 1.25rem 1.35rem;
-    backdrop-filter: blur(6px);
-  }
-  .auth-word-card-top {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  .auth-word-card-top b {
-    color: #ffffff;
-    font-size: 1.5rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-  .auth-word-card-top em {
-    color: #c7d2fe;
-    font-size: 0.85rem;
-    font-style: normal;
-  }
-  .auth-word-card p {
-    margin: 0.35rem 0 0;
-    color: #dbeafe;
-  }
-  .auth-loop {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .auth-loop li {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border-radius: 999px;
-    background: rgb(255 255 255 / 0.1);
-    padding: 0.35rem 0.85rem 0.35rem 0.4rem;
-    color: #eff6ff;
-    font-size: 0.875rem;
-    font-weight: 600;
-  }
-  .auth-loop li span {
-    display: grid;
-    width: 1.5rem;
-    height: 1.5rem;
-    place-items: center;
-    border-radius: 999px;
-    background: #ffffff;
-    color: #1e3a8a;
-    font-size: 0.75rem;
-    font-weight: 700;
-  }
-  .auth-context-caption {
-    margin: 0;
-    color: #a5b4fc;
-    font-size: 0.9rem;
-  }
-  .auth-panel {
-    justify-content: center;
-    padding: clamp(1.5rem, 4vw, 4rem);
-  }
-}
-
 /* Text and background utilities share the generated palette. In dark mode,
  * retain the existing blue brand buttons while giving inline brand text the
  * luminance it needs on dark surfaces. */
@@ -427,9 +255,8 @@ progress::-moz-progress-bar {
   top: 0;
   z-index: 10;
   border-bottom: 1px solid var(--color-neutral-200);
-  background: color-mix(in srgb, var(--color-white) 94%, transparent);
+  background: var(--color-white);
   padding-top: env(safe-area-inset-top);
-  backdrop-filter: saturate(1.4) blur(12px);
 }
 .app-header-inner {
   display: grid;
@@ -771,6 +598,10 @@ progress::-moz-progress-bar {
   border-color: var(--color-primary-300);
   background: var(--color-primary-50);
 }
+.vn-chip-link[aria-current="page"] {
+  border-color: var(--color-primary-500);
+  background: var(--color-primary-50);
+}
 .vn-text-link {
   display: inline-flex;
   min-height: 44px;
@@ -781,6 +612,215 @@ progress::-moz-progress-bar {
 .vn-text-link:hover {
   text-decoration: underline;
   text-underline-offset: 0.25em;
+}
+
+/* Page anatomy shared by every learner route: a quiet way back, one title
+ * scale, a lede, then sections on one vertical rhythm. Hierarchy comes from
+ * spacing and one weight step; only the page's subject is raised. */
+.page-header {
+  margin-bottom: 1.5rem;
+}
+.page-back {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 0.25rem;
+  padding-inline: 0 0.6rem;
+  border-radius: 999px;
+  color: var(--color-neutral-600);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+.page-back svg {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.page-back:hover {
+  background: var(--color-neutral-200);
+  color: var(--color-neutral-900);
+}
+.page-back:focus-visible {
+  outline: 2px solid var(--color-primary-700);
+  outline-offset: 2px;
+}
+.page-back + .page-header-row {
+  margin-top: 0.5rem;
+}
+.page-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+.page-header-text {
+  min-width: 0;
+  flex: 1 1 20rem;
+}
+.page-header-text .page-title {
+  overflow-wrap: anywhere;
+}
+.page-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
+}
+.page-eyebrow {
+  margin-bottom: 0.35rem;
+  color: var(--color-primary-700);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+.page-section {
+  min-width: 0;
+}
+.page-section + .page-section {
+  margin-top: 2rem;
+}
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.section-description {
+  margin-top: 0.15rem;
+  color: var(--color-neutral-600);
+  font-size: 0.9rem;
+}
+
+/* A grouped list: related rows share one surface and hairlines instead of a
+ * card each. Rows keep their own 44px+ targets. */
+.vn-list {
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 1rem;
+  background: var(--color-white);
+}
+.vn-list > li + li,
+.vn-list > a + a {
+  border-top: 1px solid var(--color-neutral-200);
+}
+.vn-list .learn-nav-link {
+  border: 0;
+  border-radius: 0;
+}
+.vn-list > .learn-nav-link + .learn-nav-link {
+  border-block-start: 1px solid var(--color-neutral-200);
+}
+.vn-list .learn-nav-link:hover {
+  background: var(--color-neutral-50);
+}
+.vn-list > li:first-child > .learn-nav-link,
+.vn-list > .learn-nav-link:first-child {
+  border-radius: 1rem 1rem 0 0;
+}
+.vn-list > li:last-child > .learn-nav-link,
+.vn-list > .learn-nav-link:last-child {
+  border-end-start-radius: 1rem;
+  border-end-end-radius: 1rem;
+}
+.vn-list .learn-nav-link:focus-visible {
+  outline-offset: -3px;
+}
+.vn-list-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.85rem 1rem;
+}
+
+/* Empty and unavailable states: plain content on the canvas, never a hollow
+ * card. The heading says what is true; one way forward follows. */
+.vn-empty {
+  padding: 1.5rem 0;
+}
+.vn-empty h2 {
+  color: var(--color-neutral-900);
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.vn-empty p {
+  max-width: 36rem;
+  margin-top: 0.35rem;
+  color: var(--color-neutral-700);
+}
+
+/* A labelled disclosure with a chevron that turns as it opens. */
+.vn-summary {
+  display: flex;
+  min-height: 48px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  cursor: pointer;
+  list-style: none;
+  color: var(--color-neutral-900);
+  font-weight: 650;
+}
+.vn-summary::-webkit-details-marker {
+  display: none;
+}
+.vn-summary::after {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  margin-left: auto;
+  background: var(--color-neutral-500);
+  content: "";
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+details[open] > .vn-summary::after {
+  transform: rotate(180deg);
+}
+.vn-summary:focus-visible {
+  outline: 2px solid var(--color-primary-700);
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  .vn-summary::after {
+    forced-color-adjust: none;
+    background: ButtonText;
+  }
+}
+
+/* Motion answers input only: a press settles a control by a pixel and an
+ * opened disclosure lets its content arrive from just above. Transform only,
+ * so contrast is never mid-fade; reduced motion removes both. */
+@layer components {
+  @media (prefers-reduced-motion: no-preference) {
+    main details[open]:has(> .vn-summary) > :not(summary) {
+      animation: vn-disclose 180ms var(--ease-out);
+    }
+    :is(
+        .vn-btn-secondary,
+        .vn-chip-link,
+        .learn-nav-link,
+        .page-back
+      ):active:not(:disabled) {
+      transform: translateY(1px);
+    }
+  }
+}
+@keyframes vn-disclose {
+  from {
+    transform: translateY(-4px);
+  }
 }
 
 /* Home: the next step, the day's real goal, your latest word, and where to
@@ -803,7 +843,7 @@ progress::-moz-progress-bar {
 }
 .today-head h1 {
   color: var(--color-neutral-900);
-  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-size: clamp(1.9rem, 4vw, 2.75rem);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -905,9 +945,14 @@ progress::-moz-progress-bar {
 }
 
 .today-goal {
-  padding: 1rem 1.1rem 0.6rem;
-  border: 1px solid var(--color-neutral-200);
-  border-radius: 1.25rem;
+  padding: 1rem 0.125rem 0.4rem;
+  border-block: 1px solid var(--color-neutral-200);
+}
+
+.learning-surface.today-feature {
+  border-block-start: 3px solid var(--color-primary-400);
+}
+.today-feature .learning-note {
   background: var(--color-white);
 }
 .today-goal-head {
@@ -1048,7 +1093,7 @@ progress::-moz-progress-bar {
 }
 .keep-going-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), auto));
   align-items: center;
   gap: 0.5rem 1rem;
   padding: 0.9rem 1rem;
@@ -1183,8 +1228,29 @@ progress::-moz-progress-bar {
 :root[data-theme="dark"] .header-icon-button[aria-current="page"] {
   color: #bfdbfe;
 }
-:root[data-theme="dark"] .goal-status[data-status="completed"] {
+:root[data-theme="dark"] .goal-status[data-status="completed"],
+:root[data-theme="dark"] .page-eyebrow {
   color: #93c5fd;
+}
+:root[data-theme="dark"] .page-back:focus-visible,
+:root[data-theme="dark"] .learn-nav-link:focus-visible,
+:root[data-theme="dark"] .vn-summary:focus-visible {
+  outline-color: var(--color-primary-300);
+}
+:root[data-theme="dark"] .learn-nav-link > svg:first-child {
+  color: var(--color-primary-300);
+}
+
+.review-progress-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-block-end: 0.5rem;
+}
+.learning-surface.review-question {
+  border-block-start: 3px solid var(--color-primary-400);
 }
 
 /* The review choice and confirmation form one stable, thumb-sized action rail. */

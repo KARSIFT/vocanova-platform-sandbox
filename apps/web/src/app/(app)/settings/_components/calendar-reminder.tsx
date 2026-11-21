@@ -128,6 +128,7 @@ export function CalendarReminder() {
 
   return (
     <Surface
+      tone="flat"
       id="practice-reminder"
       aria-labelledby="calendar-reminder-heading"
       className="mt-6 scroll-mt-24"
@@ -135,7 +136,7 @@ export function CalendarReminder() {
       <h2
         ref={heading}
         id="calendar-reminder-heading"
-        className="scroll-mt-24 text-xl font-bold text-neutral-900"
+        className="section-title scroll-mt-24"
       >
         Calendar reminder
       </h2>
@@ -221,9 +222,7 @@ export function CalendarReminder() {
         )}
       </form>
       <details className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4">
-        <summary className="min-h-12 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-          After downloading
-        </summary>
+        <summary className="vn-summary">After downloading</summary>
         <ol className="mb-4 list-decimal space-y-2 pl-5 text-sm text-neutral-700">
           <li>
             Import the .ics file into your calendar. The event repeats daily and

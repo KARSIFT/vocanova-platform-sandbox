@@ -3,7 +3,7 @@
 import { ActionLink, Button } from "@/ui/controls";
 import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
 
-import { PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader } from "@/ui/surface";
 
 export default function SentenceHistoryError({
   reset,
@@ -13,33 +13,25 @@ export default function SentenceHistoryError({
 
   return (
     <PageContainer>
-      <Surface aria-labelledby="sentence-history-error-heading">
-        <h1
-          id="sentence-history-error-heading"
-          className="text-xl font-semibold text-neutral-900"
+      <PageHeader
+        title="We couldn't load your sentence history"
+        lede="We couldn't retrieve your saved feedback. Try again or return to Progress."
+      />
+      <div className="mt-[var(--spacing-md)] flex flex-wrap gap-[var(--spacing-sm)]">
+        <Button
+          variant="primary"
+          type="button"
+          onClick={handleRetry}
+          disabled={isRetrying}
+          aria-busy={isRetrying}
+          className="text-white"
         >
-          We couldn&apos;t load your sentence history
-        </h1>
-        <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          We couldn&apos;t retrieve your saved feedback. Try again or return to
-          Progress.
-        </p>
-        <div className="mt-[var(--spacing-md)] flex flex-wrap gap-[var(--spacing-sm)]">
-          <Button
-            variant="primary"
-            type="button"
-            onClick={handleRetry}
-            disabled={isRetrying}
-            aria-busy={isRetrying}
-            className="text-white"
-          >
-            {isRetrying ? "Trying again..." : "Try again"}
-          </Button>
-          <ActionLink variant="secondary" href="/progress">
-            Back to Progress
-          </ActionLink>
-        </div>
-      </Surface>
+          {isRetrying ? "Trying again..." : "Try again"}
+        </Button>
+        <ActionLink variant="secondary" href="/progress">
+          Back to Progress
+        </ActionLink>
+      </div>
     </PageContainer>
   );
 }

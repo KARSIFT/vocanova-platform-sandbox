@@ -3,7 +3,7 @@
 import { StatusMessage } from "@/ui/status-message";
 import { Button } from "@/ui/controls";
 import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
-import { PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader } from "@/ui/surface";
 import {
   primaryAction,
   textLink,
@@ -17,34 +17,34 @@ export default function StoryError({
 }) {
   const { retry, isRetrying } = useRouteErrorRetry(reset, error);
   return (
-    <PageContainer className="max-w-[44rem]">
-      <Surface>
-        <h1 className="text-2xl font-bold text-neutral-900">
-          Your story could not load
-        </h1>
+    <PageContainer>
+      <PageHeader title="Your story could not load" />
+      <div className="vn-empty py-0">
         <StatusMessage
           as="p"
           tone="error"
           role="alert"
-          className="my-4 text-neutral-700"
+          className="mb-4 text-neutral-700"
         >
           Try again to load your saved progress.
         </StatusMessage>
-        <Button
-          variant="primary"
-          type="button"
-          className={primaryAction}
-          onClick={retry}
-          disabled={isRetrying}
-          aria-busy={isRetrying}
-        >
-          {isRetrying ? "Trying again..." : "Try again"}
-        </Button>
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Recovery needs a fresh document, not the failed cached RSC payload. */}
-        <a href="/stories" className={`${textLink} ml-4`}>
-          Back to Stories
-        </a>
-      </Surface>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Button
+            variant="primary"
+            type="button"
+            className={primaryAction}
+            onClick={retry}
+            disabled={isRetrying}
+            aria-busy={isRetrying}
+          >
+            {isRetrying ? "Trying again..." : "Try again"}
+          </Button>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Recovery needs a fresh document, not the failed cached RSC payload. */}
+          <a href="/stories" className={textLink}>
+            Back to Stories
+          </a>
+        </div>
+      </div>
     </PageContainer>
   );
 }

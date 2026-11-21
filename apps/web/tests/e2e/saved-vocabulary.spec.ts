@@ -1,4 +1,3 @@
-import { openOptionalWriting } from "./optional-writing";
 import { answerReviewWord, startReviewLesson } from "./review-readiness";
 import { randomUUID } from "node:crypto";
 
@@ -118,11 +117,21 @@ test.describe("Saved vocabulary library", () => {
     await expect(detail.getByRole("heading", { name: "pour", level: 1 })).toBeVisible();
     await expect(detail.getByText("Learning", { exact: true })).toBeVisible();
     await expect(detail.getByText("New", { exact: true })).toHaveCount(0);
-    await openOptionalWriting(page);
-    await expect(
-      page.getByRole("textbox", { name: "Write a sentence using pour" }),
-    ).toBeVisible();
+    await detail
+      .locator("summary")
+      .filter({ hasText: /^Optional writing$/ })
+      .click();
+    const editor = detail.getByRole("textbox", {
+      name: "Write a sentence using pour",
+    });
+    await expect(editor).toBeVisible();
+    await editor.click({ trial: true });
 
+    // Check the editor at its interaction position, then scan from a stable
+    // origin so unrelated pronunciation controls aren't under sticky chrome.
+    await page.evaluate(() =>
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" }),
+    );
     const detailScan = await scanForAxeViolations(page);
     expect(
       detailScan.criticalOrSerious,

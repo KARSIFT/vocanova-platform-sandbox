@@ -30,10 +30,14 @@ export default async function VocabularyWordPage({
 
   return (
     <PageContainer>
-      <Link
-        href="/vocabulary"
-        className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-      >
+      <Link href="/vocabulary" className="page-back">
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <path
+            d="m15 5-7 7 7 7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
         Back to word search
       </Link>
       <WordDetailContent

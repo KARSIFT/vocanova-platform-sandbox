@@ -3,12 +3,14 @@ import Link from "@/ui/link";
 import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader, PageSection, Surface } from "@/ui/surface";
 import { textLink } from "../../practice/_components/practice-styles";
 import { StoryAudio } from "../_components/story-audio";
 import { StoryStart } from "../_components/story-start";
 import { StoryVocabularyHelp } from "../_components/story-vocabulary";
 import { storySituationSlug } from "../../discover/[situation]/_components/unit-guide-content";
+
+import styles from "../stories.module.css";
 
 export const metadata: Metadata = { title: "Read a story — Vocanova" };
 export default async function StoryReadingPage({
@@ -26,18 +28,14 @@ export default async function StoryReadingPage({
   }
   const situationSlug = storySituationSlug(story.situation);
   return (
-    <PageContainer className="max-w-[44rem]">
-      <Link href="/stories" className={textLink}>
-        Back to Stories
-      </Link>
-      <Surface className="mt-3">
-        <Eyebrow>
-          {story.situation} · {story.level}
-        </Eyebrow>
-        <h1 className="mt-2 text-3xl font-bold text-neutral-900">
-          {story.title}
-        </h1>
-        <p className="my-4 text-neutral-700">{story.description}</p>
+    <PageContainer>
+      <PageHeader
+        back={{ href: "/stories", label: "Back to Stories" }}
+        eyebrow={`${story.situation} · ${story.level}`}
+        title={story.title}
+        lede={story.description}
+      />
+      <Surface aria-label="Story practice">
         <StoryStart storyKey={story.key} />
         <p className="mt-3 text-sm text-neutral-600">
           Practice reveals the dialogue a line at a time and saves each step.
@@ -51,16 +49,17 @@ export default async function StoryReadingPage({
             Open the situation guide
           </Link>
         )}
-        <StoryVocabularyHelp vocabulary={story.vocabulary} />
-        <h2 className="mb-3 mt-6 text-xl font-bold text-neutral-900">
-          Full story
-        </h2>
-        <p className="mb-3 text-sm text-neutral-600">
-          Audio is optional. You can read every line.
-        </p>
-        <ol className="space-y-4">
+      </Surface>
+      <StoryVocabularyHelp vocabulary={story.vocabulary} />
+      <PageSection
+        className="mt-8"
+        title="Full story"
+        titleId="full-story-heading"
+        description="Audio is optional. You can read every line."
+      >
+        <ol className={styles.dialogue}>
           {story.lines.map((line, index) => (
-            <li key={line.id} className="rounded-xl bg-neutral-50 p-4">
+            <li key={line.id} className={styles.dialogueLine}>
               <p className="text-sm font-semibold text-primary-700">
                 {line.speaker}
               </p>
@@ -74,7 +73,7 @@ export default async function StoryReadingPage({
             </li>
           ))}
         </ol>
-      </Surface>
+      </PageSection>
     </PageContainer>
   );
 }

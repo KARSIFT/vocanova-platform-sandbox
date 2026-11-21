@@ -190,7 +190,7 @@ export default async function HomePage() {
     : undefined;
 
   return (
-    <PageContainer className="today max-w-[72rem]">
+    <PageContainer width="wide" className="today">
       <header className="today-head">
         <h1>Today</h1>
         {streak.currentStreakCount > 0 ? (
@@ -217,7 +217,10 @@ export default async function HomePage() {
         ) : null}
       </header>
 
-      <section aria-label="Review words" className="next-step learning-surface">
+      <section
+        aria-label="Review words"
+        className="next-step learning-surface today-feature"
+      >
         <LearningIntro
           id="todays-mission-heading"
           eyebrow={
@@ -388,10 +391,7 @@ export default async function HomePage() {
             </ActionLink>
           </div>
         )}
-        <nav
-          aria-label="Explore your English"
-          className="grid grid-cols-2 gap-2"
-        >
+        <nav aria-label="Explore your English" className="vn-list">
           {EXPLORE_LINKS.map(([href, label, prefetch, icon]) => (
             <Link
               key={href}

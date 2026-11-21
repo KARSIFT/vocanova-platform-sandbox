@@ -8,13 +8,11 @@ export function StoryVocabularyHelp({
   vocabulary: StoryVocabulary[];
 }) {
   return (
-    <details className="mt-5 rounded-xl border border-neutral-200 p-4">
-      <summary className="min-h-11 cursor-pointer font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
-        Vocabulary help
-      </summary>
-      <ul className="mt-3 space-y-3">
+    <details className="mt-5 rounded-xl border border-neutral-200 bg-white px-4 open:pb-4">
+      <summary className="vn-summary py-3">Vocabulary help</summary>
+      <ul className="divide-y divide-neutral-200">
         {vocabulary.map((word) => (
-          <li key={word.meaningId}>
+          <li key={word.meaningId} className="pb-3">
             <Link
               href={`/vocabulary/${encodeURIComponent(word.wordSlug)}#meaning-${encodeURIComponent(word.meaningId)}`}
               className={textLink}

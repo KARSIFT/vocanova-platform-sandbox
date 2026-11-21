@@ -2,8 +2,7 @@ import Link from "@/ui/link";
 
 import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
 import { normalizeReturnTo } from "@/lib/return-to";
-import { AuthShell } from "@/ui/auth-shell";
-import { Surface } from "@/ui/surface";
+import { AuthDivider, AuthShell } from "@/ui/auth-shell";
 
 import { PasswordSignupForm } from "../auth/password/_components/password-forms";
 import { OAuthButton } from "../signin/_components/auth-forms";
@@ -24,57 +23,45 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   const capabilities = await getSignInAuthCapabilities();
   const { passwordEnabled, oauthEnabled } = capabilities;
   const unavailable = !passwordEnabled && !oauthEnabled;
+  const description = passwordEnabled
+    ? oauthEnabled
+      ? "Use Google, or we'll email a verification link before your password can be used."
+      : "We'll email a verification link before your password can be used."
+    : oauthEnabled
+      ? "Continue with Google to sign in or create your account."
+      : "Please try again later or use an available sign-in method.";
 
   return (
-    <AuthShell>
-      <Surface className="w-full space-y-[var(--spacing-lg)]">
-        <div className="space-y-[var(--spacing-sm)]">
-          <h1 className="text-2xl font-bold tracking-[-0.02em] text-neutral-900">
-            {unavailable
-              ? "Account creation is unavailable"
-              : "Create your account"}
-          </h1>
-          <p className="text-base text-neutral-700">
-            {passwordEnabled
-              ? oauthEnabled
-                ? "Use Google, or we'll email a verification link before your password can be used."
-                : "We'll email a verification link before your password can be used."
-              : oauthEnabled
-                ? "Continue with Google to sign in or create your account."
-                : "Please try again later or use an available sign-in method."}
-          </p>
-        </div>
+    <AuthShell
+      title={
+        unavailable ? "Account creation is unavailable" : "Create your account"
+      }
+      description={description}
+      showExample
+    >
+      {oauthEnabled ? (
+        <OAuthButton
+          returnTo={safeReturnTo}
+          capabilities={capabilities}
+          intent="signup"
+        />
+      ) : null}
 
-        {oauthEnabled ? (
-          <OAuthButton
-            returnTo={safeReturnTo}
-            capabilities={capabilities}
-            intent="signup"
-          />
-        ) : null}
+      {passwordEnabled && oauthEnabled ? (
+        <AuthDivider>or use email and password</AuthDivider>
+      ) : null}
 
-        {passwordEnabled && oauthEnabled ? (
-          <div className="relative flex items-center gap-[var(--spacing-sm)]">
-            <div className="h-px flex-1 bg-neutral-200" />
-            <span className="text-sm text-neutral-500">
-              or use email and password
-            </span>
-            <div className="h-px flex-1 bg-neutral-200" />
-          </div>
-        ) : null}
+      {passwordEnabled ? <PasswordSignupForm /> : null}
 
-        {passwordEnabled ? <PasswordSignupForm /> : null}
-
-        <p className="text-base text-neutral-700">
-          Already have an account?{" "}
-          <Link
-            href={`/login?${new URLSearchParams({ returnTo: safeReturnTo })}`}
-            className="font-semibold text-primary-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
-            Sign in
-          </Link>
-        </p>
-      </Surface>
+      <p className="text-base text-neutral-700">
+        Already have an account?{" "}
+        <Link
+          href={`/login?${new URLSearchParams({ returnTo: safeReturnTo })}`}
+          className="font-semibold text-primary-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        >
+          Sign in
+        </Link>
+      </p>
     </AuthShell>
   );
 }

@@ -2,6 +2,7 @@
 
 import { StatusMessage } from "@/ui/status-message";
 import { ActionLink, Button, actionClasses } from "@/ui/controls";
+import { Surface } from "@/ui/surface";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { createApiClient } from "@/lib/api";
@@ -70,14 +71,7 @@ export function PracticeJourney({
   }
   if (!journey)
     return (
-      <section
-        aria-label="Your learning path"
-        className={
-          compact
-            ? "rounded-2xl border border-neutral-200 bg-white p-4"
-            : "rounded-3xl border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)]"
-        }
-      >
+      <Surface aria-label="Your learning path" tone="flat">
         {compact ? (
           <h3 className="font-semibold text-neutral-900">Today’s practice</h3>
         ) : (
@@ -97,7 +91,7 @@ export function PracticeJourney({
         >
           Try again
         </Button>
-      </section>
+      </Surface>
     );
   const current = journey.currentSession;
   const lesson = journey.nextLesson;
@@ -109,13 +103,9 @@ export function PracticeJourney({
   );
   const completed = `${journey.completedLessons} ${journey.completedLessons === 1 ? "lesson" : "lessons"} completed`;
   return (
-    <section
+    <Surface
       aria-label="Your learning path"
-      className={
-        compact
-          ? "rounded-2xl border border-neutral-200 bg-white p-4"
-          : "rounded-3xl border border-neutral-200 bg-white p-5 shadow-[var(--vn-shadow-card)] sm:p-6"
-      }
+      tone={compact ? "flat" : "default"}
     >
       {compact ? (
         // Home's secondary activity: the same durable path, without competing
@@ -196,10 +186,8 @@ export function PracticeJourney({
       ) : (
         <>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <h2 className="text-xl font-bold tracking-tight text-neutral-900">
-              Your path
-            </h2>
-            <span className="shrink-0 whitespace-nowrap rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-primary-800">
+            <h2 className="section-title">Your path</h2>
+            <span className="text-sm font-semibold tabular-nums text-neutral-700">
               {journey.todayCompletedLessons} / {journey.dailyGoal} today
             </span>
           </div>
@@ -207,7 +195,7 @@ export function PracticeJourney({
             aria-label="Practice lessons today"
             value={today}
             max={journey.dailyGoal}
-            className="mt-5 h-2.5 w-full"
+            className="mt-3 block h-2 w-full accent-primary-700"
           />
           <p className="mt-2 text-sm text-neutral-600">{completed}</p>
         </>
@@ -215,7 +203,7 @@ export function PracticeJourney({
       {compact ? null : (
         <ol
           aria-label="Practice path"
-          className="mt-4 divide-y divide-neutral-200"
+          className="mt-4 divide-y divide-neutral-200 border-t border-neutral-200"
         >
           {nodes.map((number) => {
             const done = number < lesson;
@@ -316,9 +304,7 @@ export function PracticeJourney({
       )}
       {journey.totalKnownWords > journey.supportedKnownWords && (
         <details className="mt-4 text-sm text-neutral-600">
-          <summary className="min-h-11 cursor-pointer content-center">
-            Words in this path
-          </summary>
+          <summary className="vn-summary">Words in this path</summary>
           <p>
             {journey.supportedKnownWords} of your {journey.totalKnownWords}{" "}
             words currently have supported practice exercises. More words remain
@@ -326,6 +312,6 @@ export function PracticeJourney({
           </p>
         </details>
       )}
-    </section>
+    </Surface>
   );
 }

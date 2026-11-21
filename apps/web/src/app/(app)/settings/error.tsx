@@ -3,6 +3,7 @@
 import { Button } from "@/ui/controls";
 
 import Link from "@/ui/link";
+import { PageContainer, PageHeader } from "@/ui/surface";
 import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
 
 interface SettingsErrorProps {
@@ -14,14 +15,12 @@ export default function SettingsError(props: SettingsErrorProps) {
   const { reset, error } = props;
   const { retry, isRetrying } = useRouteErrorRetry(reset, error);
   return (
-    <div className="p-[var(--spacing-lg)]">
-      <h1 className="text-xl font-semibold text-neutral-900">
-        We couldn&apos;t load your settings
-      </h1>
-      <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
-        Please try again. Your settings are still safe.
-      </p>
-      <div className="mt-[var(--spacing-lg)] flex flex-wrap gap-[var(--spacing-md)]">
+    <PageContainer width="wide">
+      <PageHeader
+        title="We couldn't load your settings"
+        lede="Please try again. Your settings are still safe."
+      />
+      <div className="flex flex-wrap gap-3">
         <Button
           type="button"
           onClick={retry}
@@ -38,6 +37,6 @@ export default function SettingsError(props: SettingsErrorProps) {
           Back to Home
         </Link>
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -1,17 +1,13 @@
-import { ActionLink } from "@/ui/controls";
 import type { Metadata } from "next";
 import Link from "@/ui/link";
 import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { getPrimaryDefinition } from "@/lib/word-definition";
-import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader, Surface } from "@/ui/surface";
 import { SaveAndWrite } from "./_components/save-and-write";
 import { writingPrompts } from "./_components/writing-prompts";
-import {
-  textLink,
-  secondaryAction,
-} from "../practice/_components/practice-styles";
+import { textLink } from "../practice/_components/practice-styles";
 
 export const metadata: Metadata = {
   title: "Topic writing — Vocanova",
@@ -59,44 +55,35 @@ export default async function WritingPage({
     if (!canonical) notFound();
   }
   return (
-    <PageContainer className="max-w-[64rem]">
-      <Link href="/practice" className={textLink}>
-        Back to Practice
-      </Link>
-      <header className="my-6">
-        <Eyebrow>Use your words</Eyebrow>
-        <h1 className="mt-2 text-3xl font-bold text-neutral-900">
-          Topic writing
-        </h1>
-        <p className="mt-3 max-w-[44rem] text-lg text-neutral-700">
-          Write something you could use today. Choose a topic and a word, then
-          compare feedback with your own sentence.
-        </p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        title="Topic writing"
+        back={{ href: "/practice", label: "Back to Practice" }}
+        lede="Choose a topic and a word, then get feedback on a sentence you could use today."
+      />
       {situations.items.length > 0 && (
         <details
           open={!situation}
-          className="mb-6 rounded-xl border border-neutral-200 bg-white p-4"
+          className="mb-4 rounded-xl border border-neutral-200 bg-white px-4"
         >
-          <summary className="min-h-11 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
+          <summary className="vn-summary py-3">
             {detail
               ? `Change topic: ${detail.situation.title}`
               : "Choose a writing topic"}
           </summary>
           <nav
             aria-label="Writing situations"
-            className="mb-6 flex flex-wrap gap-3"
+            className="flex flex-wrap gap-2 pb-4"
           >
             {situations.items.map((item) => (
-              <ActionLink
-                variant="secondary"
+              <Link
                 key={item.id}
                 href={`/writing?${new URLSearchParams({ situation: item.slug })}`}
                 aria-current={item.slug === situation ? "page" : undefined}
-                className={`${secondaryAction} ${item.slug === situation ? "border-primary-600 bg-primary-50" : ""}`}
+                className="vn-chip-link max-w-full [overflow-wrap:anywhere]"
               >
                 {item.title}
-              </ActionLink>
+              </Link>
             ))}
           </nav>
         </details>
@@ -111,26 +98,23 @@ export default async function WritingPage({
           <h2 className="text-2xl font-bold text-neutral-900">
             {detail.situation.title}
           </h2>
-          <p className="mt-3 text-lg text-neutral-800">
+          <p className="mt-3 rounded-xl bg-secondary-50 p-4 text-lg leading-relaxed text-neutral-900">
             {writingPrompts[situation] ??
               "Write one sentence about this situation using a word you want to practise."}
           </p>
           <details
             open={!selected}
-            className="mt-5 rounded-xl border border-neutral-200 p-4"
+            className="mt-4 border-y border-neutral-200"
           >
-            <summary className="min-h-11 scroll-my-24 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
+            <summary className="vn-summary scroll-my-24 py-3">
               {selected
                 ? `Change meaning: ${selected.wordText}`
                 : "Choose a meaning"}
             </summary>
             {detail.meanings.length ? (
-              <ul className="my-3 grid gap-3 sm:grid-cols-2">
+              <ul className="divide-y divide-neutral-200">
                 {detail.meanings.map((item) => (
-                  <li
-                    key={item.meaningId}
-                    className="rounded-xl border border-neutral-200 p-3"
-                  >
+                  <li key={item.meaningId} className="pb-3">
                     <Link
                       className={textLink}
                       aria-current={
@@ -158,11 +142,11 @@ export default async function WritingPage({
           {selected && canonical && (
             <section
               aria-label="Writing with your selected meaning"
-              className="mt-6 border-t border-neutral-200 pt-6"
+              className="mt-6"
             >
               <h3
                 id={`writing-meaning-heading-${selected.meaningId}`}
-                className="text-xl font-bold text-neutral-900"
+                className="section-title"
               >
                 Write with {selected.wordText}
               </h3>
@@ -199,33 +183,17 @@ export default async function WritingPage({
           </Link>
         </Surface>
       ) : !situations.items.length ? (
-        <Surface>
-          <h2 className="text-xl font-bold text-neutral-900">
-            No writing topics are available
-          </h2>
+        <div className="vn-empty">
+          <h2>No writing topics are available</h2>
           <p className="mt-3 text-neutral-700">
             You can still write sentences with your saved words. Try the topic
             library again later.
           </p>
-          <ActionLink
-            variant="secondary"
-            href="/words"
-            className={`${secondaryAction} mt-4`}
-          >
+          <Link href="/words" className={textLink}>
             Practise with saved words
-          </ActionLink>
-        </Surface>
-      ) : (
-        <Surface>
-          <h2 className="text-xl font-bold text-neutral-900">
-            Choose a situation to begin
-          </h2>
-          <p className="mt-3 text-neutral-700">
-            Practise a message, a request, or something you want to say in
-            everyday life.
-          </p>
-        </Surface>
-      )}
+          </Link>
+        </div>
+      ) : null}
       <div className="mt-6 flex flex-wrap gap-4">
         <Link href="/progress/sentences" className={textLink}>
           Your writing history

@@ -2,12 +2,14 @@ import { ActionLink } from "@/ui/controls";
 import type { Metadata } from "next";
 import Link from "@/ui/link";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader } from "@/ui/surface";
 import {
   primaryAction,
   secondaryAction,
   textLink,
 } from "../practice/_components/practice-styles";
+
+import styles from "./stories.module.css";
 
 export const metadata: Metadata = {
   title: "Stories — Vocanova",
@@ -24,88 +26,83 @@ export default async function StoriesPage() {
     (story) => story.latestSession?.status === "in_progress",
   )?.latestSession?.id;
   return (
-    <PageContainer className="max-w-[64rem]">
-      <Link href="/discover" className={textLink}>
-        Back to Journey
-      </Link>
-      <header className="mb-6 mt-3">
-        <Eyebrow>Read, notice, practise</Eyebrow>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 [overflow-wrap:anywhere]">
-          Everyday stories
-        </h1>
-        <p className="mt-3 max-w-[40rem] text-lg text-neutral-700">
-          Follow an original short dialogue, explore useful words, and check
-          what you understand. Audio is optional.
-        </p>
-        <p className="mt-2 text-sm text-neutral-600">
-          A2–B1 · Saved progress · Repeat whenever you like
-        </p>
-      </header>
+    <PageContainer width="standard">
+      <PageHeader
+        title="Everyday stories"
+        back={{ href: "/discover", label: "Back to Journey" }}
+        lede="Follow a short dialogue, explore useful words, and check what you understand. Audio is optional."
+      />
       {!library.items.length ? (
-        <Surface>
-          <p>No stories are available right now.</p>
+        <div className="vn-empty">
+          <h2>No stories are available right now.</h2>
           <Link href="/courses" className={textLink}>
             Explore situations
           </Link>
-        </Surface>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {library.items.map((story) => (
-            <Surface key={story.key} aria-labelledby={`story-${story.key}`}>
-              <Eyebrow>
-                {story.situation} · {story.level}
-              </Eyebrow>
-              <h2
-                id={`story-${story.key}`}
-                className="mt-2 text-xl font-bold text-neutral-900"
-              >
-                {story.title}
-              </h2>
-              <p className="mt-2 text-neutral-700">{story.description}</p>
-              <p className="mt-2 text-sm text-neutral-600">
-                {story.lineCount} lines · {story.questionCount} checks ·{" "}
-                {story.vocabulary.map((word) => word.wordText).join(", ")}
-              </p>
-              {story.latestSession && (
-                <p className="mt-3 font-semibold text-neutral-900">
-                  {story.latestSession.status === "completed"
-                    ? "Story complete. Read or practise again."
-                    : `${story.latestSession.completedSteps} of ${story.latestSession.totalSteps} steps saved.`}
-                </p>
-              )}
-              {story.latestSession?.status === "in_progress" ? (
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <Link
-                    href={`/stories/session/${encodeURIComponent(story.latestSession.id)}`}
-                    className={
-                      story.latestSession.id === nextSessionId
-                        ? primaryAction
-                        : secondaryAction
-                    }
-                  >
-                    Continue story
-                  </Link>
-                  <Link
-                    href={`/stories/${encodeURIComponent(story.key)}`}
-                    className={textLink}
-                  >
-                    Story details
-                  </Link>
-                </div>
-              ) : (
-                <ActionLink
-                  variant="secondary"
-                  href={`/stories/${encodeURIComponent(story.key)}`}
-                  className={`${secondaryAction} mt-4`}
-                >
-                  {story.latestSession?.status === "completed"
-                    ? "Read and practise again"
-                    : "Read and practise"}
-                </ActionLink>
-              )}
-            </Surface>
-          ))}
         </div>
+      ) : (
+        <ul className="vn-list" role="list">
+          {library.items.map((story) => (
+            <li key={story.key}>
+              <section
+                className={styles.story}
+                aria-labelledby={`story-${story.key}`}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-neutral-600">
+                    {story.situation} · {story.level}
+                  </p>
+                  <h2 id={`story-${story.key}`} className="section-title mt-1">
+                    {story.title}
+                  </h2>
+                  <p className="mt-1 text-neutral-700">{story.description}</p>
+                  <p className="mt-2 text-sm text-neutral-600">
+                    {story.lineCount} lines · {story.questionCount} checks ·{" "}
+                    {story.vocabulary.map((word) => word.wordText).join(", ")}
+                  </p>
+                  {story.latestSession && (
+                    <p className="mt-2 text-sm font-semibold text-primary-700">
+                      {story.latestSession.status === "completed"
+                        ? "Story complete. Read or practise again."
+                        : `${story.latestSession.completedSteps} of ${story.latestSession.totalSteps} steps saved.`}
+                    </p>
+                  )}
+                </div>
+                <div className={styles.storyActions}>
+                  {story.latestSession?.status === "in_progress" ? (
+                    <>
+                      <Link
+                        href={`/stories/session/${encodeURIComponent(story.latestSession.id)}`}
+                        className={
+                          story.latestSession.id === nextSessionId
+                            ? primaryAction
+                            : secondaryAction
+                        }
+                      >
+                        Continue story
+                      </Link>
+                      <Link
+                        href={`/stories/${encodeURIComponent(story.key)}`}
+                        className={textLink}
+                      >
+                        Story details
+                      </Link>
+                    </>
+                  ) : (
+                    <ActionLink
+                      variant="secondary"
+                      href={`/stories/${encodeURIComponent(story.key)}`}
+                      className={secondaryAction}
+                    >
+                      {story.latestSession?.status === "completed"
+                        ? "Read and practise again"
+                        : "Read and practise"}
+                    </ActionLink>
+                  )}
+                </div>
+              </section>
+            </li>
+          ))}
+        </ul>
       )}
       <p className="mt-6 text-sm text-neutral-600">
         Story checks record your answers. They do not award points or change

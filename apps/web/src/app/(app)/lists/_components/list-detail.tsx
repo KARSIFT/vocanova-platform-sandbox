@@ -6,7 +6,7 @@ import Link from "@/ui/link";
 import { useRouter } from "next/navigation";
 import { ApiResponseError, type WordListDetail } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
-import { Surface } from "@/ui/surface";
+import { PageHeader } from "@/ui/surface";
 import { getPrimaryDefinition } from "@/lib/word-definition";
 import { listWriteHeaders, useListAction } from "./use-list-action";
 import { ListActionStatus } from "./list-action-status";
@@ -113,17 +113,20 @@ export function ListDetail({
   return (
     <>
       {!list ? (
-        <Surface className="mt-4">
-          <h1 className="text-2xl font-bold text-neutral-900">
-            {missing
-              ? "This list is no longer available"
-              : "Your list could not be loaded"}
-          </h1>
-          <p className="mt-2 text-neutral-700">
-            {missing
-              ? "It may have been deleted or belong to another account. Choose one of your current lists."
-              : "Try loading its current status again."}
-          </p>
+        <div>
+          <PageHeader
+            title={
+              missing
+                ? "This list is no longer available"
+                : "Your list could not be loaded"
+            }
+            back={{ href: "/lists", label: "Back to personal lists" }}
+            lede={
+              missing
+                ? "It may have been deleted or belong to another account. Choose one of your current lists."
+                : "Try loading its current status again."
+            }
+          />
           {missing ? (
             <Link href="/lists" className={`${listLink} mt-3`}>
               Choose a personal list
@@ -139,44 +142,38 @@ export function ListDetail({
               Try loading list again
             </Button>
           )}
-        </Surface>
+        </div>
       ) : (
         <>
-          <header className="my-4">
-            <h1 className="break-words text-3xl font-bold tracking-tight text-neutral-900">
-              {list.name}
-            </h1>
-            <p className="mt-2 text-neutral-700">
-              {list.memberCount}{" "}
-              {list.memberCount === 1 ? "meaning" : "meanings"}.{" "}
-              {list.usableMemberCount} available for typed and listening
-              practice.
+          <PageHeader
+            title={list.name}
+            back={{ href: "/lists", label: "Back to personal lists" }}
+            lede={`${list.memberCount} ${list.memberCount === 1 ? "meaning" : "meanings"} · ${list.usableMemberCount} available for practice`}
+            actions={
+              <>
+                {list.usableMemberCount > 0 && (
+                  <ActionLink
+                    href={`/practice?list=${encodeURIComponent(list.id)}`}
+                  >
+                    Practice this list
+                  </ActionLink>
+                )}
+                <Link href="/vocabulary" className="vn-text-link">
+                  Find words to add
+                </Link>
+              </>
+            }
+          />
+          <p className="mb-4 text-sm text-neutral-600">
+            List membership does not save words for scheduled review or change
+            what you marked as known.
+          </p>
+          {list.memberCount > 0 && list.usableMemberCount === 0 && (
+            <p className="mb-4 text-sm text-neutral-600">
+              Add a meaning available for practice to start a list session.
             </p>
-            <p className="mt-2 text-sm text-neutral-600">
-              List membership does not save words for scheduled review or change
-              what you marked as known.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-3">
-              {list.usableMemberCount > 0 && (
-                <ActionLink
-                  href={`/practice?list=${encodeURIComponent(list.id)}`}
-                >
-                  Practice this list
-                </ActionLink>
-              )}
-              <ActionLink href="/vocabulary" variant="secondary">
-                Find words to add
-              </ActionLink>
-            </div>
-            {list.usableMemberCount === 0 && (
-              <p className="mt-3 text-neutral-700">
-                {list.memberCount
-                  ? "These meanings are not yet available in focused practice. Add a supported meaning to start a list session."
-                  : "Open a word and use Personal lists to add its meaning."}
-              </p>
-            )}
-          </header>
-          <div role="search" aria-label="Search list meanings" className="my-5">
+          )}
+          <div role="search" aria-label="Search list meanings" className="mb-4">
             <label
               htmlFor="list-member-search"
               className="font-semibold text-neutral-900"
@@ -193,14 +190,11 @@ export function ListDetail({
             />
           </div>
           {members.length ? (
-            <ul aria-label="List meanings" className="space-y-3">
+            <ul aria-label="List meanings" className="vn-list">
               {members.map((member) => (
-                <li
-                  key={member.meaningId}
-                  className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-4"
-                >
-                  <div className="min-w-0 flex-1">
-                    <h2 className="break-words text-lg font-bold text-neutral-900">
+                <li key={member.meaningId} className="vn-list-row">
+                  <div className="min-w-0 flex-[1_1_17rem] [overflow-wrap:anywhere]">
+                    <h2 className="headword text-xl">
                       <Link
                         href={`/vocabulary/${encodeURIComponent(member.wordSlug)}#${meaningAnchor(member.meaningId)}`}
                         className={listLink}
@@ -234,7 +228,7 @@ export function ListDetail({
               ))}
             </ul>
           ) : (
-            <Surface>
+            <section className="vn-empty">
               <h2 className="text-xl font-bold text-neutral-900">
                 {query.trim()
                   ? "No meanings match your search"
@@ -245,16 +239,14 @@ export function ListDetail({
                   ? "Try another word or part of its meaning."
                   : "Find a useful word, then explicitly add its meaning to this list."}
               </p>
-            </Surface>
+            </section>
           )}
           <details
             id="list-settings"
             ref={settingsRef}
-            className="mt-6 rounded-xl border border-neutral-200 bg-white p-4"
+            className="mt-6 border-t border-neutral-200"
           >
-            <summary className="min-h-11 scroll-my-24 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-              List settings
-            </summary>
+            <summary className="vn-summary scroll-my-24">List settings</summary>
             <form
               onSubmit={(event) => {
                 event.preventDefault();

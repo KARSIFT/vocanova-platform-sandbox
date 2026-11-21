@@ -1,0 +1,111 @@
+.progress {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: var(--spacing-md);
+  overflow-wrap: anywhere;
+}
+
+.progressDetails {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  font-size: 0.875rem;
+}
+
+.progressTitle {
+  color: var(--color-neutral-900);
+  font-weight: 650;
+}
+
+.progressCount {
+  color: var(--color-neutral-600);
+  font-variant-numeric: tabular-nums;
+}
+
+.progressTrack {
+  display: block;
+  width: 100%;
+  height: 0.5rem;
+}
+
+.task {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.task :is(h1, legend, [tabindex="-1"]) {
+  scroll-margin-block: 1rem;
+}
+
+.task :is(h1, legend, [tabindex="-1"]):focus-visible {
+  outline-offset: 4px;
+}
+
+.choices {
+  display: grid;
+  min-width: 0;
+  gap: 0.625rem;
+}
+
+.choice {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-neutral-300);
+  border-radius: 0.75rem;
+  background: var(--color-white);
+  color: var(--color-neutral-900);
+  cursor: pointer;
+}
+
+.choice:hover:has(input:enabled) {
+  background: var(--color-neutral-50);
+}
+
+.choice:has(input:checked) {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-50);
+}
+
+.choice:focus-within {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+.choice:has(input:disabled) {
+  cursor: default;
+}
+
+.feedback {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: 0.75rem;
+  background: var(--color-secondary-50);
+  color: var(--color-neutral-900);
+}
+
+.feedback[data-correct="true"] {
+  background: var(--color-primary-50);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .choice {
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .feedback {
+    animation: show-feedback var(--duration-fast) var(--ease-out);
+  }
+}
+
+@keyframes show-feedback {
+  from {
+    transform: translateY(0.1875rem);
+  }
+}

@@ -9,7 +9,7 @@ import {
   type DictionaryEntry,
 } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { PageContainer } from "@/ui/surface";
+import { PageContainer, PageHeader } from "@/ui/surface";
 import { MeaningSaveButton } from "../discover/[situation]/[word]/_components/meaning-save-button";
 import { VocabularyMap } from "../_components/vocabulary-map";
 import { DictionaryCard } from "../_components/dictionary-card";
@@ -24,8 +24,7 @@ const categories = [
   ["social", "Social"],
 ] as const;
 const levels = ["", "a1", "a2", "b1", "b2", "c1", "unknown"] as const;
-const inputStyle =
-  "mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
+const inputStyle = "mt-2";
 
 export default async function VocabularyPage({
   searchParams,
@@ -119,26 +118,20 @@ export default async function VocabularyPage({
     return `/vocabulary${next.size ? `?${next}` : ""}`;
   }
   return (
-    <PageContainer className="max-w-[64rem]">
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
-            {mapView ? "Your vocabulary map" : "Word search"}
-          </h1>
-        </div>
-      </div>
+    <PageContainer width="standard">
+      <PageHeader title={mapView ? "Your vocabulary map" : "Word search"} />
       <Form
         action="/vocabulary"
         prefetch={false}
         key={resultURL(after)}
         role="search"
-        className="my-6 rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5"
+        className="vn-list p-4 sm:p-5"
       >
         {mapView && <input type="hidden" name="view" value="map" />}
         <label className="sr-only" htmlFor="vocabulary-query">
           Search words and meanings
         </label>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <TextInput
             id="vocabulary-query"
             name="q"
@@ -146,27 +139,21 @@ export default async function VocabularyPage({
             defaultValue={q}
             maxLength={100}
             placeholder="Search any English word…"
-            className={`${inputStyle} !mt-0 min-w-0`}
+            className="flex-[1_1_12rem]"
             autoComplete="off"
             spellCheck={false}
           />
-          <Button
-            variant="primary"
-            type="submit"
-            className="shrink-0 text-white"
-          >
+          <Button variant="primary" type="submit" className="shrink-0">
             Search
           </Button>
         </div>
         <details
-          className="mt-3"
+          className="mt-2"
           open={Boolean(category || level || knowledge)}
         >
-          <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-neutral-700">
-            Filter lesson words
-          </summary>
+          <summary className="vn-summary text-sm">Filter lesson words</summary>
           <div className="grid gap-3 sm:grid-cols-3 sm:items-end">
-            <label className="block text-sm font-semibold text-neutral-700">
+            <label className="block min-w-0 text-sm font-semibold text-neutral-700">
               Situation
               <Select
                 name="category"
@@ -180,7 +167,7 @@ export default async function VocabularyPage({
                 ))}
               </Select>
             </label>
-            <label className="block text-sm font-semibold text-neutral-700">
+            <label className="block min-w-0 text-sm font-semibold text-neutral-700">
               Level
               <Select name="level" defaultValue={level} className={inputStyle}>
                 {levels.map((value) => (
@@ -194,7 +181,7 @@ export default async function VocabularyPage({
                 ))}
               </Select>
             </label>
-            <label className="block text-sm font-semibold text-neutral-700">
+            <label className="block min-w-0 text-sm font-semibold text-neutral-700">
               My knowledge
               <Select
                 name="knowledge"
@@ -210,6 +197,31 @@ export default async function VocabularyPage({
           </div>
         </details>
       </Form>
+      <nav
+        aria-label="Vocabulary views"
+        className="mt-2 mb-6 flex flex-wrap gap-x-5 gap-y-1 border-b border-neutral-200 pb-2"
+      >
+        <Link
+          href="/vocabulary"
+          aria-current={!mapView ? "page" : undefined}
+          className="vn-text-link underline-offset-4 aria-[current=page]:underline"
+        >
+          Word search
+        </Link>
+        <Link
+          href="/vocabulary?view=map"
+          aria-current={mapView ? "page" : undefined}
+          className="vn-text-link underline-offset-4 aria-[current=page]:underline"
+        >
+          Knowledge map
+        </Link>
+        <Link href="/vocabulary/check" className="vn-text-link">
+          Find your starting words
+        </Link>
+        <Link href="/words" className="vn-text-link">
+          Saved vocabulary
+        </Link>
+      </nav>
       {showDictionary && dictionary && <DictionaryCard entry={dictionary} />}
       {dictionaryError && !exactLessonWord && (
         <StatusMessage
@@ -270,8 +282,8 @@ export default async function VocabularyPage({
         data && (
           <>
             {(!showDictionary || data.totalCount > 0) && (
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-neutral-700">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                <p className="text-sm text-neutral-700 [overflow-wrap:anywhere]">
                   {data.totalCount}{" "}
                   {data.totalCount === 1 ? "meaning" : "meanings"}
                   {q ? ` matching “${q}”` : " to explore"}
@@ -289,48 +301,45 @@ export default async function VocabularyPage({
             {data.items.length && mapView ? (
               <VocabularyMap items={data.items} />
             ) : data.items.length ? (
-              <ul className="grid gap-4 md:grid-cols-2">
+              <ul className="vn-list">
                 {data.items.map((item) => (
-                  <li
-                    key={item.meaningId}
-                    className="flex min-w-0 flex-col rounded-2xl border border-neutral-200 bg-white p-5 [overflow-wrap:anywhere]"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <Link
-                        href={`/vocabulary/${encodeURIComponent(item.wordSlug)}#${meaningAnchor(item.meaningId)}`}
-                        className="inline-flex min-h-11 items-center text-xl font-bold text-primary-700"
-                      >
-                        {item.wordText}
-                      </Link>
-                      <span className="pt-3 text-sm text-neutral-600">
+                  <li key={item.meaningId} className="vn-list-row">
+                    <div className="min-w-0 flex-[1_1_20rem] [overflow-wrap:anywhere]">
+                      <div className="flex flex-wrap items-baseline gap-x-3">
+                        <h2 className="headword text-xl">
+                          <Link
+                            href={`/vocabulary/${encodeURIComponent(item.wordSlug)}#${meaningAnchor(item.meaningId)}`}
+                            className="vn-text-link"
+                          >
+                            {item.wordText}
+                          </Link>
+                        </h2>
+                        <span className="pos text-sm">{item.partOfSpeech}</span>
                         {item.difficultyLevel &&
-                        item.difficultyLevel !== "unknown"
-                          ? item.difficultyLevel.toUpperCase()
-                          : ""}
-                      </span>
-                    </div>
-                    <p className="text-sm text-neutral-600">
-                      {item.partOfSpeech}
-                    </p>
-                    <p className="mt-3 grow text-neutral-900">
-                      {getPrimaryDefinition(
-                        item.shortDefinition,
-                        item.learnerDefinition,
-                      )}
-                    </p>
-                    {item.selfReportedKnown && (
-                      <p className="mt-3 text-sm font-semibold text-primary-700">
-                        Already known · your assessment
+                          item.difficultyLevel !== "unknown" && (
+                            <span className="text-sm text-neutral-600">
+                              {item.difficultyLevel.toUpperCase()}
+                            </span>
+                          )}
+                      </div>
+                      <p className="text-neutral-900">
+                        {getPrimaryDefinition(
+                          item.shortDefinition,
+                          item.learnerDefinition,
+                        )}
                       </p>
-                    )}
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-sm text-neutral-600">
-                        {item.due
-                          ? "Due for review"
-                          : item.saved
-                            ? "In your vocabulary"
-                            : ""}
-                      </span>
+                      {item.selfReportedKnown && (
+                        <p className="mt-2 text-sm text-neutral-600">
+                          Already known · your assessment
+                        </p>
+                      )}
+                      {(item.due || item.saved) && (
+                        <p className="mt-1 text-sm text-neutral-600">
+                          {item.due ? "Due for review" : "In your vocabulary"}
+                        </p>
+                      )}
+                    </div>
+                    <div className="min-w-0">
                       <MeaningSaveButton
                         meaningId={item.meaningId}
                         source="search"
@@ -343,7 +352,7 @@ export default async function VocabularyPage({
                 ))}
               </ul>
             ) : showDictionary || dictionaryError ? null : (
-              <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+              <div className="vn-empty">
                 <h2 className="text-xl font-semibold text-neutral-900">
                   No matching words yet
                 </h2>
@@ -379,47 +388,10 @@ export default async function VocabularyPage({
                   Next results
                 </ActionLink>
               )}
-              <Link
-                href="/words"
-                className="inline-flex min-h-11 items-center font-semibold text-primary-700"
-              >
-                Saved vocabulary
-              </Link>
             </nav>
           </>
         )
       )}
-      <nav
-        aria-label="Vocabulary views"
-        className="mt-4 flex flex-wrap gap-4 text-primary-700"
-      >
-        <Link
-          href="/vocabulary"
-          aria-current={!mapView ? "page" : undefined}
-          className="inline-flex min-h-12 items-center font-semibold underline-offset-4 aria-[current=page]:underline"
-        >
-          Word search
-        </Link>
-        <Link
-          href="/vocabulary?view=map"
-          aria-current={mapView ? "page" : undefined}
-          className="inline-flex min-h-12 items-center font-semibold underline-offset-4 aria-[current=page]:underline"
-        >
-          Knowledge map
-        </Link>
-        <Link
-          href="/vocabulary/check"
-          className="inline-flex min-h-12 items-center font-semibold underline-offset-4"
-        >
-          Find your starting words
-        </Link>
-        <Link
-          href="/words"
-          className="inline-flex min-h-11 items-center font-semibold text-primary-700"
-        >
-          Saved vocabulary
-        </Link>
-      </nav>
     </PageContainer>
   );
 }

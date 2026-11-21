@@ -24,7 +24,7 @@ export default async function PracticeSessionPage({
       await createServerApiClient()
     ).getPracticeSession(sessionId);
     return (
-      <PageContainer className="max-w-[44rem]">
+      <PageContainer>
         <PracticePlayer key={data.id} initialSession={data} />
       </PageContainer>
     );

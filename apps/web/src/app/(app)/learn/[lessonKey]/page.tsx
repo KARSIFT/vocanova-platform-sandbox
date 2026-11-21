@@ -20,7 +20,7 @@ export default async function LessonPage({
     if (lesson.sessionId)
       session = (await client.getLessonSession(lesson.sessionId)).data;
     return (
-      <PageContainer className="max-w-[44rem]">
+      <PageContainer>
         <LessonPlayer lesson={lesson} initialSession={session} />
       </PageContainer>
     );

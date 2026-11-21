@@ -46,10 +46,7 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
 
   return (
     <PageContainer>
-      <Link
-        href={`/discover/${situation}`}
-        className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800"
-      >
+      <Link href={`/discover/${situation}`} className="page-back">
         Back to {situationResponse.data.situation.title}
       </Link>
 

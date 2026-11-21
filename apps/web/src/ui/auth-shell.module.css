@@ -1,0 +1,126 @@
+.canvas {
+  min-height: 100dvh;
+  background: var(--vn-canvas);
+  color: var(--color-neutral-900);
+  overflow-wrap: anywhere;
+}
+
+.container {
+  width: 100%;
+  max-width: 75rem;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 2.5rem);
+}
+
+.header {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  padding-block: 0.625rem;
+  border-bottom: 1px solid var(--color-neutral-200);
+}
+
+.brand {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  border-radius: 0.5rem;
+}
+
+.focused,
+.withExample {
+  padding-block: clamp(1.5rem, 5vw, 4rem) 3rem;
+}
+
+.panel,
+.widePanel {
+  display: grid;
+  width: 100%;
+  max-width: 29rem;
+  min-width: 0;
+  align-content: start;
+  gap: 1.25rem;
+  margin-inline: auto;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 1.25rem;
+  background: var(--color-white);
+  padding: clamp(1rem, 4vw, 2rem);
+  box-shadow: var(--vn-shadow-card);
+}
+
+.widePanel {
+  max-width: 38rem;
+}
+
+.intro {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.intro > p {
+  line-height: 1.55;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--color-neutral-600);
+  font-size: 0.875rem;
+}
+
+.divider::before,
+.divider::after {
+  min-width: 0.5rem;
+  height: 1px;
+  flex: 1;
+  background: var(--color-neutral-200);
+  content: "";
+}
+
+.example {
+  display: none;
+}
+
+@media (min-width: 60rem) {
+  .withExample {
+    display: grid;
+    max-width: 59rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: clamp(1.5rem, 6vw, 5rem);
+    margin-inline: auto;
+  }
+
+  .example {
+    display: block;
+    width: 100%;
+    max-width: 24rem;
+    margin: 1.5rem 0 0;
+    overflow: hidden;
+    border: 1px solid var(--color-neutral-200);
+    border-radius: 1.25rem;
+    background: var(--color-white);
+  }
+}
+
+.exampleHeading {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-neutral-200);
+  background: var(--color-neutral-50);
+  color: var(--color-neutral-700);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.exampleImage {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.exampleCaption {
+  padding: 0.875rem 1rem;
+  font-family: var(--vn-headword-font, Georgia, serif);
+  font-size: 1.125rem;
+}

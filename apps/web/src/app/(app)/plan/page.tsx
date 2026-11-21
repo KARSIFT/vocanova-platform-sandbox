@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader, Surface } from "@/ui/surface";
 import {
   learningGoals as goals,
   learningFocuses as focuses,
@@ -53,28 +53,17 @@ export default async function LearningPlanPage() {
     dueCount !== undefined && dueCount > 0 && mission && !targetComplete;
 
   return (
-    <PageContainer className="max-w-[64rem]">
-      <Link href="/home" className={link}>
-        Back to Home
-      </Link>
-      <header className="mb-6 mt-3">
-        <Eyebrow>A plan you can make your own</Eyebrow>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 [overflow-wrap:anywhere]">
-          Your learning plan
-        </h1>
-        <p className="mt-3 max-w-[40rem] text-lg text-neutral-700">
-          Start with useful words, practise a little, and return to them when
-          they are due.
-        </p>
-      </header>
-      <Surface aria-labelledby="plan-preferences-heading" tone="primary">
-        <h2
-          id="plan-preferences-heading"
-          className="text-xl font-bold text-neutral-900"
-        >
+    <PageContainer width="standard">
+      <PageHeader
+        title="Your learning plan"
+        back={{ href: "/home", label: "Back to Home" }}
+        lede="Start with useful words, practise a little, and return to them when they are due."
+      />
+      <Surface aria-labelledby="plan-preferences-heading" tone="flat">
+        <h2 id="plan-preferences-heading" className="section-title">
           What you are working towards
         </h2>
-        <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+        <dl className="mt-4 grid gap-4 rounded-xl bg-neutral-50 p-4 sm:grid-cols-3">
           <div>
             <dt className="text-sm text-neutral-600">Your goal</dt>
             <dd className="mt-1 font-semibold text-neutral-900">
@@ -120,12 +109,11 @@ export default async function LearningPlanPage() {
         </div>
       </Surface>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <Surface aria-labelledby="plan-review-heading">
-          <Eyebrow>Keep words fresh</Eyebrow>
-          <h2
-            id="plan-review-heading"
-            className="mt-2 text-xl font-bold text-neutral-900"
-          >
+        <Surface
+          aria-labelledby="plan-review-heading"
+          tone={reviewReady ? "default" : "flat"}
+        >
+          <h2 id="plan-review-heading" className="section-title">
             Your reviews today
           </h2>
           {mission ? (
@@ -176,11 +164,12 @@ export default async function LearningPlanPage() {
           primary={!reviewReady}
         />
       </div>
-      <Surface aria-labelledby="plan-words-heading" className="mt-4">
-        <h2
-          id="plan-words-heading"
-          className="text-xl font-bold text-neutral-900"
-        >
+      <Surface
+        aria-labelledby="plan-words-heading"
+        tone="flat"
+        className="mt-4"
+      >
+        <h2 id="plan-words-heading" className="section-title">
           Make room for words you need
         </h2>
         <p className="mt-3 max-w-[40rem] text-neutral-700">

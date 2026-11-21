@@ -31,6 +31,7 @@ import {
   nativeLanguageLabel,
   nativeLanguageValue,
 } from "./native-languages";
+import styles from "./onboarding-form.module.css";
 
 interface OnboardingFormProps {
   defaultNativeLanguage?: string;
@@ -326,7 +327,7 @@ export function OnboardingForm({
         </StatusMessage>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-sm)] pt-[var(--spacing-sm)]">
+      <div className={styles.actions}>
         <Button
           type="button"
           onClick={goBack}
@@ -392,39 +393,44 @@ function StepIndicator({
   totalSteps: number;
 }) {
   return (
-    <ol
-      aria-label="Onboarding progress"
-      className="flex w-full items-center gap-[var(--spacing-xs)]"
-    >
-      {Array.from({ length: totalSteps }).map((_, index) => {
-        const isComplete = index < currentStep;
-        const isCurrent = index === currentStep;
-        return (
-          <li
-            key={index}
-            aria-current={isCurrent ? "step" : undefined}
-            className={`h-2 flex-1 rounded-full ${
-              isComplete
-                ? "bg-primary-600"
-                : isCurrent
-                  ? "bg-primary-300"
-                  : "bg-neutral-200"
-            }`}
-            data-state={
-              isComplete ? "complete" : isCurrent ? "current" : "upcoming"
-            }
-          >
-            <span className="sr-only">
-              {isComplete
-                ? `Step ${index + 1} of ${totalSteps} complete`
-                : isCurrent
-                  ? `Step ${index + 1} of ${totalSteps} (current)`
-                  : `Step ${index + 1} of ${totalSteps} (upcoming)`}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
+    <div className={styles.progress}>
+      <p aria-hidden="true">
+        Step {currentStep + 1} of {totalSteps}
+      </p>
+      <ol
+        aria-label="Onboarding progress"
+        className="flex w-full items-center gap-[var(--spacing-xs)]"
+      >
+        {Array.from({ length: totalSteps }).map((_, index) => {
+          const isComplete = index < currentStep;
+          const isCurrent = index === currentStep;
+          return (
+            <li
+              key={index}
+              aria-current={isCurrent ? "step" : undefined}
+              className={`h-1.5 flex-1 rounded-full ${
+                isComplete
+                  ? "bg-primary-600"
+                  : isCurrent
+                    ? "bg-primary-300"
+                    : "bg-neutral-200"
+              }`}
+              data-state={
+                isComplete ? "complete" : isCurrent ? "current" : "upcoming"
+              }
+            >
+              <span className="sr-only">
+                {isComplete
+                  ? `Step ${index + 1} of ${totalSteps} complete`
+                  : isCurrent
+                    ? `Step ${index + 1} of ${totalSteps} (current)`
+                    : `Step ${index + 1} of ${totalSteps} (upcoming)`}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 
@@ -451,21 +457,14 @@ function RadioStep<T extends string>({
         {legend}
       </legend>
       <p className="text-base text-neutral-700">{description}</p>
-      <div
-        role="radiogroup"
-        aria-label={legend}
-        className="space-y-[var(--spacing-sm)]"
-      >
+      <div role="radiogroup" aria-label={legend} className={styles.choices}>
         {options.map((option) => {
           const checked = value === option.value;
           return (
             <label
               key={option.value}
-              className={`flex min-h-[var(--spacing-2xl)] cursor-pointer items-start gap-[var(--spacing-sm)] rounded-md border p-[var(--spacing-md)] transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] ${
-                checked
-                  ? "border-primary-600 bg-primary-50"
-                  : "border-neutral-200 bg-white hover:border-primary-300"
-              } focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700`}
+              className={styles.choice}
+              data-selected={checked || undefined}
             >
               <input
                 type="radio"
@@ -473,9 +472,9 @@ function RadioStep<T extends string>({
                 value={option.value}
                 checked={checked}
                 onChange={() => onChange(option.value)}
-                className="mt-[var(--spacing-xs)] size-4 accent-primary-600"
+                className="mt-[var(--spacing-xs)] size-4 shrink-0 accent-primary-600"
               />
-              <span className="flex flex-col">
+              <span className="flex min-w-0 flex-col">
                 <span className="text-base font-medium text-neutral-900">
                   {option.label}
                 </span>
@@ -659,7 +658,7 @@ function DailyReviewTargetStep({
       <div
         role="radiogroup"
         aria-label="Daily review target"
-        className="grid grid-cols-2 gap-[var(--spacing-sm)] sm:grid-cols-4"
+        className={styles.targets}
       >
         {DAILY_REVIEW_TARGETS.map((target) => {
           const checked = value === target;
@@ -709,10 +708,7 @@ function SummaryCard({
     MAIN_USE_CASES.find((use) => use.value === state.mainUseCase)?.label ??
     "Not set";
   return (
-    <aside
-      aria-label="Onboarding summary"
-      className="rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] text-base text-neutral-800 shadow-sm"
-    >
+    <aside aria-label="Onboarding summary" className={styles.summary}>
       <h3 className="text-lg font-semibold text-neutral-900">Quick check</h3>
       <dl className="mt-[var(--spacing-sm)] space-y-[var(--spacing-xs)]">
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-[var(--spacing-sm)]">

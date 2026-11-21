@@ -532,7 +532,7 @@ export function DailyLessonPlayer({
 
   return (
     <div className="mx-auto max-w-[38rem] pb-[10rem]">
-      <div className="mb-3 flex items-center justify-between gap-4">
+      <div className="review-progress-head">
         <p className="text-base font-semibold text-neutral-700">
           {view.complete && view.active ? "Optional review" : "Review words"}
         </p>
@@ -729,7 +729,7 @@ export function DailyLessonPlayer({
         </section>
       ) : step ? (
         <form
-          className="learning-surface p-4 sm:p-7"
+          className="learning-surface review-question p-4 sm:p-7"
           onSubmit={(event) => {
             event.preventDefault();
             if (!locked) void submit("answer");

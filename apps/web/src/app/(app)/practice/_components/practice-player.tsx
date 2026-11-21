@@ -16,6 +16,7 @@ import { handleApiError } from "@/lib/session";
 import { Surface } from "@/ui/surface";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { SessionActions } from "@/ui/session";
+import styles from "./session-layout.module.css";
 
 import { PracticeAudio } from "./practice-audio";
 import { practiceModes } from "./practice-modes";
@@ -193,16 +194,18 @@ export function PracticePlayer({
   }
 
   return (
-    <div className="mx-auto max-w-[42rem] pb-[9rem]">
-      <div className="mb-5 mt-3">
-        <p className="text-sm font-semibold text-primary-700">
-          {practiceModes[session.mode].title}
-        </p>
-        <p className="mt-2 text-sm text-neutral-700">
-          {session.completedSteps} of {session.totalSteps} steps completed
-        </p>
+    <div className="pb-[9rem]">
+      <div className={styles.progress}>
+        <div className={styles.progressDetails}>
+          <p className={styles.progressTitle}>
+            {practiceModes[session.mode].title}
+          </p>
+          <p className={styles.progressCount}>
+            {session.completedSteps} of {session.totalSteps} steps completed
+          </p>
+        </div>
         <progress
-          className="mt-2 h-2 w-full accent-primary-700"
+          className={styles.progressTrack}
           aria-label="Practice progress"
           value={session.completedSteps}
           max={session.totalSteps}
@@ -210,12 +213,8 @@ export function PracticePlayer({
       </div>
 
       {session.status === "completed" ? (
-        <Surface>
-          <h1
-            ref={heading}
-            tabIndex={-1}
-            className="text-3xl font-bold tracking-tight text-neutral-900"
-          >
+        <Surface className={styles.task}>
+          <h1 ref={heading} tabIndex={-1} className="page-title">
             Practice complete
           </h1>
           <p className="mt-3 text-lg text-neutral-900">
@@ -236,15 +235,11 @@ export function PracticePlayer({
           </ActionLink>
         </Surface>
       ) : step ? (
-        <Surface key={step.id}>
+        <Surface key={step.id} className={styles.task}>
           <h1
             ref={heading}
             tabIndex={-1}
-            className={
-              teaching
-                ? "headword text-2xl"
-                : "text-2xl font-bold leading-snug text-neutral-900"
-            }
+            className={teaching ? "headword text-3xl" : "page-title"}
           >
             {teaching
               ? step.wordText
@@ -311,7 +306,7 @@ export function PracticePlayer({
                 role="group"
                 aria-label="Your sentence"
                 aria-describedby={helpId}
-                className="mt-3 flex min-h-24 flex-wrap content-start gap-2 rounded-xl border-2 border-neutral-300 p-3"
+                className="mt-3 flex min-h-24 flex-wrap content-start gap-2 rounded-xl border border-neutral-300 bg-neutral-50 p-3"
               >
                 {!shownTokens.length && (
                   <span className="py-2 text-neutral-500">
@@ -368,7 +363,7 @@ export function PracticePlayer({
                   </Button>
                 ))}
               </div>
-              <div className="mt-3 flex gap-4">
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
                 <button
                   type="button"
                   disabled={answerLocked || !tokenIds.length}
@@ -457,13 +452,10 @@ export function PracticePlayer({
                   if (selectedChoice) void submit("answer", selectedChoice);
                 }}
               >
-                <fieldset disabled={answerLocked} className="grid gap-3">
+                <fieldset disabled={answerLocked} className={styles.choices}>
                   <legend className="sr-only">Answer choices</legend>
                   {step.choices.map((choice) => (
-                    <label
-                      key={choice.id}
-                      className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border p-4 text-neutral-900 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${displayedChoice === choice.id ? "border-primary-600 bg-primary-50" : "border-neutral-300 bg-white"} ${locked || checked?.correct ? "cursor-default" : ""}`}
-                    >
+                    <label key={choice.id} className={styles.choice}>
                       <input
                         type="radio"
                         name={answerFormId}
@@ -473,15 +465,7 @@ export function PracticePlayer({
                         onChange={() => setSelectedChoice(choice.id)}
                         className="h-5 w-5 shrink-0 accent-primary-700"
                       />
-                      <span className="grow">{choice.text}</span>
-                      {displayedChoice === choice.id && (
-                        <span
-                          aria-hidden="true"
-                          className="text-sm font-semibold text-primary-800"
-                        >
-                          Selected
-                        </span>
-                      )}
+                      <span className="min-w-0 grow">{choice.text}</span>
                     </label>
                   ))}
                 </fieldset>
@@ -502,7 +486,8 @@ export function PracticePlayer({
               ref={feedback}
               tabIndex={-1}
               role="status"
-              className={`mt-5 rounded-xl border p-4 ${checked.correct ? "border-primary-200 bg-primary-50" : "border-secondary-200 bg-secondary-50"}`}
+              className={styles.feedback}
+              data-correct={checked.correct}
             >
               <h2 className="font-semibold text-neutral-900">
                 {checked.correct
@@ -583,7 +568,7 @@ export function PracticePlayer({
           </SessionActions>
         </Surface>
       ) : (
-        <Surface>
+        <Surface className={styles.task}>
           <h1
             ref={heading}
             tabIndex={-1}

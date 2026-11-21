@@ -17,7 +17,7 @@ export async function DailyReviewsContent({
     ]);
     const session = selected?.data ?? data.session;
     return (
-      <PageContainer className="max-w-[44rem]">
+      <PageContainer>
         <DailyLessonPlayer
           key={session?.id ?? "new"}
           initialSession={session}

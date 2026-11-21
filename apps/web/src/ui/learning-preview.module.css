@@ -1,0 +1,63 @@
+/* Stageshow's hairline window composition, sized around real learner controls. */
+.window {
+  width: 100%;
+  max-width: 33rem;
+  min-width: 0;
+  margin-inline: auto;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 1.5rem;
+  background: var(--color-white);
+  box-shadow: var(--vn-shadow-card);
+  overflow-wrap: anywhere;
+}
+
+.toolbar {
+  padding: 0.8rem clamp(1rem, 4vw, 1.5rem);
+  border-bottom: 1px solid var(--color-neutral-200);
+  border-radius: 1.5rem 1.5rem 0 0;
+  background: var(--color-neutral-50);
+  color: var(--color-neutral-700);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.body {
+  padding: clamp(1rem, 4vw, 1.5rem);
+}
+
+.beat {
+  min-width: 0;
+}
+
+.headword {
+  color: var(--color-neutral-900);
+  font-family: var(--vn-headword-font, Georgia, serif);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.08;
+}
+
+.example {
+  margin-block-start: 1rem;
+  border-inline-start: 3px solid var(--color-primary-400);
+  padding-inline-start: 0.75rem;
+  font-size: 1.125rem;
+}
+
+.action {
+  width: 100%;
+  margin-block-start: 1.25rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .feedback {
+    animation: reveal-feedback 180ms ease-out both;
+  }
+}
+
+@keyframes reveal-feedback {
+  from {
+    opacity: 0.65;
+    transform: translateY(3px);
+  }
+}

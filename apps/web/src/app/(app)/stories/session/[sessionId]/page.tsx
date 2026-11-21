@@ -17,7 +17,7 @@ export default async function StorySessionPage({
       await createServerApiClient()
     ).getStorySession(sessionId);
     return (
-      <PageContainer className="max-w-[44rem]">
+      <PageContainer>
         <StoryPlayer key={data.id} initialSession={data} />
       </PageContainer>
     );

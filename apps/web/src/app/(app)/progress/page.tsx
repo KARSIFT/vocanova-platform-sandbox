@@ -4,7 +4,7 @@ import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader, PageSection, Surface } from "@/ui/surface";
 import { getCompletionDayView } from "./completion-day-view";
 import { LearnIcon } from "../_components/learn-icons";
 import { Achievements } from "../_components/achievements";
@@ -84,8 +84,6 @@ export default async function ProgressPage() {
       view: getCompletionDayView(day),
     }));
 
-  const summaryStyle =
-    "min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
   const knowledge = knowledgeResponse?.data;
   const stages = knowledge
     ? ([
@@ -109,20 +107,20 @@ export default async function ProgressPage() {
     : [];
 
   return (
-    <PageContainer className="max-w-[64rem]">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="page-title">Progress</h1>
-          <p className="page-lede">Your words and daily practice.</p>
-        </div>
-        <Link href="/words" className="vn-chip-link">
-          Saved words
-        </Link>
-      </div>
+    <PageContainer width="standard">
+      <PageHeader
+        title="Progress"
+        lede="Your words and daily practice."
+        actions={
+          <Link href="/words" className="vn-text-link">
+            Saved words
+          </Link>
+        }
+      />
 
       {knowledge ? (
-        <Surface className="mt-6" aria-labelledby="vocabulary-map-heading">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <Surface aria-labelledby="vocabulary-map-heading">
+          <div className="section-head">
             <h2 id="vocabulary-map-heading" className="section-title">
               Your saved words
             </h2>
@@ -191,8 +189,8 @@ export default async function ProgressPage() {
               </div>
             </>
           )}
-          <details className="mt-1">
-            <summary className={summaryStyle}>About these stages</summary>
+          <details className="mt-1 border-t border-neutral-200">
+            <summary className="vn-summary">About these stages</summary>
             <p className="mt-2 text-sm text-neutral-600">
               New words become Learning, Reviewing and Mastered through your
               review history. These stages describe saved words, not your
@@ -224,11 +222,11 @@ export default async function ProgressPage() {
         </StatusMessage>
       )}
 
-      <Surface className="mt-4" aria-labelledby="completion-history-heading">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="completion-history-heading" className="section-title">
-            Recent activity
-          </h2>
+      <PageSection
+        title="Recent activity"
+        titleId="completion-history-heading"
+        className="mt-8"
+        action={
           <p className="inline-flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-700">
             <span className="inline-flex items-center gap-1.5 font-semibold text-neutral-900">
               <svg
@@ -246,7 +244,8 @@ export default async function ProgressPage() {
             </span>
             <span>Best: {longestStreakDays} days</span>
           </p>
-        </div>
+        }
+      >
         {historyWithLabels.length > 0 ? (
           <ul className="activity-days">
             {historyWithLabels.map((day) => (
@@ -270,7 +269,7 @@ export default async function ProgressPage() {
             </Link>
           </div>
         )}
-      </Surface>
+      </PageSection>
 
       {achievementsResponse ? (
         <Achievements achievements={achievementsResponse.data} />
@@ -281,10 +280,10 @@ export default async function ProgressPage() {
         </StatusMessage>
       )}
 
-      <div className="mt-4 divide-y divide-neutral-200 rounded-[1.25rem] border border-neutral-200 bg-white px-[var(--spacing-md)] sm:px-[var(--spacing-lg)]">
+      <div className="vn-list mt-4 divide-y divide-neutral-200 px-[var(--spacing-md)] sm:px-[var(--spacing-lg)]">
         {lessonResponse ? (
           <details className="py-2">
-            <summary className={summaryStyle}>
+            <summary className="vn-summary">
               Your learning path{" "}
               <span className="ml-2 text-sm font-normal text-neutral-600">
                 {
@@ -333,7 +332,7 @@ export default async function ProgressPage() {
 
         <section aria-labelledby="sentence-history-heading" className="py-2">
           <details>
-            <summary className={summaryStyle}>
+            <summary className="vn-summary">
               <span id="sentence-history-heading">Sentence practice</span>
             </summary>
             {sentencesResponse &&
@@ -382,7 +381,7 @@ export default async function ProgressPage() {
 
         <section aria-label="Learning summary" className="py-2">
           <details>
-            <summary className={summaryStyle}>
+            <summary className="vn-summary">
               Rewards{" "}
               <span className="ml-2 text-sm font-normal text-neutral-600">
                 {confidencePointsTotal.toLocaleString()} points
