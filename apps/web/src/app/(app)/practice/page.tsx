@@ -5,7 +5,7 @@ import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { PageContainer } from "@/ui/surface";
+import { PageContainer, PageHeader, PageSection, Surface } from "@/ui/surface";
 import { PracticeEntry } from "./_components/practice-entry";
 import { LearnIcon } from "../_components/learn-icons";
 
@@ -13,9 +13,6 @@ export const metadata: Metadata = {
   title: "Practice — Vocanova",
   description: "A learning path for listening, sentences and your own words.",
 };
-
-const linkStyle =
-  "inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 
 // Each activity can remain useful when another service is unavailable. An
 // expired session still redirects instead of looking like an empty vocabulary.
@@ -77,15 +74,11 @@ export default async function PracticePage({
   const firstWord = savedWords?.[0];
 
   return (
-    <PageContainer className="max-w-[56rem]">
-      <Link href="/home" className={linkStyle}>
-        Back to Today
-      </Link>
-      <header className="mb-4 mt-2">
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
-          Today’s practice
-        </h1>
-      </header>
+    <PageContainer>
+      <PageHeader
+        title="Today’s practice"
+        back={{ href: "/home", label: "Back to Today" }}
+      />
 
       <PracticeEntry
         key={`${selectedLessonKey}:${requestedList}`}
@@ -100,9 +93,10 @@ export default async function PracticePage({
         }
       />
 
-      <section
+      <Surface
         aria-labelledby="practice-review-heading"
-        className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-4"
+        tone="flat"
+        className="mt-6 flex flex-wrap items-center justify-between gap-3"
       >
         <div className="min-w-0 flex-1 basis-48">
           <h2 id="practice-review-heading" className="section-title">
@@ -125,56 +119,60 @@ export default async function PracticePage({
             </p>
           )}
         </div>
-        <ActionLink variant="secondary" href="/review" className="min-h-11">
+        <ActionLink variant="secondary" href="/review">
           {canStartReview ? "Start review" : "Open reviews"}
         </ActionLink>
-      </section>
+      </Surface>
 
-      {/* One list of the other ways to practise, instead of scattered rows. */}
-      <nav aria-label="Practice activities" className="mt-6">
-        <h2 className="section-title">More ways to practise</h2>
-        <ul className="mt-2 space-y-2">
-          {[
-            {
-              href: "/discovery",
-              label: "Discover words",
-              icon: "discover" as const,
-            },
-            {
-              href: "/stories",
-              label: "Short stories",
-              icon: "stories" as const,
-            },
-            {
-              href: "/courses",
-              label: "Situation lessons",
-              icon: "situations" as const,
-            },
-            {
-              href: "/progress/sentences",
-              label: "Sentence history",
-              icon: "history" as const,
-            },
-            {
-              href: firstWord
-                ? `/vocabulary/${encodeURIComponent(firstWord.wordSlug)}`
-                : "/vocabulary",
-              label: firstWord
-                ? `Listen to ${firstWord.wordText}`
-                : "Find a word to hear",
-              icon: "listen" as const,
-            },
-          ].map((item) => (
-            <li key={item.label}>
-              <Link href={item.href} className="learn-nav-link">
-                <LearnIcon name={item.icon} />
-                <span className="min-w-0 flex-1">{item.label}</span>
-                <LearnIcon name="arrow" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <PageSection
+        title="More ways to practise"
+        titleId="practice-activities-heading"
+        className="mt-8"
+      >
+        <nav aria-label="Practice activities">
+          <ul className="vn-list">
+            {[
+              {
+                href: "/discovery",
+                label: "Discover words",
+                icon: "discover" as const,
+              },
+              {
+                href: "/stories",
+                label: "Short stories",
+                icon: "stories" as const,
+              },
+              {
+                href: "/courses",
+                label: "Situation lessons",
+                icon: "situations" as const,
+              },
+              {
+                href: "/progress/sentences",
+                label: "Sentence history",
+                icon: "history" as const,
+              },
+              {
+                href: firstWord
+                  ? `/vocabulary/${encodeURIComponent(firstWord.wordSlug)}`
+                  : "/vocabulary",
+                label: firstWord
+                  ? `Listen to ${firstWord.wordText}`
+                  : "Find a word to hear",
+                icon: "listen" as const,
+              },
+            ].map((item) => (
+              <li key={item.label}>
+                <Link href={item.href} className="learn-nav-link">
+                  <LearnIcon name={item.icon} />
+                  <span className="min-w-0 flex-1">{item.label}</span>
+                  <LearnIcon name="arrow" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </PageSection>
     </PageContainer>
   );
 }

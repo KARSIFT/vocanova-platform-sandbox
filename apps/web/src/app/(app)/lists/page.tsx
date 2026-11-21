@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Link from "@/ui/link";
 import { ApiResponseError, type WordListsResponse } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer } from "@/ui/surface";
+import { PageContainer, PageHeader } from "@/ui/surface";
 import { ListsCollection } from "./_components/lists-collection";
-import { listLink } from "./_components/list-styles";
 
 export const metadata: Metadata = { title: "Personal lists — Vocanova" };
 export default async function ListsPage() {
@@ -18,19 +16,11 @@ export default async function ListsPage() {
   }
   return (
     <PageContainer>
-      <Link href="/discover" className={listLink}>
-        Back to Journey
-      </Link>
-      <header className="my-4">
-        <Eyebrow>Words for your life</Eyebrow>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-neutral-900 [overflow-wrap:anywhere]">
-          Personal lists
-        </h1>
-        <p className="mt-2 text-neutral-700">
-          Group useful meanings for a trip, a conversation or a project. Lists
-          organize your words; saving for review is a separate choice.
-        </p>
-      </header>
+      <PageHeader
+        title="Personal lists"
+        back={{ href: "/discover", label: "Back to Journey" }}
+        lede="Group useful meanings for a trip, a conversation or a project."
+      />
       <ListsCollection initialData={data} />
     </PageContainer>
   );

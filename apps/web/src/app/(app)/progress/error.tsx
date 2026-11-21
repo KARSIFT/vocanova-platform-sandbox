@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/ui/controls";
+import { PageContainer, PageHeader } from "@/ui/surface";
 import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
 
 interface ProgressErrorProps {
@@ -12,14 +13,12 @@ export default function ProgressError(props: ProgressErrorProps) {
   const { reset, error } = props;
   const { retry, isRetrying } = useRouteErrorRetry(reset, error);
   return (
-    <div className="p-[var(--spacing-lg)]">
-      <h1 className="text-xl font-semibold text-neutral-900">
-        Something went wrong
-      </h1>
-      <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
-        We couldn&apos;t load your progress. Please try again.
-      </p>
-      <div className="mt-[var(--spacing-lg)] flex flex-wrap gap-[var(--spacing-md)]">
+    <PageContainer width="standard">
+      <PageHeader
+        title="Something went wrong"
+        lede="We couldn't load your progress. Please try again."
+      />
+      <div className="flex flex-wrap gap-3">
         <Button
           variant="primary"
           onClick={retry}
@@ -36,6 +35,6 @@ export default function ProgressError(props: ProgressErrorProps) {
           Reload page
         </a>
       </div>
-    </div>
+    </PageContainer>
   );
 }

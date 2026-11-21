@@ -3,6 +3,7 @@
 import { Button } from "@/ui/controls";
 
 import Link from "@/ui/link";
+import { PageContainer, PageHeader } from "@/ui/surface";
 import { useRouteErrorRetry } from "@/ui/use-route-error-retry";
 
 interface SettingsAccountErrorProps {
@@ -14,14 +15,12 @@ export default function SettingsAccountError(props: SettingsAccountErrorProps) {
   const { reset, error } = props;
   const { retry, isRetrying } = useRouteErrorRetry(reset, error);
   return (
-    <div className="p-[var(--spacing-lg)]">
-      <h1 className="text-xl font-semibold text-neutral-900">
-        We couldn&apos;t load your account
-      </h1>
-      <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
-        Please try again. Your account is still safe.
-      </p>
-      <div className="mt-[var(--spacing-lg)] flex flex-wrap gap-[var(--spacing-md)]">
+    <PageContainer width="reading">
+      <PageHeader
+        title="We couldn't load your account"
+        lede="Please try again. Your account is still safe."
+      />
+      <div className="flex flex-wrap gap-3">
         <Button
           type="button"
           onClick={retry}
@@ -38,6 +37,6 @@ export default function SettingsAccountError(props: SettingsAccountErrorProps) {
           Back to Settings
         </Link>
       </div>
-    </div>
+    </PageContainer>
   );
 }

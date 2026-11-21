@@ -20,9 +20,9 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-20px_rgb(15_23_42_/_0.5)] backdrop-blur lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      <div className="mx-auto flex h-16 w-full max-w-[48rem] px-2">
+      <div className="mx-auto flex min-h-16 w-full max-w-[48rem] px-2 py-1">
         {NAV_ITEMS.map((item) => {
           const isActive = isPrimaryNavItemActive(pathname, item.href);
           const Icon = item.icon;
@@ -34,7 +34,7 @@ export function BottomNav() {
               // Primary destinations are worth a viewport prefetch.
               prefetch="auto"
               aria-current={isActive ? "page" : undefined}
-              className={`group flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 rounded-xl text-xs transition-colors ${
+              className={`group flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-center text-xs whitespace-nowrap transition-colors ${
                 isActive
                   ? "font-semibold text-primary-800"
                   : "font-medium text-neutral-600 hover:text-neutral-900"

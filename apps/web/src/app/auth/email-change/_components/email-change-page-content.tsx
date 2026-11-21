@@ -4,7 +4,6 @@ import { StatusMessage } from "@/ui/status-message";
 
 import { ActionLink, Button } from "@/ui/controls";
 
-import Link from "@/ui/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -13,7 +12,6 @@ import { ApiResponseError } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { AuthShell } from "@/ui/auth-shell";
-import { Surface } from "@/ui/surface";
 
 type ConfirmationState =
   | { type: "loading" }
@@ -141,73 +139,72 @@ export function EmailChangePageContent() {
   const returnTo = `/auth/email-change?${new URLSearchParams({ token }).toString()}`;
 
   return (
-    <AuthShell>
-      <Surface className="w-full space-y-[var(--spacing-md)]">
-        <h1 className="text-2xl font-semibold text-neutral-900">
-          Confirm your new email
-        </h1>
+    <AuthShell title="Confirm your new email" linkBrand={false}>
+      {state.type === "loading" ? (
+        <StatusMessage
+          as="p"
+          tone="info"
+          role="status"
+          aria-live="polite"
+          className="text-base"
+        >
+          Verifying your confirmation link...
+        </StatusMessage>
+      ) : null}
 
-        {state.type === "loading" ? (
+      {state.type === "success" ? (
+        <>
           <StatusMessage
             as="p"
-            tone="info"
+            tone="success"
             role="status"
             aria-live="polite"
-            className="text-base"
+            className="text-base [overflow-wrap:anywhere]"
           >
-            Verifying your confirmation link...
+            Your sign-in email is now {state.email}.
           </StatusMessage>
-        ) : null}
+          <ActionLink
+            ref={accountLink}
+            href="/settings/account"
+            className="justify-self-start"
+          >
+            Return to account settings
+          </ActionLink>
+        </>
+      ) : null}
 
-        {state.type === "success" ? (
-          <>
-            <StatusMessage
-              as="p"
-              tone="success"
-              role="status"
-              aria-live="polite"
-              className="text-base [overflow-wrap:anywhere]"
-            >
-              Your sign-in email is now {state.email}.
-            </StatusMessage>
-            <ActionLink ref={accountLink} href="/settings/account">
-              Return to account settings
-            </ActionLink>
-          </>
-        ) : null}
-
-        {state.type === "signin" ? (
-          <>
-            <p className="text-base text-neutral-700">
-              Sign in to the account that requested this change, then open the
-              confirmation link again.
-            </p>
+      {state.type === "signin" ? (
+        <>
+          <p className="text-base text-neutral-700">
+            Sign in to the account that requested this change, then open the
+            confirmation link again.
+          </p>
+          <div className="flex flex-wrap gap-[var(--spacing-sm)]">
             <ActionLink
               ref={signInLink}
               href={`/login?${new URLSearchParams({ returnTo, magicOnly: "1" }).toString()}`}
             >
               Sign in
             </ActionLink>
-            <Link
-              href="/"
-              className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-            >
+            <ActionLink href="/" variant="text">
               Back to home
-            </Link>
-          </>
-        ) : null}
+            </ActionLink>
+          </div>
+        </>
+      ) : null}
 
-        {state.type === "error" ? (
-          <>
-            <StatusMessage
-              as="p"
-              tone="error"
-              role="alert"
-              aria-live="assertive"
-              className="text-base"
-            >
-              {state.message}
-            </StatusMessage>
+      {state.type === "error" ? (
+        <>
+          <StatusMessage
+            as="p"
+            tone="error"
+            role="alert"
+            aria-live="assertive"
+            className="text-base"
+          >
+            {state.message}
+          </StatusMessage>
+          <div className="flex flex-wrap gap-[var(--spacing-sm)]">
             {state.recovery ? (
               <Button
                 ref={retryButton}
@@ -229,15 +226,12 @@ export function EmailChangePageContent() {
             >
               Go to account settings
             </ActionLink>
-            <Link
-              href="/"
-              className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-            >
+            <ActionLink href="/" variant="text">
               Back to home
-            </Link>
-          </>
-        ) : null}
-      </Surface>
+            </ActionLink>
+          </div>
+        </>
+      ) : null}
     </AuthShell>
   );
 }

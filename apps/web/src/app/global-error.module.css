@@ -1,0 +1,36 @@
+/* The root layout can be unavailable when this boundary renders. */
+.canvas {
+  color-scheme: light dark;
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  margin: 0;
+  background: Canvas;
+  color: CanvasText;
+  font-family: system-ui, sans-serif;
+}
+
+.content {
+  box-sizing: border-box;
+  width: min(100%, 34rem);
+  padding: clamp(1rem, 6vw, 3rem);
+  overflow-wrap: anywhere;
+}
+
+.brand {
+  font-weight: 700;
+}
+
+.content h1 {
+  margin-block: 0.5rem;
+  font-size: clamp(1.875rem, 5vw, 2.5rem);
+  line-height: 1.12;
+}
+
+.content a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: LinkText;
+  text-underline-offset: 0.2em;
+}

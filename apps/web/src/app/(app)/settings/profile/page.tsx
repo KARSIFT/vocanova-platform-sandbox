@@ -1,7 +1,7 @@
 import Link from "@/ui/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader, PageSection, Surface } from "@/ui/surface";
 
 import { ProfileForm } from "./_components/profile-form";
 
@@ -36,22 +36,12 @@ export default async function ProfilePage() {
   const displayName = user.displayName ?? "";
   return (
     <PageContainer>
-      <div className="mb-[var(--spacing-md)] flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-neutral-900">Profile</h1>
-        <Link
-          href="/settings"
-          className="text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-        >
-          Back to Settings
-        </Link>
-      </div>
-      <p className="text-base text-neutral-700">
-        Manage the details VocaNova uses to personalize your learning.
-      </p>
-      <Surface
-        aria-labelledby="profile-details-heading"
-        className="mt-[var(--spacing-lg)]"
-      >
+      <PageHeader
+        title="Profile"
+        back={{ href: "/settings", label: "Back to Settings" }}
+        lede="Manage the details VocaNova uses to personalize your learning."
+      />
+      <Surface aria-labelledby="profile-details-heading">
         <div className="flex flex-wrap items-center gap-[var(--spacing-md)]">
           <span
             aria-hidden="true"
@@ -60,10 +50,7 @@ export default async function ProfilePage() {
             {initials(displayName, email)}
           </span>
           <div className="min-w-0 flex-1 basis-[12rem]">
-            <h2
-              id="profile-details-heading"
-              className="text-lg font-semibold text-neutral-900"
-            >
+            <h2 id="profile-details-heading" className="section-title">
               Your profile
             </h2>
             <p className="text-sm text-neutral-700">
@@ -79,7 +66,8 @@ export default async function ProfilePage() {
       </Surface>
       <Surface
         aria-labelledby="profile-email-heading"
-        className="mt-[var(--spacing-lg)]"
+        tone="flat"
+        className="mt-4"
       >
         <h2
           id="profile-email-heading"
@@ -96,31 +84,20 @@ export default async function ProfilePage() {
             : "This email has not been verified yet. Check your inbox for a verification link."}
         </p>
       </Surface>
-      <Surface
-        aria-labelledby="profile-links-heading"
-        className="mt-[var(--spacing-lg)]"
+      <PageSection
+        title="More settings"
+        titleId="profile-links-heading"
+        className="mt-8"
       >
-        <h2
-          id="profile-links-heading"
-          className="text-lg font-semibold text-neutral-900"
-        >
-          More settings
-        </h2>
-        <div className="mt-[var(--spacing-md)] flex flex-wrap gap-[var(--spacing-md)]">
-          <Link
-            href="/settings/account"
-            className="inline-flex min-h-[var(--spacing-2xl)] items-center font-semibold text-primary-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
+        <div className="flex flex-wrap gap-x-5 gap-y-1">
+          <Link href="/settings/account" className="vn-text-link">
             Account security
           </Link>
-          <Link
-            href="/settings"
-            className="inline-flex min-h-[var(--spacing-2xl)] items-center font-semibold text-primary-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
+          <Link href="/settings" className="vn-text-link">
             Learning preferences
           </Link>
         </div>
-      </Surface>
+      </PageSection>
     </PageContainer>
   );
 }

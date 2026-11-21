@@ -111,7 +111,7 @@ function JourneyPlaces({ read }: { read: Promise<SituationsRead> }) {
       aria-labelledby="journey-places-heading"
       className={styles.placesSection}
     >
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+      <div className="section-head">
         <div>
           <h2 id="journey-places-heading" className="section-title">
             Places to use English
@@ -198,7 +198,7 @@ export default async function JourneyPage({
       ? "/discover"
       : `/discover?band=${validBand(requested)}`;
   return (
-    <PageContainer className={styles.journey}>
+    <PageContainer width="wide" className={styles.journey}>
       <header className={styles.journeyHead}>
         <h1 className="page-title">Journey</h1>
         <p className="page-lede">Your words, one step at a time.</p>

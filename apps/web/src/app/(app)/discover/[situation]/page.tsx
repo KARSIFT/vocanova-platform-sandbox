@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { PageContainer } from "@/ui/surface";
+import { PageContainer, PageHeader } from "@/ui/surface";
 
 import { getSituationDetailView } from "./_components/situation-view";
 import { getConversationPractice } from "./_components/conversation-context-content";
@@ -81,28 +81,23 @@ export default async function SituationDiscoverPage({
 
   return (
     <PageContainer>
-      <Link
-        href="/courses"
-        className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800"
-      >
-        All courses
-      </Link>
-      <p className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral-600">
-        <span className="capitalize">
-          {situationData.category.replaceAll("_", " ")}
-        </span>
-        {situationData.levelBand ? (
-          <span className="rounded-full bg-secondary-50 px-2.5 py-0.5 text-secondary-800">
-            {formatLevelBand(situationData.levelBand)}
-          </span>
-        ) : null}
-      </p>
-      <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
-        {situationData.title}
-      </h1>
-      <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-        {getSituationOutcome(situation) ?? situationData.shortDescription}
-      </p>
+      <PageHeader
+        back={{ href: "/courses", label: "All courses" }}
+        title={situationData.title}
+        lede={getSituationOutcome(situation) ?? situationData.shortDescription}
+        eyebrow={
+          <>
+            <span className="capitalize">
+              {situationData.category.replaceAll("_", " ")}
+            </span>
+            {situationData.levelBand ? (
+              <span className="ml-2 font-medium text-neutral-600">
+                {formatLevelBand(situationData.levelBand)}
+              </span>
+            ) : null}
+          </>
+        }
+      />
 
       <nav
         aria-label="This situation"

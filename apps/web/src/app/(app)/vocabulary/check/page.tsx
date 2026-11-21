@@ -5,7 +5,7 @@ import {
   type VocabularySearchItem,
 } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { PageContainer } from "@/ui/surface";
+import { PageContainer, PageHeader } from "@/ui/surface";
 import { VocabularySelfCheck } from "./_components/self-check";
 
 export const metadata: Metadata = {
@@ -42,26 +42,18 @@ export default async function VocabularyCheckPage() {
       requireAuthRedirect(error, "/vocabulary/check");
   }
   return (
-    <PageContainer className="max-w-[48rem]">
-      <Link
-        href="/vocabulary"
-        className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+    <PageContainer>
+      <PageHeader
+        title="Find your starting words"
+        back={{ href: "/vocabulary", label: "Back to vocabulary" }}
+        lede="Choose meanings you know or want to learn. This check is optional."
       >
-        Back to vocabulary
-      </Link>
-      <header className="mb-5 mt-3">
-        <h1 className="text-xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
-          Find your starting words
-        </h1>
-        <p className="mt-2 max-w-[40rem] text-neutral-700">
-          Choose meanings you know or want to learn. This check is optional.
-        </p>
         {category && (
           <p className="mt-2 text-sm text-neutral-600">
             Starting with your focus: {category.replaceAll("_", " ")}.
           </p>
         )}
-      </header>
+      </PageHeader>
       <VocabularySelfCheck
         key={items?.map((item) => item.meaningId).join(",") ?? "unavailable"}
         items={items}
@@ -70,10 +62,7 @@ export default async function VocabularyCheckPage() {
         Saved and already-known meanings are left out. Your private notes stay
         unchanged. You can leave the check at any time.
       </p>
-      <Link
-        href="/plan"
-        className="mt-5 inline-flex min-h-11 items-center font-semibold text-primary-700"
-      >
+      <Link href="/plan" className="vn-text-link mt-3">
         Go to your learning plan
       </Link>
     </PageContainer>

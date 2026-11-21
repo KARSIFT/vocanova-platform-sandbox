@@ -1,10 +1,9 @@
 import { ActionLink } from "@/ui/controls";
-import Link from "@/ui/link";
 
 import type { LearnerSentence } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader } from "@/ui/surface";
 
 const PAGE_SIZE = 12;
 
@@ -36,22 +35,13 @@ export default async function SentenceHistoryPage({
   const { items, hasMore, nextCursor } = response.data;
 
   return (
-    <PageContainer className="max-w-[48rem]">
-      <Link
-        href="/progress"
-        className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-      >
-        Back to Progress
-      </Link>
-      <header className="mt-3">
-        <Eyebrow>Your writing practice</Eyebrow>
-        <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900 [overflow-wrap:anywhere]">
-          Sentence history
-        </h1>
-        <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          Look back at your original sentences and the feedback you received.
-        </p>
-      </header>
+    <PageContainer>
+      <PageHeader
+        title="Sentence history"
+        eyebrow="Your writing practice"
+        back={{ href: "/progress", label: "Back to Progress" }}
+        lede="Look back at your sentences and the feedback you received."
+      />
 
       {items.length === 0 ? (
         after ? (
@@ -78,8 +68,8 @@ export default async function SentenceHistoryPage({
 
 function EmptySentenceHistory() {
   return (
-    <Surface
-      className="mt-[var(--spacing-lg)]"
+    <section
+      className="vn-empty"
       aria-labelledby="empty-sentence-history-heading"
     >
       <h2
@@ -99,14 +89,14 @@ function EmptySentenceHistory() {
       >
         Go to Home
       </ActionLink>
-    </Surface>
+    </section>
   );
 }
 
 function ExhaustedSentenceHistory() {
   return (
-    <Surface
-      className="mt-[var(--spacing-lg)]"
+    <section
+      className="vn-empty"
       aria-labelledby="exhausted-sentence-history-heading"
     >
       <h2
@@ -125,16 +115,16 @@ function ExhaustedSentenceHistory() {
       >
         Back to newest sentences
       </ActionLink>
-    </Surface>
+    </section>
   );
 }
 
 function SentenceList({ items }: Readonly<{ items: LearnerSentence[] }>) {
   return (
-    <ol className="mt-[var(--spacing-lg)] space-y-[var(--spacing-md)]">
+    <ol className="vn-list">
       {items.map((sentence) => (
-        <li key={sentence.id}>
-          <Surface aria-labelledby={`sentence-${sentence.id}`}>
+        <li key={sentence.id} className="min-w-0 p-4 sm:p-6">
+          <article aria-labelledby={`sentence-${sentence.id}`}>
             <div className="flex flex-wrap items-start justify-between gap-[var(--spacing-sm)]">
               <h2
                 id={`sentence-${sentence.id}`}
@@ -160,7 +150,7 @@ function SentenceList({ items }: Readonly<{ items: LearnerSentence[] }>) {
                 {getProcessingDescription(sentence.processingStatus)}
               </p>
             )}
-          </Surface>
+          </article>
         </li>
       ))}
     </ol>
@@ -171,11 +161,12 @@ function CompletedFeedback({
   sentence,
 }: Readonly<{ sentence: LearnerSentence }>) {
   return (
-    <div className="mt-[var(--spacing-md)] space-y-[var(--spacing-sm)] border-t border-neutral-200 pt-[var(--spacing-md)]">
+    <div className="mt-3 space-y-3">
       {sentence.correctedSentence &&
       sentence.correctedSentence !== sentence.originalSentence ? (
         <SentenceText
           label="Suggested revision"
+          revised
           value={sentence.correctedSentence}
         />
       ) : null}
@@ -199,9 +190,12 @@ function CompletedFeedback({
 function SentenceText({
   label,
   value,
-}: Readonly<{ label: string; value: string }>) {
+  revised,
+}: Readonly<{ label: string; value: string; revised?: boolean }>) {
   return (
-    <div className="mt-[var(--spacing-md)] rounded-md bg-neutral-50 p-[var(--spacing-md)]">
+    <div
+      className={`mt-3 rounded-xl p-3 ${revised ? "bg-primary-50" : "bg-neutral-50"}`}
+    >
       <p className="text-sm font-medium text-neutral-700">{label}</p>
       <p className="mt-[var(--spacing-xs)] wrap-anywhere text-base text-neutral-900">
         {value}

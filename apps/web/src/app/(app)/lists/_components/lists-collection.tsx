@@ -3,10 +3,10 @@
 import { Button, TextInput } from "@/ui/controls";
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "@/ui/link";
+import { LearnIcon } from "../../_components/learn-icons";
 import { useRouter } from "next/navigation";
 import type { WordListsResponse } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
-import { Surface } from "@/ui/surface";
 import { listWriteHeaders, useListAction } from "./use-list-action";
 import { ListActionStatus } from "./list-action-status";
 import { listLink } from "./list-styles";
@@ -58,7 +58,7 @@ export function ListsCollection({
   return (
     <>
       {!data ? (
-        <Surface>
+        <section className="vn-empty">
           <h2 className="text-xl font-bold text-neutral-900">
             Your lists are unavailable
           </h2>
@@ -74,11 +74,11 @@ export function ListsCollection({
           >
             Try loading lists again
           </Button>
-        </Surface>
+        </section>
       ) : (
         <>
           <div
-            className="my-5"
+            className="mb-4"
             role="search"
             aria-label="Search personal lists"
           >
@@ -98,33 +98,36 @@ export function ListsCollection({
             />
           </div>
           {items.length ? (
-            <ul
-              aria-label="Personal lists"
-              className="grid gap-4 sm:grid-cols-2"
-            >
+            <ul aria-label="Personal lists" className="vn-list">
               {items.map((list) => (
-                <li
-                  key={list.id}
-                  className="min-w-0 rounded-2xl border border-neutral-200 bg-white p-5"
-                >
-                  <h2 className="break-words text-xl font-bold text-neutral-900">
-                    <Link
-                      href={`/lists/${encodeURIComponent(list.id)}`}
-                      className={listLink}
-                    >
-                      {list.name}
-                    </Link>
-                  </h2>
-                  <p className="mt-2 text-neutral-700">
-                    {list.memberCount}{" "}
-                    {list.memberCount === 1 ? "meaning" : "meanings"} ·{" "}
-                    {list.usableMemberCount} available for practice
-                  </p>
+                <li key={list.id}>
+                  <Link
+                    href={`/lists/${encodeURIComponent(list.id)}`}
+                    className="vn-list-row flex-nowrap rounded-sm hover:bg-neutral-50 focus-visible:-outline-offset-4"
+                    aria-labelledby={`list-name-${list.id}`}
+                  >
+                    <div className="min-w-0 [overflow-wrap:anywhere]">
+                      <h2
+                        id={`list-name-${list.id}`}
+                        className="text-lg font-semibold text-neutral-900"
+                      >
+                        {list.name}
+                      </h2>
+                      <p className="mt-1 text-sm text-neutral-600">
+                        {list.memberCount}{" "}
+                        {list.memberCount === 1 ? "meaning" : "meanings"} ·{" "}
+                        {list.usableMemberCount} available for practice
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-primary-700">
+                      <LearnIcon name="arrow" />
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>
           ) : (
-            <Surface>
+            <section className="vn-empty">
               <h2 className="text-xl font-bold text-neutral-900">
                 {query.trim()
                   ? "No lists match your search"
@@ -138,17 +141,15 @@ export function ListsCollection({
               <Link href="/vocabulary" className={`${listLink} mt-3`}>
                 Find useful words
               </Link>
-            </Surface>
+            </section>
           )}
           <details
             id="create-list"
             ref={createRef}
             open={!data.items.length}
-            className="mt-6 rounded-xl border border-neutral-200 bg-white p-4"
+            className="mt-6 border-t border-neutral-200"
           >
-            <summary className="min-h-11 scroll-my-24 cursor-pointer py-3 font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-              Create a list
-            </summary>
+            <summary className="vn-summary scroll-my-24">Create a list</summary>
             <form
               className="mt-3"
               onSubmit={(event) => {

@@ -1,7 +1,7 @@
 import Link from "@/ui/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { PageContainer } from "@/ui/surface";
+import { PageContainer, PageHeader, PageSection } from "@/ui/surface";
 
 import { SettingsForm } from "./_components/settings-form";
 import { ThemePreferenceControl } from "@/app/_components/theme-preference";
@@ -28,36 +28,30 @@ export default async function SettingsPage() {
   }
 
   return (
-    <PageContainer className="lg:max-w-[72rem]">
-      <Link
-        href="/home"
-        className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-primary-700 hover:bg-primary-50 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-      >
-        <span aria-hidden="true">←</span>
-        Back to Home
-      </Link>
-      <div className="app-page-heading mb-5 mt-1">
-        <h1 className="page-title">Settings</h1>
-      </div>
+    <PageContainer width="wide">
+      <PageHeader
+        title="Settings"
+        back={{ href: "/home", label: "Back to Home" }}
+      />
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <section aria-labelledby="learning-preferences-heading">
-          <h2 id="learning-preferences-heading" className="section-title">
-            Learning preferences
-          </h2>
+      <div className="grid items-start gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <PageSection
+          title="Learning preferences"
+          titleId="learning-preferences-heading"
+        >
           <SettingsForm
             key={user.data.id}
             initialSettings={response.data}
             userId={user.data.id}
           />
           <CalendarReminder />
-        </section>
-        <aside className="space-y-5">
+        </PageSection>
+        <aside className="min-w-0 space-y-6">
           <nav aria-labelledby="account-section-heading">
-            <h2 id="account-section-heading" className="section-title mb-2">
+            <h2 id="account-section-heading" className="section-title mb-3">
               Account
             </h2>
-            <div className="grid gap-2">
+            <div className="vn-list">
               <Link href="/settings/profile" className="learn-nav-link">
                 <LearnIcon name="profile" />
                 <span className="min-w-0 flex-1">Profile</span>
@@ -76,8 +70,8 @@ export default async function SettingsPage() {
           </Link>
         </aside>
       </div>
-      <details className="mt-6 border-t border-neutral-200 pt-2">
-        <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-neutral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
+      <details className="mt-10 border-t border-neutral-200 pt-2 text-sm">
+        <summary className="vn-summary text-neutral-600">
           Version and app information
         </summary>
         <BuildIdentity />

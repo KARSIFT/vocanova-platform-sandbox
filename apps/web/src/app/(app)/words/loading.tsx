@@ -1,29 +1,36 @@
 import { StatusMessage } from "@/ui/status-message";
+import { PageContainer } from "@/ui/surface";
+
 export default function SavedWordsLoading() {
   return (
-    <section
-      aria-busy="true"
-      aria-labelledby="saved-words-loading-status"
-      className="animate-pulse p-[var(--spacing-lg)]"
-    >
-      <StatusMessage
-        as="p"
-        id="saved-words-loading-status"
-        role="status"
-        className="sr-only"
-      >
-        Loading saved vocabulary
-      </StatusMessage>
-      <div className="h-7 w-1/2 rounded bg-neutral-200" />
-      <div className="mt-[var(--spacing-xs)] h-4 w-3/4 rounded bg-neutral-200" />
-      <div className="mt-[var(--spacing-lg)] grid grid-cols-1 gap-[var(--spacing-md)] md:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div
-            key={index}
-            className="h-40 rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
-          />
-        ))}
-      </div>
-    </section>
+    <PageContainer width="standard">
+      <section aria-busy="true" aria-labelledby="saved-words-loading-status">
+        <StatusMessage
+          as="p"
+          id="saved-words-loading-status"
+          role="status"
+          className="sr-only"
+        >
+          Loading saved vocabulary
+        </StatusMessage>
+        <div aria-hidden="true" className="motion-safe:animate-pulse">
+          <div className="h-8 w-2/3 max-w-[15rem] rounded bg-neutral-200" />
+          <div className="mt-3 h-4 w-3/4 max-w-[22rem] rounded bg-neutral-200" />
+          <div className="vn-list mt-8 space-y-3 p-4 sm:p-5">
+            <div className="h-4 w-1/3 rounded bg-neutral-200" />
+            <div className="h-12 w-full rounded-xl bg-neutral-100" />
+            <div className="h-12 w-2/3 rounded-xl bg-neutral-100" />
+          </div>
+          <ul className="vn-list mt-6">
+            {["w-1/4", "w-1/3", "w-1/5"].map((width) => (
+              <li key={width} className="space-y-3 p-4">
+                <div className={`h-5 rounded bg-neutral-200 ${width}`} />
+                <div className="h-4 w-3/4 rounded bg-neutral-100" />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    </PageContainer>
   );
 }

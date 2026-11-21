@@ -1,9 +1,7 @@
-import Link from "@/ui/link";
 import { ApiResponseError, type WordListDetail } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer } from "@/ui/surface";
 import { ListDetail } from "../_components/list-detail";
-import { listLink } from "../_components/list-styles";
 
 export default async function PersonalListPage({
   params,
@@ -25,9 +23,6 @@ export default async function PersonalListPage({
   }
   return (
     <PageContainer>
-      <Link href="/lists" className={listLink}>
-        Back to personal lists
-      </Link>
       <ListDetail
         key={listId}
         listId={listId}

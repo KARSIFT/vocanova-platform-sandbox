@@ -1,8 +1,6 @@
-import Link from "@/ui/link";
-
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
-import { PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader, Surface } from "@/ui/surface";
 
 import { AccountDeletionForm } from "./_components/account-deletion-form";
 import { PersonalDataExport } from "./_components/personal-data-export";
@@ -28,29 +26,14 @@ export default async function SettingsAccountPage() {
 
   return (
     <PageContainer>
-      <div className="mb-[var(--spacing-md)] flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-neutral-900">Account</h1>
-        <Link
-          href="/settings"
-          className="text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-        >
-          Back to Settings
-        </Link>
-      </div>
+      <PageHeader
+        title="Account"
+        back={{ href: "/settings", label: "Back to Settings" }}
+        lede="Manage your sign-in and personal data."
+      />
 
-      <p className="text-base text-neutral-700">
-        Update your sign-in email, then finish with a confirmation link. You can
-        also delete your account from here.
-      </p>
-
-      <Surface
-        aria-labelledby="email-change-heading"
-        className="mt-[var(--spacing-lg)]"
-      >
-        <h2
-          id="email-change-heading"
-          className="text-lg font-semibold text-neutral-900"
-        >
+      <Surface aria-labelledby="email-change-heading">
+        <h2 id="email-change-heading" className="section-title">
           Sign-in email
         </h2>
         <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
@@ -81,7 +64,7 @@ export default async function SettingsAccountPage() {
 
       <section
         aria-labelledby="account-deletion-heading"
-        className="mt-[var(--spacing-lg)] rounded-md border border-red-200 bg-red-50 p-[var(--spacing-md)] shadow-sm"
+        className="mt-[var(--spacing-lg)] rounded-[1.25rem] border border-red-200 bg-red-50 p-[var(--spacing-md)] sm:p-[var(--spacing-lg)]"
       >
         <h2
           id="account-deletion-heading"

@@ -59,6 +59,7 @@ export function PersonalDataExport() {
 
   return (
     <Surface
+      tone="flat"
       aria-labelledby="personal-data-export-heading"
       className="mt-[var(--spacing-lg)]"
     >

@@ -2,7 +2,7 @@ import { StatusMessage } from "@/ui/status-message";
 import Link from "@/ui/link";
 import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { PageContainer } from "@/ui/surface";
+import { PageContainer, PageHeader } from "@/ui/surface";
 import { LessonPath } from "../_components/lesson-path";
 import { RecommendedLesson } from "../_components/lesson-recommendation";
 
@@ -33,53 +33,33 @@ export default async function CoursesPage() {
     requireAuthRedirect(error, "/courses");
   }
   return (
-    <PageContainer className="max-w-[72rem]">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="page-title">Situation courses</h1>
-          <p className="page-lede">
-            Short guided lessons for the places you use English.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-x-5">
-          <Link
-            href="/vocabulary"
-            className="inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800"
-          >
-            Find a word
-          </Link>
-          <Link
-            href="/words"
-            className="inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800"
-          >
-            Saved words
-          </Link>
-        </div>
-      </header>
+    <PageContainer width="wide">
+      <PageHeader
+        title="Situation courses"
+        lede="Short guided lessons for the places you use English."
+        actions={
+          <>
+            <Link href="/vocabulary" className="vn-text-link">
+              Find a word
+            </Link>
+            <Link href="/words" className="vn-text-link">
+              Saved words
+            </Link>
+          </>
+        }
+      />
       <RecommendedLesson
         data={recommendation?.data ?? null}
         browseHref="#journey-lessons"
         browseLabel={lessonResponse ? "All lessons" : "Explore situations"}
       />
       <nav aria-label="Ways to practise" className="my-5 flex flex-wrap gap-2">
-        {(
-          [
-            [
-              "/practice",
-              "Choose a practice",
-              "Remember words and revisit mistakes.",
-            ],
-            [
-              "/stories",
-              "Short stories",
-              "Follow a conversation and check its meaning.",
-            ],
-          ] as const
-        ).map(([href, label]) => (
-          <Link key={href} href={href} className="vn-chip-link">
-            <span className="block font-semibold">{label}</span>
-          </Link>
-        ))}
+        <Link href="/practice" className="vn-chip-link">
+          Choose a practice
+        </Link>
+        <Link href="/stories" className="vn-chip-link">
+          Short stories
+        </Link>
       </nav>
       {!lessonResponse && (
         <StatusMessage as="p" role="status" className="mb-4 text-neutral-700">
@@ -93,7 +73,7 @@ export default async function CoursesPage() {
           situations={response.data.items}
         />
         {!response.data.items.length && !lessonResponse?.data.items.length && (
-          <div className="py-8">
+          <div className="vn-empty">
             <h2 className="text-xl font-semibold text-neutral-900">
               New situations are on the way
             </h2>
@@ -110,16 +90,10 @@ export default async function CoursesPage() {
         )}
       </div>
       <div className="mt-6 flex flex-wrap gap-x-6 border-t border-neutral-200 pt-3">
-        <Link
-          href="/lists"
-          className="inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800"
-        >
+        <Link href="/lists" className="vn-text-link">
           Personal lists
         </Link>
-        <Link
-          href="/plan"
-          className="inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800"
-        >
+        <Link href="/plan" className="vn-text-link">
           Your learning plan
         </Link>
       </div>

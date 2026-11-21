@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 
 import { connectionRetryDestination } from "@/lib/connection-error";
 import { AuthShell } from "@/ui/auth-shell";
-import { Surface } from "@/ui/surface";
 import { actionClasses } from "@/ui/controls";
 
 export const metadata: Metadata = {
@@ -19,24 +18,18 @@ export default async function ConnectionErrorPage({
   const safeDestination = connectionRetryDestination(returnTo);
 
   return (
-    <AuthShell>
-      <Surface className="space-y-5">
-        <h1 className="text-2xl font-bold tracking-[-0.02em] text-neutral-900">
-          We couldn&apos;t connect
-        </h1>
-        <p className="text-base leading-7 text-neutral-700">
-          Vocanova is temporarily unavailable. Try again in a moment to
-          continue.
-        </p>
-        {/* A full navigation rechecks the session rather than reusing a cached
+    <AuthShell
+      title="We couldn't connect"
+      description="Vocanova is temporarily unavailable. Try again in a moment to continue."
+    >
+      {/* A full navigation rechecks the session rather than reusing a cached
             failed route transition. No private learner data is rendered here. */}
-        <a
-          href={safeDestination}
-          className={actionClasses("primary", "w-full sm:w-auto")}
-        >
-          Try again
-        </a>
-      </Surface>
+      <a
+        href={safeDestination}
+        className={actionClasses("primary", "justify-self-start")}
+      >
+        Try again
+      </a>
     </AuthShell>
   );
 }

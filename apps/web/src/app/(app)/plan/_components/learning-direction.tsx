@@ -17,7 +17,7 @@ import { handleApiError } from "@/lib/session";
 import { learningGoals, learningFocuses } from "@/lib/learning-direction";
 
 const action =
-  "vn-btn vn-btn-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
+  "vn-btn vn-btn-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 const input =
   "mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 
@@ -150,7 +150,7 @@ export function LearningDirection({
   return (
     <form
       aria-label="Learning direction"
-      className="w-full border-t border-primary-200 pt-5"
+      className="w-full border-t border-neutral-200 pt-5"
       onSubmit={(event) => {
         event.preventDefault();
         void save();
@@ -166,7 +166,7 @@ export function LearningDirection({
       {baseline ? (
         <>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <label className="font-semibold text-neutral-900">
+            <label className="min-w-0 font-semibold text-neutral-900">
               Learning goal
               <Select
                 value={goal}
@@ -188,7 +188,7 @@ export function LearningDirection({
                 ))}
               </Select>
             </label>
-            <label className="font-semibold text-neutral-900">
+            <label className="min-w-0 font-semibold text-neutral-900">
               Main focus
               <Select
                 value={focus}
@@ -213,7 +213,7 @@ export function LearningDirection({
           </div>
           {!retry && !reload && (
             <Button
-              variant="primary"
+              variant="secondary"
               type="submit"
               className={`${action} mt-4`}
               disabled={
@@ -255,7 +255,7 @@ export function LearningDirection({
       )}
       {retry && (
         <Button
-          variant="primary"
+          variant="secondary"
           type="button"
           disabled={busy}
           className={`${action} mt-3`}
@@ -266,7 +266,7 @@ export function LearningDirection({
       )}
       {(reload || !baseline) && (
         <Button
-          variant="primary"
+          variant="secondary"
           type="button"
           disabled={busy}
           className={`${action} mt-3`}

@@ -34,14 +34,12 @@ export function WordDetailContent({
   const difficultyLabel = wordDifficultyLabel(wordData.difficultyLevel);
   return (
     <>
-      <div className="mt-[var(--spacing-md)]">
+      <header className="mt-[var(--spacing-md)] min-w-0">
         {contextTitle ? (
-          <p className="mb-3 inline-flex rounded-full bg-secondary-50 px-3 py-1 text-sm font-semibold text-secondary-800">
-            {contextTitle}
-          </p>
+          <p className="page-eyebrow mb-2">{contextTitle}</p>
         ) : null}
         {/* Set like a dictionary entry: headword, then its kind of word. */}
-        <h1 className="headword text-[clamp(2.6rem,8vw,3.6rem)]">
+        <h1 className="headword text-[clamp(2.6rem,8vw,3.6rem)] [overflow-wrap:anywhere]">
           {wordData.text}
         </h1>
         {wordData.meanings.length === 0 && (
@@ -55,12 +53,17 @@ export function WordDetailContent({
             </span>
           ) : null}
         </p>
-      </div>
+      </header>
 
       <MeaningComparison word={wordData} />
 
-      <section className="mt-[var(--spacing-lg)]">
-        <h2 className="text-xl font-bold text-neutral-900">Meanings</h2>
+      <section
+        aria-labelledby="word-meanings-heading"
+        className="mt-[var(--spacing-lg)]"
+      >
+        <h2 id="word-meanings-heading" className="section-title">
+          Meanings
+        </h2>
         <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-md)]">
           {wordData.meanings.map((meaning, index) => {
             const additionalDefinition = getAdditionalDefinition(
@@ -83,7 +86,7 @@ export function WordDetailContent({
                 key={meaning.id}
                 id={meaningAnchor(meaning.id)}
                 tabIndex={-1}
-                className="scroll-mt-24 rounded-[1.5rem] border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-[var(--vn-shadow-card)] sm:p-[var(--spacing-lg)]"
+                className="learning-surface scroll-mt-24 p-[var(--spacing-md)] sm:p-[var(--spacing-lg)]"
               >
                 {/* Kind of word and the save toggle share one row so the
                     definition below keeps the full reading width. */}
@@ -93,9 +96,9 @@ export function WordDetailContent({
                       ? undefined
                       : `sentence-practice-${meaning.id}`
                   }
-                  className={`flex items-start justify-between gap-[var(--spacing-md)]${writingAvailable ? "" : " scroll-mt-24"}`}
+                  className={`flex flex-wrap items-center justify-between gap-x-[var(--spacing-md)] gap-y-2${writingAvailable ? "" : " scroll-mt-24"}`}
                 >
-                  <p className="pos pt-2.5 text-base">{meaning.partOfSpeech}</p>
+                  <p className="pos text-base">{meaning.partOfSpeech}</p>
                   <MeaningSaveButton
                     meaningId={meaning.id}
                     source={source}
@@ -159,9 +162,7 @@ export function WordDetailContent({
                 ) : null}
 
                 <details className="mt-4 border-t border-neutral-200 pt-2">
-                  <summary className="min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-                    Personal tools
-                  </summary>
+                  <summary className="vn-summary">Personal tools</summary>
                   <MeaningListEditor meaningId={meaning.id} />
                   <MeaningKnowledgeEditor
                     meaningId={meaning.id}

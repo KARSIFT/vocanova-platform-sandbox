@@ -415,7 +415,7 @@ export function ReviewSession({
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center justify-between">
+      <div className="review-progress-head">
         <p className="text-sm font-medium text-neutral-600">
           {remainingCount} word{remainingCount === 1 ? "" : "s"} remaining
         </p>

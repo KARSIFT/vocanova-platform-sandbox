@@ -1,4 +1,3 @@
-import Link from "@/ui/link";
 import { notFound } from "next/navigation";
 
 import { ApiResponseError } from "@vocanova/api-client";
@@ -8,7 +7,7 @@ import {
   getAdditionalDefinition,
   getPrimaryDefinition,
 } from "@/lib/word-definition";
-import { PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, PageHeader, Surface } from "@/ui/surface";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { LearningIntro } from "@/ui/learning-guide";
 import { WordPracticeDisclosure } from "../../_components/word-practice-disclosure";
@@ -76,41 +75,36 @@ export default async function SavedWordDetailPage({
 
   return (
     <PageContainer>
-      <Link
-        href="/words"
-        className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800"
+      <PageHeader
+        title={<span className="headword">{savedWord.wordText}</span>}
+        back={{ href: "/words", label: "Saved words" }}
+        actions={
+          <RemoveSavedWordButton
+            meaningId={savedWord.meaningId}
+            wordText={savedWord.wordText}
+            redirectTo="/words"
+          />
+        }
       >
-        Saved words
-      </Link>
-
-      <div className="mt-[var(--spacing-md)] flex flex-wrap items-start justify-between gap-[var(--spacing-md)]">
-        <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">
-            {savedWord.wordText}
-          </h1>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="pos">{savedWord.partOfSpeech}</span>
+          {statusLabel && (
+            <span className="text-sm font-semibold text-primary-700">
+              {statusLabel}
+            </span>
+          )}
           <ListenButton
             text={savedWord.wordText}
             meaningId={savedWord.meaningId}
           />
-          <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-            {savedWord.partOfSpeech}
-          </p>
-          {statusLabel ? (
-            <p className="mt-[var(--spacing-xs)] text-sm font-semibold text-primary-700">
-              {statusLabel}
-            </p>
-          ) : null}
         </div>
-        <RemoveSavedWordButton
-          meaningId={savedWord.meaningId}
-          wordText={savedWord.wordText}
-          redirectTo="/words"
-        />
-      </div>
+      </PageHeader>
 
-      <Surface className="mt-[var(--spacing-lg)]">
-        <h2 className="text-xl font-semibold text-neutral-900">Meaning</h2>
-        <p className="mt-[var(--spacing-sm)] text-base text-neutral-800">
+      <Surface aria-labelledby="saved-meaning-heading">
+        <h2 id="saved-meaning-heading" className="section-title">
+          Meaning
+        </h2>
+        <p className="mt-2 text-lg leading-snug text-neutral-900 [overflow-wrap:anywhere]">
           {getPrimaryDefinition(
             meaning.shortDefinition,
             meaning.learnerDefinition,
@@ -118,7 +112,7 @@ export default async function SavedWordDetailPage({
         </p>
         {additionalDefinition ? (
           <details className="mt-[var(--spacing-xs)] text-base text-neutral-600">
-            <summary className="min-h-11 cursor-pointer py-2 font-medium text-primary-700">
+            <summary className="vn-summary text-sm">
               Reference definition
             </summary>
             <p>{additionalDefinition}</p>
@@ -131,34 +125,33 @@ export default async function SavedWordDetailPage({
           meaningRevision={meaning.meaningRevision}
         />
         <MeaningTeaching meaning={meaning} />
-        <div className="mt-6">
-          <LearningIntro
-            title="Try this meaning in a sentence"
-            headingLevel={3}
-            description="Make your own example. Writing is optional, and you can edit your sentence after feedback."
-          />
-          <WordPracticeDisclosure>
-            <SentenceFeedback
-              targetWord={savedWord.wordText}
-              attemptId={savedWord.userWordId}
-              source="word_detail"
-              userId={currentUserResponse.data.id}
-              shortDefinition={savedWord.shortDefinition}
-            />
-          </WordPracticeDisclosure>
-        </div>
-
-        <details className="mt-4 border-t border-neutral-200 pt-2">
-          <summary className="min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-            Personal tools
-          </summary>
-          <MeaningListEditor meaningId={meaning.id} />
-          <MeaningKnowledgeEditor
-            meaningId={meaning.id}
-            initialKnown={meaning.selfReportedKnown}
-          />
-        </details>
       </Surface>
+      <section aria-labelledby="saved-word-practice-heading" className="mt-8">
+        <LearningIntro
+          id="saved-word-practice-heading"
+          title="Try this meaning in a sentence"
+          headingLevel={2}
+          description="Make your own example. Writing is optional, and you can edit your sentence after feedback."
+        />
+        <WordPracticeDisclosure>
+          <SentenceFeedback
+            targetWord={savedWord.wordText}
+            attemptId={savedWord.userWordId}
+            source="word_detail"
+            userId={currentUserResponse.data.id}
+            shortDefinition={savedWord.shortDefinition}
+          />
+        </WordPracticeDisclosure>
+      </section>
+
+      <details className="mt-6 border-t border-neutral-200">
+        <summary className="vn-summary">Personal tools</summary>
+        <MeaningListEditor meaningId={meaning.id} />
+        <MeaningKnowledgeEditor
+          meaningId={meaning.id}
+          initialKnown={meaning.selfReportedKnown}
+        />
+      </details>
 
       <MeaningComparison
         word={wordResponse.data.word}

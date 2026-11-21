@@ -176,11 +176,9 @@ export function PracticeEntry({
       />
       <details
         open={explicitSelection}
-        className="mt-8 border-t border-neutral-200 pt-3"
+        className="mt-4 rounded-2xl border border-neutral-200 bg-white px-4 sm:px-6"
       >
-        <summary className="min-h-12 cursor-pointer content-center rounded-lg font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700">
-          More practice
-        </summary>
+        <summary className="vn-summary py-3">More practice</summary>
         {lessonsUnavailable && (
           <StatusMessage
             as="p"
@@ -193,7 +191,7 @@ export function PracticeEntry({
         )}
         {hasVocabularySelection ? (
           <div className="mt-4 max-w-[40rem]">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-3">
               <label
                 htmlFor="practice-vocabulary"
                 className="font-semibold text-neutral-900"
@@ -238,7 +236,7 @@ export function PracticeEntry({
               ))}
             </Select>
             <details className="mt-1">
-              <summary className="min-h-11 cursor-pointer content-center text-sm text-neutral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+              <summary className="vn-summary text-sm">
                 About this selection
               </summary>
               <p
@@ -284,7 +282,7 @@ export function PracticeEntry({
             )}
           </div>
         )}
-        <div className="mt-4 divide-y divide-neutral-200 border-y border-neutral-200">
+        <ul className="vn-list mt-4">
           {(Object.keys(practiceModes) as PracticeMode[])
             .filter((mode) => mode !== "journey")
             .map((mode) => {
@@ -298,7 +296,7 @@ export function PracticeEntry({
                     : `${sessions.availableMistakes} ${sessions.availableMistakes === 1 ? "word is" : "words are"} ready for another try.`
                   : content.description;
               const label = (
-                <span className="min-w-0">
+                <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                   <span className="block text-lg font-semibold text-neutral-900">
                     {noMistakes ? content.title : content.startLabel}
                   </span>
@@ -311,36 +309,37 @@ export function PracticeEntry({
                 </span>
               );
               return noMistakes ? (
-                <div key={mode} className="px-3 py-4">
+                <li key={mode} className="vn-list-row">
                   {label}
-                </div>
+                </li>
               ) : (
-                <button
-                  key={mode}
-                  type="button"
-                  aria-label={content.startLabel}
-                  aria-describedby={`practice-mode-${mode}-description`}
-                  disabled={
-                    locked || (mode !== "mistakes" && unavailableSelection)
-                  }
-                  className="flex min-h-20 w-full items-center justify-between gap-4 rounded-lg px-3 py-4 text-left hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => void start(mode)}
-                >
-                  {label}
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="size-5 shrink-0 text-primary-700"
+                <li key={mode}>
+                  <button
+                    type="button"
+                    aria-label={content.startLabel}
+                    aria-describedby={`practice-mode-${mode}-description`}
+                    disabled={
+                      locked || (mode !== "mistakes" && unavailableSelection)
+                    }
+                    className="vn-list-row min-h-12 w-full text-left hover:enabled:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => void start(mode)}
                   >
-                    <path d="m9 5 7 7-7 7" />
-                  </svg>
-                </button>
+                    {label}
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="size-5 shrink-0 text-primary-700"
+                    >
+                      <path d="m9 5 7 7-7 7" />
+                    </svg>
+                  </button>
+                </li>
               );
             })}
-        </div>
+        </ul>
 
         <Link href="/lists" className={`${textLink} mt-2 text-sm`}>
           Manage personal lists
@@ -415,15 +414,10 @@ export function PracticeEntry({
           )}
           className="mt-4"
         >
-          <summary className="min-h-11 cursor-pointer content-center font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-            Recent practice
-          </summary>
-          <ul className="mt-2 divide-y divide-neutral-200">
+          <summary className="vn-summary">Recent practice</summary>
+          <ul className="vn-list mt-2">
             {manualSessions.map((session) => (
-              <li
-                key={session.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-3"
-              >
+              <li key={session.id} className="vn-list-row">
                 <div>
                   <p className="font-semibold text-neutral-900">
                     {practiceModes[session.mode].title}
