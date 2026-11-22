@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { DiscoveryFinished } from "./discovery-finished";
 import { useDiscoveryPosition } from "./use-discovery-position";
 import { DiscoveryNavigation } from "./discovery-navigation";
+import { discoveryDetailHref } from "./discovery-detail-route";
 import { DiscoveryWordDetails } from "./discovery-word-details";
 import {
   useEffect,
@@ -66,7 +67,9 @@ interface SavedChoice {
   rank?: number;
 }
 
-function SavedMeaning({ choice }: { choice: SavedChoice }) {
+function SavedMeaning({ choice, rank }: { choice: SavedChoice; rank: number }) {
+  const finished = choice.rank === undefined;
+
   return (
     <section aria-label="Saved meaning" className="mt-4">
       <LearningNote>
@@ -79,12 +82,30 @@ function SavedMeaning({ choice }: { choice: SavedChoice }) {
             choice.word.learnerDefinition,
           )}
         </p>
-        <Link
-          href={`/vocabulary/${encodeURIComponent(choice.word.wordSlug)}#sentence-practice-${choice.meaningId}`}
-          className="vn-text-link mt-2 inline-flex min-h-11 items-center"
-        >
-          Use {choice.word.wordText} in a sentence
-        </Link>
+        <div className="mt-2 flex flex-wrap gap-x-4">
+          <Link
+            href={discoveryDetailHref(
+              choice.word.wordSlug,
+              choice.meaningId,
+              rank,
+              { finished },
+            )}
+            className="vn-text-link inline-flex min-h-11 items-center"
+          >
+            Study this meaning
+          </Link>
+          <Link
+            href={discoveryDetailHref(
+              choice.word.wordSlug,
+              choice.meaningId,
+              rank,
+              { finished, writing: true },
+            )}
+            className="vn-text-link inline-flex min-h-11 items-center"
+          >
+            Use {choice.word.wordText} in a sentence
+          </Link>
+        </div>
       </LearningNote>
     </section>
   );
@@ -262,7 +283,7 @@ export function Discovery({
       ? savedChoice
       : null;
   const savedMeaning = confirmedSave ? (
-    <SavedMeaning choice={confirmedSave} />
+    <SavedMeaning choice={confirmedSave} rank={displayedRank ?? rank} />
   ) : null;
   const saveAnnouncement = (
     <StatusMessage
@@ -855,6 +876,8 @@ export function Discovery({
             <DiscoveryWordDetails
               key={`${item.meaningId}:${item.meaningRevision ?? ""}`}
               wordSlug={item.wordSlug}
+              rank={item.rank}
+              navigationLocked={navigationLocked}
               meaningId={item.meaningId}
               meaningRevision={item.meaningRevision}
               exampleSentence={item.exampleSentence}

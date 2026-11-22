@@ -3,6 +3,14 @@ package dailylesson
 // Exact authored revisions and reviewed sentence/alternative sets. Images use
 // the full approved publication catalog, independently of this cloze allowlist.
 var mixedRevisions = map[string]string{
+	"dea3518f-2df9-597e-a7ee-6b08c2354fb6": "17729686ddc74468ef386fb31811712d414f57b6fe40406452a475489d82e22a", // wear
+	"01a4148b-ebca-5551-95ae-e8f89e209a8f": "b4c75192d297d2527ecd1b43f0d2f001836ca4494d996a1a1860fbd2af1e611d", // tell
+	"551f5f50-dcba-5aff-83c8-010349b8196b": "4a95528e6497681809b336f4b36fa9cc5c1b9c3247b0a16e774130508651f3bc", // take
+	"8b59765a-f447-589a-97d2-902cdebd5162": "45368090eb8de464d30782083c8563956c79d351b680fb3a43d43c1b19c6d66c", // sleep
+	"3a072b9d-685a-5758-a547-546878c37f1a": "ac4a227ff04a3e53110677c530918b89256c2b57fd6786db6893428e782682bd", // see
+	"9e355fcd-9732-5cb3-bb95-48cd1cb07e53": "9c8f730754f78317d07d10f4236be61aa32c09e4a45a44042462c0f3df761541", // sing
+	"63415f8b-4919-56e8-8837-058cb9409003": "0319c9dbc9ab436d5acf638ae1ebfd4d8e2c513726714f7629ca4f72729391b4", // get
+	"9a130bcc-15aa-5532-99f8-8537cc1c4819": "b403c915655d4be0df3b6036b428e95cfbee3c5005add8f208d55bcff9b858f1", // eat
 	"2534b539-a80f-5001-b9a4-27a5e0679539": "445da3734da17ce98a160e46176790438f40b9b0d472f7a8e41efae2eaff4d84", // appetizer
 	"b20c1447-0e63-5712-9ae7-dd4aca9aeb85": "09555ca2e69146c3c12f263b81112bca8792a808b39f9538aed4771290b28c7d", // cash
 	"b548ade3-8682-521e-bf26-848526519854": "8dfe89e4fa92ac1533a3a19e125e44fb542e8fa6db67366d3ec797440d1be773", // form
@@ -26,6 +34,10 @@ type gapSet struct {
 }
 
 var gapSets = map[string]gapSet{
+	"551f5f50-dcba-5aff-83c8-010349b8196b": {Example: "Could you take this box to the kitchen?", IDs: []string{"551f5f50-dcba-5aff-83c8-010349b8196b", "8b59765a-f447-589a-97d2-902cdebd5162", "dea3518f-2df9-597e-a7ee-6b08c2354fb6", "9e355fcd-9732-5cb3-bb95-48cd1cb07e53"}},
+	"01a4148b-ebca-5551-95ae-e8f89e209a8f": {Example: "Please tell me when the meeting starts.", IDs: []string{"01a4148b-ebca-5551-95ae-e8f89e209a8f", "8b59765a-f447-589a-97d2-902cdebd5162", "dea3518f-2df9-597e-a7ee-6b08c2354fb6", "9a130bcc-15aa-5532-99f8-8537cc1c4819"}},
+	"3a072b9d-685a-5758-a547-546878c37f1a": {Example: "Can you see the sign from here?", IDs: []string{"3a072b9d-685a-5758-a547-546878c37f1a", "8b59765a-f447-589a-97d2-902cdebd5162", "dea3518f-2df9-597e-a7ee-6b08c2354fb6", "9a130bcc-15aa-5532-99f8-8537cc1c4819"}},
+	"63415f8b-4919-56e8-8837-058cb9409003": {Example: "Did you get the email with your new schedule?", IDs: []string{"63415f8b-4919-56e8-8837-058cb9409003", "8b59765a-f447-589a-97d2-902cdebd5162", "dea3518f-2df9-597e-a7ee-6b08c2354fb6", "9a130bcc-15aa-5532-99f8-8537cc1c4819"}},
 	"6a61d337-80e7-5d50-bc61-8b45b6a054a1": {Example: "Our flight leaves from gate twelve.", IDs: []string{"6a61d337-80e7-5d50-bc61-8b45b6a054a1", "58529fdd-9425-5aef-a8c7-bc1086be7080", "bee2408e-5991-5805-923c-6fba33ab7e7a", "2534b539-a80f-5001-b9a4-27a5e0679539"}},
 	"d990ce6e-4756-52e0-96e8-9926442963f2": {Example: "My key card stopped working.", IDs: []string{"d990ce6e-4756-52e0-96e8-9926442963f2", "58529fdd-9425-5aef-a8c7-bc1086be7080", "bee2408e-5991-5805-923c-6fba33ab7e7a", "2534b539-a80f-5001-b9a4-27a5e0679539"}},
 	"58529fdd-9425-5aef-a8c7-bc1086be7080": {Example: "The reading list is in the syllabus.", IDs: []string{"58529fdd-9425-5aef-a8c7-bc1086be7080", "6a61d337-80e7-5d50-bc61-8b45b6a054a1", "538cc7f5-983c-59cc-8664-173cefca65ad", "2534b539-a80f-5001-b9a4-27a5e0679539"}},

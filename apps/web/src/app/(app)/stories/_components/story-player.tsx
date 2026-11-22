@@ -23,6 +23,7 @@ import {
 } from "../../practice/_components/practice-styles";
 import { StoryAudio } from "./story-audio";
 import { StoryVocabularyHelp } from "./story-vocabulary";
+import { scenarioLessons } from "../scenario-lessons";
 import { StoryStart } from "./story-start";
 import { storySituationSlug } from "../../discover/[situation]/_components/unit-guide-content";
 
@@ -50,6 +51,9 @@ export function StoryPlayer({
   const focusTaskAfterRecovery = useRef(false);
   const priorStep = useRef(initialSession.currentStep?.id);
   const situationSlug = storySituationSlug(session.situation);
+  const scenario = scenarioLessons.find(
+    (entry) => entry.story === session.storyKey,
+  );
   const step = session.currentStep;
   const checked =
     session.feedback?.stepId === step?.id ? session.feedback : null;
@@ -204,7 +208,19 @@ export function StoryPlayer({
               points.
             </p>
             <div className="my-5 flex flex-wrap items-center gap-4">
-              <StoryStart storyKey={session.storyKey} repeat />
+              {scenario && (
+                <Link
+                  href={`/practice?mode=listening_choice&lesson=${scenario.lesson}#practice-mode-listening_choice`}
+                  className={primaryAction}
+                >
+                  Listen for these three words
+                </Link>
+              )}
+              <StoryStart
+                storyKey={session.storyKey}
+                repeat
+                secondary={!!scenario}
+              />
               <Link
                 href={`/stories/${encodeURIComponent(session.storyKey)}`}
                 className={textLink}

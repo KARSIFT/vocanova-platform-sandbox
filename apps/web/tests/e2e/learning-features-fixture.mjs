@@ -2,6 +2,7 @@
 // verified by the Go/PostgreSQL tests; this module is not production logic.
 import { randomUUID } from "node:crypto";
 import { handlePracticeSessions } from "./practice-sessions-fixture.mjs";
+import { scenarioLessons, showScenarioLessons } from "./scenario-lessons-fixture.mjs";
 import { savedVocabularyFixture } from "./saved-vocabulary-fixture.mjs";
 
 export async function handleLearningFeatures({
@@ -222,10 +223,23 @@ export async function handleLearningFeatures({
       ),
     });
   }
+  const startKey = url.pathname.match(/^\/api\/v1\/lessons\/([^/]+)\/sessions$/u)?.[1];
+  const sessionId = url.pathname.match(/^\/api\/v1\/lesson-sessions\/([^/]+)/u)?.[1];
+  state.scenarioLessonStates ??= new Map();
+  const currentScenarioKey = startKey ?? [...state.scenarioLessonStates.entries()].find(
+    ([, record]) => record.lesson?.id === sessionId && sessionId,
+  )?.[0];
+  const scenario = scenarioLessons.get(currentScenarioKey);
+  let lessonState = state;
+  if (scenario) {
+    if (!state.scenarioLessonStates.has(currentScenarioKey))
+      state.scenarioLessonStates.set(currentScenarioKey, {});
+    lessonState = state.scenarioLessonStates.get(currentScenarioKey);
+  }
   const rawWords = ["invite", "confirm", "reschedule"].map(
     (slug) => canonicalWords[slug],
   );
-  const words = rawWords.map((word) => ({
+  const words = scenario?.words ?? rawWords.map((word) => ({
     meaningId: word.meanings[0].id,
     wordText: word.text,
     wordSlug: word.slug,
@@ -234,7 +248,7 @@ export async function handleLearningFeatures({
     example: word.meanings[0].examples[0].exampleText,
     usageNote: word.meanings[0].usageNotes[0]?.noteText ?? "",
   }));
-  const summary = {
+  const summary = scenario?.summary ?? {
     key: "conversation-basics",
     version: "1",
     title: "Make a plan with a friend",
@@ -257,7 +271,7 @@ export async function handleLearningFeatures({
             : `Choose a word for this situation.`,
       ...(kind === "context"
         ? {
-            context: [
+            context: scenario ? word.definition : [
               "Ask your friend to come to dinner.",
               "Say that the meeting time is definite.",
               "Move your meeting to another day.",
@@ -273,15 +287,15 @@ export async function handleLearningFeatures({
             })),
     })),
   );
-  if (cookies.e2e_lesson_format === "mixed")
+  if (scenario || cookies.e2e_lesson_format === "mixed")
     steps = steps.map((step, index) =>
       index === 4
         ? {
             ...step,
             id: "typed-2",
             kind: "typed_recall",
-            prompt: "Type the word for a definite arrangement.",
-            context: "Say that the meeting time is definite.",
+            prompt: scenario ? "Type the word that matches this meaning." : "Type the word for a definite arrangement.",
+            context: scenario ? step.word.definition : "Say that the meeting time is definite.",
             choices: [],
           }
         : index === 5
@@ -363,10 +377,14 @@ export async function handleLearningFeatures({
       items: [
         {
           ...summary,
-          status: state.lesson?.status ?? "not_started",
-          completedSteps: state.lesson?.completedSteps ?? 0,
-          ...(state.lesson ? { sessionId: state.lesson.id } : {}),
+          status: lessonState.lesson?.status ?? "not_started",
+          completedSteps: lessonState.lesson?.completedSteps ?? 0,
+          ...(lessonState.lesson ? { sessionId: lessonState.lesson.id } : {}),
         },
+        ...(showScenarioLessons(cookies, state) ? [...scenarioLessons.values()].map(({summary}) => {
+          const session = state.scenarioLessonStates.get(summary.key)?.lesson;
+          return {...summary, status: session?.status ?? "not_started", completedSteps: session?.completedSteps ?? 0, ...(session ? {sessionId: session.id} : {})};
+        }) : []),
       ],
     });
   }
@@ -375,8 +393,8 @@ export async function handleLearningFeatures({
     url.pathname === `/api/v1/lessons/${summary.key}/sessions`
   ) {
     if (!checkCsrf(req, cookies, res, logLine)) return true;
-    state.lesson ??= {
-      ...(cookies.e2e_lesson_format === "mixed"
+    lessonState.lesson ??= {
+      ...(scenario || cookies.e2e_lesson_format === "mixed"
         ? { exerciseVersion: "mixed-recall-v1" }
         : {}),
       id: randomUUID(),
@@ -395,27 +413,27 @@ export async function handleLearningFeatures({
       firstAnswersCorrect: 0,
       questionsAnswered: 0,
     };
-    state.lessonReceipts ??= new Map();
-    state.lessonAnswered ??= new Set();
-    return send(200, state.lesson);
+    lessonState.lessonReceipts ??= new Map();
+    lessonState.lessonAnswered ??= new Set();
+    return send(200, lessonState.lesson);
   }
   if (url.pathname.startsWith("/api/v1/lesson-sessions/")) {
     const [id, action] = url.pathname
       .slice("/api/v1/lesson-sessions/".length)
       .split("/");
-    if (!state.lesson || state.lesson.id !== id)
+    if (!lessonState.lesson || lessonState.lesson.id !== id)
       return send(404, { detail: "not found" });
-    if (req.method === "GET" && !action) return send(200, state.lesson);
+    if (req.method === "GET" && !action) return send(200, lessonState.lesson);
     if (req.method === "POST" && action === "actions") {
       if (!checkCsrf(req, cookies, res, logLine)) return true;
       const body = await readJsonBody(req);
       const key = req.headers["idempotency-key"];
       const fingerprint = JSON.stringify(body);
-      if (state.lessonReceipts.has(key))
-        return state.lessonReceipts.get(key) === fingerprint
-          ? send(200, state.lesson)
+      if (lessonState.lessonReceipts.has(key))
+        return lessonState.lessonReceipts.get(key) === fingerprint
+          ? send(200, lessonState.lesson)
           : send(409, { detail: "changed action" });
-      const session = state.lesson;
+      const session = lessonState.lesson;
       const step = session.currentStep;
       if (
         !step ||
@@ -451,10 +469,10 @@ export async function handleLearningFeatures({
                 .replace(/\s+/g, " ")
                 .toLowerCase() === step.word.wordText.toLowerCase()
             : body.choiceId === step.word.meaningId;
-        if (!state.lessonAnswered.has(step.id)) {
+        if (!lessonState.lessonAnswered.has(step.id)) {
           session.questionsAnswered++;
           if (correct) session.firstAnswersCorrect++;
-          state.lessonAnswered.add(step.id);
+          lessonState.lessonAnswered.add(step.id);
         }
         session.feedback = {
           stepId: step.id,
@@ -469,7 +487,7 @@ export async function handleLearningFeatures({
         session.canContinue = correct;
       } else return send(400, { detail: "invalid action" });
       session.revision++;
-      state.lessonReceipts.set(key, fingerprint);
+      lessonState.lessonReceipts.set(key, fingerprint);
       return send(200, session);
     }
   }

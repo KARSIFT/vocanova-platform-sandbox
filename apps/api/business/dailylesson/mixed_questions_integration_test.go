@@ -31,6 +31,15 @@ func realMixedFixture(t *testing.T, meaning string) *fixture {
 		_, err = f.db.Exec(q, string(raw))
 		require.NoError(t, err)
 	}
+	var authored bool
+	require.NoError(t, f.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM word_meanings WHERE id=$1)`, meaning).Scan(&authored))
+	if !authored {
+		tx, err := f.db.BeginTx(t.Context(), nil)
+		require.NoError(t, err)
+		defer tx.Rollback()
+		require.NoError(t, knowledgecatalog.Seed(t.Context(), tx))
+		require.NoError(t, tx.Commit())
+	}
 	raw, err = os.ReadFile("../../../web/src/lib/meaning-pictures.json")
 	require.NoError(t, err)
 	var manifest map[string]struct{ MeaningID, MeaningRevision, Alt string }
@@ -228,7 +237,7 @@ func TestDailyMixedPicturesOutsideFormerAllowlist(t *testing.T) {
 }
 
 func TestDailyMixedEveryReviewedGapIsAvailableAndHidesTarget(t *testing.T) {
-	require.Len(t, gapSets, 12)
+	require.Len(t, gapSets, 16)
 	for id, gap := range gapSets {
 		t.Run(id, func(t *testing.T) {
 			f := realMixedFixture(t, id)

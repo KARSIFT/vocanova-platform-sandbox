@@ -109,6 +109,9 @@ test("typed recall saves normalized, wrong and assisted answers without review c
     assisted: false,
     answer: "invite",
   });
+  await expect(main(page).getByRole("link", { name: "Explore invite" })).toHaveAttribute(
+    "href", `/vocabulary/invite#meaning-${session.feedback!.meaningId}`,
+  );
   expect(session.firstAnswersCorrect).toBe(1);
   await page.reload();
   await expect(
@@ -127,6 +130,10 @@ test("typed recall saves normalized, wrong and assisted answers without review c
   await expect(
     main(page).getByText(session.feedback!.explanation, { exact: true }),
   ).toBeVisible();
+  await main(page).getByRole("textbox", { name: "Your answer" }).fill("cancel");
+  session = await act(page, "Check answer");
+  expect(session.feedback).toMatchObject({ correct: false, assisted: true });
+  await expect(main(page).getByRole("heading", { name: "Keep practising" })).toBeVisible();
   await main(page)
     .getByRole("textbox", { name: "Your answer" })
     .fill("confirm");
@@ -617,8 +624,8 @@ test("unsupported listening keeps its ungraded session and offers another mode",
     ),
   ).toBeVisible();
   await expect(
-    main(page).getByRole("link", { name: "Choose another practice mode" }),
-  ).toHaveAttribute("href", "/practice");
+    main(page).getByRole("link", { name: "Switch to typed recall" }),
+  ).toHaveAttribute("href", "/practice?mode=typed_recall#practice-mode-typed_recall");
   expect(await saved(page, session.id)).toMatchObject({
     revision: 0,
     completedSteps: 0,

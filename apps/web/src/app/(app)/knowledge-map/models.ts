@@ -7,7 +7,7 @@ import type {
 export type MapWord = KnowledgeMapItem;
 export type KnowledgeMapData = KnowledgeMap;
 
-const WORD_STATES = {
+export const WORD_STATES = {
   known: { code: "k", label: "Already know" },
   learning: { code: "l", label: "Learning" },
   learned: { code: "m", label: "Learned" },

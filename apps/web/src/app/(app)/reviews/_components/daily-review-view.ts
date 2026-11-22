@@ -1,4 +1,58 @@
-import type { DailyReviewGoal } from "@vocanova/api-client";
+import type { DailyLessonAction, DailyReviewGoal } from "@vocanova/api-client";
+
+/** The server's reason for an "I'm not sure" answer with help. */
+export const ASSISTED_REASON = "assisted";
+
+type CheckedFeedback = { correct: boolean; skipped: boolean; reason?: string };
+
+export function isAssistedFeedback(feedback: CheckedFeedback): boolean {
+  return !feedback.skipped && feedback.reason === ASSISTED_REASON;
+}
+
+/** Assisted help, deliberate skips, misses and correct answers stay distinct. */
+export function dailyFeedbackHeading(feedback: CheckedFeedback): string {
+  if (feedback.skipped)
+    return feedback.reason === "already_known"
+      ? "Already marked as known"
+      : feedback.reason === "already_reviewed"
+        ? "Already reviewed elsewhere"
+        : feedback.reason === "removed"
+          ? "This word has changed"
+          : "Skipped for now";
+  if (isAssistedFeedback(feedback)) return "Here’s the meaning";
+  return feedback.correct ? "Correct" : "Not quite";
+}
+
+/**
+ * "I'm not sure" reuses the existing answer contract: help requested and no
+ * choice. The server schedules it like a miss and grants no credit or effort.
+ */
+export function unsureAction(
+  stepId: string,
+  expectedRevision: number,
+  clientActionId: string,
+): DailyLessonAction {
+  return {
+    stepId,
+    expectedRevision,
+    clientActionId,
+    action: "answer",
+    wasHintUsed: true,
+  };
+}
+
+export const MISTAKES_PRACTICE_HREF =
+  "/practice?mode=mistakes#practice-mode-mistakes";
+
+/** Link straight to Mistakes only when the server confirms one is available. */
+export function completionPracticeLink(availableMistakes?: number): {
+  href: string;
+  label: string;
+} {
+  return availableMistakes && availableMistakes > 0
+    ? { href: MISTAKES_PRACTICE_HREF, label: "Practice your mistakes" }
+    : { href: "/practice", label: "Today’s practice" };
+}
 
 /** Confirmed effort and a session's status are independent of recall accuracy. */
 export function dailyReviewView({

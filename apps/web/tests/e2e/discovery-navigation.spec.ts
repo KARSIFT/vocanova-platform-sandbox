@@ -1044,3 +1044,66 @@ for (const { choice, partial } of [
     await expect(page).toHaveURL(/\/discovery\?band=12&word=1101&active=1$/);
   });
 }
+
+for (const theme of ["light", "dark"] as const) {
+  test(`scan a range by knowledge state and return to the exact card in ${theme}`, async ({ page, baseURL }) => {
+    await page.context().addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+      { name: "vocanova_theme", value: theme, url: baseURL! },
+      { name: "e2e_knowledge_map", value: "mixed-progress", url: baseURL! },
+      { name: "e2e_discovery_detail", value: "pour", url: baseURL! },
+      { name: "e2e_vocabulary", value: "multiple-meanings", url: baseURL! },
+    ]);
+    const decisions: string[] = [];
+    page.on("request", (req) => {
+      if (req.url().endsWith("/knowledge-map/decisions")) decisions.push(req.method());
+    });
+    await page.goto("/discovery?band=1&word=2&active=1");
+    if (theme === "dark") {
+      await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+    }
+    await page.getByRole("button", { name: "Choose a word" }).click();
+    const picker = page.getByRole("dialog", { name: "Choose a word" });
+    const grid = picker.getByRole("button", { name: "Grid view" });
+    await grid.press("Enter");
+    await expect(grid).toHaveAttribute("aria-pressed", "true");
+    const state = picker.getByRole("combobox", { name: "Knowledge state" });
+    await state.selectOption("known");
+    await expect(picker.getByRole("listitem")).toHaveCount(1);
+    await expect(picker.getByRole("listitem")).toContainText("the");
+    await state.selectOption("learning");
+    await expect(picker.getByRole("listitem")).toHaveCount(1);
+    await expect(picker.getByRole("listitem")).toContainText("Map word 3");
+    await state.selectOption("unseen");
+    await expect(picker.getByRole("listitem")).toHaveCount(97);
+    await state.selectOption("learned");
+    const search = picker.getByRole("searchbox", { name: "Filter words" });
+    await search.fill("no match");
+    await expect(picker.getByRole("status")).toHaveText("No words match.");
+    await search.fill("pour");
+    const result = picker.getByRole("button", { name: /12 pour Learned/ });
+    await pressTab(page);
+    await expect(state).toBeFocused();
+    await pressTab(page);
+    await expect(grid).toBeFocused();
+    await pressTab(page);
+    await expect(result).toBeFocused();
+    await expect.poll(() => result.evaluate((button) => {
+      const rect = button.getBoundingClientRect();
+      const target = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return rect.left >= 0 && rect.right <= innerWidth && rect.height >= 44 &&
+        !!target && button.contains(target);
+    })).toBe(true);
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("heading", { name: "pour", exact: true })).toBeFocused();
+    await expect(page).toHaveURL(/band=1&word=12&active=1&revisit=1$/);
+    await page.getByText("Word details & other meanings", { exact: true }).press("Enter");
+    await page.getByRole("link", { name: "Open verb meaning 1" }).click();
+    await expect(page).toHaveURL(/\/vocabulary\/pour\?fromDiscovery=12#meaning-mean-pour-second$/);
+    await expect(page.locator("#meaning-mean-pour-second")).toContainText("to arrive in large numbers");
+    await page.getByRole("link", { name: "Back to Discovery" }).click();
+    await expect(page).toHaveURL(/band=1&word=12&active=1&revisit=1$/);
+    await expect(page.getByRole("heading", { name: "pour", exact: true })).toBeVisible();
+    expect(decisions).toEqual([]);
+  });
+}

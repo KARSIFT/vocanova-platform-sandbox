@@ -12,8 +12,8 @@ test.beforeEach(async ({ context, baseURL }) => {
     { name: "vocanova_csrf", value: randomUUID(), url: baseURL },
   ]);
 });
-async function start(page: Page) {
-  await page.goto("/stories/a-quiet-lunch");
+async function start(page: Page, story = "a-quiet-lunch") {
+  await page.goto(`/stories/${story}`);
   const response = page.waitForResponse(
     (r) =>
       r.request().method() === "POST" &&
@@ -85,7 +85,7 @@ test("story progression focuses the new line and current question instead of the
   await expect(main(page).getByRole("radio").first()).toBeEnabled();
 });
 
-test("six original situations, full transcript, vocabulary and optional audio", async ({
+test("original situations, full transcript, vocabulary and optional audio", async ({
   page,
   context,
   baseURL,
@@ -107,6 +107,11 @@ test("six original situations, full transcript, vocabulary and optional audio", 
     "A better fit",
     "Plans for Saturday",
     "A room for tonight",
+    "Before the team meeting",
+    "A new gate",
+    "Dinner to go",
+    "The lamp that went dark",
+    "A parcel next door",
   ])
     await expect(
       main(page).getByRole("heading", { name: title, exact: true }),
@@ -148,6 +153,41 @@ test("six original situations, full transcript, vocabulary and optional audio", 
     ),
   ).toBe(true);
 });
+test("an airport dialogue reply survives reload and transfers to its three-word listening set", async ({ page }) => {
+  let session = await start(page, "a-new-gate");
+  for (let i = 0; i < 4; i++) await act(page);
+  await main(page).getByRole("radio", {name: "The flight number.", exact: true}).check();
+  await act(page, "Check answer");
+  for (let i = 0; i < 3; i++) session = await act(page);
+  expect(session.currentStep?.kind).toBe("dialogue_reply");
+  await main(page).getByRole("radio", { name: /Take our bags to flight 240/ }).check();
+  await act(page, "Check answer");
+  await page.reload();
+  await expect(main(page).getByText("Let's try that again.", {exact: true})).toBeVisible();
+  await main(page).getByRole("radio", { name: /Bring our luggage to gate nine/ }).check();
+  session = await act(page, "Check again");
+  expect(session.firstAnswersCorrect).toBe(1);
+  for (let i = 0; i < 3; i++) await act(page);
+  await main(page).getByRole("radio", {name: "boarding pass", exact: true}).check();
+  await act(page, "Check answer");
+  session = await act(page, "Finish story");
+  expect(session).toMatchObject({status: "completed", questionsAnswered: 3, firstAnswersCorrect: 2});
+  const listen = main(page).getByRole("link", { name: "Listen for these three words" });
+  await expect(listen).toHaveAttribute("href", "/practice?mode=listening_choice&lesson=airport#practice-mode-listening_choice");
+  await listen.click();
+  await expect(main(page).getByLabel("Practice vocabulary", { exact: true })).toHaveValue("airport");
+  const opened = page.waitForResponse((response) =>
+    response.request().method() === "POST" &&
+    new URL(response.url()).pathname === "/api/v1/practice-sessions",
+  );
+  await main(page).getByRole("button", { name: "Start listening practice", exact: true }).click();
+  const practice = await (await opened).json();
+  expect(practice).toMatchObject({
+    mode: "listening_choice", lessonKey: "airport", totalSteps: 3,
+    currentStep: { speechText: "boarding pass", pronunciationMeaningId: "8a6ec801-3292-5fc2-bfb3-242ac405d891" },
+  });
+});
+
 test("wrong correction and correct retry, reload, completion and independent repeat", async ({
   page,
 }) => {

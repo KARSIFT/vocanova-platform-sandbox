@@ -39,7 +39,11 @@ test("Home opens optional Mistakes practice when a meaning needs another try", a
   expect(missed.ok()).toBe(true);
   await page.reload();
   await expect(mistakes).toBeVisible();
-  await expect(page.getByText("1 meaning is ready for a second try.")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("1 meaning is ready for a second try.", {
+      exact: true,
+    }),
+  ).toBeVisible();
   await mistakes.click();
   await expect(page).toHaveURL(/\/practice\?mode=mistakes#practice-mode-mistakes$/);
   await expect(page.getByRole("button", { name: "Practise past mistakes" })).toBeVisible();

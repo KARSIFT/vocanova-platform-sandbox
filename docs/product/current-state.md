@@ -1,5 +1,20 @@
 # Vocanova current product state
 
+## Discovery, Review and scenario practice — 23 November 2026
+
+Discovery offers a card-by-card path and a browsable grid with progress filters.
+Learners can open the exact meaning in Vocabulary and return to their selected
+Discovery position. A due Review can reveal the meaning without earning recall
+credit. Confirmed wrong answers can lead to a focused Mistakes activity from
+Review or Home. Each correction uses a saved source receipt and a frozen prompt.
+
+Practice offers focused listening and typed recall for a course lesson or saved
+list, with an alternative when audio is unavailable. Five original stories cover
+an airport, a meeting, a delivery, a restaurant and returning a purchase. Stories
+include choosing a reply in context and link to listening with the same lesson
+words. The [hands-on audit](wordup-duolingo-hands-on-audit.md) records the
+WordUp and Duolingo behaviors that informed these changes.
+
 ## Discovery and review teaching — 22 November 2026
 
 Discovery lets learners open word details on the card before choosing **Learn**

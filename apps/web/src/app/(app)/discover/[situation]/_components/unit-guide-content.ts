@@ -378,6 +378,9 @@ const storySituations: Readonly<Record<string, string>> = {
   shopping: "shopping",
   friends: "daily-conversation",
   hotel: "hotel-check-in",
+  airport: "airport",
+  delivery: "deliveries",
+  meeting: "work-meeting",
 };
 export function storySituationSlug(situation: string): string | undefined {
   return storySituations[situation];

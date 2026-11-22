@@ -7,14 +7,19 @@ import { useRouter } from "next/navigation";
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
-import { primaryAction } from "../../practice/_components/practice-styles";
+import {
+  primaryAction,
+  secondaryAction,
+} from "../../practice/_components/practice-styles";
 
 export function StoryStart({
   storyKey,
   repeat = false,
+  secondary = false,
 }: {
   storyKey: string;
   repeat?: boolean;
+  secondary?: boolean;
 }) {
   const router = useRouter();
   const key = useRef<string | null>(null);
@@ -50,9 +55,9 @@ export function StoryStart({
   return (
     <div>
       <Button
-        variant="primary"
+        variant={secondary ? "secondary" : "primary"}
         type="button"
-        className={primaryAction}
+        className={secondary ? secondaryAction : primaryAction}
         disabled={busy}
         onClick={() => void start()}
       >

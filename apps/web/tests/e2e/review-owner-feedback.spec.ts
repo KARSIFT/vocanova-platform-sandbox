@@ -177,6 +177,34 @@ test("checked teaching restores after a real synthetic session reload", async ({
   await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
 });
 
+test("unsure reveals the meaning and survives reload without recall credit", async ({ page }) => {
+  await setup(page);
+  await page.goto("/review");
+  await page.getByRole("button", { name: "Start review", exact: true }).click();
+  const response = page.waitForResponse((value) =>
+    value.request().method() === "POST" &&
+    /\/daily-lessons\/[^/]+\/actions$/.test(new URL(value.url()).pathname)
+  );
+  const unsure = page.getByRole("button", { name: "I’m not sure", exact: true });
+  await unsure.focus();
+  await page.keyboard.press("Enter");
+  const checked = await response;
+  expect(checked.ok()).toBe(true);
+  expect(checked.request().postDataJSON()).toMatchObject({ action: "answer", wasHintUsed: true });
+  expect(checked.request().postDataJSON()).not.toHaveProperty("choiceId");
+  expect(await checked.json()).toMatchObject({
+    feedback: { reason: "assisted", credited: false, correct: false, skipped: false },
+    goal: { reviewed: 0 },
+  });
+  const result = page.getByRole("status").filter({ hasText: "Here’s the meaning" });
+  await expect(result).toBeVisible();
+  await page.reload();
+  await expect(result).toBeVisible();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(unsure).toBeVisible();
+  await expect(result).toHaveCount(0);
+});
+
 for (const theme of ["light", "dark"] as const) {
   test(`mixed review choices support keyboard and 200 percent text in ${theme}`, async ({ page }) => {
     const value = lesson();

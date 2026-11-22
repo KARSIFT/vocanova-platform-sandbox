@@ -170,6 +170,16 @@ export async function handleDailyDiscovery({
           ...(rank === 1
             ? { exampleSentence: "The bus to the station is late again." }
             : {}),
+          // Let one read-only browsing fixture open both ranked and canonical views.
+          ...(rank === 12 && cookies.e2e_discovery_detail === "pour" ? {
+            meaningId: "mean-pour",
+            wordId: "word-pour",
+            wordText: "pour",
+            wordSlug: "pour",
+            partOfSpeech: "verb",
+            shortDefinition: "to make liquid flow into a container",
+            exampleSentence: "Could you pour me a cup of coffee?",
+          } : {}),
           selfReportedKnown: entry?.decision === "known",
           saved: entry?.decision === "learn",
           ...(!legacyProgress && entry?.learned ? { learned: true } : {}),
@@ -406,7 +416,8 @@ export async function handleDailyDiscovery({
       session.completedAt = new Date().toISOString();
     } else session.currentStep = step(words[session.completedWords]);
   } else if (["answer", "skip"].includes(body.action) && !session.feedback) {
-    const correct = body.action === "answer" && body.choiceId === "meaning-a";
+    const assisted = body.action === "answer" && body.wasHintUsed === true;
+    const correct = body.action === "answer" && !assisted && body.choiceId === "meaning-a";
     state.dailyDeferredMeaningIds.add(word.meaningId);
     if (body.action === "answer") {
       if (!body.wasHintUsed) state.dailyEffortWordIds.add(word.wordId ?? word.meaningId);
@@ -433,12 +444,12 @@ export async function handleDailyDiscovery({
       stepId: session.currentStep.id,
       correct,
       answer: word.shortDefinition,
-      explanation: "",
+      explanation: assisted ? "You practised this meaning with help." : "",
       meaningId: word.meaningId,
       wordText: word.wordText,
       credited: correct,
       skipped: body.action === "skip",
-      reason: body.action === "skip" ? "learner_skip" : undefined,
+      reason: assisted ? "assisted" : body.action === "skip" ? "learner_skip" : undefined,
       correctChoiceId: "meaning-a",
       selectedChoiceId: body.action === "answer" ? body.choiceId : undefined,
     };

@@ -26,6 +26,7 @@ export function PracticeEntry({
   initialSessions,
   lessons,
   initialLessonKey,
+  requestedMode,
   initialLists,
   initialListId,
   explicitSelection = false,
@@ -34,6 +35,7 @@ export function PracticeEntry({
   initialSessions: PracticeSessionsResponse | null;
   lessons: LessonSummary[];
   initialLessonKey: string;
+  requestedMode?: PracticeMode;
   initialLists: WordListSummary[] | null;
   initialListId: string;
   explicitSelection?: boolean;
@@ -48,6 +50,7 @@ export function PracticeEntry({
   const selectedListId = selection.startsWith("list:")
     ? selection.slice(5)
     : "";
+  const selectedLesson = lessons.find((lesson) => lesson.key === selection);
   const selectedList = lists?.find((item) => item.id === selectedListId);
   const hasVocabularySelection = Boolean(
     lessons.length > 0 || lists?.length || selectedListId,
@@ -68,6 +71,37 @@ export function PracticeEntry({
   const locked = busy || needsRetry || needsRefresh || expired.current;
   const manualSessions =
     sessions?.items.filter((item) => item.mode !== "journey") ?? [];
+
+  const focusedMode = requestedMode === "journey" ? undefined : requestedMode;
+  const modes: PracticeMode[] = [
+    "typed_recall",
+    "listening_choice",
+    "mistakes",
+  ];
+  const orderedModes = focusedMode
+    ? [focusedMode, ...modes.filter((mode) => mode !== focusedMode)]
+    : modes;
+  const resume = manualSessions.find(
+    (item) =>
+      item.mode === focusedMode &&
+      item.status === "in_progress" &&
+      (item.mode === "mistakes" ||
+        ((item.listId ?? "") === selectedListId &&
+          (item.lessonKey ?? "") === (selectedListId ? "" : selection))),
+  );
+  const recentSessions = manualSessions.filter(
+    (item) => item.id !== resume?.id,
+  );
+  const personalPath = (
+    <div id="practice-journey" className="scroll-mt-24">
+      <PracticeJourney
+        journey={sessions?.journey ?? null}
+        busy={locked}
+        onStart={() => void start("journey")}
+        onRefresh={() => void loadSessions()}
+      />
+    </div>
+  );
 
   async function start(mode?: PracticeMode) {
     if (inFlight.current || needsRefresh || expired.current) return;
@@ -168,14 +202,9 @@ export function PracticeEntry({
       <h2 id="focused-practice-heading" className="sr-only">
         Remember your words
       </h2>
-      <PracticeJourney
-        journey={sessions?.journey ?? null}
-        busy={locked}
-        onStart={() => void start("journey")}
-        onRefresh={() => void loadSessions()}
-      />
+      {!focusedMode && personalPath}
       <details
-        open={explicitSelection}
+        open={explicitSelection || Boolean(focusedMode)}
         className="mt-4 rounded-2xl border border-neutral-200 bg-white px-4 sm:px-6"
       >
         <summary className="vn-summary py-3">More practice</summary>
@@ -251,6 +280,33 @@ export function PracticeEntry({
             </details>
           </div>
         ) : null}
+        {selectedLesson && (
+          <div className="mt-4 rounded-xl border border-neutral-200 p-4">
+            <h3 className="font-semibold text-neutral-900">
+              {selectedLesson.title}
+            </h3>
+            <p className="mt-1 text-sm text-neutral-700">
+              {selectedLesson.description}
+            </p>
+            <p className="mt-2 text-sm text-neutral-600">
+              {selectedLesson.wordCount}{" "}
+              {selectedLesson.wordCount === 1 ? "word" : "words"} ·{" "}
+              {selectedLesson.status === "completed"
+                ? "Lesson complete"
+                : selectedLesson.status === "in_progress"
+                  ? `${selectedLesson.completedSteps} of ${selectedLesson.stepCount} steps completed`
+                  : `${selectedLesson.stepCount} lesson steps`}
+            </p>
+            <Link
+              href={`/learn/${encodeURIComponent(selectedLesson.key)}`}
+              className={textLink}
+            >
+              {selectedLesson.status === "in_progress"
+                ? "Resume situation lesson"
+                : "Open situation lesson"}
+            </Link>
+          </div>
+        )}
         {selectedList && (
           <p className="mt-3 text-neutral-700">
             Selected list: {selectedList.name}. {selectedList.usableMemberCount}{" "}
@@ -283,68 +339,103 @@ export function PracticeEntry({
           </div>
         )}
         <ul className="vn-list mt-4">
-          {(Object.keys(practiceModes) as PracticeMode[])
-            .filter((mode) => mode !== "journey")
-            .map((mode) => {
-              const content = practiceModes[mode];
-              const noMistakes =
-                mode === "mistakes" && sessions?.availableMistakes === 0;
-              const description =
-                mode === "mistakes" && sessions
-                  ? noMistakes
-                    ? "No past mistakes to revisit right now."
-                    : `${sessions.availableMistakes} ${sessions.availableMistakes === 1 ? "word is" : "words are"} ready for another try.`
-                  : content.description;
-              const label = (
-                <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-                  <span className="block text-lg font-semibold text-neutral-900">
-                    {noMistakes ? content.title : content.startLabel}
-                  </span>
-                  <span
-                    id={`practice-mode-${mode}-description`}
-                    className="mt-1 block text-sm font-normal text-neutral-600"
-                  >
-                    {description}
-                  </span>
+          {orderedModes.map((mode) => {
+            const content = practiceModes[mode];
+            const noMistakes =
+              mode === "mistakes" && sessions?.availableMistakes === 0;
+            const description =
+              mode === "mistakes" && sessions
+                ? noMistakes
+                  ? "No past mistakes to revisit right now."
+                  : `${sessions.availableMistakes} ${sessions.availableMistakes === 1 ? "word is" : "words are"} ready for another try.`
+                : content.description;
+            const label = (
+              <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                <span className="block text-lg font-semibold text-neutral-900">
+                  {noMistakes ? content.title : content.startLabel}
                 </span>
-              );
-              return noMistakes ? (
-                <li key={mode} className="vn-list-row">
-                  {label}
-                </li>
-              ) : (
-                <li key={mode}>
-                  <button
-                    type="button"
-                    aria-label={content.startLabel}
-                    aria-describedby={`practice-mode-${mode}-description`}
-                    disabled={
-                      locked || (mode !== "mistakes" && unavailableSelection)
-                    }
-                    className="vn-list-row min-h-12 w-full text-left hover:enabled:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={() => void start(mode)}
+                <span
+                  id={`practice-mode-${mode}-description`}
+                  className="mt-1 block text-sm font-normal text-neutral-600"
+                >
+                  {description}
+                </span>
+              </span>
+            );
+            if (resume && resume.mode === mode) {
+              return (
+                <li
+                  key={mode}
+                  id={`practice-mode-${mode}`}
+                  className="scroll-mt-24"
+                >
+                  <Link
+                    href={`/practice/session/${encodeURIComponent(resume.id)}`}
+                    className="vn-list-row min-h-12"
                   >
-                    {label}
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="size-5 shrink-0 text-primary-700"
-                    >
-                      <path d="m9 5 7 7-7 7" />
-                    </svg>
-                  </button>
+                    <span>
+                      <span className="block font-semibold text-neutral-900">
+                        {mode === "mistakes"
+                          ? "Resume mistake practice"
+                          : mode === "typed_recall"
+                            ? "Resume typed recall"
+                            : "Resume listening practice"}
+                      </span>
+                      <span className="block text-sm text-neutral-600">
+                        {resume.completedSteps} of {resume.totalSteps} questions
+                        completed
+                      </span>
+                    </span>
+                  </Link>
                 </li>
               );
-            })}
+            }
+            return noMistakes ? (
+              <li
+                key={mode}
+                id={`practice-mode-${mode}`}
+                className="vn-list-row scroll-mt-24"
+              >
+                {label}
+              </li>
+            ) : (
+              <li
+                key={mode}
+                id={`practice-mode-${mode}`}
+                className="scroll-mt-24"
+              >
+                <button
+                  type="button"
+                  aria-label={content.startLabel}
+                  aria-describedby={`practice-mode-${mode}-description`}
+                  disabled={
+                    locked || (mode !== "mistakes" && unavailableSelection)
+                  }
+                  className="vn-list-row min-h-12 w-full text-left hover:enabled:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => void start(mode)}
+                >
+                  {label}
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="size-5 shrink-0 text-primary-700"
+                  >
+                    <path d="m9 5 7 7-7 7" />
+                  </svg>
+                </button>
+              </li>
+            );
+          })}
         </ul>
 
         <Link href="/lists" className={`${textLink} mt-2 text-sm`}>
           Manage personal lists
         </Link>
       </details>
+      {focusedMode && personalPath}
       {busy && (
         <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
           {openedSession ? "Opening your practice…" : "Loading your practice…"}
@@ -407,16 +498,16 @@ export function PracticeEntry({
         </div>
       )}
 
-      {sessions && manualSessions.length > 0 && (
+      {sessions && recentSessions.length > 0 && (
         <details
-          open={manualSessions.some(
+          open={recentSessions.some(
             (session) => session.status !== "completed",
           )}
           className="mt-4"
         >
           <summary className="vn-summary">Recent practice</summary>
           <ul className="vn-list mt-2">
-            {manualSessions.map((session) => (
+            {recentSessions.map((session) => (
               <li key={session.id} className="vn-list-row">
                 <div>
                   <p className="font-semibold text-neutral-900">

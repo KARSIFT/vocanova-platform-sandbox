@@ -20,9 +20,13 @@ import { SessionActions } from "@/ui/session";
 import { DailyLessonTeaching } from "./daily-lesson-teaching";
 import { DailyLessonChoices } from "./daily-lesson-choices";
 import {
+  completionPracticeLink,
+  dailyFeedbackHeading,
   dailyReviewView,
+  isAssistedFeedback,
   relativeReviewDate,
   reviewGoalDayChanged,
+  unsureAction,
 } from "./daily-review-view";
 import { ReviewSchedule } from "./review-schedule";
 
@@ -77,6 +81,11 @@ export function DailyLessonPlayer({
   const [conflict, setConflict] = useState(false);
   const [completionCheck, setCompletionCheck] =
     useState<CompletionCheck | null>(null);
+  // Optional, server-confirmed Mistakes availability for the completed lesson.
+  const [mistakes, setMistakes] = useState<{
+    sessionId: string;
+    available: number;
+  }>();
   const completionGeneration = useRef(0);
   const inFlight = useRef(false);
   const startKey = useRef<string | null>(null);
@@ -113,6 +122,12 @@ export function DailyLessonPlayer({
   const nextOpportunity = goal?.nextReviewAt
     ? relativeReviewDate(goal.nextReviewAt, goal.timeZone ?? deviceTimeZone)
     : undefined;
+  const practiceLink = completionPracticeLink(
+    mistakes && mistakes.sessionId === session?.id
+      ? mistakes.available
+      : undefined,
+  );
+  const assisted = feedback ? isAssistedFeedback(feedback) : false;
 
   useEffect(() => {
     try {
@@ -271,6 +286,19 @@ export function DailyLessonPlayer({
     const generation = ++completionGeneration.current;
     const identity = { sessionId: session.id, revision: session.revision };
     setCompletionCheck({ ...identity, status: "loading" });
+    // Mistakes availability is optional: a failed read keeps general practice.
+    void createApiClient()
+      .listPracticeSessions()
+      .then(({ data }) => {
+        if (active && generation === completionGeneration.current)
+          setMistakes({
+            sessionId: identity.sessionId,
+            available: data.availableMistakes,
+          });
+      })
+      .catch(() => {
+        /* Keep the general practice link. */
+      });
     void createApiClient()
       .getCurrentDailyLesson()
       .then(({ data }) => {
@@ -424,20 +452,24 @@ export function DailyLessonPlayer({
     }
   }
 
-  async function submit(action?: DailyLessonAction["action"]) {
+  async function submit(action?: DailyLessonAction["action"] | "unsure") {
     if (inFlight.current || conflict || !session || !step) return;
     if (!pending.current) {
       if (!action || (action === "answer" && !choice)) return;
-      pending.current = {
-        stepId: step.id,
-        expectedRevision: session.revision,
-        clientActionId: crypto.randomUUID(),
-        action,
-        ...(action === "answer" ? { choiceId: choice } : {}),
-        ...(action === "continue" && nextReview !== "automatic"
-          ? { nextReview }
-          : {}),
-      };
+      // The pending request is reused unchanged by "Retry same answer".
+      pending.current =
+        action === "unsure"
+          ? unsureAction(step.id, session.revision, crypto.randomUUID())
+          : {
+              stepId: step.id,
+              expectedRevision: session.revision,
+              clientActionId: crypto.randomUUID(),
+              action,
+              ...(action === "answer" ? { choiceId: choice } : {}),
+              ...(action === "continue" && nextReview !== "automatic"
+                ? { nextReview }
+                : {}),
+            };
     }
     const request = pending.current;
     inFlight.current = true;
@@ -720,10 +752,10 @@ export function DailyLessonPlayer({
             </ActionLink>
             <ActionLink
               variant="secondary"
-              href="/practice"
+              href={practiceLink.href}
               className={secondary}
             >
-              Today’s practice
+              {practiceLink.label}
             </ActionLink>
           </div>
         </section>
@@ -817,17 +849,7 @@ export function DailyLessonPlayer({
               className="mt-5 rounded-xl border border-primary-200 bg-primary-50 p-4 text-neutral-900"
             >
               <p className="text-lg font-bold">
-                {feedback.skipped
-                  ? feedback.reason === "already_known"
-                    ? "Already marked as known"
-                    : feedback.reason === "already_reviewed"
-                      ? "Already reviewed elsewhere"
-                      : feedback.reason === "removed"
-                        ? "This word has changed"
-                        : "Skipped for now"
-                  : feedback.correct
-                    ? "Correct"
-                    : "Not quite"}
+                {dailyFeedbackHeading(feedback)}
               </p>
               <p className="mt-2 text-base">{feedback.answer}</p>
               {feedback.explanation && (
@@ -838,13 +860,33 @@ export function DailyLessonPlayer({
                   Level {feedback.reviewStep + 1} of 8
                 </p>
               )}
-              {!feedback.skipped && !feedback.correct && (
+              {!feedback.skipped && !feedback.correct && !assisted && (
                 <p className="mt-3 text-base">
                   Read the meaning, then continue. Your first answer stays
                   recorded.
                 </p>
               )}
             </StatusMessage>
+          )}
+          {!feedback && (
+            <div className="mt-4">
+              <button
+                type="button"
+                className="min-h-11 rounded-lg px-3 text-base font-semibold text-primary-700 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:text-neutral-500 disabled:no-underline"
+                disabled={locked}
+                aria-describedby="daily-lesson-unsure-help"
+                onClick={() => void submit("unsure")}
+              >
+                I’m not sure
+              </button>
+              <p
+                id="daily-lesson-unsure-help"
+                className="px-3 text-sm text-neutral-600"
+              >
+                See the meaning with help. It won’t count as remembered, and the
+                word comes back on another day.
+              </p>
+            </div>
           )}
           {feedback && !feedback.skipped && (
             <DailyLessonTeaching
