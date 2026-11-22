@@ -83,9 +83,8 @@ for source_rank,(word,count) in enumerate(rows,1):
   sense.update({'pos':m['part_of_speech'],'definition':m['short_definition'],'sense_key':'existing:'+m['id'],'example':''});source='Vocanova authored'
   wid=old['id'];mid=m['id']
  else:wid=str(uuid.uuid5(ns,'word:en:'+word));mid=str(uuid.uuid5(ns,'primary-meaning:en:'+word))
- gloss=sense['definition'];example=''
- match=re.search(r'; "([^"\n]+)"(?:; "[^"\n]+")*$',gloss)
- if match:example=match.group(1);gloss=gloss[:match.start()].rstrip()
+ gloss=sense['definition']
+ example=sense.get('example','') if source=='Vocanova editorial core' else ''
  if source=='WordNet 3.0':
   # Source quotations can be unsafe, dated, or about a different synonym.
   # Retain the reference definition, never display unreviewed examples.
@@ -110,8 +109,15 @@ payload = {
     'wordnet_license': archive.read('wordnet/LICENSE').decode('utf-8'),
     'items': items,
 }
+def catalog_gzip(data):
+    # Python versions disagree on gzip's OS header byte. Preserve the frozen
+    # Unix marker so a macOS rebuild also reproduces the unchanged alias file.
+    packed = bytearray(gzip.compress(data, compresslevel=9, mtime=0))
+    packed[9] = 3
+    return bytes(packed)
+
 encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
-packed = gzip.compress(encoded, compresslevel=9, mtime=0)
+packed = catalog_gzip(encoded)
 args.output.write_bytes(packed)
 print(json.dumps({'words': len(items), 'json_bytes': len(encoded), 'gzip_bytes': len(packed),
     'sha256': hashlib.sha256(packed).hexdigest(), 'last_source_rank': items[-1]['source_rank']}))
@@ -164,7 +170,7 @@ for synset in sorted({sense for values in aliases.values() for sense in values})
     if broader: ancestors[synset]=sorted(broader)
 alias_payload = {'version':'wordnet-3.0-all-senses-v2', 'wordnet_license':payload['wordnet_license'], 'entries':aliases, 'ancestors':ancestors}
 alias_raw = json.dumps(alias_payload, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
-alias_packed = gzip.compress(alias_raw, compresslevel=9, mtime=0)
+alias_packed = catalog_gzip(alias_raw)
 alias_output = args.output.with_name('semantic-aliases.json.gz')
 alias_output.write_bytes(alias_packed)
 print(json.dumps({'alias_words':len(aliases), 'alias_gzip_bytes':len(alias_packed), 'alias_sha256':hashlib.sha256(alias_packed).hexdigest()}))

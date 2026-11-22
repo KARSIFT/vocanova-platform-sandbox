@@ -91,6 +91,7 @@ function SavedMeaning({ choice }: { choice: SavedChoice }) {
 }
 
 function revealFocusedControl(event: FocusEvent<HTMLDivElement>) {
+  const surface = event.currentTarget;
   const target = event.target;
   if (!(target instanceof HTMLElement) || target.closest("dialog")) return;
   // Let native keyboard scrolling settle before measuring the real
@@ -104,7 +105,14 @@ function revealFocusedControl(event: FocusEvent<HTMLDivElement>) {
       return;
     const header = document.querySelector("header.app-header");
     const safeTop = (header?.getBoundingClientRect().bottom ?? 0) + 8;
-    const safeBottom = window.innerHeight - 8;
+    // A mobile decision bar may cover the focused word detail or its retry button.
+    const actions = target.closest("article")
+      ? surface.querySelector<HTMLElement>(`.${styles.actions}`)
+      : null;
+    const safeBottom =
+      (actions && getComputedStyle(actions).position === "sticky"
+        ? Math.min(window.innerHeight, actions.getBoundingClientRect().top)
+        : window.innerHeight) - 8;
     const bounds = target.getBoundingClientRect();
     const delta =
       bounds.top < safeTop
@@ -844,6 +852,17 @@ export function Discovery({
             {item.exampleSentence && (
               <p className={styles.example}>{item.exampleSentence}</p>
             )}
+            <DiscoveryWordDetails
+              key={`${item.meaningId}:${item.meaningRevision ?? ""}`}
+              wordSlug={item.wordSlug}
+              meaningId={item.meaningId}
+              meaningRevision={item.meaningRevision}
+              exampleSentence={item.exampleSentence}
+              displayedDefinition={getPrimaryDefinition(
+                item.shortDefinition,
+                item.learnerDefinition,
+              )}
+            />
           </article>
           <div className={styles.actions}>
             <button
@@ -940,20 +959,6 @@ export function Discovery({
           </button>
         )}
       </div>
-      {started && (
-        <DiscoveryWordDetails
-          key={`${item.meaningId}:${item.meaningRevision ?? ""}`}
-          wordSlug={item.wordSlug}
-          meaningId={item.meaningId}
-          meaningRevision={item.meaningRevision}
-          exampleSentence={item.exampleSentence}
-
-          displayedDefinition={getPrimaryDefinition(
-            item.shortDefinition,
-            item.learnerDefinition,
-          )}
-        />
-      )}
     </div>
   );
 }

@@ -1,6 +1,8 @@
 package knowledgecatalog
 
 import (
+	"encoding/json"
+	"os"
 	"regexp"
 	"testing"
 
@@ -51,6 +53,31 @@ func TestCatalogHasRealStableEntriesAndReviewedCore(t *testing.T) {
 		require.False(t, present, word)
 	}
 }
+
+// The source-of-truth examples and their generated, sense-specific seed rows
+// must agree. The existing curriculum seeds its authored examples separately.
+func TestReviewedEditorialExamplesReachTheRankedCatalog(t *testing.T) {
+	raw, err := os.ReadFile("editorial-core.json")
+	require.NoError(t, err)
+	var editorial map[string]struct {
+		Example string `json:"example"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &editorial))
+	data, err := loadCatalog()
+	require.NoError(t, err)
+	for _, entry := range data.Items {
+		if entry.Rank <= 30 {
+			require.Equal(t, "Vocanova editorial core", entry.Source)
+			require.NotEmpty(t, editorial[entry.Word].Example, entry.Word)
+		}
+		if entry.Source == "Vocanova editorial core" {
+			require.Equal(t, editorial[entry.Word].Example, entry.Example, entry.Word)
+		}
+		if entry.Example != "" {
+			require.Equal(t, uuid.NewSHA1(entry.MeaningID, []byte("source-example-v1")), entry.ExampleID)
+		}
+	}
+}
 func TestPostgreSQLCompleteCatalogSeedAndConsistentBandCounts(t *testing.T) {
 	db := isolatedCatalogDB(t)
 	original := preloadAuthoredCore(t, db)
@@ -74,11 +101,33 @@ func TestPostgreSQLCompleteCatalogSeedAndConsistentBandCounts(t *testing.T) {
 		return state
 	}
 	catalogBefore := catalogSnapshot()
+	// Model an already-seeded release without these rows. The rerun must
+	// backfill exactly one active example for each of the 30 editorial senses.
+	_, err = db.Exec(`DELETE FROM word_examples USING knowledge_catalog_entries k WHERE word_examples.meaning_id=k.meaning_id AND k.rank <= 30`)
+	require.NoError(t, err)
 	// Reruns preserve public identity and do not duplicate examples or learner rows.
 	tx, err = db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
 	require.NoError(t, Seed(t.Context(), tx))
 	require.NoError(t, tx.Commit())
+	data, err := loadCatalog()
+	require.NoError(t, err)
+	rows, err := db.Query(`SELECT k.rank,e.id,e.example_text FROM knowledge_catalog_entries k JOIN word_examples e ON e.meaning_id=k.meaning_id AND e.status='active' WHERE k.rank <= 30 ORDER BY k.rank`)
+	require.NoError(t, err)
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		var rank int
+		var id uuid.UUID
+		var example string
+		require.NoError(t, rows.Scan(&rank, &id, &example))
+		count++
+		require.Equal(t, count, rank)
+		require.Equal(t, data.Items[rank-1].ExampleID, id)
+		require.Equal(t, data.Items[rank-1].Example, example)
+	}
+	require.NoError(t, rows.Err())
+	require.Equal(t, 30, count)
 	require.Equal(t, catalogBefore, catalogSnapshot())
 	require.Equal(t, wordsBefore, snapshot("canonical_words", "canonical_words"))
 	require.Equal(t, meaningsBefore, snapshot("word_meanings", "word_meanings"))

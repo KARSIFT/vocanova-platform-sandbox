@@ -1,8 +1,25 @@
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
+import { pressTab } from "./keyboard-navigation";
 
+
+async function expectDetailFocusVisible(target: Locator) {
+  await expect(target).toBeFocused();
+  await expect.poll(() => target.evaluate((control) => {
+    const rect = control.getBoundingClientRect();
+    const header = document.querySelector("header.app-header");
+    const decisions = control.closest("article")?.nextElementSibling;
+    if (!decisions) return false;
+    const lowerEdge = getComputedStyle(decisions).position === "sticky"
+      ? Math.min(innerHeight, decisions.getBoundingClientRect().top)
+      : innerHeight;
+    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    return rect.top >= (header?.getBoundingClientRect().bottom ?? 0)
+      && rect.bottom <= lowerEdge && !!hit && control.contains(hit);
+  })).toBe(true);
+}
 
 async function chooseWord(page: Page, rank: number) {
   await page.getByRole("button", { name: "Choose a word", exact: true }).click();
@@ -276,7 +293,18 @@ test("word details load only on demand, bind the displayed sense and retry hones
                   exampleText: "An example for this meaning.",
                 },
               ],
-              usageNotes: [],
+              usageNotes: [
+                {
+                  id: "current-usage",
+                  noteType: "collocation",
+                  noteText: "the same",
+                },
+                {
+                  id: "blank-usage",
+                  noteType: "register",
+                  noteText: " ",
+                },
+              ],
             },
             {
               id: "other-sense",
@@ -308,9 +336,12 @@ test("word details load only on demand, bind the displayed sense and retry hones
     page.getByRole("heading", { name: "the", exact: true }),
   ).toBeVisible();
   expect(reads).toEqual([]);
-  const details = page.locator("details").filter({
-    has: page.getByText("Word details & other meanings", { exact: true }),
-  });
+  const details = page
+    .getByRole("article", { name: "the", exact: true })
+    .locator("details")
+    .filter({
+      has: page.getByText("Word details & other meanings", { exact: true }),
+    });
   await details.locator("summary").press("Enter");
   for (const nextFailureStatus of [500, 0]) {
     await expect(details.getByRole("alert")).toContainText(
@@ -320,9 +351,19 @@ test("word details load only on demand, bind the displayed sense and retry hones
       /HTTP|Raw provider|upstream/,
     );
     failureStatus = nextFailureStatus;
-    await page
-      .getByRole("button", { name: "Retry word details", exact: true })
-      .click();
+    const retry = details.getByRole("button", { name: "Retry word details", exact: true });
+    if (nextFailureStatus === 500) {
+      // The summary opened with Enter. Follow native tab order through the expanded error.
+      await pressTab(page);
+      await expectDetailFocusVisible(retry);
+      await pressTab(page, { backwards: true });
+      await expectDetailFocusVisible(details.locator("summary"));
+      await pressTab(page);
+      await expectDetailFocusVisible(retry);
+      await page.keyboard.press("Enter");
+    } else {
+      await retry.click();
+    }
   }
   await expect(
     page.getByRole("button", { name: "Retry word details", exact: true }),
@@ -343,6 +384,16 @@ test("word details load only on demand, bind the displayed sense and retry hones
   await expect(
     details.getByRole("heading", { name: "Other meanings", exact: true }),
   ).toBeVisible();
+  await expect(
+    details.getByText("Often used with: the same", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    details.getByText("When to use it:", { exact: true }),
+  ).toHaveCount(0);
+  const content = await details.innerText();
+  expect(content.indexOf("Often used with: the same")).toBeLessThan(
+    content.indexOf("Other meanings"),
+  );
   const alternatives = details.getByRole("listitem");
   await expect(alternatives).toHaveCount(2);
   await expect(alternatives.nth(0)).toContainText("noun");

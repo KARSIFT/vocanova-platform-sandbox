@@ -1,5 +1,16 @@
 # Vocanova release readiness
 
+## Discovery and review teaching — 22 November 2026
+
+The two affected Playwright suites passed locally on Chromium, Firefox and
+WebKit at 360, 430 and 1280 pixels (105 cases per engine). Cases include both
+themes, keyboard navigation, optional detail failures and continuing after a
+checked answer. These runs used the synthetic API. The catalog tests separately
+passed on disposable PostgreSQL 16, including a seed rerun that restores the
+30 example sentences to an already populated database. The generated catalog
+matches its predecessor in every decoded field except those 30 sentences.
+Production rollout and learner outcomes require separate evidence.
+
 ## Shared component consistency acceptance — 14 November 2026
 
 The [component delivery](component-consistency-2026-11-14.md) consolidates ordinary

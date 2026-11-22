@@ -1,7 +1,7 @@
 {
   "a": {
     "definition": "Used before a singular countable noun when the listener does not yet know which one.",
-    "example": "",
+    "example": "A woman asked me for directions.",
     "pos": "determiner",
     "sense_key": "vocanova:editorial-v1:a:determiner"
   },
@@ -757,7 +757,7 @@
   },
   "and": {
     "definition": "Used to join words, phrases, or ideas together.",
-    "example": "",
+    "example": "I packed a towel and a swimsuit.",
     "pos": "conjunction",
     "sense_key": "vocanova:editorial-v1:and:conjunction"
   },
@@ -1021,7 +1021,7 @@
   },
   "are": {
     "definition": "A present form of be used with you, we, they, or plural nouns.",
-    "example": "",
+    "example": "The towels are in the bathroom.",
     "pos": "verb",
     "sense_key": "vocanova:editorial-v1:are:verb"
   },
@@ -1519,7 +1519,7 @@
   },
   "be": {
     "definition": "To exist, or to have a particular identity, quality, or position.",
-    "example": "",
+    "example": "I want to be a teacher.",
     "pos": "verb",
     "sense_key": "vocanova:editorial-v1:be:verb"
   },
@@ -2503,7 +2503,7 @@
   },
   "can": {
     "definition": "To be able to do something.",
-    "example": "",
+    "example": "My brother can fix a flat tire.",
     "pos": "verb",
     "sense_key": "vocanova:editorial-v1:can:verb"
   },
@@ -5143,7 +5143,7 @@
   },
   "do": {
     "definition": "To perform an action or activity.",
-    "example": "",
+    "example": "I do the shopping on Fridays.",
     "pos": "verb",
     "sense_key": "vocanova:editorial-v1:do:verb"
   },
@@ -6769,7 +6769,7 @@
   },
   "for": {
     "definition": "Used to show the person, purpose, or reason something is intended for.",
-    "example": "",
+    "example": "This letter is for my neighbor.",
     "pos": "preposition",
     "sense_key": "vocanova:editorial-v1:for:preposition"
   },
@@ -7987,7 +7987,7 @@
   },
   "have": {
     "definition": "To own, hold, or experience something.",
-    "example": "",
+    "example": "I have a spare key in my bag.",
     "pos": "verb",
     "sense_key": "vocanova:editorial-v1:have:verb"
   },
@@ -7999,7 +7999,7 @@
   },
   "he": {
     "definition": "A male person or animal already mentioned.",
-    "example": "",
+    "example": "Ben missed the bus, so he walked home.",
     "pos": "pronoun",
     "sense_key": "vocanova:editorial-v1:he:pronoun"
   },
@@ -8695,7 +8695,7 @@
   },
   "i": {
     "definition": "The person who is speaking or writing.",
-    "example": "",
+    "example": "I take the bus to work every morning.",
     "pos": "pronoun",
     "sense_key": "vocanova:editorial-v1:i:pronoun"
   },
@@ -8905,7 +8905,7 @@
   },
   "in": {
     "definition": "Inside a place, area, group, or period of time.",
-    "example": "",
+    "example": "Your glasses are in the top drawer.",
     "pos": "preposition",
     "sense_key": "vocanova:editorial-v1:in:preposition"
   },
@@ -9475,7 +9475,7 @@
   },
   "is": {
     "definition": "A present form of be used with he, she, it, or one person or thing.",
-    "example": "",
+    "example": "The shop is open until six.",
     "pos": "verb",
     "sense_key": "vocanova:editorial-v1:is:verb"
   },
@@ -9487,7 +9487,7 @@
   },
   "it": {
     "definition": "A thing, animal, situation, or idea already mentioned.",
-    "example": "",
+    "example": "I found my wallet and put it in my bag.",
     "pos": "pronoun",
     "sense_key": "vocanova:editorial-v1:it:pronoun"
   },
@@ -9805,7 +9805,7 @@
   },
   "know": {
     "definition": "To have information about something or be familiar with someone.",
-    "example": "",
+    "example": "I know the way to the station.",
     "pos": "verb",
     "sense_key": "vocanova:editorial-v1:know:verb"
   },
@@ -10867,7 +10867,7 @@
   },
   "me": {
     "definition": "The object form of I, used for the person speaking.",
-    "example": "",
+    "example": "Please send me the address.",
     "pos": "pronoun",
     "sense_key": "vocanova:editorial-v1:me:pronoun"
   },
@@ -11557,7 +11557,7 @@
   },
   "my": {
     "definition": "Belonging to or connected with the person speaking.",
-    "example": "",
+    "example": "I left my umbrella at work.",
     "pos": "determiner",
     "sense_key": "vocanova:editorial-v1:my:determiner"
   },
@@ -11809,7 +11809,7 @@
   },
   "no": {
     "definition": "Not any; not one.",
-    "example": "",
+    "example": "There are no eggs left in the fridge.",
     "pos": "determiner",
     "sense_key": "vocanova:editorial-v1:no:determiner"
   },
@@ -11857,7 +11857,7 @@
   },
   "not": {
     "definition": "Used to make a statement negative or say that something is not true.",
-    "example": "",
+    "example": "The library is not open on Sundays.",
     "pos": "adverb",
     "sense_key": "vocanova:editorial-v1:not:adverb"
   },
@@ -12055,7 +12055,7 @@
   },
   "of": {
     "definition": "Used to show belonging, a part of something, or a connection.",
-    "example": "",
+    "example": "One of my keys is missing.",
     "pos": "preposition",
     "sense_key": "vocanova:editorial-v1:of:preposition"
   },
@@ -12127,7 +12127,7 @@
   },
   "on": {
     "definition": "Touching and supported by a surface.",
-    "example": "",
+    "example": "Your cup is on the kitchen table.",
     "pos": "preposition",
     "sense_key": "vocanova:editorial-v1:on:preposition"
   },
@@ -13969,7 +13969,7 @@
   },
   "queer": {
     "definition": "Describing someone whose sexual orientation or gender identity differs from traditional expectations; often used as an umbrella term for LGBTQ people.",
-    "example": "Some people use this word for themselves; do not label someone this way unless they prefer it.",
+    "usage_note": "Some people use this word for themselves; do not label someone this way unless they prefer it.",
     "pos": "adjective",
     "sense_key": "vocanova:editorial-v1:queer:adjective"
   },
@@ -17641,13 +17641,13 @@
   },
   "that": {
     "definition": "Used for a person or thing farther away or already mentioned.",
-    "example": "",
+    "example": "Can you see that house across the river?",
     "pos": "determiner",
     "sense_key": "vocanova:editorial-v1:that:determiner"
   },
   "the": {
     "definition": "Used before a noun when the speaker and listener can identify which one is meant.",
-    "example": "",
+    "example": "I bought a loaf of bread and put the bread on the table.",
     "pos": "determiner",
     "sense_key": "vocanova:editorial-v1:the:determiner"
   },
@@ -17767,7 +17767,7 @@
   },
   "this": {
     "definition": "Used for a person or thing that is near or being discussed.",
-    "example": "",
+    "example": "This seat beside me is free.",
     "pos": "determiner",
     "sense_key": "vocanova:editorial-v1:this:determiner"
   },
@@ -17923,7 +17923,7 @@
   },
   "to": {
     "definition": "Used to show a destination, direction, or person receiving something.",
-    "example": "",
+    "example": "We walked to the station after lunch.",
     "pos": "preposition",
     "sense_key": "vocanova:editorial-v1:to:preposition"
   },
@@ -19135,7 +19135,7 @@
   },
   "was": {
     "definition": "A past form of be used with I, he, she, it, or one person or thing.",
-    "example": "",
+    "example": "The bus was late this morning.",
     "pos": "verb",
     "sense_key": "vocanova:editorial-v1:was:verb"
   },
@@ -19195,7 +19195,7 @@
   },
   "we": {
     "definition": "The speaker and one or more other people.",
-    "example": "",
+    "example": "My sister and I live nearby, so we walk to school together.",
     "pos": "pronoun",
     "sense_key": "vocanova:editorial-v1:we:pronoun"
   },
@@ -19285,7 +19285,7 @@
   },
   "what": {
     "definition": "Used to ask about a thing, action, or piece of information.",
-    "example": "",
+    "example": "What do we need for dinner?",
     "pos": "pronoun",
     "sense_key": "vocanova:editorial-v1:what:pronoun"
   },
@@ -19483,7 +19483,7 @@
   },
   "with": {
     "definition": "Together with a person or thing.",
-    "example": "",
+    "example": "I went to the market with my aunt.",
     "pos": "preposition",
     "sense_key": "vocanova:editorial-v1:with:preposition"
   },
@@ -19735,7 +19735,7 @@
   },
   "you": {
     "definition": "The person or people being spoken or written to.",
-    "example": "",
+    "example": "Can you show me the way to the station?",
     "pos": "pronoun",
     "sense_key": "vocanova:editorial-v1:you:pronoun"
   },
@@ -19753,7 +19753,7 @@
   },
   "your": {
     "definition": "Belonging to or connected with the person or people being spoken to.",
-    "example": "",
+    "example": "Please write your name on the form.",
     "pos": "determiner",
     "sense_key": "vocanova:editorial-v1:your:determiner"
   },

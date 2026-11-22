@@ -86,36 +86,40 @@ test("post-answer teaching uses canonical meanings and optional failure cannot b
   let canonicalReads = 0;
   await page.route("**/api/v1/canonical-words/menu", (route) => {
     canonicalReads++;
-    return route.fulfill({ json: { word: { id: "menu", text: "menu", slug: "menu", wordType: "word", meanings: [{ id: meaningId, meaningRevision: revision, partOfSpeech: "noun", shortDefinition: "a list of food", saved: true, selfReportedKnown: false, examples: [], usageNotes: [] }, { id: "other-real", partOfSpeech: "noun", shortDefinition: "a list of computer commands", saved: false, selfReportedKnown: false, examples: [], usageNotes: [] }] } } });
+    return route.fulfill({ json: { word: { id: "menu", text: "menu", slug: "menu", wordType: "word", meanings: [{ id: meaningId, meaningRevision: revision, partOfSpeech: "noun", shortDefinition: "a list of food", saved: true, selfReportedKnown: false, examples: [{ id: "menu-food", exampleText: "Can I see the lunch menu?" }], usageNotes: [] }, { id: "other-real", partOfSpeech: "noun", shortDefinition: "a list of computer commands", saved: false, selfReportedKnown: false, examples: [{ id: "menu-software", exampleText: "Open the settings menu." }], usageNotes: [] }] } } });
   });
   await page.route("**/api/v1/meaning-images**", (route) => route.abort());
   await page.route("**/api/v1/daily-lessons/*/actions", (route) => route.fulfill({ json: { ...value, revision: 2, feedback: { stepId: value.currentStep!.id, correct: false, answer: "a list of food", explanation: "", meaningId, wordText: "menu", credited: false, skipped: false, correctChoiceId: "choice-0", selectedChoiceId: "choice-1" }, canContinue: true } }));
   await open(page, value);
   expect(canonicalReads).toBe(0);
+  await expect(page.getByText("Can I see the lunch menu?", { exact: true })).toHaveCount(0);
   await page.getByRole("radio").nth(1).check();
   await page.getByRole("button", { name: "Check answer", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Not quite" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
+  await expect(page.getByText("Can I see the lunch menu?", { exact: true })).toBeVisible();
+  await expect(page.getByText("Open the settings menu.", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Other meanings of menu", { exact: true })).toBeVisible();
   await page.getByText("Other meanings of menu", { exact: true }).click();
   await expect(page.getByText("a list of computer commands", { exact: true })).toBeVisible();
   await expect(page.getByText("Word sources", { exact: true })).toHaveCount(0);
 });
 
-for (const optional of ["single", "failure"] as const) {
+for (const optional of ["single", "failure", "revised"] as const) {
   test(`post-answer ${optional} canonical read leaves the checked answer and Continue available`, async ({ page }) => {
     const value = lesson();
     await page.route("**/api/v1/canonical-words/menu", (route) => optional === "failure"
       ? route.abort()
-      : route.fulfill({ json: { word: { id: "menu", text: "menu", slug: "menu", wordType: "word", meanings: [{ id: meaningId, meaningRevision: revision, partOfSpeech: "noun", shortDefinition: "a list of food", saved: true, selfReportedKnown: false, examples: [], usageNotes: [] }] } } }));
+      : route.fulfill({ json: { word: { id: "menu", text: "menu", slug: "menu", wordType: "word", meanings: [{ id: meaningId, meaningRevision: optional === "revised" ? "b".repeat(64) : revision, partOfSpeech: "noun", shortDefinition: "a list of food", saved: true, selfReportedKnown: false, examples: optional === "revised" ? [{ id: "later", exampleText: "A sentence from the revised meaning." }] : [], usageNotes: [] }] } } }));
     await page.route("**/api/v1/meaning-images**", (route) => route.abort());
     await page.route("**/api/v1/daily-lessons/*/actions", (route) => route.fulfill({ json: { ...value, revision: 2, feedback: { stepId: value.currentStep!.id, correct: true, answer: "a list of food", explanation: "", meaningId, wordText: "menu", credited: true, skipped: false, correctChoiceId: "choice-0", selectedChoiceId: "choice-0" }, canContinue: true } }));
     await open(page, value);
     await page.getByRole("radio").first().check();
     await page.getByRole("button", { name: "Check answer", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: /^Correct/ })).toContainText("a list of food");
-    await expect(page.getByText(optional === "single" ? "This is the only meaning available for menu." : "Other meanings could not load. You can continue.", { exact: true })).toBeVisible();
+    await expect(page.getByText(optional === "failure" ? "Other meanings could not load. You can continue." : "This is the only meaning available for menu.", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
+    await expect(page.getByText("A sentence from the revised meaning.", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
     await expect(page.getByRole("status")).toHaveCount(1);
   });
@@ -229,7 +233,7 @@ for (const theme of ["light", "dark"] as const) {
       return choice ? route.fulfill({ path: choice.path, contentType: "image/webp" }) : route.abort();
     });
     await page.route("**/api/v1/meaning-images**", (route) => route.fulfill({ json: { items: [reviewedChoices[0]!.image] } }));
-    await page.route("**/api/v1/canonical-words/menu", (route) => route.fulfill({ json: { word: { id: "menu", text: "menu", slug: "menu", wordType: "word", meanings: [{ id: meaningId, meaningRevision: reviewedPictures[meaningId]!.meaningRevision, image: reviewedChoices[0]!.image, partOfSpeech: "noun", shortDefinition: reviewedChoices[0]!.text, saved: true, selfReportedKnown: false, examples: [], usageNotes: [] }] } } }));
+    await page.route("**/api/v1/canonical-words/menu", (route) => route.fulfill({ json: { word: { id: "menu", text: "menu", slug: "menu", wordType: "word", meanings: [{ id: meaningId, meaningRevision: reviewedPictures[meaningId]!.meaningRevision, image: reviewedChoices[0]!.image, partOfSpeech: "noun", shortDefinition: reviewedChoices[0]!.text, saved: true, selfReportedKnown: false, examples: [{ id: "menu-food", exampleText: "Can I see the lunch menu?" }], usageNotes: [] }] } } }));
     await page.route("**/api/v1/daily-lessons/*/actions", (route) => {
       if (route.request().postDataJSON().action === "continue") return route.fulfill({ json: sessions[++index] });
       const value = sessions[index]!;
@@ -251,6 +255,7 @@ for (const theme of ["light", "dark"] as const) {
       await first.press("Space");
       await page.getByRole("button", { name: "Check answer", exact: true }).click();
       const teaching = page.getByRole("region", { name: "Learn more about menu", exact: true });
+      await expect(teaching.getByText("Can I see the lunch menu?", { exact: true })).toBeVisible();
       await expect(teaching.getByRole("img")).toBeVisible();
       await expect.poll(() => teaching.getByRole("img").evaluate((element) => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
       await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();

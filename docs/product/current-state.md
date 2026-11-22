@@ -1,5 +1,20 @@
 # Vocanova current product state
 
+## Discovery and review teaching — 22 November 2026
+
+Discovery lets learners open word details on the card before choosing **Learn**
+or **Already know**. The current meaning’s examples and labeled usage notes
+come first, followed by alternative meanings. Daily Review shows an authored
+example after a checked answer when the sentence belongs to the same meaning
+and revision. The ranked catalog now includes original example sentences for
+its first 30 words, from *you* through *with*.
+
+In a hands-on comparison, WordUp offered deeper teaching from its discovery
+card before either decision, then used illustrated choices in a due review.
+Duolingo opened mistakes practice with a bounded set and one recall prompt
+at a time. The existing [recording notes](reference-video-review.md) cover the
+longer flows.
+
 ## Stageshow interface refactor — 22 November 2026
 
 The [interface refactor record](stageshow-ui-refactor-2026-11-22.md) maps the

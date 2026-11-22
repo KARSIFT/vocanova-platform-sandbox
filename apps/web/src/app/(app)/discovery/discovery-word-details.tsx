@@ -6,6 +6,7 @@ import type { WordDetail } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { handleApiError, isSessionExpiredError } from "@/lib/session";
 import {
+  formatNoteType,
   getAdditionalDefinition,
   getPrimaryDefinition,
 } from "@/lib/word-definition";
@@ -44,12 +45,14 @@ function MeaningDetails({
       )
     : meaning.examples;
 
+  const notes = meaning.usageNotes.filter((note) => note.noteText.trim());
+
   if (
     current &&
     !currentExplanation &&
     !referenceDefinition &&
     !examples.length &&
-    !meaning.usageNotes.length
+    !notes.length
   )
     return null;
 
@@ -79,8 +82,11 @@ function MeaningDetails({
           {example.exampleText}
         </p>
       ))}
-      {meaning.usageNotes.map((note) => (
-        <p key={note.id}>{note.noteText}</p>
+      {notes.map((note) => (
+        <p key={note.id}>
+          <span className="font-medium">{formatNoteType(note.noteType)}: </span>
+          {note.noteText}
+        </p>
       ))}
     </div>
   );
@@ -206,6 +212,12 @@ export function DiscoveryWordDetails({
       )}
       {currentMeaning && (
         <>
+          <MeaningDetails
+            current
+            exampleSentence={exampleSentence}
+            displayedDefinition={displayedDefinition}
+            meaning={currentMeaning}
+          />
           {otherMeanings.length ? (
             <>
               <h2 className="font-semibold text-neutral-900">Other meanings</h2>
@@ -220,12 +232,6 @@ export function DiscoveryWordDetails({
           ) : (
             <p>This is the only meaning in Vocanova.</p>
           )}
-          <MeaningDetails
-            current
-            exampleSentence={exampleSentence}
-            displayedDefinition={displayedDefinition}
-            meaning={currentMeaning}
-          />
         </>
       )}
     </details>
