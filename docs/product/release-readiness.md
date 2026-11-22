@@ -5,7 +5,10 @@
 The two affected Playwright suites passed locally on Chromium, Firefox and
 WebKit at 360, 430 and 1280 pixels (105 cases per engine). Cases include both
 themes, keyboard navigation, optional detail failures and continuing after a
-checked answer. These runs used the synthetic API. The catalog tests separately
+checked answer. A separate enlarged-text check exposed an obscured disclosure
+at 360px. Discovery now unpins the decision bar when the buttons stack, so the
+learner can reach the full label and the retry button at 200% text.
+These runs used the synthetic API. The catalog tests separately
 passed on disposable PostgreSQL 16, including a seed rerun that restores the
 30 example sentences to an already populated database. The generated catalog
 matches its predecessor in every decoded field except those 30 sentences.
