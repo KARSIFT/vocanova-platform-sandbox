@@ -130,5 +130,5 @@ func Seed(ctx context.Context, tx *sql.Tx) error {
 			return fmt.Errorf("seed knowledge catalog: %w", err)
 		}
 	}
-	return nil
+	return seedRankedUsageNotes(ctx, tx, data.Items)
 }

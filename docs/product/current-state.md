@@ -6,8 +6,9 @@ Discovery lets learners open word details on the card before choosing **Learn**
 or **Already know**. The current meaning’s examples and labeled usage notes
 come first, followed by alternative meanings. Daily Review shows an authored
 example after a checked answer when the sentence belongs to the same meaning
-and revision. The ranked catalog now includes original example sentences for
-its first 30 words, from *you* through *with*.
+and revision. The first catalog range includes original example sentences
+for all 97 editorial entries and ten notes on usage, combinations, and common
+mistakes.
 
 In a hands-on comparison, WordUp offered deeper teaching from its discovery
 card before either decision, then used illustrated choices in a due review.

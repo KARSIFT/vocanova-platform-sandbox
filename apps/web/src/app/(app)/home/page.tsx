@@ -37,15 +37,29 @@ async function HomePractice({
     result.reason.status === 401
   )
     requireAuthRedirect(result.reason, "/home");
+  const data = result.status === "fulfilled" ? result.value.data : null;
+  const mistakes = data?.availableMistakes ?? 0;
   return (
-    <PracticeJourney
-      journey={
-        result.status === "fulfilled"
-          ? (result.value.data.journey ?? null)
-          : null
-      }
-      compact
-    />
+    <>
+      <PracticeJourney journey={data?.journey ?? null} compact />
+      {mistakes > 0 && (
+        <div className="keep-going-row">
+          <div>
+            <h3>Mistakes to revisit</h3>
+            <p>
+              {mistakes} {mistakes === 1 ? "meaning is" : "meanings are"} ready
+              for a second try.
+            </p>
+          </div>
+          <ActionLink
+            variant="secondary"
+            href="/practice?mode=mistakes#practice-mode-mistakes"
+          >
+            Practice mistakes
+          </ActionLink>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -65,10 +65,11 @@ func TestReviewedEditorialExamplesReachTheRankedCatalog(t *testing.T) {
 	require.NoError(t, json.Unmarshal(raw, &editorial))
 	data, err := loadCatalog()
 	require.NoError(t, err)
+	covered := 0
 	for _, entry := range data.Items {
-		if entry.Rank <= 30 {
-			require.Equal(t, "Vocanova editorial core", entry.Source)
+		if entry.Rank <= 100 && entry.Source == "Vocanova editorial core" {
 			require.NotEmpty(t, editorial[entry.Word].Example, entry.Word)
+			covered++
 		}
 		if entry.Source == "Vocanova editorial core" {
 			require.Equal(t, editorial[entry.Word].Example, entry.Example, entry.Word)
@@ -77,6 +78,10 @@ func TestReviewedEditorialExamplesReachTheRankedCatalog(t *testing.T) {
 			require.Equal(t, uuid.NewSHA1(entry.MeaningID, []byte("source-example-v1")), entry.ExampleID)
 		}
 	}
+	require.Equal(t, 97, covered)
+	notes, err := rankedUsageNotes(data.Items)
+	require.NoError(t, err)
+	require.Len(t, notes, 10)
 }
 func TestPostgreSQLCompleteCatalogSeedAndConsistentBandCounts(t *testing.T) {
 	db := isolatedCatalogDB(t)
@@ -101,9 +106,9 @@ func TestPostgreSQLCompleteCatalogSeedAndConsistentBandCounts(t *testing.T) {
 		return state
 	}
 	catalogBefore := catalogSnapshot()
-	// Model an already-seeded release without these rows. The rerun must
-	// backfill exactly one active example for each of the 30 editorial senses.
-	_, err = db.Exec(`DELETE FROM word_examples USING knowledge_catalog_entries k WHERE word_examples.meaning_id=k.meaning_id AND k.rank <= 30`)
+	// Model an already-seeded release without the first range's editorial rows.
+	_, err = db.Exec(`DELETE FROM word_examples USING knowledge_catalog_entries k
+	  WHERE word_examples.meaning_id=k.meaning_id AND k.rank <= 100 AND k.source_name='Vocanova editorial core'`)
 	require.NoError(t, err)
 	// Reruns preserve public identity and do not duplicate examples or learner rows.
 	tx, err = db.BeginTx(t.Context(), nil)
@@ -112,22 +117,29 @@ func TestPostgreSQLCompleteCatalogSeedAndConsistentBandCounts(t *testing.T) {
 	require.NoError(t, tx.Commit())
 	data, err := loadCatalog()
 	require.NoError(t, err)
-	rows, err := db.Query(`SELECT k.rank,e.id,e.example_text FROM knowledge_catalog_entries k JOIN word_examples e ON e.meaning_id=k.meaning_id AND e.status='active' WHERE k.rank <= 30 ORDER BY k.rank`)
+	rows, err := db.Query(`SELECT k.rank,e.id,e.example_text FROM knowledge_catalog_entries k
+	  JOIN word_examples e ON e.meaning_id=k.meaning_id AND e.status='active'
+	  WHERE k.rank <= 100 AND k.source_name='Vocanova editorial core' ORDER BY k.rank`)
 	require.NoError(t, err)
 	defer rows.Close()
-	count := 0
+	ranks := make(map[int]struct{})
 	for rows.Next() {
 		var rank int
 		var id uuid.UUID
 		var example string
 		require.NoError(t, rows.Scan(&rank, &id, &example))
-		count++
-		require.Equal(t, count, rank)
+		require.NotContains(t, ranks, rank)
+		ranks[rank] = struct{}{}
 		require.Equal(t, data.Items[rank-1].ExampleID, id)
 		require.Equal(t, data.Items[rank-1].Example, example)
 	}
 	require.NoError(t, rows.Err())
-	require.Equal(t, 30, count)
+	require.Len(t, ranks, 97)
+	var publishedNotes int
+	require.NoError(t, db.QueryRow(`SELECT count(*) FROM usage_notes n
+	  JOIN knowledge_catalog_entries k ON k.meaning_id=n.meaning_id
+	  WHERE k.rank <= 100 AND n.note_order=1001 AND n.status='active'`).Scan(&publishedNotes))
+	require.Equal(t, 10, publishedNotes)
 	require.Equal(t, catalogBefore, catalogSnapshot())
 	require.Equal(t, wordsBefore, snapshot("canonical_words", "canonical_words"))
 	require.Equal(t, meaningsBefore, snapshot("word_meanings", "word_meanings"))

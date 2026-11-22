@@ -58,11 +58,13 @@ The broader reference tail is not claimed to have graded A2–B1 teaching text.
 
 All unreviewed WordNet examples and quoted example tails are removed. Source
 examples can describe another synonym, dated factual claims or unsafe actions.
-The first 30 ranked senses have original examples in the editorial core. The
+The first range includes 97 editorial senses with original examples. The
 generator publishes their explicit `example` fields. Editorial usage notes stay
 out of the example column. The canonical seed upserts examples by stable
 meaning-scoped UUID on each release, including on previously seeded databases.
 Other entries may have no example. Authored curriculum examples are preserved.
+Ten first-range senses also have notes for usage, word combinations, and
+common mistakes. The notes are keyed to their exact catalog definitions.
 
 ## Version 1 content review
 
@@ -74,8 +76,8 @@ entries and 6,652 retained WordNet reference definitions. All 89 authored words,
 outside this selection. This review is not a human certification or a promise
 that every reference definition is suitable for a beginner.
 
-The frozen catalog gzip is 1,000,012 bytes, SHA-256
-`e866a36c5021d49c969c1df959379706cd4c04533f48bb192566f0f1847b8ddb`.
+The frozen catalog gzip is 1,001,423 bytes, SHA-256
+`247f2a3e64e7b25344aaeaf38e5c97054e33a2d54fea1c360004f54704f7f9d9`.
 The independent all-sense alias sidecar is 677,585 bytes, SHA-256
 `e70d8f957c0b2694db758e957e96964632ffd844fc0ad124075c4074aa1fd8b8`.
 Changing version 1 membership or order requires an explicit migration; do not
