@@ -142,7 +142,23 @@ export function DiscoveryNavigation({
         }}
       >
         {picker && (
-          <div className={styles.panel}>
+          <div
+            className={styles.panel}
+            onFocusCapture={(event) => {
+              // Enlarged text can make the panel scroll as well as the results.
+              const control = event.target;
+              requestAnimationFrame(() => {
+                if (
+                  control === document.activeElement &&
+                  control.matches(":focus-visible")
+                )
+                  control.scrollIntoView({
+                    block: "nearest",
+                    inline: "nearest",
+                  });
+              });
+            }}
+          >
             <header className={styles.panelHeader}>
               <h2 id="discovery-picker-title">
                 {choosingRange ? "Choose a range" : "Choose a word"}

@@ -1,5 +1,20 @@
 # Vocanova release readiness
 
+## Discovery, Review and scenario practice — 23 November 2026
+
+Manual local browser checks covered the Discovery picker and a saved meaning,
+assisted Review with zero recall credit, a Home-to-Mistakes correction, and
+completion of the airport and meeting stories. The airport dialogue preserved
+its first miss through a reload and opened a three-word listening activity using
+the same vocabulary. The Chromium, Firefox and WebKit acceptance cases cover
+desktop and 360/430px layouts, light and dark themes, and keyboard navigation.
+
+Disposable PostgreSQL checks used the real seed and API repositories. They
+verified the ranked example backfill, assisted-answer receipts, and that an
+older Mistakes session leaves a newer miss available. These checks establish
+learning behavior on local fixtures. The PR records the staging and production
+deployment evidence separately.
+
 ## Discovery and review teaching — 22 November 2026
 
 The two affected Playwright suites passed locally on Chromium, Firefox and
