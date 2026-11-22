@@ -10,6 +10,12 @@ import (
 
 func order(seed, s string) string { h := sha256.Sum256([]byte(seed + ":" + s)); return string(h[:]) }
 func build(req StartRequest, words []Word, sources map[string]Source, seed string) (Snapshot, error) {
+	return buildWith(req, words, sources, seed, nil)
+}
+
+// buildWith freezes a session. Ranked mistake targets without a curated typed
+// cue become recognition questions; starter targets keep typed recall.
+func buildWith(req StartRequest, words []Word, sources map[string]Source, seed string, ranked *rankedTargets) (Snapshot, error) {
 	snap := Snapshot{Mode: req.Mode, LessonKey: req.LessonKey, ContentVersion: ContentVersion, GradingVersion: GradingVersion, Steps: []privateStep{}}
 	if len(words) == 0 || (len(words) < 3 && (req.ListID == "" || req.Mode == "listening_choice")) {
 		return snap, ErrContentUnavailable
@@ -45,6 +51,19 @@ func build(req StartRequest, words []Word, sources map[string]Source, seed strin
 		return snap, ErrContentUnavailable
 	}
 	for _, w := range selected {
+		if _, starter := referenceFor(w.MeaningID); !starter && req.Mode == "mistakes" {
+			snap.ContentVersion = MistakesContentVersion
+		}
+		if ranked != nil && req.Mode == "mistakes" && ranked.recognition[w.MeaningID] {
+			step, err := recognitionStep(w, ranked.pool, seed)
+			if err != nil {
+				return snap, err
+			}
+			copy := sources[w.MeaningID]
+			step.Source = &copy
+			snap.Steps = append(snap.Steps, step)
+			continue
+		}
 		id := uuid.NewString()
 		step := privateStep{Word: w, Accepted: acceptedWordAnswers(w), Public: Step{ID: id, Kind: "typed_recall", Prompt: "Type the word or phrase you learned: " + recallDefinition(w), Choices: []Choice{}}}
 		if src, ok := sources[w.MeaningID]; ok && req.Mode == "mistakes" {

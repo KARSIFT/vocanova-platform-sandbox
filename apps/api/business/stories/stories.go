@@ -43,7 +43,7 @@ type StoryChoice struct {
 type StoryStep struct {
 	_       struct{}      `nullable:"true"`
 	ID      string        `json:"id"`
-	Kind    string        `json:"kind" enum:"line,comprehension,phrase_completion"`
+	Kind    string        `json:"kind" enum:"line,comprehension,phrase_completion,dialogue_reply"`
 	Line    *StoryLine    `json:"line,omitempty"`
 	Prompt  string        `json:"prompt,omitempty"`
 	Choices []StoryChoice `json:"choices,omitempty"`

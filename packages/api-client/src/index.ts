@@ -545,7 +545,7 @@ export interface StoryChoice {
 }
 export interface StoryStep {
   id: string;
-  kind: "line" | "comprehension" | "phrase_completion";
+  kind: "line" | "comprehension" | "phrase_completion" | "dialogue_reply";
   line?: StoryLine;
   prompt?: string;
   choices?: StoryChoice[];

@@ -451,6 +451,7 @@
 
 /* Focused discovery session. */
 .focus {
+  container: discovery / inline-size;
   max-width: 40rem;
   margin: 0 auto;
   padding: 0.75rem 1rem 2rem;
@@ -669,6 +670,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+/* Two stacked decisions can hide a whole line of focused teaching at larger
+ * text sizes. Pin only the single row (two 9rem buttons plus their gap). */
+@container discovery (width < 18.75rem) {
+  .actions {
+    position: static;
+  }
 }
 
 @media (max-height: 30rem) {

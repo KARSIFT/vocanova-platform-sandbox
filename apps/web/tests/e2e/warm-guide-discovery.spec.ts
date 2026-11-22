@@ -177,9 +177,13 @@ for (const theme of ["light", "dark"]) {
       name: "Use be in a sentence",
       exact: true,
     });
+    await expect(savedMeaning(page).getByRole("link", { name: "Study this meaning" })).toHaveAttribute(
+      "href",
+      "/vocabulary/map-word-2?fromDiscovery=3#meaning-map-meaning-2",
+    );
     await expect(writing).toHaveAttribute(
       "href",
-      "/vocabulary/map-word-2#sentence-practice-map-meaning-2",
+      "/vocabulary/map-word-2?fromDiscovery=3#sentence-practice-map-meaning-2",
     );
     await expect(savedMeaning(page)).toContainText(
       "A synthetic meaning for this browser fixture.",
@@ -242,9 +246,9 @@ test("a lost Learn receipt exposes no writing until the original request is conf
   await expect(
     page.getByRole("heading", { name: "Map word 3", exact: true }),
   ).toBeFocused();
-  await expect(savedMeaning(page).getByRole("link")).toHaveAttribute(
+  await expect(savedMeaning(page).getByRole("link", { name: /in a sentence$/ })).toHaveAttribute(
     "href",
-    "/vocabulary/map-word-2#sentence-practice-map-meaning-2",
+    "/vocabulary/map-word-2?fromDiscovery=3#sentence-practice-map-meaning-2",
   );
   await expect(announcement).toHaveText("Saved be for review.");
   expect(attempts).toHaveLength(2);
@@ -344,9 +348,9 @@ test("an incomplete receipt uses the existing fresh read before offering writing
   await expect(
     page.getByRole("heading", { name: "Map word 3", exact: true }),
   ).toBeFocused();
-  await expect(savedMeaning(page).getByRole("link")).toHaveAttribute(
+  await expect(savedMeaning(page).getByRole("link", { name: /in a sentence$/ })).toHaveAttribute(
     "href",
-    "/vocabulary/map-word-2#sentence-practice-map-meaning-2",
+    "/vocabulary/map-word-2?fromDiscovery=3#sentence-practice-map-meaning-2",
   );
   await expect(saveConfirmation(page)).toHaveText("Saved be for review.");
 });
@@ -377,9 +381,9 @@ test("manual word, history and range navigation retire the previous save bridge"
   await expect(savedMeaning(page)).toHaveCount(0);
   await expect(announcement).toBeEmpty();
   await page.getByRole("button", { name: "Learn", exact: true }).click();
-  await expect(savedMeaning(page).getByRole("link")).toHaveAttribute(
+  await expect(savedMeaning(page).getByRole("link", { name: /in a sentence$/ })).toHaveAttribute(
     "href",
-    "/vocabulary/map-word-3#sentence-practice-map-meaning-3",
+    "/vocabulary/map-word-3?fromDiscovery=4#sentence-practice-map-meaning-3",
   );
   await expect(announcement).toHaveText("Saved Map word 3 for review.");
   await page.getByRole("button", { name: "Word range", exact: true }).click();

@@ -3,9 +3,10 @@
 import { RangeMiniGrid } from "../knowledge-map/range-mini-grid";
 import { rangeProgressLabel } from "../knowledge-map/range-preview-model";
 import { StatusMessage } from "@/ui/status-message";
-import { TextInput } from "@/ui/controls";
+import { Select, TextInput } from "@/ui/controls";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
+  WORD_STATES,
   wordState,
   wordStateLabel,
   type KnowledgeMapData,
@@ -34,6 +35,8 @@ export function DiscoveryNavigation({
 }) {
   const [picker, setPicker] = useState<Picker | null>(null);
   const [query, setQuery] = useState("");
+  const [stateFilter, setStateFilter] = useState("");
+  const [grid, setGrid] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const options = useRef<HTMLUListElement>(null);
@@ -55,6 +58,7 @@ export function DiscoveryNavigation({
     // Safari does not always focus a button on tap. Make it the return target.
     event.currentTarget.focus({ preventScroll: true });
     setQuery("");
+    setStateFilter("");
     setPicker(next);
   }
 
@@ -71,10 +75,11 @@ export function DiscoveryNavigation({
   );
   const words = data.currentBand.items.filter(
     (word) =>
-      !filter ||
-      (byRank
-        ? String(word.rank).startsWith(numericFilter)
-        : word.wordText.toLocaleLowerCase().includes(filter)),
+      (!stateFilter || wordState(word) === stateFilter) &&
+      (!filter ||
+        (byRank
+          ? String(word.rank).startsWith(numericFilter)
+          : word.wordText.toLocaleLowerCase().includes(filter))),
   );
   const choosingRange = picker === "range";
 
@@ -137,7 +142,23 @@ export function DiscoveryNavigation({
         }}
       >
         {picker && (
-          <div className={styles.panel}>
+          <div
+            className={styles.panel}
+            onFocusCapture={(event) => {
+              // Enlarged text can make the panel scroll as well as the results.
+              const control = event.target;
+              requestAnimationFrame(() => {
+                if (
+                  control === document.activeElement &&
+                  control.matches(":focus-visible")
+                )
+                  control.scrollIntoView({
+                    block: "nearest",
+                    inline: "nearest",
+                  });
+              });
+            }}
+          >
             <header className={styles.panelHeader}>
               <h2 id="discovery-picker-title">
                 {choosingRange ? "Choose a range" : "Choose a word"}
@@ -168,12 +189,43 @@ export function DiscoveryNavigation({
                 }}
               />
             </label>
+            {!choosingRange && (
+              <div className={styles.scanControls}>
+                <Select
+                  aria-label="Knowledge state"
+                  value={stateFilter}
+                  onChange={(event) => {
+                    setStateFilter(event.target.value);
+                    if (options.current) options.current.scrollTop = 0;
+                  }}
+                >
+                  <option value="">All states</option>
+                  {Object.entries(WORD_STATES).map(([state, { label }]) => (
+                    <option key={state} value={state}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+                <button
+                  type="button"
+                  aria-pressed={grid}
+                  className={styles.gridToggle}
+                  onClick={() => setGrid(!grid)}
+                >
+                  Grid view
+                </button>
+              </div>
+            )}
             {(choosingRange ? ranges.length : words.length) === 0 ? (
               <StatusMessage as="p" className={styles.empty} role="status">
                 {choosingRange ? "No ranges match." : "No words match."}
               </StatusMessage>
             ) : (
-              <ul ref={options} className={styles.options}>
+              <ul
+                ref={options}
+                className={styles.options}
+                data-grid={!choosingRange && grid}
+              >
                 {choosingRange
                   ? ranges.map((range) => (
                       <li

@@ -39,7 +39,7 @@ func story(key, title, description, situation string, v []StoryVocabulary, steps
 	return Snapshot{Story: item, ContentVersion: ContentVersion, GradingVersion: GradingVersion, Steps: steps}
 }
 
-var catalog = []Snapshot{
+var catalog = append([]Snapshot{
 	story("a-quiet-lunch", "A quiet lunch", "Order a light lunch before a meeting.", "restaurant",
 		[]StoryVocabulary{
 			vocab("menu", "menu", "329c4ec9-6562-568e-9e71-9134da2f0d8d", "A list of food and drinks you can order."),
@@ -142,7 +142,7 @@ var catalog = []Snapshot{
 		line("Narrator", "Aisha can enjoy breakfast and explore the town before her bus journey."),
 		question("phrase_completion", "Complete the receptionist's instruction: Here is your ___ to open the room.", 0, "The receptionist gives Aisha a key card, which opens her hotel room.", "key card", "return ticket", "receipt"),
 	),
-}
+}, scenarioStories...)
 
 func build(key string) (Snapshot, error) {
 	for _, snap := range catalog {

@@ -1,5 +1,53 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import type { PracticeSession } from "@vocanova/api-client";
+
+test("Home opens optional Mistakes practice when a meaning needs another try", async ({
+  context,
+  baseURL,
+  page,
+}) => {
+  const csrf = randomUUID();
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "vocanova_csrf", value: csrf, url: baseURL! },
+  ]);
+  const practiceURL = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}/api/v1/practice-sessions`;
+  const headers = () => ({
+    "X-CSRF-Token": csrf,
+    "Idempotency-Key": randomUUID(),
+  });
+  await page.goto("/home");
+  const mistakes = page.getByRole("link", { name: "Practice mistakes" });
+  await expect(mistakes).toHaveCount(0);
+  const started = await page.request.post(practiceURL, {
+    data: { mode: "typed_recall" },
+    headers: headers(),
+  });
+  expect(started.ok()).toBe(true);
+  const session: PracticeSession = await started.json();
+  const missed = await page.request.post(`${practiceURL}/${session.id}/actions`, {
+    data: {
+      action: "answer",
+      stepId: session.currentStep!.id,
+      expectedRevision: session.revision,
+      clientActionId: randomUUID(),
+      typedAnswer: "unrelated response",
+    },
+    headers: headers(),
+  });
+  expect(missed.ok()).toBe(true);
+  await page.reload();
+  await expect(mistakes).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("1 meaning is ready for a second try.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await mistakes.click();
+  await expect(page).toHaveURL(/\/practice\?mode=mistakes#practice-mode-mistakes$/);
+  await expect(page.getByRole("button", { name: "Practise past mistakes" })).toBeVisible();
+});
 
 // Catch a return to an inverted blue reading panel or a white next-action
 // button: learning copy belongs on a calm surface and the action carries blue.

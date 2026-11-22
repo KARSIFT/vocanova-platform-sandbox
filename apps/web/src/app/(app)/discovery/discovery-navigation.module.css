@@ -82,6 +82,7 @@
 }
 
 .panel {
+  overflow: auto;
   display: flex;
   flex-direction: column;
   max-height: min(100dvh - 2rem, 39rem);
@@ -131,6 +132,7 @@
 }
 
 .options {
+  min-height: min(6rem, 30dvh);
   position: relative;
   overflow: auto;
   overscroll-behavior: contain;
@@ -234,4 +236,41 @@
   color: var(--color-neutral-700);
   font-size: 0.75rem;
   line-height: 1.5;
+}
+
+.scanControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.scanControls select {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 7rem;
+}
+.gridToggle {
+  min-height: 44px;
+  border: 1px solid var(--color-neutral-300);
+  border-radius: 0.625rem;
+  padding: 0.375rem 0.75rem;
+  cursor: pointer;
+}
+.gridToggle[aria-pressed="true"] {
+  background: var(--color-primary-100);
+  color: var(--color-primary-900);
+}
+.options[data-grid="true"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 7rem), 1fr));
+  align-content: start;
+  gap: 0.375rem;
+}
+.options[data-grid="true"] .wordOption {
+  height: 100%;
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 0.125rem;
+  border: 1px solid var(--color-neutral-200);
 }

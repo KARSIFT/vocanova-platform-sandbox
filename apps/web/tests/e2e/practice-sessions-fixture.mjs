@@ -2,6 +2,8 @@
 // Keep this small: three canonical meanings, deterministic order, opaque IDs.
 import { createHash, randomUUID } from "node:crypto";
 
+import { scenarioLessons } from "./scenario-lessons-fixture.mjs";
+
 const normalize = (value) => value.trim().replace(/\s+/gu, " ").toLowerCase();
 
 export async function handlePracticeSessions({
@@ -38,7 +40,7 @@ export async function handlePracticeSessions({
   state.practiceSessions ??= new Map();
   state.practiceReceipts ??= new Map();
   state.practiceMistakes ??= new Map();
-  const words = ["invite", "confirm", "reschedule"].map((slug) => {
+  const defaultWords = ["invite", "confirm", "reschedule"].map((slug) => {
     const word = canonicalWords[slug];
     const meaning = word.meanings[0];
     return {
@@ -160,6 +162,8 @@ export async function handlePracticeSessions({
     return send(200, project(state.practiceSessions.get(receipt.sessionId)));
   }
   if (parts.length === 0) {
+    const scenario = scenarioLessons.get(body.lessonKey);
+    const words = scenario?.words ?? defaultWords;
     if (
       !["typed_recall", "listening_choice", "mistakes", "journey"].includes(
         body.mode,
@@ -168,6 +172,7 @@ export async function handlePracticeSessions({
       return send(400, { detail: "Invalid mode" });
     if (
       body.lessonKey &&
+      !scenario &&
       !["daily-conversation", "conversation-basics"].includes(body.lessonKey)
     )
       return send(503, { detail: "Fixture lesson unavailable" });
@@ -429,9 +434,7 @@ export async function handlePracticeSessions({
         ? { correctChoiceId: step.correctChoice }
         : {}),
       assisted,
-      ...(entry.summary.mode === "journey"
-        ? { revealed: body.action === "reveal" }
-        : {}),
+      revealed: body.action === "reveal",
       answer: step.sentence ?? step.word.wordText,
       explanation: `The word from this lesson is “${step.word.wordText}”. ${step.word.definition}${assisted ? " This answer was practised with help." : ""}`,
       wordText: step.word.wordText,

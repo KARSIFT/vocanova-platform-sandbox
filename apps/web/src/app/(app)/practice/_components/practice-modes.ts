@@ -1,4 +1,7 @@
-import type { PracticeMode } from "@vocanova/api-client";
+import type {
+  PracticeMode,
+  PracticeSessionSummary,
+} from "@vocanova/api-client";
 
 export const practiceModes: Record<
   PracticeMode,
@@ -25,7 +28,26 @@ export const practiceModes: Record<
   },
   mistakes: {
     title: "Revisit mistakes",
-    description: "Try again with words you missed in earlier practice.",
+    description:
+      "Try words you missed in earlier lessons, reviews or practice.",
     startLabel: "Practise past mistakes",
   },
 };
+
+export function readPracticeMode(value: unknown): PracticeMode | undefined {
+  return typeof value === "string" && Object.hasOwn(practiceModes, value)
+    ? (value as PracticeMode)
+    : undefined;
+}
+
+export function practiceModeHref(
+  mode: PracticeMode,
+  source?: Pick<PracticeSessionSummary, "listId" | "lessonKey">,
+): string {
+  const query = new URLSearchParams({ mode });
+  if (mode === "typed_recall" || mode === "listening_choice") {
+    if (source?.listId) query.set("list", source.listId);
+    else if (source?.lessonKey) query.set("lesson", source.lessonKey);
+  }
+  return `/practice?${query}#${mode === "journey" ? "practice-journey" : `practice-mode-${mode}`}`;
+}

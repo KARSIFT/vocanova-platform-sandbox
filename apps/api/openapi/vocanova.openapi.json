@@ -6546,7 +6546,8 @@
             "enum": [
               "line",
               "comprehension",
-              "phrase_completion"
+              "phrase_completion",
+              "dialogue_reply"
             ],
             "type": "string"
           },

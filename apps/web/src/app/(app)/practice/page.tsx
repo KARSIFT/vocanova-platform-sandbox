@@ -7,6 +7,8 @@ import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer, PageHeader, PageSection, Surface } from "@/ui/surface";
 import { PracticeEntry } from "./_components/practice-entry";
+import { PracticeSituations } from "./_components/practice-situations";
+import { readPracticeMode } from "./_components/practice-modes";
 import { LearnIcon } from "../_components/learn-icons";
 
 export const metadata: Metadata = {
@@ -33,6 +35,7 @@ export default async function PracticePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = await searchParams;
+  const requestedMode = readPracticeMode(query.mode);
   const requestedList =
     query.list !== undefined
       ? typeof query.list === "string" && query.list
@@ -68,7 +71,9 @@ export default async function PracticePage({
     );
   const selectedLessonKey =
     query.lesson === undefined
-      ? (studiedLesson?.key ?? "")
+      ? requestedMode
+        ? ""
+        : (studiedLesson?.key ?? "")
       : (lessons?.find((lesson) => lesson.key === query.lesson)?.key ?? "");
   const savedWords = savedResponse?.data.items;
   const firstWord = savedWords?.[0];
@@ -81,7 +86,8 @@ export default async function PracticePage({
       />
 
       <PracticeEntry
-        key={`${selectedLessonKey}:${requestedList}`}
+        key={`${requestedMode ?? ""}:${selectedLessonKey}:${requestedList}`}
+        requestedMode={requestedMode}
         initialSessions={practiceResponse?.data ?? null}
         lessons={lessons ?? []}
         lessonsUnavailable={!lessonResponse}
@@ -92,6 +98,8 @@ export default async function PracticePage({
           query.list !== undefined || query.lesson !== undefined
         }
       />
+
+      {lessons && <PracticeSituations lessons={lessons} />}
 
       <Surface
         aria-labelledby="practice-review-heading"

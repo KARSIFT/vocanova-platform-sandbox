@@ -18,10 +18,12 @@ export function PracticeAudio({
   text,
   meaningId,
   meaningRevision,
+  typedPracticeHref,
 }: {
   text: string;
   meaningId?: string;
   meaningRevision?: string;
+  typedPracticeHref: string;
 }) {
   const owner = useRef(Symbol("practice-audio"));
   const [state, setState] = useState<PronunciationState>({ status: "idle" });
@@ -87,8 +89,8 @@ export function PracticeAudio({
             You can try the audio again or choose typed recall instead. Your
             saved session will still be here.
           </p>
-          <Link href="/practice" className={`${textLink} mt-2`}>
-            Choose another practice mode
+          <Link href={typedPracticeHref} className={`${textLink} mt-2`}>
+            Switch to typed recall
           </Link>
         </div>
       )}

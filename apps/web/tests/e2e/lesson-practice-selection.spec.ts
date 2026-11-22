@@ -81,7 +81,10 @@ test("an unknown lesson query falls back to an explicit full-course mix", async 
   await expect(
     main.getByLabel("Practice vocabulary", { exact: true }),
   ).toHaveValue("");
-  await main.locator("summary").filter({ hasText: "About this selection" }).focus();
+  await main
+    .locator("summary")
+    .filter({ hasText: "About this selection" })
+    .focus();
   await page.keyboard.press("Enter");
   await expect(
     main.getByText(
@@ -99,4 +102,99 @@ test("an unknown lesson query falls back to an explicit full-course mix", async 
     .click();
   expect((await started).postDataJSON()).toEqual({ mode: "typed_recall" });
   await expect(page).toHaveURL(/\/practice\/session\/[^/]+$/);
+});
+
+test("a focused mode link keeps its situation and resumes the same saved session", async ({
+  page,
+  context,
+}) => {
+  const url =
+    "/practice?mode=typed_recall&lesson=conversation-basics#practice-mode-typed_recall";
+  await page.goto(url);
+  const main = page.getByRole("main");
+  const focused = main.locator("#practice-mode-typed_recall");
+  await expect(
+    main.getByRole("link", { name: "Open situation lesson", exact: true }),
+  ).toHaveAttribute("href", "/learn/conversation-basics");
+  await expect(
+    focused.getByRole("button", { name: "Start typed recall" }),
+  ).toBeVisible();
+  const before = await (
+    await context.request.get(`${apiURL}/api/v1/practice-sessions`)
+  ).json();
+  expect(before.items).toHaveLength(0);
+  const response = page.waitForResponse(
+    (r) =>
+      r.request().method() === "POST" &&
+      new URL(r.url()).pathname === "/api/v1/practice-sessions",
+  );
+  await focused.getByRole("button").click();
+  const saved = await (await response).json();
+  expect(saved).toMatchObject({
+    mode: "typed_recall",
+    lessonKey: "conversation-basics",
+  });
+  await expect(page).toHaveURL(`/practice/session/${saved.id}`);
+  await page.goto(url);
+  const resume = focused.getByRole("link", { name: /Resume typed recall/ });
+  await expect(resume).toHaveAttribute("href", `/practice/session/${saved.id}`);
+  await resume.focus();
+  await resume.press("Enter");
+  await expect(page).toHaveURL(`/practice/session/${saved.id}`);
+  const after = await (
+    await context.request.get(`${apiURL}/api/v1/practice-sessions`)
+  ).json();
+  expect(after.items).toHaveLength(1);
+});
+
+test("a learner arriving from Review sees the empty mistake state", async ({
+  page,
+}) => {
+  await page.goto("/practice?mode=mistakes#practice-mode-mistakes");
+  const modes = page.locator("#practice-mode-mistakes");
+  await expect(modes).toContainText("No past mistakes to revisit right now.");
+  await expect(modes.getByRole("button")).toHaveCount(0);
+  await expect(modes.locator("..").locator("li").first()).toHaveAttribute(
+    "id",
+    "practice-mode-mistakes",
+  );
+});
+
+test("situation practice leads to the lesson in the server catalog", async ({
+  page,
+}) => {
+  await page.goto("/practice");
+  const scenarios = page.getByRole("region", { name: "Practise a situation" });
+  const lesson = scenarios.getByRole("link", {
+    name: /Make a plan with a friend/,
+  });
+  await expect(lesson).toContainText("3 words · 9 steps");
+  await lesson.click();
+  await expect(page).toHaveURL("/learn/conversation-basics");
+});
+
+test("the practice hub links each available situation to its guided lesson", async ({
+  context,
+  baseURL,
+  page,
+}) => {
+  await context.addCookies([
+    { name: "e2e_lessons", value: "scenarios", url: baseURL! },
+  ]);
+  await page.goto("/practice");
+  const situations = page.getByRole("region", { name: "Practise a situation" });
+  for (const [topic, key] of [
+    ["Work", "work-meeting"],
+    ["Travel", "airport"],
+    ["Dining", "restaurant-other-plans"],
+    ["Shopping", "shopping-returns"],
+    ["Everyday problems", "delivery-parcel"],
+  ]) {
+    const link = situations.getByRole("link", { name: new RegExp(`^${topic} `) });
+    await expect(link).toHaveAttribute("href", `/learn/${key}`);
+  }
+  const travel = situations.getByRole("link", { name: /^Travel / });
+  await travel.focus();
+  await travel.press("Enter");
+  await expect(page).toHaveURL("/learn/airport");
 });

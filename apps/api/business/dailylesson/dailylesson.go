@@ -642,7 +642,12 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 			return nil, ErrInvalid
 		}
 		correct := false
-		if a.Action == "answer" {
+		// "I'm not sure" is an answer with help and no choice. It follows the
+		// same receipt and scheduling path as a miss, so a reload or retry
+		// replays one immutable receipt. Effort, success credit and rating XP
+		// all require an unassisted answer, so none is earned.
+		assisted := a.Action == "answer" && a.WasHintUsed
+		if a.Action == "answer" && (a.ChoiceID != "" || !assisted) {
 			found := false
 			for _, c := range w.Public.Choices {
 				if c.ID == a.ChoiceID {
@@ -734,10 +739,11 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 			st.CompletedWords++
 			if a.Action == "skip" {
 				fb.Explanation = "This word was left for another day."
-			} else if correct {
-				fb.Explanation = "Correct. This word is reviewed for today."
 			} else {
-				fb.Explanation = "Review the meaning. This word will return on another day."
+				fb.Explanation = feedbackExplanation(w, correct, assisted)
+				if assisted {
+					fb.Reason = AssistedReason
+				}
 			}
 		}
 		st.Feedback = fb

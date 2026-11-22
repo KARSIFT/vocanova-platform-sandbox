@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "@/ui/link";
+import { discoveryDetailHref } from "./discovery-detail-route";
 import { StatusMessage } from "@/ui/status-message";
 import { useEffect, useRef, useState } from "react";
 import type { WordDetail } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { handleApiError, isSessionExpiredError } from "@/lib/session";
 import {
+  formatNoteType,
   getAdditionalDefinition,
   getPrimaryDefinition,
 } from "@/lib/word-definition";
@@ -44,12 +47,14 @@ function MeaningDetails({
       )
     : meaning.examples;
 
+  const notes = meaning.usageNotes.filter((note) => note.noteText.trim());
+
   if (
     current &&
     !currentExplanation &&
     !referenceDefinition &&
     !examples.length &&
-    !meaning.usageNotes.length
+    !notes.length
   )
     return null;
 
@@ -79,8 +84,11 @@ function MeaningDetails({
           {example.exampleText}
         </p>
       ))}
-      {meaning.usageNotes.map((note) => (
-        <p key={note.id}>{note.noteText}</p>
+      {notes.map((note) => (
+        <p key={note.id}>
+          <span className="font-medium">{formatNoteType(note.noteType)}: </span>
+          {note.noteText}
+        </p>
       ))}
     </div>
   );
@@ -89,12 +97,16 @@ function MeaningDetails({
 /** Teaching is optional and read-only; no canonical request until opened. */
 export function DiscoveryWordDetails({
   wordSlug,
+  rank,
+  navigationLocked,
   meaningId,
   meaningRevision,
   exampleSentence,
   displayedDefinition,
 }: {
   wordSlug: string;
+  rank: number;
+  navigationLocked: boolean;
   meaningId: string;
   meaningRevision?: string;
   exampleSentence?: string;
@@ -206,13 +218,38 @@ export function DiscoveryWordDetails({
       )}
       {currentMeaning && (
         <>
+          <MeaningDetails
+            current
+            exampleSentence={exampleSentence}
+            displayedDefinition={displayedDefinition}
+            meaning={currentMeaning}
+          />
+          {!navigationLocked && (
+            <Link
+              href={discoveryDetailHref(wordSlug, meaningId, rank)}
+              prefetch={false}
+              className="vn-text-link inline-flex min-h-11 items-center"
+            >
+              Explore this meaning and personal tools
+            </Link>
+          )}
           {otherMeanings.length ? (
             <>
               <h2 className="font-semibold text-neutral-900">Other meanings</h2>
               <ol className={styles.meanings}>
-                {otherMeanings.map((meaning) => (
+                {otherMeanings.map((meaning, index) => (
                   <li key={meaning.id}>
                     <MeaningDetails meaning={meaning} />
+                    {!navigationLocked && (
+                      <Link
+                        href={discoveryDetailHref(wordSlug, meaning.id, rank)}
+                        prefetch={false}
+                        className="vn-text-link inline-flex min-h-11 items-center"
+                      >
+                        Open {meaning.partOfSpeech} meaning
+                        <span className="sr-only"> {index + 1}</span>
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -220,12 +257,6 @@ export function DiscoveryWordDetails({
           ) : (
             <p>This is the only meaning in Vocanova.</p>
           )}
-          <MeaningDetails
-            current
-            exampleSentence={exampleSentence}
-            displayedDefinition={displayedDefinition}
-            meaning={currentMeaning}
-          />
         </>
       )}
     </details>

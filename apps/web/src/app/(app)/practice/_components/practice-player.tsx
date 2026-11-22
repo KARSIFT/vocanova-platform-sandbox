@@ -18,8 +18,9 @@ import { MeaningPicture } from "@/ui/meaning-picture";
 import { SessionActions } from "@/ui/session";
 import styles from "./session-layout.module.css";
 
+import { meaningAnchor } from "../../_components/meaning-comparison";
 import { PracticeAudio } from "./practice-audio";
-import { practiceModes } from "./practice-modes";
+import { practiceModeHref, practiceModes } from "./practice-modes";
 import { primaryAction, secondaryAction, textLink } from "./practice-styles";
 
 export function PracticePlayer({
@@ -57,6 +58,7 @@ export function PracticePlayer({
     ? (checked.correctChoiceId ?? selectedChoice)
     : selectedChoice;
   const locked = busy || needsRetry || needsRefresh;
+  const typedPracticeHref = practiceModeHref("typed_recall", session);
   const journey = session.mode === "journey";
   const teaching = step?.kind === "teach";
   const assembly = step?.kind === "sentence_build";
@@ -221,11 +223,23 @@ export function PracticePlayer({
             {session.firstAnswersCorrect} of {session.questionsAnswered} correct
             on your first try without help.
           </p>
-          <p className="mt-2 text-neutral-700">
-            {journey
-              ? "Your next step is ready on your learning path."
-              : "Come back for another try whenever you like."}
-          </p>
+          {session.mode === "listening_choice" ||
+          session.mode === "typed_recall" ? (
+            <ActionLink
+              variant="secondary"
+              className={`${secondaryAction} mt-4 mr-3`}
+              href={practiceModeHref(
+                session.mode === "typed_recall"
+                  ? "listening_choice"
+                  : "typed_recall",
+                session,
+              )}
+            >
+              {session.mode === "typed_recall"
+                ? "Try listening practice"
+                : "Try typed recall"}
+            </ActionLink>
+          ) : null}
           <ActionLink
             variant="primary"
             href="/practice"
@@ -274,6 +288,7 @@ export function PracticePlayer({
               {step.speechText && (
                 <PracticeAudio
                   text={step.speechText}
+                  typedPracticeHref={typedPracticeHref}
                   meaningId={step.pronunciationMeaningId}
                   meaningRevision={step.pronunciationRevision}
                 />
@@ -294,6 +309,7 @@ export function PracticePlayer({
               {step.speechText && (
                 <PracticeAudio
                   text={step.speechText}
+                  typedPracticeHref={typedPracticeHref}
                   meaningId={step.pronunciationMeaningId}
                   meaningRevision={step.pronunciationRevision}
                 />
@@ -432,17 +448,21 @@ export function PracticePlayer({
               {step.speechText ? (
                 <PracticeAudio
                   text={step.speechText}
+                  typedPracticeHref={typedPracticeHref}
                   meaningId={step.pronunciationMeaningId}
                   meaningRevision={step.pronunciationRevision}
                 />
-              ) : !journey ? (
+              ) : step.kind === "listening_choice" ? (
                 <StatusMessage
                   as="p"
                   role="status"
                   className="rounded-xl bg-secondary-50 p-4 text-neutral-800"
                 >
                   The audio for this question is unavailable. You can show the
-                  answer or return to Practice for another activity.
+                  answer or switch to typed recall.
+                  <Link href={typedPracticeHref} className={`${textLink} ml-2`}>
+                    Switch to typed recall
+                  </Link>
                 </StatusMessage>
               ) : null}
               <form
@@ -494,7 +514,7 @@ export function PracticePlayer({
                   ? checked.assisted
                     ? "Practised with help"
                     : "You remembered it"
-                  : checked.assisted && (!journey || session.canContinue)
+                  : checked.revealed
                     ? "Answer shown"
                     : "Keep practising"}
               </h2>
@@ -510,7 +530,7 @@ export function PracticePlayer({
                 </p>
               )}
               <Link
-                href={`/vocabulary/${encodeURIComponent(checked.wordSlug)}`}
+                href={`/vocabulary/${encodeURIComponent(checked.wordSlug)}${checked.meaningId ? `#${meaningAnchor(checked.meaningId)}` : ""}`}
                 className={`${textLink} mt-2`}
               >
                 Explore {checked.wordText}

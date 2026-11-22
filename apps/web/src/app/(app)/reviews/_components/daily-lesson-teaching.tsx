@@ -106,9 +106,13 @@ export function DailyLessonTeaching({
     frozenRevision,
   ]);
   const current = read?.identity === identity ? read : undefined;
-  const canonicalImage = current?.word?.meanings.find(
+  const checkedMeaning = current?.word?.meanings.find(
     (meaning) => meaning.id === feedback.meaningId,
-  )?.image;
+  );
+  const example =
+    frozenRevision && checkedMeaning?.meaningRevision === frozenRevision
+      ? checkedMeaning.examples?.find((item) => item.exampleText.trim())
+      : undefined;
   const otherMeanings = current?.word?.meanings.filter(
     (meaning) => meaning.id !== feedback.meaningId,
   );
@@ -117,12 +121,20 @@ export function DailyLessonTeaching({
       aria-label={`Learn more about ${feedback.wordText}`}
       className="mt-4"
     >
+      {example && (
+        <div className="mb-4 border-l-2 border-primary-300 pl-3">
+          <p className="text-sm font-semibold text-neutral-600">Example</p>
+          <p className="mt-1 text-base leading-relaxed text-neutral-900">
+            {example.exampleText}
+          </p>
+        </div>
+      )}
       {frozenRevision && (
         <MeaningPicture
           key={identity}
           meaningId={feedback.meaningId}
           meaningRevision={frozenRevision}
-          image={current?.image ?? canonicalImage}
+          image={current?.image ?? checkedMeaning?.image}
         />
       )}
       {otherMeanings && otherMeanings.length > 0 ? (

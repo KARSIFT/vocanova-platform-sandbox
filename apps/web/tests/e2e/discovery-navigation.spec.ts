@@ -1,8 +1,25 @@
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
+import { pressTab } from "./keyboard-navigation";
 
+
+async function expectDetailFocusVisible(target: Locator) {
+  await expect(target).toBeFocused();
+  await expect.poll(() => target.evaluate((control) => {
+    const rect = control.getBoundingClientRect();
+    const header = document.querySelector("header.app-header");
+    const decisions = control.closest("article")?.nextElementSibling;
+    if (!decisions) return false;
+    const lowerEdge = getComputedStyle(decisions).position === "sticky"
+      ? Math.min(innerHeight, decisions.getBoundingClientRect().top)
+      : innerHeight;
+    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    return rect.top >= (header?.getBoundingClientRect().bottom ?? 0)
+      && rect.bottom <= lowerEdge && !!hit && control.contains(hit);
+  })).toBe(true);
+}
 
 async function chooseWord(page: Page, rank: number) {
   await page.getByRole("button", { name: "Choose a word", exact: true }).click();
@@ -276,7 +293,18 @@ test("word details load only on demand, bind the displayed sense and retry hones
                   exampleText: "An example for this meaning.",
                 },
               ],
-              usageNotes: [],
+              usageNotes: [
+                {
+                  id: "current-usage",
+                  noteType: "collocation",
+                  noteText: "the same",
+                },
+                {
+                  id: "blank-usage",
+                  noteType: "register",
+                  noteText: " ",
+                },
+              ],
             },
             {
               id: "other-sense",
@@ -308,9 +336,12 @@ test("word details load only on demand, bind the displayed sense and retry hones
     page.getByRole("heading", { name: "the", exact: true }),
   ).toBeVisible();
   expect(reads).toEqual([]);
-  const details = page.locator("details").filter({
-    has: page.getByText("Word details & other meanings", { exact: true }),
-  });
+  const details = page
+    .getByRole("article", { name: "the", exact: true })
+    .locator("details")
+    .filter({
+      has: page.getByText("Word details & other meanings", { exact: true }),
+    });
   await details.locator("summary").press("Enter");
   for (const nextFailureStatus of [500, 0]) {
     await expect(details.getByRole("alert")).toContainText(
@@ -320,9 +351,19 @@ test("word details load only on demand, bind the displayed sense and retry hones
       /HTTP|Raw provider|upstream/,
     );
     failureStatus = nextFailureStatus;
-    await page
-      .getByRole("button", { name: "Retry word details", exact: true })
-      .click();
+    const retry = details.getByRole("button", { name: "Retry word details", exact: true });
+    if (nextFailureStatus === 500) {
+      // The summary opened with Enter. Follow native tab order through the expanded error.
+      await pressTab(page);
+      await expectDetailFocusVisible(retry);
+      await pressTab(page, { backwards: true });
+      await expectDetailFocusVisible(details.locator("summary"));
+      await pressTab(page);
+      await expectDetailFocusVisible(retry);
+      await page.keyboard.press("Enter");
+    } else {
+      await retry.click();
+    }
   }
   await expect(
     page.getByRole("button", { name: "Retry word details", exact: true }),
@@ -343,6 +384,16 @@ test("word details load only on demand, bind the displayed sense and retry hones
   await expect(
     details.getByRole("heading", { name: "Other meanings", exact: true }),
   ).toBeVisible();
+  await expect(
+    details.getByText("Often used with: the same", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    details.getByText("When to use it:", { exact: true }),
+  ).toHaveCount(0);
+  const content = await details.innerText();
+  expect(content.indexOf("Often used with: the same")).toBeLessThan(
+    content.indexOf("Other meanings"),
+  );
   const alternatives = details.getByRole("listitem");
   await expect(alternatives).toHaveCount(2);
   await expect(alternatives.nth(0)).toContainText("noun");
@@ -991,5 +1042,68 @@ for (const { choice, partial } of [
       page.getByRole("heading", { name: "Map word 1101", exact: true }),
     ).toBeFocused();
     await expect(page).toHaveURL(/\/discovery\?band=12&word=1101&active=1$/);
+  });
+}
+
+for (const theme of ["light", "dark"] as const) {
+  test(`scan a range by knowledge state and return to the exact card in ${theme}`, async ({ page, baseURL }) => {
+    await page.context().addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+      { name: "vocanova_theme", value: theme, url: baseURL! },
+      { name: "e2e_knowledge_map", value: "mixed-progress", url: baseURL! },
+      { name: "e2e_discovery_detail", value: "pour", url: baseURL! },
+      { name: "e2e_vocabulary", value: "multiple-meanings", url: baseURL! },
+    ]);
+    const decisions: string[] = [];
+    page.on("request", (req) => {
+      if (req.url().endsWith("/knowledge-map/decisions")) decisions.push(req.method());
+    });
+    await page.goto("/discovery?band=1&word=2&active=1");
+    if (theme === "dark") {
+      await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+    }
+    await page.getByRole("button", { name: "Choose a word" }).click();
+    const picker = page.getByRole("dialog", { name: "Choose a word" });
+    const grid = picker.getByRole("button", { name: "Grid view" });
+    await grid.press("Enter");
+    await expect(grid).toHaveAttribute("aria-pressed", "true");
+    const state = picker.getByRole("combobox", { name: "Knowledge state" });
+    await state.selectOption("known");
+    await expect(picker.getByRole("listitem")).toHaveCount(1);
+    await expect(picker.getByRole("listitem")).toContainText("the");
+    await state.selectOption("learning");
+    await expect(picker.getByRole("listitem")).toHaveCount(1);
+    await expect(picker.getByRole("listitem")).toContainText("Map word 3");
+    await state.selectOption("unseen");
+    await expect(picker.getByRole("listitem")).toHaveCount(97);
+    await state.selectOption("learned");
+    const search = picker.getByRole("searchbox", { name: "Filter words" });
+    await search.fill("no match");
+    await expect(picker.getByRole("status")).toHaveText("No words match.");
+    await search.fill("pour");
+    const result = picker.getByRole("button", { name: /12 pour Learned/ });
+    await pressTab(page);
+    await expect(state).toBeFocused();
+    await pressTab(page);
+    await expect(grid).toBeFocused();
+    await pressTab(page);
+    await expect(result).toBeFocused();
+    await expect.poll(() => result.evaluate((button) => {
+      const rect = button.getBoundingClientRect();
+      const target = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return rect.left >= 0 && rect.right <= innerWidth && rect.height >= 44 &&
+        !!target && button.contains(target);
+    })).toBe(true);
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("heading", { name: "pour", exact: true })).toBeFocused();
+    await expect(page).toHaveURL(/band=1&word=12&active=1&revisit=1$/);
+    await page.getByText("Word details & other meanings", { exact: true }).press("Enter");
+    await page.getByRole("link", { name: "Open verb meaning 1" }).click();
+    await expect(page).toHaveURL(/\/vocabulary\/pour\?fromDiscovery=12#meaning-mean-pour-second$/);
+    await expect(page.locator("#meaning-mean-pour-second")).toContainText("to arrive in large numbers");
+    await page.getByRole("link", { name: "Back to Discovery" }).click();
+    await expect(page).toHaveURL(/band=1&word=12&active=1&revisit=1$/);
+    await expect(page.getByRole("heading", { name: "pour", exact: true })).toBeVisible();
+    expect(decisions).toEqual([]);
   });
 }

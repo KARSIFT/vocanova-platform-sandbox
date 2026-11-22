@@ -1114,5 +1114,1050 @@
         "Explanation": "The receptionist gives Aisha a key card, which opens her hotel room."
       }
     ]
+  },
+  {
+    "Story": {
+      "key": "before-the-team-meeting",
+      "title": "Before the team meeting",
+      "description": "Read a change of plan and agree who will do what.",
+      "situation": "meeting",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 3,
+      "vocabulary": [
+        {
+          "wordText": "agenda",
+          "wordSlug": "agenda",
+          "meaningId": "8a7f86d3-ed7a-512c-9c19-d86b5d46ffa8",
+          "definition": "The list of things to discuss at a meeting."
+        },
+        {
+          "wordText": "action items",
+          "wordSlug": "action-items",
+          "meaningId": "71c851c2-c028-5d8f-9e0a-5be524410a82",
+          "definition": "Tasks people agree to do after a meeting."
+        },
+        {
+          "wordText": "deadline",
+          "wordSlug": "deadline",
+          "meaningId": "b571a540-89bb-533b-be81-9cedf443a64a",
+          "definition": "The latest time to finish a task."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "before-the-team-meeting-1",
+          "kind": "line",
+          "line": {
+            "id": "before-the-team-meeting-1",
+            "speaker": "Narrator",
+            "text": "The team planned a meeting at ten. Jo finds a note on the meeting room door."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "before-the-team-meeting-2",
+          "kind": "line",
+          "line": {
+            "id": "before-the-team-meeting-2",
+            "speaker": "Note",
+            "text": "New time: eleven. Same room. Please bring the agenda and the new prices."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "before-the-team-meeting-3",
+          "kind": "line",
+          "line": {
+            "id": "before-the-team-meeting-3",
+            "speaker": "Jo",
+            "text": "I have the prices, but I left the agenda on my desk."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "before-the-team-meeting-4",
+          "kind": "line",
+          "line": {
+            "id": "before-the-team-meeting-4",
+            "speaker": "Ali",
+            "text": "I have a copy on my phone. We can use mine."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "before-the-team-meeting-5",
+          "kind": "comprehension",
+          "prompt": "What has changed since the team made its plan?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "The meeting room."
+            },
+            {
+              "id": "choice-2",
+              "text": "The list of prices."
+            },
+            {
+              "id": "choice-3",
+              "text": "The meeting time."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-3",
+        "Explanation": "The note gives a new time and says to use the same room."
+      },
+      {
+        "Public": {
+          "id": "before-the-team-meeting-6",
+          "kind": "line",
+          "line": {
+            "id": "before-the-team-meeting-6",
+            "speaker": "Jo",
+            "text": "After the meeting, someone needs to email the prices to the shop. I can do that."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "before-the-team-meeting-7",
+          "kind": "line",
+          "line": {
+            "id": "before-the-team-meeting-7",
+            "speaker": "Ali",
+            "text": "Good. The shop needs them by two. Can you meet that deadline?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "before-the-team-meeting-8",
+          "kind": "dialogue_reply",
+          "prompt": "Reply as Jo. Agree to the task and confirm the time.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "Yes, I'll email the prices by two."
+            },
+            {
+              "id": "choice-2",
+              "text": "Yes, I'll bring my agenda at two."
+            },
+            {
+              "id": "choice-3",
+              "text": "Yes, let's move the meeting to two."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-1",
+        "Explanation": "Jo has agreed to email the prices. Sending them by two meets the shop's deadline."
+      },
+      {
+        "Public": {
+          "id": "before-the-team-meeting-9",
+          "kind": "line",
+          "line": {
+            "id": "before-the-team-meeting-9",
+            "speaker": "Ali",
+            "text": "I'll write that down with our other action items."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "before-the-team-meeting-10",
+          "kind": "line",
+          "line": {
+            "id": "before-the-team-meeting-10",
+            "speaker": "Narrator",
+            "text": "Jo sends the prices at one thirty and crosses the task off her list."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "before-the-team-meeting-11",
+          "kind": "phrase_completion",
+          "prompt": "To ask which tasks everyone agreed to, say: What are our ___?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "prices"
+            },
+            {
+              "id": "choice-2",
+              "text": "action items"
+            },
+            {
+              "id": "choice-3",
+              "text": "rooms"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-2",
+        "Explanation": "Action items are the tasks people agree to do."
+      }
+    ]
+  },
+  {
+    "Story": {
+      "key": "a-new-gate",
+      "title": "A new gate",
+      "description": "Compare two flight notices and find the place to board.",
+      "situation": "airport",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 3,
+      "vocabulary": [
+        {
+          "wordText": "boarding pass",
+          "wordSlug": "boarding-pass",
+          "meaningId": "8a6ec801-3292-5fc2-bfb3-242ac405d891",
+          "definition": "The document you show to get on a plane."
+        },
+        {
+          "wordText": "gate",
+          "wordSlug": "gate",
+          "meaningId": "6a61d337-80e7-5d50-bc61-8b45b6a054a1",
+          "definition": "The place at the airport where passengers board their flight."
+        },
+        {
+          "wordText": "luggage",
+          "wordSlug": "luggage",
+          "meaningId": "bee2408e-5991-5805-923c-6fba33ab7e7a",
+          "definition": "The bags you take on a trip."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "a-new-gate-1",
+          "kind": "line",
+          "line": {
+            "id": "a-new-gate-1",
+            "speaker": "Narrator",
+            "text": "Lena is at gate six. Her boarding pass says flight 204 to Lima."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-new-gate-2",
+          "kind": "line",
+          "line": {
+            "id": "a-new-gate-2",
+            "speaker": "Screen",
+            "text": "Flight 204 to Lima: go to gate nine. Flight 240 to Lima: gate six."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-new-gate-3",
+          "kind": "line",
+          "line": {
+            "id": "a-new-gate-3",
+            "speaker": "Lena",
+            "text": "Both flights go to Lima. Mine is two zero four."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-new-gate-4",
+          "kind": "line",
+          "line": {
+            "id": "a-new-gate-4",
+            "speaker": "Agent",
+            "text": "Look at the flight number first. The screen has the latest gate."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-new-gate-5",
+          "kind": "comprehension",
+          "prompt": "Which detail tells Lena which flight to follow?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "The city name."
+            },
+            {
+              "id": "choice-2",
+              "text": "The flight number."
+            },
+            {
+              "id": "choice-3",
+              "text": "The number of bags."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-2",
+        "Explanation": "Both flights go to Lima. The number on her boarding pass matches flight 204."
+      },
+      {
+        "Public": {
+          "id": "a-new-gate-6",
+          "kind": "line",
+          "line": {
+            "id": "a-new-gate-6",
+            "speaker": "Lena",
+            "text": "My brother is waiting for me at gate six with our luggage."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-new-gate-7",
+          "kind": "line",
+          "line": {
+            "id": "a-new-gate-7",
+            "speaker": "Agent",
+            "text": "Call him now. Boarding starts in ten minutes."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-new-gate-8",
+          "kind": "dialogue_reply",
+          "prompt": "What should Lena say so her brother meets her at the right place?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "Please stay at six. I'll come back after boarding."
+            },
+            {
+              "id": "choice-2",
+              "text": "Take our bags to flight 240 at gate six."
+            },
+            {
+              "id": "choice-3",
+              "text": "Bring our luggage to gate nine for flight 204."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-3",
+        "Explanation": "Their flight is 204. Its new gate is nine, and her brother has the bags."
+      },
+      {
+        "Public": {
+          "id": "a-new-gate-9",
+          "kind": "line",
+          "line": {
+            "id": "a-new-gate-9",
+            "speaker": "Brother",
+            "text": "I'm on my way with the bags. See you at nine."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-new-gate-10",
+          "kind": "line",
+          "line": {
+            "id": "a-new-gate-10",
+            "speaker": "Agent",
+            "text": "Here you are together. Please show me your boarding passes."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-new-gate-11",
+          "kind": "phrase_completion",
+          "prompt": "When the agent is ready to scan her document, Lena says: Here's my ___.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "boarding pass"
+            },
+            {
+              "id": "choice-2",
+              "text": "return address"
+            },
+            {
+              "id": "choice-3",
+              "text": "room key"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-1",
+        "Explanation": "The agent scans a boarding pass before a passenger gets on the plane."
+      }
+    ]
+  },
+  {
+    "Story": {
+      "key": "dinner-to-go",
+      "title": "Dinner to go",
+      "description": "Change a restaurant booking into an order to collect.",
+      "situation": "restaurant",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 3,
+      "vocabulary": [
+        {
+          "wordText": "reservation",
+          "wordSlug": "reservation",
+          "meaningId": "52c8ed28-544d-5a80-a911-6ddd03953606",
+          "definition": "An arrangement to keep a restaurant table for you."
+        },
+        {
+          "wordText": "take-out",
+          "wordSlug": "take-out",
+          "meaningId": "1e9e55f8-d329-5c52-bc30-7ed77a31a167",
+          "definition": "Food prepared at a restaurant to eat somewhere else."
+        },
+        {
+          "wordText": "tip",
+          "wordSlug": "tip",
+          "meaningId": "bd5eacb6-be32-5e7b-a8d7-d56db1908347",
+          "definition": "Extra money someone chooses to leave for service."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "dinner-to-go-1",
+          "kind": "line",
+          "line": {
+            "id": "dinner-to-go-1",
+            "speaker": "Narrator",
+            "text": "Cam and his sister have a table booked for seven. His sister needs to stay home."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "dinner-to-go-2",
+          "kind": "line",
+          "line": {
+            "id": "dinner-to-go-2",
+            "speaker": "Cam",
+            "text": "Hello, I have a reservation under Cam. We can't eat at the restaurant tonight."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "dinner-to-go-3",
+          "kind": "line",
+          "line": {
+            "id": "dinner-to-go-3",
+            "speaker": "Server",
+            "text": "I can cancel the table and make your food for take-out."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "dinner-to-go-4",
+          "kind": "line",
+          "line": {
+            "id": "dinner-to-go-4",
+            "speaker": "Cam",
+            "text": "That works. Two bowls of noodles, please. I'll come and get them."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "dinner-to-go-5",
+          "kind": "comprehension",
+          "prompt": "How will Cam and his sister get dinner?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "Cam will collect food for both of them."
+            },
+            {
+              "id": "choice-2",
+              "text": "They will eat at the reserved table."
+            },
+            {
+              "id": "choice-3",
+              "text": "The server will bring dinner to their home."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-1",
+        "Explanation": "Cam says he will collect the noodles after the server offers take-out."
+      },
+      {
+        "Public": {
+          "id": "dinner-to-go-6",
+          "kind": "line",
+          "line": {
+            "id": "dinner-to-go-6",
+            "speaker": "Server",
+            "text": "Our driver is busy. Are you sure you can collect the food?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "dinner-to-go-7",
+          "kind": "line",
+          "line": {
+            "id": "dinner-to-go-7",
+            "speaker": "Cam",
+            "text": "Yes. I'll be outside the restaurant at a quarter past seven."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "dinner-to-go-8",
+          "kind": "dialogue_reply",
+          "prompt": "Reply as the server. Confirm the collection plan.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "Your table is ready for two at seven."
+            },
+            {
+              "id": "choice-2",
+              "text": "Your take-out will be ready to collect at 7:15."
+            },
+            {
+              "id": "choice-3",
+              "text": "Our driver will come to your house at 7:15."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-2",
+        "Explanation": "A quarter past seven means 7:15. Cam has asked to collect the food himself."
+      },
+      {
+        "Public": {
+          "id": "dinner-to-go-9",
+          "kind": "line",
+          "line": {
+            "id": "dinner-to-go-9",
+            "speaker": "Narrator",
+            "text": "Cam arrives on time. The server brings two warm bowls in a bag."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "dinner-to-go-10",
+          "kind": "line",
+          "line": {
+            "id": "dinner-to-go-10",
+            "speaker": "Cam",
+            "text": "Thank you for changing the order. I'd like to leave a tip."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "dinner-to-go-11",
+          "kind": "phrase_completion",
+          "prompt": "Cam chooses to leave extra money for the service. He leaves a ___.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "reservation"
+            },
+            {
+              "id": "choice-2",
+              "text": "menu"
+            },
+            {
+              "id": "choice-3",
+              "text": "tip"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-3",
+        "Explanation": "A tip is extra money for service."
+      }
+    ]
+  },
+  {
+    "Story": {
+      "key": "the-lamp-that-went-dark",
+      "title": "The lamp that went dark",
+      "description": "Read a receipt and ask for your money back.",
+      "situation": "shopping",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 3,
+      "vocabulary": [
+        {
+          "wordText": "receipt",
+          "wordSlug": "receipt",
+          "meaningId": "74a55fe5-7736-58f0-98b8-23eef998067d",
+          "definition": "A record of what you bought and paid."
+        },
+        {
+          "wordText": "refund",
+          "wordSlug": "refund",
+          "meaningId": "538cc7f5-983c-59cc-8664-173cefca65ad",
+          "definition": "Money returned after a payment."
+        },
+        {
+          "wordText": "exchange",
+          "wordSlug": "exchange",
+          "meaningId": "c916143f-197b-5cd7-a4c9-7b21178f04aa",
+          "definition": "To return something and get another item in its place."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-1",
+          "kind": "line",
+          "line": {
+            "id": "the-lamp-that-went-dark-1",
+            "speaker": "Narrator",
+            "text": "Eva bought a desk lamp on Monday. On Tuesday it stopped working."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-2",
+          "kind": "line",
+          "line": {
+            "id": "the-lamp-that-went-dark-2",
+            "speaker": "Receipt",
+            "text": "Desk lamp. Paid by card. Keep this receipt for returns."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-3",
+          "kind": "line",
+          "line": {
+            "id": "the-lamp-that-went-dark-3",
+            "speaker": "Eva",
+            "text": "I brought the lamp and the receipt. I have another lamp at home now."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-4",
+          "kind": "line",
+          "line": {
+            "id": "the-lamp-that-went-dark-4",
+            "speaker": "Assistant",
+            "text": "You can exchange this lamp for a new one or get a refund."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-5",
+          "kind": "comprehension",
+          "prompt": "What does the receipt tell the assistant about Eva's payment?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "She paid in cash."
+            },
+            {
+              "id": "choice-2",
+              "text": "She still owes money."
+            },
+            {
+              "id": "choice-3",
+              "text": "She paid by card."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-3",
+        "Explanation": "The receipt says Eva paid by card."
+      },
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-6",
+          "kind": "line",
+          "line": {
+            "id": "the-lamp-that-went-dark-6",
+            "speaker": "Eva",
+            "text": "I don't need a new lamp. Could you put the money back on my card?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-7",
+          "kind": "line",
+          "line": {
+            "id": "the-lamp-that-went-dark-7",
+            "speaker": "Assistant",
+            "text": "Of course. Shall I write down that you want an exchange?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-8",
+          "kind": "dialogue_reply",
+          "prompt": "Help Eva correct the misunderstanding.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "A refund, please. I don't need another lamp."
+            },
+            {
+              "id": "choice-2",
+              "text": "Yes, a new lamp would be perfect."
+            },
+            {
+              "id": "choice-3",
+              "text": "I'd like to buy the same lamp again."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-1",
+        "Explanation": "Eva wants her money back. An exchange would give her another item."
+      },
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-9",
+          "kind": "line",
+          "line": {
+            "id": "the-lamp-that-went-dark-9",
+            "speaker": "Assistant",
+            "text": "Thanks for checking. I'll send the money back to your card."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-10",
+          "kind": "line",
+          "line": {
+            "id": "the-lamp-that-went-dark-10",
+            "speaker": "Narrator",
+            "text": "Eva takes the paper showing that the shop has returned her payment."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-lamp-that-went-dark-11",
+          "kind": "phrase_completion",
+          "prompt": "If Eva wanted a new lamp in place of the broken one, she could ask to ___ it.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "pack"
+            },
+            {
+              "id": "choice-2",
+              "text": "exchange"
+            },
+            {
+              "id": "choice-3",
+              "text": "order"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-2",
+        "Explanation": "To exchange the lamp means to return it for a different one."
+      }
+    ]
+  },
+  {
+    "Story": {
+      "key": "a-parcel-next-door",
+      "title": "A parcel next door",
+      "description": "Read a delivery message and collect the right package.",
+      "situation": "delivery",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 3,
+      "vocabulary": [
+        {
+          "wordText": "parcel",
+          "wordSlug": "parcel",
+          "meaningId": "0b593408-6679-5fb8-a21c-b73a525c76e5",
+          "definition": "A package prepared for sending."
+        },
+        {
+          "wordText": "address",
+          "wordSlug": "address",
+          "meaningId": "3bb8e710-2cfb-5f6f-a281-c0a167d46fb2",
+          "definition": "Details that tell someone where a home or building is."
+        },
+        {
+          "wordText": "delivery",
+          "wordSlug": "delivery",
+          "meaningId": "4609031d-af20-550a-906e-3fd3cde7588e",
+          "definition": "Bringing goods to a person or place."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "a-parcel-next-door-1",
+          "kind": "line",
+          "line": {
+            "id": "a-parcel-next-door-1",
+            "speaker": "Narrator",
+            "text": "When Max comes home to number twelve, there is a delivery note on the floor."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-parcel-next-door-2",
+          "kind": "line",
+          "line": {
+            "id": "a-parcel-next-door-2",
+            "speaker": "Note",
+            "text": "We left your parcel with your neighbour at number fourteen. Please collect it before six."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-parcel-next-door-3",
+          "kind": "line",
+          "line": {
+            "id": "a-parcel-next-door-3",
+            "speaker": "Max",
+            "text": "It's five now. I'll go next door before dinner."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-parcel-next-door-4",
+          "kind": "line",
+          "line": {
+            "id": "a-parcel-next-door-4",
+            "speaker": "Neighbour",
+            "text": "I have two parcels here. What name and address are on yours?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-parcel-next-door-5",
+          "kind": "comprehension",
+          "prompt": "Where should Max go to collect his parcel?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "The sorting office."
+            },
+            {
+              "id": "choice-2",
+              "text": "Number fourteen."
+            },
+            {
+              "id": "choice-3",
+              "text": "The shop where he ordered it."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-2",
+        "Explanation": "The note says that the parcel was left with the neighbour at number fourteen."
+      },
+      {
+        "Public": {
+          "id": "a-parcel-next-door-6",
+          "kind": "line",
+          "line": {
+            "id": "a-parcel-next-door-6",
+            "speaker": "Max",
+            "text": "My name is Max Bell. I live at twelve Park Road."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-parcel-next-door-7",
+          "kind": "line",
+          "line": {
+            "id": "a-parcel-next-door-7",
+            "speaker": "Neighbour",
+            "text": "This small box says Max Bell, twelve Park Road. The big one says Mina Lee, ten Park Road."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-parcel-next-door-8",
+          "kind": "dialogue_reply",
+          "prompt": "Reply as Max. Identify the parcel he should take.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "Both boxes are mine because they were delivered here."
+            },
+            {
+              "id": "choice-2",
+              "text": "The big one, please. It says Park Road."
+            },
+            {
+              "id": "choice-3",
+              "text": "The small one, please. That's my name and address."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-3",
+        "Explanation": "Only the small box has both Max's name and his address."
+      },
+      {
+        "Public": {
+          "id": "a-parcel-next-door-9",
+          "kind": "line",
+          "line": {
+            "id": "a-parcel-next-door-9",
+            "speaker": "Neighbour",
+            "text": "Here you are. I'm glad you saw the delivery note."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-parcel-next-door-10",
+          "kind": "line",
+          "line": {
+            "id": "a-parcel-next-door-10",
+            "speaker": "Max",
+            "text": "Thanks for keeping it safe. I'll take it home now."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-parcel-next-door-11",
+          "kind": "phrase_completion",
+          "prompt": "To find a house, a driver needs its ___.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "address"
+            },
+            {
+              "id": "choice-2",
+              "text": "price"
+            },
+            {
+              "id": "choice-3",
+              "text": "size"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-1",
+        "Explanation": "The address tells the driver which house and street to find."
+      }
+    ]
   }
 ]

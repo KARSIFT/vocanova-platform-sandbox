@@ -40,7 +40,7 @@ func scan(row scanner) (*State, error) {
 	}
 	// Content is frozen in the saved snapshot. The expanded course must not
 	// invalidate sessions created with the reviewed original 21-word catalog.
-	supportedContent := st.Snapshot.ContentVersion == "starter-21-v1" || st.Snapshot.ContentVersion == ContentVersion || st.Snapshot.ContentVersion == JourneyContentVersion
+	supportedContent := st.Snapshot.ContentVersion == "starter-21-v1" || st.Snapshot.ContentVersion == ContentVersion || st.Snapshot.ContentVersion == JourneyContentVersion || (st.Snapshot.ContentVersion == MistakesContentVersion && st.Snapshot.Mode == "mistakes")
 	if len(st.Snapshot.Steps) == 0 || st.Index < 0 || st.Index > len(st.Snapshot.Steps) || !supportedContent || st.Snapshot.GradingVersion != GradingVersion {
 		return nil, ErrContentUnavailable
 	}
@@ -71,19 +71,37 @@ func mistakes(ctx context.Context, q queryer, u uuid.UUID) (map[string]Source, e
 	// resurrect older mistakes; resolving an old snapshot cannot erase a new one.
 	// The frozen step identifies the target, including typed answers without a
 	// choice ID. Retain feedback fallback for historical actions/snapshots.
+	//
+	// Daily review records every graded answer with the self-check prompt type,
+	// so prompt type alone cannot separate it from self-ratings. A daily miss
+	// counts only with its exact owned effort receipt: the effort row names this
+	// attempt, user and meaning, and its daily session froze this user word.
+	// Effort is never written for skips or assisted answers. Ranked meanings
+	// enter through daily review; a later independent miss on a frozen ranked
+	// mistakes step is then eligible to become the latest source.
 	rows, err := q.QueryContext(ctx, `WITH events AS (
  SELECT 'lesson'::text kind,la.id,
  COALESCE((SELECT NULLIF(step->'step'->'word'->>'meaningId','')
    FROM jsonb_array_elements(ls.snapshot->'steps') step
    WHERE step->'step'->>'id'=la.action->>'stepId' LIMIT 1),
-   NULLIF(la.result->'feedback'->>'correctChoiceId','')) meaning,la.created_at
+   NULLIF(la.result->'feedback'->>'correctChoiceId','')) meaning,la.created_at,false ranked_eligible
  FROM lesson_actions la JOIN lesson_sessions ls ON ls.id=la.session_id AND ls.user_id=la.user_id
  WHERE la.user_id=$1 AND la.operation='action' AND la.action->>'action'='answer' AND la.result->'feedback'->>'correct'='false'
- UNION ALL SELECT 'review',ra.id,ra.meaning_id::text,ra.created_at FROM review_attempts ra WHERE ra.user_id=$1 AND ra.prompt_type='multiple_choice' AND ra.result='incorrect'
- UNION ALL SELECT 'practice',pa.id,pa.meaning_id::text,pa.created_at FROM practice_actions pa WHERE pa.user_id=$1 AND pa.correct=false AND pa.action->>'action'='answer'
- ),ranked AS(SELECT *,row_number() OVER(PARTITION BY meaning ORDER BY created_at DESC,id DESC,kind) rn FROM events WHERE meaning=ANY($2::text[]))
+ UNION ALL SELECT 'review',ra.id,ra.meaning_id::text,ra.created_at,false FROM review_attempts ra WHERE ra.user_id=$1 AND ra.prompt_type='multiple_choice' AND ra.result='incorrect'
+ UNION ALL SELECT 'review',ra.id,ra.meaning_id::text,ra.created_at,true FROM review_attempts ra
+ JOIN daily_review_effort effort ON effort.review_attempt_id=ra.id AND effort.user_id=ra.user_id AND effort.meaning_id=ra.meaning_id
+ JOIN daily_lesson_sessions daily ON daily.id=effort.daily_session_id AND daily.user_id=ra.user_id
+ WHERE ra.user_id=$1 AND ra.prompt_type='self_check' AND ra.source='review_session' AND ra.result='incorrect' AND NOT ra.was_hint_used
+ AND EXISTS(SELECT 1 FROM jsonb_array_elements(daily.state->'Words') frozen WHERE frozen->>'MeaningID'=ra.meaning_id::text AND frozen->>'UserWordID'=ra.user_word_id::text)
+ UNION ALL SELECT 'practice',pa.id,pa.meaning_id::text,pa.created_at,
+   ps.mode='mistakes' AND ps.snapshot->>'ContentVersion'=$3 AND pa.result->'feedback'->>'assisted'='false'
+   AND EXISTS(SELECT 1 FROM jsonb_array_elements(ps.snapshot->'Steps') step WHERE step->'Public'->>'id'=pa.action->>'stepId'
+     AND step->'Word'->>'MeaningID'=pa.meaning_id::text AND step->'Source'->>'ID' IS NOT NULL)
+ FROM practice_actions pa JOIN practice_sessions ps ON ps.id=pa.session_id AND ps.user_id=pa.user_id
+ WHERE pa.user_id=$1 AND pa.correct=false AND pa.action->>'action'='answer'
+ ),ranked AS(SELECT *,row_number() OVER(PARTITION BY meaning ORDER BY created_at DESC,id DESC,kind) rn FROM events WHERE meaning=ANY($2::text[]) OR ranked_eligible)
  SELECT e.kind,e.id,e.meaning,e.created_at FROM ranked e JOIN word_meanings wm ON wm.id::text=e.meaning JOIN canonical_words cw ON cw.id=wm.word_id JOIN users u ON u.id=$1
- WHERE rn=1 AND wm.status='active' AND cw.status='active' AND u.status='active' AND u.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM practice_mistake_resolutions r WHERE r.user_id=$1 AND r.source_kind=e.kind AND r.source_id=e.id)`, u, pq.Array(ids))
+ WHERE rn=1 AND wm.status='active' AND cw.status='active' AND u.status='active' AND u.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM practice_mistake_resolutions r WHERE r.user_id=$1 AND r.source_kind=e.kind AND r.source_id=e.id)`, u, pq.Array(ids), MistakesContentVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -99,8 +117,27 @@ func mistakes(ctx context.Context, q queryer, u uuid.UUID) (map[string]Source, e
 	}
 	return out, rows.Err()
 }
+
+// availableMistakes counts only sources a mistakes session can include.
+func (r *PostgreSQLRepository) availableMistakes(ctx context.Context, u uuid.UUID) (int, error) {
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	sources, err := mistakes(ctx, tx, u)
+	if err != nil {
+		return 0, err
+	}
+	ranked, err := loadRankedTargets(ctx, tx, sources, u.String())
+	if err != nil {
+		return 0, err
+	}
+	return len(supportedMistakes(sources, ranked)), tx.Commit()
+}
+
 func (r *PostgreSQLRepository) List(ctx context.Context, u uuid.UUID) ([]State, int, error) {
-	sources, err := mistakes(ctx, r.db, u)
+	available, err := r.availableMistakes(ctx, u)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -117,7 +154,7 @@ func (r *PostgreSQLRepository) List(ctx context.Context, u uuid.UUID) ([]State, 
 		}
 		out = append(out, *st)
 	}
-	return out, len(sources), rows.Err()
+	return out, available, rows.Err()
 }
 func loadWords(ctx context.Context, tx *sql.Tx) ([]Word, error) {
 	return loadReferences(ctx, tx, catalog)
@@ -231,11 +268,18 @@ func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, req Start
 		return r.startJourney(ctx, tx, u, req, key, fp, now)
 	}
 	sources := map[string]Source{}
+	id = uuid.New()
+	var ranked *rankedTargets
 	if req.Mode == "mistakes" {
 		sources, err = mistakes(ctx, tx, u)
 		if err != nil {
 			return nil, err
 		}
+		ranked, err = loadRankedTargets(ctx, tx, sources, id.String())
+		if err != nil {
+			return nil, err
+		}
+		sources = supportedMistakes(sources, ranked)
 	}
 	listName := ""
 	if req.ListID != "" {
@@ -316,8 +360,10 @@ func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, req Start
 			}
 		}
 	}
-	id = uuid.New()
-	snap, err := build(req, words, sources, id.String())
+	if ranked != nil {
+		words = append(words, ranked.words...)
+	}
+	snap, err := buildWith(req, words, sources, id.String(), ranked)
 	if err != nil {
 		return nil, err
 	}

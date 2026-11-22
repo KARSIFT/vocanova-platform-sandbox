@@ -29,7 +29,11 @@ func TestOriginalStoryCatalogEditorialAndMeaningAlignment(t *testing.T) {
 	for _, m := range seed.Meanings {
 		meanings[m.ID] = words[m.WordID]
 	}
-	require.Len(t, catalog, 6)
+	require.Len(t, catalog, 11)
+	withReply := map[string]bool{}
+	for _, scenario := range scenarioStories {
+		withReply[scenario.Story.Key] = true
+	}
 	situations := map[string]bool{}
 	keys := map[string]bool{}
 	for _, snap := range catalog {
@@ -37,8 +41,12 @@ func TestOriginalStoryCatalogEditorialAndMeaningAlignment(t *testing.T) {
 		keys[snap.Story.Key] = true
 		situations[snap.Story.Situation] = true
 		require.Equal(t, 8, snap.Story.LineCount)
-		require.Equal(t, 2, snap.Story.QuestionCount)
-		require.Len(t, snap.Steps, 10)
+		questions := 2
+		if withReply[snap.Story.Key] {
+			questions++
+		}
+		require.Equal(t, questions, snap.Story.QuestionCount)
+		require.Len(t, snap.Steps, snap.Story.LineCount+questions)
 		require.Len(t, snap.Story.Vocabulary, 3)
 		for _, v := range snap.Story.Vocabulary {
 			require.Equal(t, v.WordText, meanings[v.MeaningID])
@@ -72,10 +80,11 @@ func TestOriginalStoryCatalogEditorialAndMeaningAlignment(t *testing.T) {
 			}
 			require.Equal(t, 1, correct)
 		}
+		require.Equal(t, withReply[snap.Story.Key], kinds["dialogue_reply"])
 		require.True(t, kinds["comprehension"])
 		require.True(t, kinds["phrase_completion"])
 	}
-	require.Len(t, situations, 6)
+	require.Len(t, situations, 9)
 }
 func TestStoryProgressionWrongRetryResumeCompletionAndNoAnswerLeak(t *testing.T) {
 	now := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
@@ -124,9 +133,9 @@ func TestStoryProgressionWrongRetryResumeCompletionAndNoAnswerLeak(t *testing.T)
 			require.Nil(t, p.CurrentStep)
 			require.Nil(t, p.Feedback)
 			require.False(t, p.CanContinue)
-			require.Equal(t, 2, p.QuestionsAnswered)
+			require.Equal(t, snap.Story.QuestionCount, p.QuestionsAnswered)
 			require.Zero(t, p.FirstAnswersCorrect)
-			require.Equal(t, 10, p.CompletedSteps)
+			require.Equal(t, len(snap.Steps), p.CompletedSteps)
 		})
 	}
 }

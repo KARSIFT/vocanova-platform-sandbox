@@ -19,6 +19,7 @@ import { ListenButton } from "@/ui/pronunciation";
 import { Surface } from "@/ui/surface";
 import { SessionActions } from "@/ui/session";
 import styles from "../../practice/_components/session-layout.module.css";
+import { scenarioLessons } from "../../stories/scenario-lessons";
 import { LessonAudio } from "./lesson-audio";
 import { LessonReviewSave } from "./lesson-review-save";
 
@@ -32,6 +33,7 @@ export function LessonPlayer({
   lesson: LessonSummary;
   initialSession: LessonSession | null;
 }) {
+  const scenario = scenarioLessons.find((entry) => entry.lesson === lesson.key);
   const [session, setSession] = useState(initialSession);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -301,9 +303,19 @@ export function LessonPlayer({
             >
               Practise these words
             </ActionLink>
-            <ActionLink variant="primary" href="/courses" className={primary}>
-              Choose your next lesson
-            </ActionLink>
+            {scenario ? (
+              <ActionLink
+                variant="primary"
+                href={`/stories/${scenario.story}`}
+                className={primary}
+              >
+                Use these words in “{scenario.title}”
+              </ActionLink>
+            ) : (
+              <ActionLink variant="primary" href="/courses" className={primary}>
+                Choose your next lesson
+              </ActionLink>
+            )}
             <ActionLink
               variant="secondary"
               href="/review"
