@@ -305,3 +305,44 @@ test.describe("Saved vocabulary library", () => {
     });
   });
 });
+
+test("saved detail returns to the originating filters after back and removal", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  if (!baseURL) throw new Error("Missing app URL");
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL },
+    { name: "vocanova_csrf", value: randomUUID(), url: baseURL },
+  ]);
+
+  await page.goto("/vocabulary/greeting");
+  await page.getByRole("button", { name: /^Save greeting:/ }).click();
+  await expect(
+    page.getByRole("button", { name: "Remove greeting from saved words" }),
+  ).toBeVisible();
+
+  const returnPath = "/words?q=greet&stage=new";
+  await page.goto(returnPath);
+  const main = page.getByRole("main");
+  await main.getByRole("link", { name: "greeting", exact: true }).click();
+  const back = main.getByRole("link", { name: "Saved words", exact: true });
+  await expect(back).toHaveAttribute("href", returnPath);
+  await back.click();
+  await expect(page).toHaveURL(new URL(returnPath, baseURL).href);
+  await expect(main.getByRole("searchbox")).toHaveValue("greet");
+  await expect(main.getByRole("combobox", { name: "Review stage" })).toHaveValue(
+    "new",
+  );
+
+  await main
+    .getByRole("link", { name: "Open greeting details and sentence practice" })
+    .click();
+  await expect(back).toHaveAttribute("href", returnPath);
+  await main.getByRole("button", { name: "Remove greeting", exact: true }).click();
+  await expect(page).toHaveURL(new URL(returnPath, baseURL).href);
+  await expect(
+    main.getByRole("heading", { name: "No saved words match these filters" }),
+  ).toBeVisible();
+});

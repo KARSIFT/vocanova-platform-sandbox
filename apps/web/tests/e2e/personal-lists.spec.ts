@@ -402,10 +402,16 @@ for (const colorScheme of ["light", "dark"] as const) {
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    const returnQuery = new URLSearchParams({ fromList: `/lists/${list.id}` });
     for (const member of list.members) {
-      await expect(page.getByRole("list", { name: "List meanings", exact: true })
-        .getByRole("link", { name: member.wordText, exact: true }))
-        .toHaveAttribute("href", `/vocabulary/${member.wordSlug}#meaning-${member.meaningId}`);
+      await expect(
+        page
+          .getByRole("list", { name: "List meanings", exact: true })
+          .getByRole("link", { name: member.wordText, exact: true }),
+      ).toHaveAttribute(
+        "href",
+        `/vocabulary/${member.wordSlug}?${returnQuery}#meaning-${member.meaningId}`,
+      );
     }
     await page
       .getByLabel("Search words and meanings in this list")
@@ -489,4 +495,38 @@ test("expired membership session stops changes and returns to sign-in", async ({
   expect(new URL(page.url()).searchParams.get("reason")).toBe(
     "session-expired",
   );
+});
+
+test("a dictionary meaning links back to its originating personal list and filter", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  if (!baseURL) throw new Error("Missing app URL");
+  const list = await seedList(context, "Conversation plans", [
+    "invite",
+    "confirm",
+  ]);
+  await page.goto(`/lists/${list.id}`);
+  const main = page.getByRole("main");
+  const search = main.getByRole("searchbox", {
+    name: "Search words and meanings in this list",
+  });
+  await search.fill("invite");
+  await expect(
+    main.getByRole("link", { name: "confirm", exact: true }),
+  ).toHaveCount(0);
+  await main.getByRole("link", { name: "invite", exact: true }).click();
+  const back = main.getByRole("link", { name: "Back to list", exact: true });
+  const returnPath = `/lists/${list.id}?q=invite`;
+  await expect(back).toHaveAttribute("href", returnPath);
+  const member = list.members.find(({ wordSlug }) => wordSlug === "invite");
+  if (!member) throw new Error("Missing seeded meaning");
+  expect(new URL(page.url()).hash).toBe(`#meaning-${member.meaningId}`);
+  await back.click();
+  await expect(page).toHaveURL(new URL(returnPath, baseURL).href);
+  await expect(search).toHaveValue("invite");
+  await expect(
+    main.getByRole("link", { name: "confirm", exact: true }),
+  ).toHaveCount(0);
 });

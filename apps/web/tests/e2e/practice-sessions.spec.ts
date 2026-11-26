@@ -687,11 +687,13 @@ test("personal path mixes teaching, listening, gap fill and accessible sentence 
   await expect(
     main(page).getByText("We _____ our friends.", { exact: true }),
   ).toBeVisible();
+  expect(session.currentStep?.choices.map((choice) => choice.text)).toEqual([
+    "invite",
+    "confirm",
+    "reschedule",
+  ]);
   await main(page)
-    .getByRole("radio", {
-      name: session.currentStep!.choices[0]!.text,
-      exact: true,
-    })
+    .getByRole("radio", { name: "invite", exact: true })
     .check();
   await act(page, "Check answer");
   session = await act(page, "Continue");

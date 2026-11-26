@@ -281,15 +281,23 @@ export async function handlePracticeSessions({
         id: randomUUID(),
         text: item.definition,
       }));
+      const gapChoices = words.map((item) => ({
+        id: randomUUID(),
+        text: item.wordText,
+      }));
       const sentence = "We invite our friends.";
       const tokens = sentence
         .split(" ")
         .map((text) => ({ id: randomUUID(), text }));
-      const make = (kind, prompt, extra = {}) => ({
+      const make = (
+        kind,
+        prompt,
+        { choices: options = choices, ...extra } = {},
+      ) => ({
         word,
         sourceId: null,
-        correctChoice: choices[0].id,
-        public: { id: randomUUID(), kind, prompt, choices, ...extra },
+        correctChoice: options[0]?.id,
+        public: { id: randomUUID(), kind, prompt, choices: options, ...extra },
       });
       entry.steps = [
         make("teach", word.definition, {
@@ -302,8 +310,9 @@ export async function handlePracticeSessions({
         make("listening_choice", "Listen and choose the meaning", {
           speechText: word.wordText,
         }),
-        make("gap_choice", "Complete the sentence", {
+        make("gap_choice", "Choose the missing word.", {
           context: "We _____ our friends.",
+          choices: gapChoices,
         }),
         {
           ...make("sentence_build", "Put the sentence together", {
