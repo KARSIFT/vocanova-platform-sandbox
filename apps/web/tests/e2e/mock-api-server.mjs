@@ -107,7 +107,10 @@ import { handleMeaningTeaching } from "./meaning-teaching-fixture.mjs";
 import { handlePersonalLists } from "./personal-lists-fixture.mjs";
 import { handleStoryFeatures } from "./stories-fixture.mjs";
 import { handleLearningFeatures } from "./learning-features-fixture.mjs";
-import { handleDailyDiscovery } from "./daily-discovery-fixture.mjs";
+import {
+  handleDailyDiscovery,
+  rankedFixtureEntry,
+} from "./daily-discovery-fixture.mjs";
 import { handleDiscoveryPosition } from "./discovery-position-fixture.mjs";
 import {
   dailyConversationFixture,
@@ -543,6 +546,28 @@ function buildDailyMission(
   };
 }
 
+function buildRankedFixtureWord(rank) {
+  const entry = rankedFixtureEntry(rank);
+  if (!entry) return null;
+  return {
+    id: entry.wordId,
+    text: entry.wordText,
+    slug: entry.wordSlug,
+    wordType: entry.partOfSpeech,
+    meanings: [
+      {
+        id: entry.meaningId,
+        partOfSpeech: entry.partOfSpeech,
+        shortDefinition: entry.shortDefinition,
+        examples: entry.exampleSentence
+          ? [{ id: `map-example-${rank}`, exampleText: entry.exampleSentence }]
+          : [],
+        usageNotes: [],
+      },
+    ],
+  };
+}
+
 function findCanonicalMeaning(meaningId) {
   if (meaningId === SECONDARY_POUR_MEANING.id) {
     return { word: CANONICAL_WORDS.pour, meaning: SECONDARY_POUR_MEANING };
@@ -551,7 +576,10 @@ function findCanonicalMeaning(meaningId) {
     const meaning = word.meanings.find((item) => item.id === meaningId);
     if (meaning) return { word, meaning };
   }
-  return {};
+  const word = buildRankedFixtureWord(
+    Number(/^map-meaning-([1-9]\d*)$/u.exec(meaningId)?.[1]),
+  );
+  return word ? { word, meaning: word.meanings[0] } : {};
 }
 
 function buildSavedWords(state) {
@@ -640,7 +668,8 @@ function buildDueWords(state, { fixtureDueWordCount, limit }) {
 }
 
 function buildWordDetailResponse(state, slug, definitionFixture, vocabularyFixture) {
-  const word = CANONICAL_WORDS[slug];
+  const rank = Number(/^map-word-([1-9]\d*)$/u.exec(slug)?.[1]);
+  const word = CANONICAL_WORDS[slug] ?? buildRankedFixtureWord(rank);
   if (!word) {
     return null;
   }
@@ -648,35 +677,33 @@ function buildWordDetailResponse(state, slug, definitionFixture, vocabularyFixtu
     slug === "pour" && vocabularyFixture === "secondary-saved-meaning"
       ? [...word.meanings, SECONDARY_POUR_MEANING]
       : word.meanings;
-  const meanings = sourceMeanings.map((meaning) => ({
-    ...meaning,
-    ...(definitionFixture === "duplicate"
-      ? {
-          learnerDefinition: `  ${meaning.shortDefinition.toUpperCase().replaceAll(" ", "   ")}  `,
-        }
-      : definitionFixture === "distinct"
+  const rankedDecision = state.mapDecisions?.get(rank)?.decision;
+  const meanings = sourceMeanings.map((meaning) => {
+    const saved =
+      state.savedMeaningIds.has(meaning.id) || rankedDecision === "learn";
+    const reviewed = state.reviewedMeaningIds.has(meaning.id);
+    return {
+      ...meaning,
+      ...(definitionFixture === "duplicate"
         ? {
-            learnerDefinition: `${meaning.shortDefinition}. You control where the liquid goes by tipping its container.`,
+            learnerDefinition: `  ${meaning.shortDefinition.toUpperCase().replaceAll(" ", "   ")}  `,
           }
-        : definitionFixture === "blank"
-          ? { learnerDefinition: "   " }
-          : {}),
-    saved: state.savedMeaningIds.has(meaning.id),
-    selfReportedKnown:
-      state.wordKnowledge?.get(meaning.id)?.selfReportedKnown ?? false,
-    userWordId: state.savedMeaningIds.has(meaning.id)
-      ? `uw-${meaning.id}`
-      : undefined,
-    reviewState: state.savedMeaningIds.has(meaning.id)
-      ? state.reviewedMeaningIds.has(meaning.id)
-        ? "learning"
-        : "new"
-      : undefined,
-    due:
-      (state.savedMeaningIds.has(meaning.id) &&
-        !state.reviewedMeaningIds.has(meaning.id)) ||
-      undefined,
-  }));
+        : definitionFixture === "distinct"
+          ? {
+              learnerDefinition: `${meaning.shortDefinition}. You control where the liquid goes by tipping its container.`,
+            }
+          : definitionFixture === "blank"
+            ? { learnerDefinition: "   " }
+            : {}),
+      saved,
+      selfReportedKnown:
+        state.wordKnowledge?.get(meaning.id)?.selfReportedKnown ??
+        (rankedDecision === "known"),
+      userWordId: saved ? `uw-${meaning.id}` : undefined,
+      reviewState: saved ? (reviewed ? "learning" : "new") : undefined,
+      due: (saved && !reviewed) || undefined,
+    };
+  });
   return {
     word: {
       ...word,

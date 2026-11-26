@@ -5,6 +5,47 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
+test("a word saved in Discovery opens its exact meaning for writing", async ({
+  page,
+  baseURL,
+}) => {
+  await page.context().addCookies([
+    { name: "vocanova_session", value: `advance-${randomUUID()}`, url: baseURL! },
+    { name: "vocanova_csrf", value: "discovery-advance", url: baseURL! },
+  ]);
+  await page.goto("/discovery?band=1&word=1");
+  await page
+    .getByRole("button", { name: "Start discovering", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Learn", exact: true }).click();
+  await page
+    .getByRole("link", { name: "Use the in a sentence", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "the", exact: true }),
+  ).toBeVisible();
+
+  const editor = page.getByRole("textbox", {
+    name: "Write a sentence using the",
+    exact: true,
+  });
+  await expect(editor).toBeVisible();
+  await editor.fill("The bus to the station is late again.");
+  await page
+    .getByRole("button", { name: "Check my sentence", exact: true })
+    .click();
+  await expect(
+    page.getByRole("status", { name: "Feedback result: Correct", exact: true }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("link", { name: "Back to Discovery", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "be", exact: true }),
+  ).toBeVisible();
+});
+
 test("each choice in a range is one confirmed request, and the saved state matches", async ({
   page,
   baseURL,

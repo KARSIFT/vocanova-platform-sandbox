@@ -4,6 +4,11 @@ import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import {
+  savedWordHref,
+  savedWordsRestartHref,
+  savedWordsReturnHref,
+} from "@/lib/vocabulary-return";
+import {
   getAdditionalDefinition,
   getPrimaryDefinition,
 } from "@/lib/word-definition";
@@ -22,12 +27,17 @@ import { formatSavedWordStatus } from "../_components/saved-word-view";
 
 interface SavedWordDetailPageProps {
   params: Promise<{ userWordId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function SavedWordDetailPage({
   params,
+  searchParams,
 }: SavedWordDetailPageProps) {
-  const { userWordId } = await params;
+  const [{ userWordId }, query] = await Promise.all([params, searchParams]);
+  // Restore a validated, filtered/paged Saved collection; else the default.
+  const savedBack = savedWordsReturnHref(query.fromSaved);
+  const authReturn = savedWordHref(userWordId, savedBack);
   const client = await createServerApiClient();
 
   let savedResponse: Awaited<ReturnType<typeof client.getSavedWord>>;
@@ -44,7 +54,7 @@ export default async function SavedWordDetailPage({
     ) {
       notFound();
     }
-    requireAuthRedirect(error, `/words/${userWordId}`);
+    requireAuthRedirect(error, authReturn);
   }
 
   const savedWord = savedResponse.data;
@@ -55,7 +65,7 @@ export default async function SavedWordDetailPage({
     if (error instanceof ApiResponseError && error.status === 404) {
       notFound();
     }
-    requireAuthRedirect(error, `/words/${userWordId}`);
+    requireAuthRedirect(error, authReturn);
   }
 
   const meaning = wordResponse.data.word.meanings.find(
@@ -77,12 +87,12 @@ export default async function SavedWordDetailPage({
     <PageContainer>
       <PageHeader
         title={<span className="headword">{savedWord.wordText}</span>}
-        back={{ href: "/words", label: "Saved words" }}
+        back={{ href: savedBack ?? "/words", label: "Saved words" }}
         actions={
           <RemoveSavedWordButton
             meaningId={savedWord.meaningId}
             wordText={savedWord.wordText}
-            redirectTo="/words"
+            redirectTo={savedWordsRestartHref(savedBack)}
           />
         }
       >

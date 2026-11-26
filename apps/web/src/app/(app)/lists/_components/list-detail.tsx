@@ -8,6 +8,7 @@ import { ApiResponseError, type WordListDetail } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { PageHeader } from "@/ui/surface";
 import { getPrimaryDefinition } from "@/lib/word-definition";
+import { listPageHref } from "@/lib/vocabulary-return";
 import { listWriteHeaders, useListAction } from "./use-list-action";
 import { ListActionStatus } from "./list-action-status";
 import { listLink } from "./list-styles";
@@ -17,16 +18,18 @@ export function ListDetail({
   listId,
   initialList,
   initialMissing,
+  initialQuery = "",
 }: {
   listId: string;
   initialList: WordListDetail | null;
   initialMissing: boolean;
+  initialQuery?: string;
 }) {
   const router = useRouter();
   const [list, setList] = useState(initialList);
   const [missing, setMissing] = useState(initialMissing);
   const [name, setName] = useState(initialList?.name ?? "");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const action = useListAction();
   const settingsRef = useRef<HTMLDetailsElement>(null);
@@ -110,6 +113,12 @@ export function ListDetail({
         .toLocaleLowerCase()
         .includes(query.trim().toLocaleLowerCase()),
     ) ?? [];
+  // Carry this list and its current filter so word detail can return here.
+  const listReturn = list ? listPageHref(list.id, query) : null;
+  const memberHref = (wordSlug: string, meaningId: string) =>
+    `/vocabulary/${encodeURIComponent(wordSlug)}${
+      listReturn ? `?${new URLSearchParams({ fromList: listReturn })}` : ""
+    }#${meaningAnchor(meaningId)}`;
   return (
     <>
       {!list ? (
@@ -196,7 +205,7 @@ export function ListDetail({
                   <div className="min-w-0 flex-[1_1_17rem] [overflow-wrap:anywhere]">
                     <h2 className="headword text-xl">
                       <Link
-                        href={`/vocabulary/${encodeURIComponent(member.wordSlug)}#${meaningAnchor(member.meaningId)}`}
+                        href={memberHref(member.wordSlug, member.meaningId)}
                         className={listLink}
                       >
                         {member.wordText}

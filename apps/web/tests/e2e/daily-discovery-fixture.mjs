@@ -18,6 +18,26 @@ const attribution = {
 };
 const revision = (value) => String(value).padStart(64, "0");
 
+export function rankedFixtureEntry(rank) {
+  if (!Number.isInteger(rank) || rank < 1 || rank > 10000) return null;
+  return {
+    rank,
+    meaningId: `map-meaning-${rank}`,
+    wordId: `map-word-${rank}`,
+    wordText: rank === 1 ? "the" : rank === 2 ? "be" : `Map word ${rank}`,
+    wordSlug: `map-word-${rank}`,
+    partOfSpeech: rank === 1 ? "determiner" : "verb",
+    shortDefinition:
+      rank === 1
+        ? "Used before a person or thing that is already clear."
+        : "A synthetic meaning for this browser fixture.",
+    // Keep one card as long as a real Discovery entry.
+    ...(rank === 1
+      ? { exampleSentence: "The bus to the station is late again." }
+      : {}),
+  };
+}
+
 export async function handleDailyDiscovery({
   req,
   res,
@@ -156,20 +176,7 @@ export async function handleDailyDiscovery({
         const rank = (band - 1) * 100 + index + 1;
         const entry = mapEntry(rank);
         return {
-          rank,
-          meaningId: `map-meaning-${rank}`,
-          wordId: `map-word-${rank}`,
-          wordText: rank === 1 ? "the" : rank === 2 ? "be" : `Map word ${rank}`,
-          wordSlug: `map-word-${rank}`,
-          partOfSpeech: rank === 1 ? "determiner" : "verb",
-          shortDefinition:
-            rank === 1
-              ? "Used before a person or thing that is already clear."
-              : "A synthetic meaning for this browser fixture.",
-          // One realistic example keeps the card as long as real content.
-          ...(rank === 1
-            ? { exampleSentence: "The bus to the station is late again." }
-            : {}),
+          ...rankedFixtureEntry(rank),
           // Let one read-only browsing fixture open both ranked and canonical views.
           ...(rank === 12 && cookies.e2e_discovery_detail === "pour" ? {
             meaningId: "mean-pour",
@@ -206,6 +213,7 @@ export async function handleDailyDiscovery({
     if (!checkCsrf(req, cookies, res, logLine)) return true;
     const rank = Number(removal[1]);
     const entry = mapEntry(rank);
+    state.savedMeaningIds.delete(`map-meaning-${rank}`);
     // Removing a saved word leaves no learning or known state behind.
     if (entry?.decision === "learn")
       state.mapDecisions.set(rank, {

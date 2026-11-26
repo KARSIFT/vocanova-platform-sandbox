@@ -9,20 +9,14 @@ import {
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer, PageHeader } from "@/ui/surface";
+import { SAVED_WORD_STAGES, savedWordHref } from "@/lib/vocabulary-return";
 
 import { RemoveSavedWordButton } from "./_components/remove-saved-word-button";
 import { ReloadSavedWordsButton } from "./_components/reload-saved-words-button";
 import { getSavedWordsView } from "./_components/saved-word-view";
 
 const PAGE_SIZE = 20;
-const stages = [
-  "new",
-  "learning",
-  "reviewing",
-  "mastered",
-  "ignored",
-  "archived",
-] as const;
+const stages = SAVED_WORD_STAGES;
 const stageLabels: Record<string, string> = {
   new: "New",
   learning: "Learning",
@@ -82,6 +76,7 @@ export default async function SavedWordsPage({
       rejectedFilters = true;
   }
 
+  const currentResultsHref = resultsURL(after);
   const items = data?.items ?? [];
   const nextCursor = data?.nextCursor;
   const view = getSavedWordsView(items.length, Boolean(after));
@@ -289,6 +284,10 @@ export default async function SavedWordsPage({
           </StatusMessage>
           <ul aria-label="Saved vocabulary results" className="vn-list mt-3">
             {items.map((savedWord) => {
+              const detailHref = savedWordHref(
+                savedWord.userWordId,
+                currentResultsHref,
+              );
               const statusLabel =
                 stageLabels[savedWord.reviewState] ?? "Stage unavailable";
               return (
@@ -297,7 +296,7 @@ export default async function SavedWordsPage({
                     <div className="flex flex-wrap items-baseline gap-[var(--spacing-xs)]">
                       <h2 className="headword text-xl">
                         <Link
-                          href={`/words/${savedWord.userWordId}`}
+                          href={detailHref}
                           className="rounded-sm hover:text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
                         >
                           {savedWord.wordText}
@@ -331,7 +330,7 @@ export default async function SavedWordsPage({
                   <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2">
                     <ActionLink
                       variant="secondary"
-                      href={`/words/${savedWord.userWordId}`}
+                      href={detailHref}
                       aria-label={`Open ${savedWord.wordText} details and sentence practice`}
                       className="min-h-11"
                     >
