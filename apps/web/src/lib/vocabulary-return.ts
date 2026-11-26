@@ -174,7 +174,8 @@ export function listPageHref(listId: string, q?: string): string | null {
  * optional `q`) and returns its canonical form, or null otherwise.
  */
 export function listReturnHref(value: unknown): string | null {
-  if (typeof value !== "string" || value.length > MAX_RETURN_LENGTH) return null;
+  if (typeof value !== "string" || value.length > MAX_RETURN_LENGTH)
+    return null;
   const listId = LIST_RETURN_PATTERN.exec(value)?.[1];
   if (!listId || !LIST_ID_PATTERN.test(listId)) return null;
   const destination = parseReturnPath(value, `/lists/${listId}`);

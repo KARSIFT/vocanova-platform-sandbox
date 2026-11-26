@@ -25,8 +25,7 @@ export default async function VocabularyWordPage({
   // Discovery keeps precedence; otherwise restore a validated search state.
   const searchBack = back ? null : vocabularySearchReturnHref(query.fromSearch);
   // Then a validated personal list (with its filter) opened from that list.
-  const listBack =
-    back || searchBack ? null : listReturnHref(query.fromList);
+  const listBack = back || searchBack ? null : listReturnHref(query.fromList);
   const returnQuery = back
     ? `?fromDiscovery=${query.fromDiscovery}${finished ? "&finished=1" : ""}`
     : searchBack
