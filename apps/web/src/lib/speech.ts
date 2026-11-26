@@ -340,6 +340,7 @@ export const deviceSpeech = createPronunciationController(
         signal: AbortSignal,
         meaningId?: string,
         meaningRevision?: string,
+        preferCdn?: boolean,
       ) {
         const [{ createApiClient }, { getOrRefreshCSRFToken }] =
           await Promise.all([import("./api"), import("./csrf")]);
@@ -355,6 +356,7 @@ export const deviceSpeech = createPronunciationController(
           },
           meaningId,
           meaningRevision,
+          preferCdn,
         );
         return data;
       },

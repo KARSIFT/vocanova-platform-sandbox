@@ -2,7 +2,7 @@
 // Explicitly opt in and run THIS spec with a fresh synthetic session. The core
 // journey logs out, so its already-revoked token cannot be reused here.
 // No mock server, AI feedback request, vocabulary reset or session-history purge.
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { expect, test, type BrowserContext } from "@playwright/test";
 import type {
@@ -120,7 +120,7 @@ export async function safeStagingRequest(
     if (
       (method === "POST" &&
         (url.pathname !== "/api/v1/pronunciation" ||
-          url.search !== "" ||
+          url.search !== "?preferCdn=true" ||
           url.hash !== "" ||
           !body ||
           !PRONUNCIATION_CASES.some(
@@ -205,6 +205,60 @@ export async function safeStagingRequest(
     // Never attach the original cause, URL, headers, cookie values or response.
     throw new Error("The bounded staging API check failed.");
   }
+}
+
+async function downloadPublicPronunciation(
+  clip: PronunciationAudio,
+  meaningId: string,
+  webOrigin: string,
+): Promise<Buffer> {
+  const revision = clip.meaningRevision;
+  if (!revision || !/^[0-9a-f]{64}$/u.test(revision))
+    throw new Error("The public clip must confirm a valid meaning revision.");
+  const prefix = `https://audio.vocanova.site/meanings/${meaningId}/${revision}/`;
+  const suffix = clip.audioUrl?.startsWith(prefix)
+    ? clip.audioUrl.slice(prefix.length)
+    : "";
+  const match = /^[0-9a-f]{64}\/([0-9a-f]{64})\.mp3$/u.exec(suffix);
+  if (!match || match[0] !== suffix)
+    throw new Error("The CDN URL must identify the confirmed public clip.");
+
+  const response = await fetch(prefix + suffix, {
+    credentials: "omit",
+    headers: { Origin: webOrigin },
+    redirect: "error",
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (
+    response.status !== 200 ||
+    response.headers.get("content-type") !== "audio/mpeg" ||
+    response.headers.get("access-control-allow-origin") !== webOrigin
+  ) {
+    await response.body?.cancel();
+    throw new Error("The public MP3 must be available for anonymous staging playback.");
+  }
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("The public MP3 response has no body.");
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      length += chunk.value.byteLength;
+      if (length > 1_048_576) throw new Error("The public MP3 exceeds one MiB.");
+      chunks.push(chunk.value);
+    }
+  } catch (error) {
+    await reader.cancel();
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = Buffer.concat(chunks);
+  if (bytes.length < 3 || createHash("sha256").update(bytes).digest("hex") !== match[1])
+    throw new Error("The public MP3 bytes must match the SHA-256 in its URL.");
+  return bytes;
 }
 
 test("connected maturity journey against real staging", async ({
@@ -795,84 +849,31 @@ test("connected maturity journey against real staging", async ({
       expect(vocabularyState(await readMeaning())).toEqual(before);
     });
 
-    await test.step("decode six actual meaning-specific AI pronunciations and confirm their separate durable caches", async () => {
+    await test.step("download and decode six distinct meaning-specific pronunciations from the CDN", async () => {
+      const urls = new Set<string>();
       for (const sample of PRONUNCIATION_CASES) {
         await test.step(sample.name, async () => {
-          const getClip = async (meaningRevision?: string) => {
-            const response = await safeStagingRequest(
-              context,
-              apiOrigin,
-              `${apiOrigin}/api/v1/pronunciation`,
-              "POST",
-              {
-                text: sample.text,
-                meaningId: sample.meaningId,
-                ...(meaningRevision ? { meaningRevision } : {}),
-              },
-            );
-            expect(
-              response.status(),
-              "Actual staging natural pronunciation must be available.",
-            ).toBe(200);
-            const clip = (await response.json()) as PronunciationAudio;
-            expect(
-              clip.voice === "marin",
-              "The configured natural voice must match.",
-            ).toBe(true);
-            expect(
-              clip.meaningId === sample.meaningId,
-              "The clip must confirm the requested meaning.",
-            ).toBe(true);
-            expect(
-              clip.partOfSpeech === sample.partOfSpeech,
-              "The clip must confirm the requested part of speech.",
-            ).toBe(true);
-            expect(
-              typeof clip.meaningRevision === "string" &&
-                /^[0-9a-f]{64}$/u.test(clip.meaningRevision),
-              "The clip must confirm a valid meaning revision.",
-            ).toBe(true);
-            if (meaningRevision)
-              expect(
-                clip.meaningRevision === meaningRevision,
-                "A replay must retain the confirmed meaning revision.",
-              ).toBe(true);
-            expect(
-              clip.mimeType === "audio/mpeg",
-              "The clip must be MPEG audio.",
-            ).toBe(true);
-            expect(typeof clip.cacheHit === "boolean").toBe(true);
-            expect(typeof clip.audioBase64 === "string").toBe(true);
-            expect(
-              clip.audioBase64.length > 0 &&
-                clip.audioBase64.length <= 1_398_104,
-              "The encoded clip must stay within the one MiB audio bound.",
-            ).toBe(true);
-            const bytes = Buffer.from(clip.audioBase64, "base64");
-            expect(
-              bytes.toString("base64") === clip.audioBase64,
-              "The clip must contain canonical valid base64.",
-            ).toBe(true);
-            expect(bytes.byteLength >= 3 && bytes.byteLength <= 1_048_576).toBe(
-              true,
-            );
-            expect(
-              bytes.subarray(0, 3).toString("ascii") === "ID3" ||
-                (bytes[0] === 0xff && (bytes[1]! & 0xe0) === 0xe0),
-              "The returned clip must have an MP3 header.",
-            ).toBe(true);
-            return clip;
-          };
-          const first = await getClip();
-          const second = await getClip(first.meaningRevision);
-          expect(
-            second.cacheHit,
-            "A successful replay must use the durable cache.",
-          ).toBe(true);
-          expect(
-            second.audioBase64 === first.audioBase64,
-            "The cached public clip must be byte-identical.",
-          ).toBe(true);
+          const response = await safeStagingRequest(
+            context,
+            apiOrigin,
+            `${apiOrigin}/api/v1/pronunciation?preferCdn=true`,
+            "POST",
+            { text: sample.text, meaningId: sample.meaningId },
+          );
+          expect(response.status()).toBe(200);
+          const clip = (await response.json()) as PronunciationAudio;
+          expect(clip.meaningId).toBe(sample.meaningId);
+          expect(clip.partOfSpeech).toBe(sample.partOfSpeech);
+          expect(clip.voice).toBe("marin");
+          expect(clip.mimeType).toBe("audio/mpeg");
+          expect(clip.cacheHit).toBe(true);
+          expect(clip.audioBase64).toBe("");
+          const bytes = await downloadPublicPronunciation(
+            clip,
+            sample.meaningId,
+            webOrigin,
+          );
+          urls.add(clip.audioUrl!);
           let decoded: {
             duration: number;
             sampleRate: number;
@@ -894,7 +895,7 @@ test("connected maturity journey against real staging", async ({
               } finally {
                 await audio.close();
               }
-            }, first.audioBase64);
+            }, bytes.toString("base64"));
           } catch {
             throw new Error(
               "The actual public MP3 could not be decoded by the real browser.",
@@ -909,13 +910,14 @@ test("connected maturity journey against real staging", async ({
           // Never attach API envelopes, cookies, headers or authenticated traces.
           const sampleName = `natural-pronunciation-${sample.name}.mp3`;
           const samplePath = test.info().outputPath(sampleName);
-          await writeFile(samplePath, Buffer.from(first.audioBase64, "base64"));
+          await writeFile(samplePath, bytes);
           await test.info().attach(sampleName, {
             path: samplePath,
             contentType: "audio/mpeg",
           });
         });
       }
+      expect(urls.size).toBe(PRONUNCIATION_CASES.length);
     });
 
     await test.step("read, start, grade and resume a new original story without replacing history", async () => {

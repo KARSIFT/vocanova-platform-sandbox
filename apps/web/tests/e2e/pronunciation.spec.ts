@@ -1,5 +1,6 @@
 import { openOptionalWriting } from "./optional-writing";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { pressTab } from "./keyboard-navigation.js";
 
@@ -21,7 +22,7 @@ async function installSpeech(
   page: Page,
   mode: "ready" | "unsupported" | "no-english" | "enhanced" = "ready",
 ) {
-  await page.route("**/api/v1/pronunciation", async (route) => {
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
     const body = route.request().postDataJSON();
     if (mode === "unsupported" || mode === "no-english") {
       await route.fulfill({
@@ -410,7 +411,7 @@ test("an unavailable saved device voice does not block contextual audio and can 
     { name: "vocanova_csrf", value: "reset-voice-csrf", url: baseURL! },
   ]);
   const requests: { text: string; csrf: string | undefined }[] = [];
-  await page.route("**/api/v1/pronunciation", async (route) => {
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
     requests.push({
       text: route.request().postDataJSON().text,
       csrf: route.request().headers()["x-csrf-token"],
@@ -530,7 +531,7 @@ test("natural pronunciation requests only authored text with CSRF and replays at
     meaningId: string;
     csrf: string | undefined;
   }[] = [];
-  await page.route("**/api/v1/pronunciation", async (route) => {
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
     requests.push({
       text: route.request().postDataJSON().text,
       meaningId: route.request().postDataJSON().meaningId,
@@ -647,7 +648,7 @@ test("blocked natural audio retries the prepared clip inside the next click", as
     { name: "vocanova_csrf", value: "gesture-audio-csrf", url: baseURL! },
   ]);
   let requests = 0;
-  await page.route("**/api/v1/pronunciation", async (route) => {
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
     requests++;
     await route.fulfill({
       status: 200,
@@ -802,7 +803,7 @@ test("a mismatched meaning response never plays and an explicit retry stays avai
 }) => {
   await installSpeech(page);
   let matching = false;
-  await page.route("**/api/v1/pronunciation", async (route) => {
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
     const body = route.request().postDataJSON();
     await route.fulfill({
       status: 200,
@@ -856,7 +857,7 @@ test("same-spelling meanings send separate identities and switching stops the pr
     { name: "e2e_teaching", value: "true", url: baseURL! },
   ]);
   const requests: { text: string; meaningId: string }[] = [];
-  await page.route("**/api/v1/pronunciation", async (route) => {
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
     const body = route.request().postDataJSON();
     requests.push(body);
     await route.fulfill({
@@ -920,6 +921,148 @@ test("canonical word detail preserves authentication and missing-word handling",
   await page.goto("/vocabulary/pour");
   await expect(page).toHaveURL(/\/login\?returnTo=%2Fvocabulary%2Fpour/);
 });
+
+for (const cdnAvailable of [true, false]) {
+  test(`meaning-specific Listen ${cdnAvailable ? "plays the CDN clip" : "retries through the API when the CDN fails"}`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("A test app URL is required");
+    const origin = new URL(baseURL).origin;
+    const meaningId = "b571a540-89bb-533b-be81-9cedf443a64a";
+    const meaningRevision =
+      "19738e0a996465f59ed78d1c7ef9ef3824c74e03f054f1b6b36bf4c626814be9";
+    const cacheKey =
+      "4952186b332740aef55dcfdedd8dbfd6a6a4b54ee3d6cd7c0f640cc8b272be1d";
+    const mp3 = await readFile(
+      new URL(
+        "../../../api/business/pronunciation/testdata/tone.mp3",
+        import.meta.url,
+      ),
+    );
+    const hash = createHash("sha256").update(mp3).digest("hex");
+    const audioUrl = `https://audio.vocanova.site/meanings/${meaningId}/${meaningRevision}/${cacheKey}/${hash}.mp3`;
+    await context.addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: baseURL },
+      { name: "vocanova_csrf", value: "cdn-audio-csrf", url: baseURL },
+      { name: "e2e_teaching", value: "true", url: baseURL },
+      {
+        name: "synthetic_session_probe",
+        value: randomUUID(),
+        domain: ".vocanova.site",
+        path: "/",
+        secure: true,
+        httpOnly: true,
+        sameSite: "None",
+      },
+    ]);
+    const requests: { query: string; body: unknown; csrf?: string }[] = [];
+    await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const preferCdn = url.searchParams.get("preferCdn") === "true";
+      requests.push({
+        query: url.search,
+        body: request.postDataJSON(),
+        csrf: request.headers()["x-csrf-token"],
+      });
+      await route.fulfill({
+        json: {
+          audioBase64: preferCdn ? "" : mp3.toString("base64"),
+          ...(preferCdn ? { audioUrl } : {}),
+          mimeType: "audio/mpeg",
+          voice: "marin",
+          meaningId,
+          meaningRevision,
+          cacheHit: true,
+        },
+      });
+    });
+    const mediaRequests: { url: string; origin?: string; cookie?: string }[] =
+      [];
+    await page.route("https://audio.vocanova.site/**", async (route) => {
+      const request = route.request();
+      const headers = await request.allHeaders();
+      mediaRequests.push({
+        url: request.url(),
+        origin: headers.origin,
+        cookie: headers.cookie,
+      });
+      if (!cdnAvailable) {
+        await route.abort("failed");
+        return;
+      }
+      const range = /^bytes=(\d+)-(\d*)$/u.exec(headers.range ?? "");
+      const start = range ? Number(range[1]) : 0;
+      const end = range?.[2]
+        ? Math.min(Number(range[2]), mp3.length - 1)
+        : mp3.length - 1;
+      await route.fulfill({
+        status: range ? 206 : 200,
+        contentType: "audio/mpeg",
+        headers: {
+          "access-control-allow-origin": origin,
+          "accept-ranges": "bytes",
+          ...(range
+            ? { "content-range": `bytes ${start}-${end}/${mp3.length}` }
+            : {}),
+        },
+        body: mp3.subarray(start, end + 1),
+      });
+    });
+
+    // Observe the browser's native player. A fake Audio would miss CORS,
+    // media decoding and the actual network error on the fallback path.
+    await page.addInitScript(() => {
+      const play = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () {
+        this.addEventListener(
+          "playing",
+          () => {
+            const root = document.documentElement;
+            root.dataset.testAudioSrc = this.currentSrc;
+            root.dataset.testAudioCors = this.crossOrigin ?? "none";
+          },
+          { once: true },
+        );
+        return play.call(this);
+      };
+    });
+
+    await page.goto("/vocabulary/deadline");
+    const sense = page.locator(`#meaning-${meaningId}`);
+    const listen = sense.getByRole("button", {
+      name: "Listen to deadline",
+      exact: true,
+    });
+    await listen.click();
+    const root = page.locator("html");
+    await expect(root).toHaveAttribute(
+      "data-test-audio-src",
+      cdnAvailable ? audioUrl : /^blob:/u,
+    );
+    if (cdnAvailable) {
+      await expect(root).toHaveAttribute("data-test-audio-cors", "anonymous");
+    }
+    await expect(listen).toBeVisible();
+    expect(mediaRequests.length).toBeGreaterThan(0);
+    for (const request of mediaRequests) {
+      expect(request).toEqual({ url: audioUrl, origin, cookie: undefined });
+    }
+    expect(requests.map(({ query }) => query)).toEqual(
+      cdnAvailable ? ["?preferCdn=true"] : ["?preferCdn=true", ""],
+    );
+    for (const [index, request] of requests.entries()) {
+      expect(request.body).toEqual({
+        text: "deadline",
+        meaningId,
+        ...(index === 1 ? { meaningRevision } : {}),
+      });
+      expect(request.csrf).toBe("cdn-audio-csrf");
+    }
+  });
+}
 
 test("discovery speaks after sound opt-in, supports mute and explicit replay, and cancels on exit", async ({
   page,
@@ -1163,7 +1306,7 @@ test("discovery brings an unconfirmed choice and its exact retry into view", asy
 
 test("pronunciation busy or daily limit gives an honest later retry without device substitution", async ({ page }) => {
   await installSpeech(page);
-  await page.route("**/api/v1/pronunciation", (route) => route.fulfill({
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, (route) => route.fulfill({
     status: 429,
     contentType: "application/json",
     body: JSON.stringify({ detail: "private backend detail" }),

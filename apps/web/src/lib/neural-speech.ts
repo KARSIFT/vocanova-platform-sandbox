@@ -21,19 +21,23 @@ export interface PronunciationMedia {
   pause(): void;
 }
 
+interface PronunciationAudioSource {
+  audioBase64: string;
+  audioUrl?: string;
+  mimeType: string;
+  meaningId?: string;
+  meaningRevision?: string;
+}
+
 export interface NeuralSpeechEnvironment {
   request(
     text: string,
     signal: AbortSignal,
     meaningId?: string,
     meaningRevision?: string,
-  ): Promise<{
-    audioBase64: string;
-    mimeType: string;
-    meaningId?: string;
-    meaningRevision?: string;
-  }>;
-  createMedia(response: { audioBase64: string; mimeType: string }): {
+    preferCdn?: boolean,
+  ): Promise<PronunciationAudioSource>;
+  createMedia(response: PronunciationAudioSource): {
     media: PronunciationMedia;
     dispose(): void;
   };
@@ -181,10 +185,16 @@ export function createPronunciationController(
       ) {
         const request = active;
         const clip = request.clip!;
+        const isCurrentClip = () =>
+          active === request &&
+          request.phase === "audio" &&
+          request.clip === clip;
         request.notify = notify;
         request.blocked = false;
         notify({ status: "starting" });
-        request.timer = setTimeout(() => request.fallback?.(), timeoutMs);
+        request.timer = setTimeout(() => {
+          if (isCurrentClip()) request.fallback?.();
+        }, timeoutMs);
         try {
           clip.media.playbackRate = slow ? 0.7 : preferences.rate;
           // This invocation is intentionally synchronous in play(), before any
@@ -192,11 +202,14 @@ export function createPronunciationController(
           const playing = clip.media.play();
           void playing
             .then(() => {
-              clearTimeout(request.timer);
-              if (active === request && request.phase === "audio")
+              if (isCurrentClip()) {
+                clearTimeout(request.timer);
                 notify({ status: "playing", source: "neural" });
+              }
             })
-            .catch((error) => mediaFailure(request, error));
+            .catch((error) => {
+              if (isCurrentClip()) mediaFailure(request, error);
+            });
         } catch (error) {
           mediaFailure(request, error);
         }
@@ -239,7 +252,6 @@ export function createPronunciationController(
             active = null;
         });
       }
-      request.fallback = fallback;
       // A device override is safe only for general audio. Meaning-specific
       // playback needs the server's confirmed context and must never guess.
       if (
@@ -251,39 +263,64 @@ export function createPronunciationController(
         return;
       }
       const neural = environment;
-      notify({ status: "starting" });
-      // Generation allows 12 seconds plus 2 seconds to persist its result.
-      // Do not spend the playback-start budget while waiting for that response.
-      request.timer = setTimeout(
-        fallback,
-        meaningId ? meaningRequestTimeoutMs : timeoutMs,
-      );
-      void (async () => {
+      async function start(preferCdn: boolean, revision = meaningRevision) {
+        const attempt = request.abort;
+        const isCurrent = () =>
+          active === request &&
+          request.abort === attempt &&
+          request.phase !== "device";
+        request.fallback = fallback;
+        request.notify({ status: "starting" });
+        if (!isCurrent()) return;
+        // Give API generation and playback startup separate time budgets.
+        request.timer = setTimeout(
+          () => {
+            if (isCurrent()) request.fallback?.();
+          },
+          meaningId ? meaningRequestTimeoutMs : timeoutMs,
+        );
         try {
           const response = await neural.request(
             text,
-            request.abort.signal,
+            attempt.signal,
             meaningId,
-            meaningRevision,
+            revision,
+            preferCdn,
           );
-          if (active !== request || request.phase !== "request") return;
+          if (!isCurrent()) return;
           if (meaningId && response.meaningId !== meaningId)
             throw new Error("Pronunciation meaning did not match");
-          if (meaningRevision && response.meaningRevision !== meaningRevision)
+          if (revision && response.meaningRevision !== revision)
             throw new Error("Pronunciation meaning revision did not match");
+
+          if (response.audioUrl !== undefined) {
+            if (!preferCdn) throw new Error("Unexpected pronunciation URL");
+            request.fallback = () => {
+              if (!isCurrent()) return;
+              clearTimeout(request.timer);
+              request.abort = new AbortController();
+              request.phase = "request";
+              request.blocked = false;
+              attempt.abort();
+              try {
+                clearMedia(request);
+              } catch {
+                /* The failed clip is no longer owned by this request. */
+              }
+              void start(false, response.meaningRevision ?? revision);
+            };
+          }
           clearTimeout(request.timer);
-          request.timer = setTimeout(fallback, timeoutMs);
+          request.timer = setTimeout(() => {
+            if (isCurrent()) request.fallback?.();
+          }, timeoutMs);
           const clip = neural.createMedia(response);
           request.clip = clip;
           request.phase = "audio";
           clip.media.playbackRate = slow ? 0.7 : preferences.rate;
           if ("preservesPitch" in clip.media) clip.media.preservesPitch = true;
           clip.media.onended = () => {
-            if (
-              active !== request ||
-              request.phase !== "audio" ||
-              request.blocked
-            )
+            if (!isCurrent() || request.phase !== "audio" || request.blocked)
               return;
             active = null;
             try {
@@ -294,17 +331,18 @@ export function createPronunciationController(
             request.notify({ status: "idle", source: "neural" });
           };
           clip.media.onerror = () => {
-            if (!request.blocked) fallback();
+            if (isCurrent() && !request.blocked) request.fallback?.();
           };
           await clip.media.play();
-          clearTimeout(request.timer);
-          if (active === request && request.phase === "audio")
-            notify({ status: "playing", source: "neural" });
+          if (isCurrent()) {
+            clearTimeout(request.timer);
+            request.notify({ status: "playing", source: "neural" });
+          }
         } catch (error) {
-          if (active !== request || request.phase === "device") return;
-          mediaFailure(request, error);
+          if (isCurrent()) mediaFailure(request, error);
         }
-      })();
+      }
+      void start(Boolean(meaningId));
     },
     stop(owner: symbol) {
       if (active?.owner === owner) cancel(true);
@@ -315,14 +353,43 @@ export function createPronunciationController(
   };
 }
 
-/** Convert a validated bounded MP3 response into a revocable browser-only URL. */
+const pronunciationCdnUrl =
+  /^https:\/\/audio\.vocanova\.site\/meanings\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/([a-f0-9]{64})\/[a-f0-9]{64}\/[a-f0-9]{64}\.mp3$/;
+
+/** Play a confirmed CDN clip or turn bounded API bytes into a revocable URL. */
 export function createPronunciationMedia(
-  response: { audioBase64: string; mimeType: string },
+  response: PronunciationAudioSource,
   browser: Pick<
     typeof globalThis,
     "atob" | "Audio" | "Blob" | "URL"
   > = globalThis,
 ) {
+  if (response.audioUrl !== undefined) {
+    const url = response.audioUrl;
+    const match = typeof url === "string" && pronunciationCdnUrl.exec(url);
+    if (
+      response.mimeType !== "audio/mpeg" ||
+      response.audioBase64 !== "" ||
+      !match ||
+      match[0] !== url ||
+      match[1] !== response.meaningId ||
+      match[2] !== response.meaningRevision
+    ) {
+      throw new Error("Unsupported pronunciation URL");
+    }
+    const media = new browser.Audio();
+    // Anonymous CORS omits the application's domain-wide session cookies.
+    media.crossOrigin = "anonymous";
+    media.preload = "auto";
+    media.src = url;
+    return {
+      media: media as unknown as PronunciationMedia,
+      dispose: () => {
+        media.removeAttribute("src");
+        media.load();
+      },
+    };
+  }
   if (
     response.mimeType !== "audio/mpeg" ||
     !response.audioBase64 ||

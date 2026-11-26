@@ -178,6 +178,10 @@
           "audioBase64": {
             "type": "string"
           },
+          "audioUrl": {
+            "description": "Direct MP3 URL when the caller opts in and the exact recording is published",
+            "type": "string"
+          },
           "cacheHit": {
             "type": "boolean"
           },
@@ -10259,6 +10263,18 @@
     "/api/v1/pronunciation": {
       "post": {
         "operationId": "GetPronunciation",
+        "parameters": [
+          {
+            "description": "Allow a direct URL for a published vocabulary recording",
+            "explode": false,
+            "in": "query",
+            "name": "preferCdn",
+            "schema": {
+              "description": "Allow a direct URL for a published vocabulary recording",
+              "type": "boolean"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {

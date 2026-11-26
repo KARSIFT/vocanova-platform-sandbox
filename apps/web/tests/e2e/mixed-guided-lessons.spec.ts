@@ -20,7 +20,7 @@ for (const theme of ["light", "dark"])
     ]);
     const requests: { text: string; meaningId: string }[] = [];
     let wrongMeaning = true;
-    await page.route("**/api/v1/pronunciation", async (route) => {
+    await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
       const body = route.request().postDataJSON();
       requests.push(body);
       await route.fulfill({

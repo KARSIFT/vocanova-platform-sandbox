@@ -266,6 +266,7 @@ export interface OAuthStartResponse {
 
 export interface PronunciationAudio {
   audioBase64: string;
+  audioUrl?: string;
   mimeType: "audio/mpeg";
   voice: string;
   cacheHit: boolean;
@@ -1425,10 +1426,11 @@ export class VocanovaClient {
     init?: RequestInit,
     meaningId?: string,
     meaningRevision?: string,
+    preferCdn?: boolean,
   ): Promise<{ data: PronunciationAudio; response: Response }> {
     const response = await this.request(
       "POST",
-      "/api/v1/pronunciation",
+      "/api/v1/pronunciation" + (preferCdn ? "?preferCdn=true" : ""),
       {
         text,
         ...(meaningId ? { meaningId } : {}),

@@ -39,6 +39,7 @@ var (
 
 type Audio struct {
 	AudioBase64     string `json:"audioBase64"`
+	AudioURL        string `json:"audioUrl,omitempty" doc:"Direct MP3 URL when the caller opts in and the exact recording is published"`
 	MimeType        string `json:"mimeType"`
 	Voice           string `json:"voice"`
 	CacheHit        bool   `json:"cacheHit"`
@@ -111,6 +112,12 @@ func (s *Service) SpeakMeaning(ctx context.Context, user uuid.UUID, text, meanin
 	return s.SpeakMeaningRevision(ctx, user, text, meaningID, "")
 }
 func (s *Service) SpeakMeaningRevision(ctx context.Context, user uuid.UUID, text, meaningID, revision string) (*Audio, error) {
+	return s.SpeakMeaningRevisionWithCDN(ctx, user, text, meaningID, revision, false)
+}
+
+// SpeakMeaningRevisionWithCDN keeps the byte response for existing clients
+// and for explicit retries when the browser cannot play an eligible CDN URL.
+func (s *Service) SpeakMeaningRevisionWithCDN(ctx context.Context, user uuid.UUID, text, meaningID, revision string, preferCDN bool) (*Audio, error) {
 	if user == uuid.Nil {
 		return nil, ErrNotFound
 	}
@@ -152,6 +159,14 @@ func (s *Service) SpeakMeaningRevision(ctx context.Context, user uuid.UUID, text
 		return nil, ErrUnavailable
 	}
 	key := utteranceCacheKey(identity, utterance)
+	if preferCDN && meaningID != "" && utterance.Kind == "word" && liveRevision != "" {
+		if url := publishedRecordingURL(meaningID, liveRevision, key); url != "" {
+			return &Audio{
+				AudioURL: url, MimeType: "audio/mpeg", Voice: identity.Voice, CacheHit: true,
+				MeaningID: meaningID, MeaningRevision: liveRevision, PartOfSpeech: utterance.PartOfSpeech,
+			}, nil
+		}
+	}
 	reserved, err := s.repo.Reserve(ctx, key, utf8.RuneCountInString(utterance.Text), s.clock.Now().UTC())
 	if err != nil {
 		return nil, err

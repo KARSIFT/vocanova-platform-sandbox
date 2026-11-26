@@ -37,7 +37,7 @@ for (const scenario of [
       }
     }, scenario.preference);
     const audio: unknown[] = [];
-    await page.route("**/api/v1/pronunciation", async (route) => {
+    await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
       audio.push(route.request().postDataJSON());
       await route.fulfill({ status: 503, json: { title: "Unavailable" } });
     });
@@ -64,7 +64,7 @@ test("Discovery retains explicit automatic sound opt-in and saves a later opt-ou
     sessionStorage.setItem("vocanova-discovery-muted", "false");
   });
   const audio: unknown[] = [];
-  await page.route("**/api/v1/pronunciation", async (route) => {
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
     audio.push(route.request().postDataJSON());
     await route.fulfill({ status: 503, json: { title: "Unavailable" } });
   });
@@ -87,7 +87,7 @@ test("Discovery retains explicit automatic sound opt-in and saves a later opt-ou
 test("Discovery lets the learner enable automatic sound before Start", async ({ page, baseURL }) => {
   await learner(page, baseURL!);
   let audioRequests = 0;
-  await page.route("**/api/v1/pronunciation", async (route) => {
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
     audioRequests += 1;
     await route.fulfill({ status: 503, json: { title: "Unavailable" } });
   });
