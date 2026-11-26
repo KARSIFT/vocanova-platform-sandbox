@@ -22,22 +22,21 @@ test("a remembered browser enters Home from the root without signing in again", 
 });
 
 for (const theme of ["light", "dark"] as const) {
-  test(`invalid deactivation date omits the deadline and sign-in recovery works (${theme})`, async ({ page, baseURL }) => {
+  test(`invalid deactivation date keeps the account-closure message and support link (${theme})`, async ({ page }) => {
     await page.addInitScript(value => localStorage.setItem("vocanova:theme-preference", value), theme);
     await page.goto("/account-deactivated?purgeAfter=not-a-date");
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const confirmation = page.getByRole("status");
     await expect(confirmation.getByRole("heading", { name: "Your account has been deactivated.", exact: true })).toBeVisible();
-    await expect(confirmation).toContainText("You can sign in again before then to reactivate");
-    await expect(confirmation.getByText(/permanently anonymize/)).toHaveCount(0);
+    await expect(confirmation).not.toContainText(/you can sign in again.*reactivate/i);
     await expect(confirmation).not.toContainText("Invalid Date");
 
-    const signIn = confirmation.getByRole("link", { name: "Go to sign in", exact: true });
+    const support = confirmation.getByRole("link", { name: /help|support/i });
     await pressTab(page);
-    await expect(signIn).toBeFocused();
+    await expect(support).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(`${baseURL}/login`);
-    await expect(page.getByRole("heading", { level: 1, name: "Sign in to Vocanova", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/help(?:#contact-support)?$/);
+    await expect(page.getByRole("heading", { level: 1, name: "How can we help?", exact: true })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
   });
   test(`landing navigation activates each destination by keyboard (${theme})`, async ({ page, baseURL }) => {

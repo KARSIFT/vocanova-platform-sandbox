@@ -82,7 +82,21 @@ type Config struct {
 	// reserved synthetic identity, so it applies the same refusal
 	// the sign-in paths do. An empty value reserves nothing.
 	ReservedSyntheticEmail string
+
+	// EmailChangeSendingDisabled refuses new email-change requests
+	// when confirmation delivery cannot reach a real mailbox (production
+	// wiring sets it whenever the shared sender is not the real HTTP
+	// provider). RequestEmailChangeLink then returns
+	// ErrEmailChangeDeliveryUnavailable before any proof is created or
+	// any send is attempted. Previously issued links remain consumable.
+	// The zero value keeps sending enabled.
+	EmailChangeSendingDisabled bool
 }
+
+// ErrEmailChangeDeliveryUnavailable is returned by RequestEmailChangeLink
+// when Config.EmailChangeSendingDisabled is set. It carries no detail
+// about the requested address.
+var ErrEmailChangeDeliveryUnavailable = errors.New("email change confirmation delivery unavailable")
 
 // EmailChangeRateLimitConfig is the rate-limit shape T03 introduces.
 // The values are kept separate from auth.RateLimitConfig so the
@@ -269,6 +283,11 @@ type EmailLink struct {
 func (s *Service) RequestEmailChangeLink(ctx context.Context, userID uuid.UUID, clientIP, sessionToken, newEmail string) (*EmailLink, error) {
 	if userID == uuid.Nil {
 		return nil, errors.New("user id required")
+	}
+	// Refuse before validation, rate limiting, token generation, persistence,
+	// or dispatch: no confirmation proof may exist that cannot be delivered.
+	if s.cfg.EmailChangeSendingDisabled {
+		return nil, ErrEmailChangeDeliveryUnavailable
 	}
 	newEmail = strings.ToLower(strings.TrimSpace(newEmail))
 	if !isAcceptableEmail(newEmail) || s.isReservedSyntheticEmail(newEmail) {

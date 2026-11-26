@@ -2,22 +2,32 @@
 
 import { StatusMessage } from "@/ui/status-message";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { ApiResponseError } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
-import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
-import { handleApiError } from "@/lib/session";
+import { getOrRefreshCSRFToken } from "@/lib/csrf";
+import { handleApiError, isSessionExpiredError } from "@/lib/session";
 
 interface MeaningSaveButtonProps {
   meaningId: string;
+  wordSlug: string;
   source: "journey" | "search";
   initialSaved: boolean;
   wordText: string;
   shortDefinition: string;
 }
 
+interface PendingSave {
+  key: string;
+  body: { meaningId: string; source: "journey" | "search" };
+}
+
+const SESSION_NOT_READY = "Session is not ready. Please refresh the page.";
+
 export function MeaningSaveButton({
   meaningId,
+  wordSlug,
   source,
   initialSaved,
   wordText,
@@ -25,72 +35,160 @@ export function MeaningSaveButton({
 }: MeaningSaveButtonProps) {
   const router = useRouter();
   const [saved, setSaved] = useState(initialSaved);
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [checkNeeded, setCheckNeeded] = useState(false);
+  const [refreshing, startRefresh] = useTransition();
+  // A save with an unknown outcome; retried with the same key and body.
+  const pending = useRef<PendingSave | null>(null);
+  const inFlight = useRef(false);
+  const mounted = useRef(true);
 
-  async function toggleSave() {
-    const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrfToken) {
-      setStatus("error");
-      setErrorMessage("Session is not ready. Please refresh the page.");
-      return;
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!refreshing && !inFlight.current && !pending.current)
+      setSaved(initialSaved);
+  }, [initialSaved, refreshing]);
+
+  function errorText(cause: unknown, fallback: string) {
+    return isSessionExpiredError(cause)
+      ? handleApiError(cause, fallback)
+      : fallback;
+  }
+
+  async function readSaved(id: string) {
+    const { data } = await createApiClient().getCanonicalWord(wordSlug, {
+      cache: "no-store",
+    });
+    const meaning = data.word.meanings.find((item) => item.id === id);
+    if (
+      data.word.slug !== wordSlug ||
+      !meaning ||
+      (meaning.saved && !meaning.userWordId)
+    ) {
+      throw new Error("Saved state unknown");
     }
+    return meaning.saved;
+  }
 
-    setStatus("loading");
-    setErrorMessage("");
-
-    const client = createApiClient();
+  // Read-only: never sends a new save.
+  async function check() {
+    setCheckNeeded(true);
     try {
-      if (saved) {
-        await client.unsaveUserWord(meaningId, {
-          headers: { "X-CSRF-Token": csrfToken },
-        });
-        setSaved(false);
-      } else {
-        const idempotencyKey = generateIdempotencyKey();
-        await client.saveUserWord({ meaningId, source }, idempotencyKey, {
-          headers: { "X-CSRF-Token": csrfToken },
-        });
-        setSaved(true);
+      const isSaved = await readSaved(
+        pending.current?.body.meaningId ?? meaningId,
+      );
+      if (!mounted.current) return;
+      pending.current = null;
+      setCheckNeeded(false);
+      setSaved(isSaved);
+      if (isSaved) startRefresh(() => router.refresh());
+      else setErrorMessage("This word was not saved. You can save it again.");
+    } catch (cause) {
+      if (mounted.current) {
+        setErrorMessage(
+          errorText(cause, "We could not check this word. Please try again."),
+        );
       }
-      setStatus("idle");
-      // Word Detail's SentenceFeedback entry point (PRD §2 / #1181) is
-      // gated on the server-rendered `meaning.saved` + `meaning.userWordId`
-      // fields from the parent Server Component, not on this button's own
-      // local `saved` state. Without a refresh, saving a word flips this
-      // button to "Saved" but the sentence-practice widget below it never
-      // appears until the learner manually reloads the page - refresh the
-      // route so the server refetches and the widget shows up immediately.
-      router.refresh();
-    } catch (error) {
-      setStatus("error");
-      // handleApiError detects 401 and routes the learner to
-      // re-authentication (T06: session-expiry mid-flow). For any
-      // other failure it returns a stable, caller-supplied message.
+    }
+  }
+
+  async function save() {
+    pending.current ??= {
+      key: generateIdempotencyKey(),
+      body: { meaningId, source },
+    };
+    const { key, body } = pending.current;
+    try {
+      const token = await getOrRefreshCSRFToken();
+      if (!token) return setErrorMessage(SESSION_NOT_READY);
+      const { data } = await createApiClient().saveUserWord(body, key, {
+        headers: { "X-CSRF-Token": token },
+      });
+      if (!mounted.current) return;
+      if (
+        data?.meaningId !== body.meaningId ||
+        data.saved !== true ||
+        !data.userWordId
+      ) {
+        return check();
+      }
+      pending.current = null;
+      setSaved(true);
+      // Sentence practice is server-rendered from saved state; refresh to show it.
+      startRefresh(() => router.refresh());
+    } catch (cause) {
+      if (!mounted.current) return;
+      if (
+        cause instanceof ApiResponseError &&
+        (cause.status === 404 || cause.status === 409)
+      ) {
+        return check();
+      }
       setErrorMessage(
-        handleApiError(
-          error,
-          "Unable to update saved state. Please try again.",
-        ),
+        errorText(cause, "We could not save this word. Please try again."),
       );
     }
   }
 
-  const label = saved ? "Saved" : "Save to review";
-  const ariaLabel = saved
-    ? `Remove ${wordText} from saved words`
-    : `Save ${wordText}: ${shortDefinition}`;
+  async function remove() {
+    try {
+      const token = await getOrRefreshCSRFToken();
+      if (!token) return setErrorMessage(SESSION_NOT_READY);
+      await createApiClient().unsaveUserWord(meaningId, {
+        headers: { "X-CSRF-Token": token },
+      });
+      if (!mounted.current) return;
+      setSaved(false);
+      startRefresh(() => router.refresh());
+    } catch (cause) {
+      if (mounted.current) {
+        setErrorMessage(
+          errorText(cause, "Unable to update saved state. Please try again."),
+        );
+      }
+    }
+  }
+
+  function handleClick() {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setErrorMessage("");
+    const action = checkNeeded ? check() : saved ? remove() : save();
+    void action.finally(() => {
+      inFlight.current = false;
+      if (mounted.current) setBusy(false);
+    });
+  }
+
+  const ariaLabel = checkNeeded
+    ? `Check saved status for ${wordText}`
+    : saved
+      ? `Remove ${wordText} from saved words`
+      : `Save ${wordText}: ${shortDefinition}`;
+  const label = checkNeeded
+    ? "Check saved status"
+    : saved
+      ? "Saved"
+      : "Save to review";
 
   return (
     <div className="flex flex-col items-end gap-[var(--spacing-xs)]">
       <button
         type="button"
-        onClick={toggleSave}
-        disabled={status === "loading"}
+        onClick={handleClick}
+        aria-disabled={busy || undefined}
         aria-pressed={saved}
         aria-label={ariaLabel}
-        aria-busy={status === "loading"}
-        className={`inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50 ${saved ? "border-primary-200 bg-primary-50 text-primary-800 hover:bg-primary-100" : "border-primary-300 bg-white text-primary-700 hover:bg-primary-50"}`}
+        aria-busy={busy}
+        className={`inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 ${saved ? "border-primary-200 bg-primary-50 text-primary-800 hover:bg-primary-100" : "border-primary-300 bg-white text-primary-700 hover:bg-primary-50"}`}
       >
         <svg
           aria-hidden="true"
@@ -111,7 +209,7 @@ export function MeaningSaveButton({
             />
           )}
         </svg>
-        {status === "loading" ? "Saving…" : label}
+        {busy ? (checkNeeded ? "Checking…" : "Saving…") : label}
       </button>
       {errorMessage ? (
         <StatusMessage

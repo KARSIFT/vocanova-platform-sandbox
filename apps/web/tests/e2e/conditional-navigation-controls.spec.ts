@@ -135,21 +135,22 @@ for (const theme of ["light", "dark"] as const) {
       expect(first.items.length).toBeGreaterThan(0);
       expect(second.items.length).toBeGreaterThan(0);
       expect(second.items.map(item => item.meaningId)).not.toEqual(first.items.map(item => item.meaningId));
-      async function expectRows(items: VocabularySearchItem[]) {
+      async function expectRows(items: VocabularySearchItem[], returnTo?: string) {
         const rows = page.getByRole("main").getByRole("listitem");
         await expect(rows).toHaveCount(items.length);
         for (const [index, item] of items.entries()) {
           const row = rows.nth(index);
           const word = row.getByRole("link", { name: item.wordText, exact: true });
           await expect(word).toBeVisible();
-          await expect(word).toHaveAttribute("href", `/vocabulary/${encodeURIComponent(item.wordSlug)}#meaning-${item.meaningId}`);
+          const query = returnTo ? `?${new URLSearchParams({ fromSearch: returnTo })}` : "";
+          await expect(word).toHaveAttribute("href", `/vocabulary/${encodeURIComponent(item.wordSlug)}${query}#meaning-${item.meaningId}`);
           await expect(row.getByText(item.shortDefinition, { exact: true })).toBeVisible();
         }
       }
       await goto(page, "/vocabulary");
       await expectRows(first.items);
       await activate(page, page.getByRole("link", { name: "Next results", exact: true }), "/vocabulary?after=2", "Word search");
-      await expectRows(second.items);
+      await expectRows(second.items, "/vocabulary?after=2");
       await activate(page, page.getByRole("link", { name: "First results", exact: true }), "/vocabulary", "Word search");
       await expectRows(first.items);
       await expect(page.getByRole("link", { name: "Next results", exact: true })).toBeVisible();

@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/ui/controls";
 import { StatusMessage } from "@/ui/status-message";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -215,30 +214,35 @@ export function SaveAndWrite({
       />
     );
   }
+  const actionLabel = meaning
+    ? busy
+      ? "Saving…"
+      : pending.current
+        ? "Retry save"
+        : "Save and write"
+    : "Check saved status";
   return (
     <div className="mt-4 border-l-2 border-neutral-300 pl-4">
       <p className="max-w-prose text-neutral-700">
         Save this meaning to write with it here. It also joins your saved
         vocabulary for review.
       </p>
-      {meaning && !pending.current && (
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={busy}
-          aria-busy={busy}
-          className={`${actionStyle} mt-3`}
-        >
-          {busy ? "Saving…" : "Save and write"}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => void (meaning ? save() : checkSavedState())}
+        aria-disabled={busy || undefined}
+        aria-busy={busy}
+        className={`${actionStyle} mt-3 aria-disabled:cursor-not-allowed aria-disabled:opacity-60`}
+      >
+        {actionLabel}
+      </button>
       {busy && (
         <StatusMessage
           as="p"
           role="status"
           className="mt-3 text-sm text-neutral-600"
         >
-          Confirming saved meaning…
+          {meaning ? "Saving this meaning…" : "Confirming saved meaning…"}
         </StatusMessage>
       )}
       {notice && (
@@ -257,26 +261,7 @@ export function SaveAndWrite({
           className="mt-3 space-y-3 text-sm text-red-700"
         >
           <p>{error}</p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void (pending.current ? save() : checkSavedState())}
-            className={actionStyle}
-          >
-            {pending.current ? "Retry save" : "Check saved status"}
-          </button>
         </StatusMessage>
-      )}
-      {!meaning && !error && (
-        <Button
-          variant="primary"
-          type="button"
-          disabled={busy}
-          onClick={() => void checkSavedState()}
-          className={`${actionStyle} mt-3`}
-        >
-          Check saved status
-        </Button>
       )}
     </div>
   );

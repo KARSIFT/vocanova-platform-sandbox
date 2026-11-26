@@ -279,7 +279,7 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
-test("Practice keeps scheduled count truthful after today's review target is complete", async ({
+test("Practice keeps scheduled counts truthful and Home resumes the active optional review", async ({
   page,
   context,
   baseURL,
@@ -363,6 +363,58 @@ test("Practice keeps scheduled count truthful after today's review target is com
   ).toHaveAttribute("value", "5");
   // The explicit extra set keeps today’s confirmed goal as the progress scale.
   await expect(main.getByRole("progressbar", { name: "Review progress" })).toHaveAttribute("max", "5");
+
+  const checkedFeedback = main.getByRole("status").filter({
+    hasText: /^Correct/,
+  });
+  const next = main.getByRole("button", { name: "Continue", exact: true });
+  for (const word of [6, 7]) {
+    await main
+      .getByRole("radio", {
+        name: `definition for review word ${word}`,
+        exact: true,
+      })
+      .check();
+    await main.getByRole("button", { name: "Check answer", exact: true }).click();
+    await expect(checkedFeedback).toContainText(
+      `definition for review word ${word}`,
+    );
+    if (word === 6) await next.click();
+  }
+
+  const currentResponse = await context.request.get(
+    `${mockAPI}/api/v1/daily-lessons/current`,
+  );
+  expect(currentResponse.status()).toBe(200);
+  expect(await currentResponse.json()).toMatchObject({
+    dueCount: 0,
+    goal: { target: 5, reviewed: 5, remaining: 0, complete: true },
+    session: {
+      id: extra.id,
+      status: "in_progress",
+      feedback: { correct: true, wordText: "Review word 7" },
+    },
+  });
+
+  await page.getByRole("link", { name: "VocaNova home", exact: true }).click();
+  await expect(page).toHaveURL("/home");
+  const resume = main.getByRole("link", {
+    name: "Continue optional review",
+    exact: true,
+  });
+  await expect(resume).toBeVisible();
+  await resume.focus();
+  await expect(resume).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(
+    `/review/session?lesson=${encodeURIComponent(extra.id)}`,
+  );
+  await expect(checkedFeedback).toContainText("definition for review word 7");
+  await expect(next).toBeEnabled();
+  await expect(
+    main.getByRole("progressbar", { name: "Review progress" }),
+  ).toHaveAttribute("value", "5");
+  expect(browserStarts).toEqual(["?additional=true"]);
 });
 
 test("Practice distinguishes unavailable lessons from an empty catalog without hiding other activities", async ({

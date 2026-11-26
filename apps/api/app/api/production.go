@@ -639,6 +639,9 @@ type KillSwitchStatus struct {
 	OAuthEnabled      bool `json:"oauth_enabled" example:"false"`
 	NewSignupsEnabled bool `json:"new_signups_enabled" example:"false"`
 	AIEnabled         bool `json:"ai_enabled" example:"true"`
+	// EmailChangeEnabled is true only when the real email provider is wired,
+	// so new email-change confirmation links can actually be delivered.
+	EmailChangeEnabled bool `json:"email_change_enabled" example:"false" doc:"True when email-change confirmation links can be delivered by the real email provider"`
 }
 
 type MonitoringSentryTestInput struct {
@@ -712,6 +715,10 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	if err != nil {
 		return nil, nil, fmt.Errorf("build email sender: %w", err)
 	}
+	// buildEmailSender returns either the real HTTP sender or email.Fake.
+	// Email-change requests and the /healthz flag both derive from this one
+	// observed outcome so they cannot disagree.
+	_, emailChangeEnabled := mailer.(*email.HTTPSender)
 
 	oauthProvider, err := buildOAuthProvider(cfg)
 	if err != nil {
@@ -802,12 +809,13 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	accountsIdem := accountsIdempotencyAdapter{store: learningIdem}
 	accountsLimiter := auth.NewFixedWindowRateLimiter(clk, time.Minute, 10)
 	accountsSvc := accounts.NewService(accountsRepo, authRepo, mailer, accountsIdem, clk, accountsLimiter, accounts.Config{
-		Environment:               cfg.Environment,
-		BaseURL:                   cfg.BaseURL,
-		EmailChangePath:           "/auth/email-change",
-		EmailChangeLinkLifetime:   15 * time.Minute,
-		AccountDeletionPurgeDelay: accounts.DefaultAccountDeletionPurgeDelay,
-		ReservedSyntheticEmail:    cfg.SyntheticSmokeTestEmail,
+		Environment:                cfg.Environment,
+		BaseURL:                    cfg.BaseURL,
+		EmailChangePath:            "/auth/email-change",
+		EmailChangeLinkLifetime:    15 * time.Minute,
+		AccountDeletionPurgeDelay:  accounts.DefaultAccountDeletionPurgeDelay,
+		ReservedSyntheticEmail:     cfg.SyntheticSmokeTestEmail,
+		EmailChangeSendingDisabled: !emailChangeEnabled,
 	})
 
 	aiProvider, safetyClassifier := buildAIProviders(cfg)
@@ -894,11 +902,12 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	SetOnboardingStatusLookup(newOnboardingStatusLookup(usersSvc))
 
 	RegisterHealthz(api, db, KillSwitchStatus{
-		MagicLinkEnabled:  cfg.MagicLinkOn,
-		PasswordEnabled:   effectivePasswordEnabled(cfg),
-		OAuthEnabled:      cfg.OAuthOn,
-		NewSignupsEnabled: cfg.NewSignupsOn,
-		AIEnabled:         aiGenerationEnabled,
+		MagicLinkEnabled:   cfg.MagicLinkOn,
+		PasswordEnabled:    effectivePasswordEnabled(cfg),
+		OAuthEnabled:       cfg.OAuthOn,
+		NewSignupsEnabled:  cfg.NewSignupsOn,
+		AIEnabled:          aiGenerationEnabled,
+		EmailChangeEnabled: emailChangeEnabled,
 	}, ControlledSignupReady(
 		cfg.OAuthOn,
 		cfg.NewSignupsOn,

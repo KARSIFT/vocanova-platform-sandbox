@@ -73,35 +73,103 @@ for (const [mode, button] of [
   });
 }
 
-test("an unknown lesson query falls back to an explicit full-course mix", async ({
+for (const [kind, lessonKey] of [
+  ["an unknown", "not-a-real-lesson"],
+  ["a blank", ""],
+] as const) {
+  test(`${kind} lesson needs a new vocabulary choice before focused practice`, async ({
+    page,
+  }) => {
+    await page.goto(`/practice?mode=typed_recall&lesson=${encodeURIComponent(lessonKey)}`);
+    const main = page.getByRole("main");
+    const selection = main.getByRole("combobox", { name: "Practice vocabulary" });
+    const typed = main.getByRole("button", {
+      name: "Start typed recall",
+      exact: true,
+    });
+    await expect(
+      main.getByRole("option", { name: "Selected lesson is unavailable" }),
+    ).toBeAttached();
+    await expect(selection).not.toHaveValue("");
+    await expect(typed).toBeDisabled();
+    await expect(
+      main.getByRole("button", { name: "Start listening practice", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      main.getByRole("button", { name: "Start practice lesson", exact: true }),
+    ).toBeEnabled();
+
+    await selection.selectOption({ label: "Mix from the full course" });
+    const started = page.waitForRequest(
+      (request) =>
+        new URL(request.url()).pathname === "/api/v1/practice-sessions" &&
+        request.method() === "POST",
+    );
+    await typed.click();
+    expect((await started).postDataJSON()).toEqual({ mode: "typed_recall" });
+    await expect(page).toHaveURL(/\/practice\/session\/[^/]+$/);
+  });
+}
+
+test("focused listening retains its lesson through a catalog outage", async ({
   page,
+  context,
+  baseURL,
 }) => {
-  await page.goto("/practice?lesson=not-a-real-lesson");
-  const main = page.getByRole("main");
-  await expect(
-    main.getByLabel("Practice vocabulary", { exact: true }),
-  ).toHaveValue("");
-  await main
-    .locator("summary")
-    .filter({ hasText: "About this selection" })
-    .focus();
-  await page.keyboard.press("Enter");
-  await expect(
-    main.getByText(
-      "A full-course mix can include words you have not studied yet.",
-      { exact: false },
-    ),
-  ).toBeVisible();
-  const started = page.waitForRequest(
-    (request) =>
-      new URL(request.url()).pathname === "/api/v1/practice-sessions" &&
-      request.method() === "POST",
+  if (!baseURL) throw new Error("Missing app URL");
+  await context.addCookies([
+    { name: "e2e_lessons", value: "unavailable", url: baseURL },
+  ]);
+  const starts: unknown[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/v1/practice-sessions"
+    )
+      starts.push(request.postDataJSON());
+  });
+  await page.goto(
+    "/practice?mode=listening_choice&lesson=conversation-basics#practice-mode-listening_choice",
   );
-  await main
-    .getByRole("button", { name: "Start typed recall", exact: true })
-    .click();
-  expect((await started).postDataJSON()).toEqual({ mode: "typed_recall" });
-  await expect(page).toHaveURL(/\/practice\/session\/[^/]+$/);
+  const main = page.getByRole("main");
+  const selection = main.getByRole("combobox", { name: "Practice vocabulary" });
+  const listening = main.getByRole("button", {
+    name: "Start listening practice",
+    exact: true,
+  });
+  await expect(
+    main.getByRole("status").filter({
+      hasText: /situation lesson choices are unavailable/i,
+    }),
+  ).toBeVisible();
+  await expect(
+    main.getByRole("option", { name: "Selected lesson is unavailable" }),
+  ).toBeAttached();
+  await expect(selection).not.toHaveValue("");
+  await expect(listening).toBeDisabled();
+
+  await context.clearCookies({ name: "e2e_lessons" });
+  const refresh = main.getByRole("button", { name: "Refresh practice sources" });
+  await refresh.focus();
+  await expect(refresh).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(selection).toHaveValue("conversation-basics");
+  await expect(listening).toBeEnabled();
+  expect(starts).toEqual([]);
+
+  const started = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/api/v1/practice-sessions",
+  );
+  await listening.click();
+  const response = await started;
+  expect(response.status()).toBe(200);
+  const session = await response.json();
+  expect(starts).toEqual([
+    { mode: "listening_choice", lessonKey: "conversation-basics" },
+  ]);
+  await expect(page).toHaveURL(`/practice/session/${session.id}`);
 });
 
 test("a focused mode link keeps its situation and resumes the same saved session", async ({

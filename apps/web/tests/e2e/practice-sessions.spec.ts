@@ -697,9 +697,31 @@ test("personal path mixes teaching, listening, gap fill and accessible sentence 
   session = await act(page, "Continue");
   expect(session.currentStep?.kind).toBe("sentence_build");
   await expect(main(page).getByTestId("meaning-picture")).toHaveCount(0);
+  let assemblyRequests = 0;
+  const actionPath = `/api/v1/practice-sessions/${session.id}/actions`;
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === actionPath &&
+      request.postDataJSON().action === "answer"
+    )
+      assemblyRequests += 1;
+  });
   const available = main(page).getByRole("group", { name: "Available words" });
+  const sentence = main(page).getByRole("group", { name: "Your sentence" });
+  const check = main(page).getByRole("button", {
+    name: "Check answer",
+    exact: true,
+  });
   await available.getByRole("button", { name: "We", exact: true }).click();
   await available.getByRole("button", { name: "our", exact: true }).click();
+  await expect(check).toBeDisabled();
+  await expect(
+    sentence.getByRole("button", { name: /^our, position 2\./ }),
+  ).toBeEnabled();
+  await expect(
+    available.getByRole("button", { name: "invite", exact: true }),
+  ).toBeEnabled();
   const startOver = main(page).getByRole("button", { name: "Start over", exact: true });
   await startOver.focus();
   await page.keyboard.press("Enter");
@@ -710,7 +732,6 @@ test("personal path mixes teaching, listening, gap fill and accessible sentence 
   await expect(available.getByRole("button", { name: "our", exact: true })).toBeEnabled();
   for (const token of ["We", "our", "invite", "friends."])
     await available.getByRole("button", { name: token, exact: true }).click();
-  const sentence = main(page).getByRole("group", { name: "Your sentence" });
   await sentence.getByRole("button", { name: /^our, position 2\./ }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(
@@ -719,10 +740,13 @@ test("personal path mixes teaching, listening, gap fill and accessible sentence 
   await main(page)
     .getByRole("button", { name: "Undo last word", exact: true })
     .click();
+  await expect(check).toBeDisabled();
+  expect(assemblyRequests).toBe(0);
   await available
     .getByRole("button", { name: "friends.", exact: true })
     .click();
   session = await act(page, "Check answer");
+  expect(assemblyRequests).toBe(1);
   expect(session.feedback).toMatchObject({
     correct: true,
     answer: "We invite our friends.",

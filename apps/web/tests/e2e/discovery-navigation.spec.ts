@@ -1046,6 +1046,66 @@ for (const { choice, partial } of [
 }
 
 for (const theme of ["light", "dark"] as const) {
+  test(`recover from empty Discovery pickers in ${theme}`, async ({ page, baseURL }) => {
+    await page.context().addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+      { name: "vocanova_theme", value: theme, url: baseURL! },
+      { name: "e2e_knowledge_map", value: "mixed-progress", url: baseURL! },
+    ]);
+    await page.goto("/discovery?band=1&word=2&active=1");
+    if (theme === "dark") {
+      await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+    }
+    const wordTrigger = page.getByRole("button", { name: "Choose a word", exact: true });
+    await wordTrigger.click();
+    const wordPicker = page.getByRole("dialog", { name: "Choose a word" });
+    const wordSearch = wordPicker.getByRole("searchbox", { name: "Filter words" });
+    const state = wordPicker.getByRole("combobox", { name: "Knowledge state" });
+    const grid = wordPicker.getByRole("button", { name: "Grid view" });
+    const showWords = wordPicker.getByRole("button", { name: "Show all words" });
+    await grid.click();
+    await state.selectOption("learned");
+    await wordSearch.fill("no matching word");
+    await expect(wordPicker.getByRole("status")).toHaveText("No words match.");
+    await pressTab(page);
+    await expect(state).toBeFocused();
+    await pressTab(page);
+    await expect(grid).toBeFocused();
+    await pressTab(page);
+    await expect(showWords).toBeFocused();
+    await expect.poll(() => showWords.evaluate((button) => {
+      const rect = button.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return rect.left >= 0 && rect.right <= innerWidth && rect.height >= 44 &&
+        button.matches(":focus-visible") && !!hit && button.contains(hit);
+    })).toBe(true);
+    await page.keyboard.press("Enter");
+    await expect(wordSearch).toBeFocused();
+    await expect(wordSearch).toHaveValue("");
+    await expect(state).toHaveValue("");
+    await expect(grid).toHaveAttribute("aria-pressed", "true");
+    await expect(wordPicker.getByRole("listitem")).toHaveCount(100);
+    await expect(showWords).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(wordTrigger).toBeFocused();
+
+    const rangeTrigger = page.getByRole("button", { name: "Word range", exact: true });
+    await rangeTrigger.click();
+    const rangePicker = page.getByRole("dialog", { name: "Choose a range" });
+    const rangeSearch = rangePicker.getByRole("searchbox", { name: "Filter ranges" });
+    const showRanges = rangePicker.getByRole("button", { name: "Show all ranges" });
+    await rangeSearch.fill("999999");
+    await expect(rangePicker.getByRole("status")).toHaveText("No ranges match.");
+    await showRanges.click();
+    await expect(rangeSearch).toBeFocused();
+    await expect(rangeSearch).toHaveValue("");
+    await expect(rangePicker.getByRole("button", { name: "1–100", exact: true })).toBeVisible();
+    await expect(showRanges).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(rangeTrigger).toBeFocused();
+    await expect(page).toHaveURL(/band=1&word=2&active=1$/);
+  });
+
   test(`scan a range by knowledge state and return to the exact card in ${theme}`, async ({ page, baseURL }) => {
     await page.context().addCookies([
       { name: "vocanova_session", value: randomUUID(), url: baseURL! },

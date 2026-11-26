@@ -248,7 +248,9 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     ).toBeVisible();
     const wordLink = await chooseSituationWordLink(page);
     await wordLink.click();
-    await expect(page).toHaveURL(/\/discover\/ordering-at-a-cafe\/pour(\?|$)/);
+    await expect(page).toHaveURL(
+      /\/discover\/ordering-at-a-cafe\/pour#meaning-mean-pour$/,
+    );
     await expect(
       page.getByRole("heading", { name: "pour", level: 1 }),
     ).toBeVisible();
@@ -519,7 +521,7 @@ test("word navigation uses the visible situation list while guide examples stay 
   const wordLink = await chooseSituationWordLink(page);
   await expect(wordLink).toBeVisible();
   const href = await wordLink.getAttribute("href");
-  expect(href).toMatch(/^\/discover\/airport\/[^#]+$/);
+  expect(href).toMatch(/^\/discover\/airport\/[^#]+#meaning-[^#]+$/);
   const wordText = await wordLink
     .getByRole("heading", { level: 2 })
     .innerText();

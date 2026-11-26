@@ -35,6 +35,26 @@ test.describe("Sentence history", () => {
     await expect(page.getByText("Suggested revision")).toBeVisible();
   });
 
+  test("an invalid history cursor offers a return to the newest sentences", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await context.addCookies([
+      { name: "e2e_sentence_history_fixture", value: "paginated", url: baseURL! },
+    ]);
+    await page.goto("/progress/sentences?after=invalid-cursor");
+    const main = page.getByRole("main");
+    const newest = main.getByText("Fixture sentence 1 uses pour naturally.");
+    await expect(newest).toHaveCount(0);
+    await main.getByRole("link", { name: /newest sentences/i }).press("Enter");
+    await expect(page).toHaveURL(new URL("/progress/sentences", baseURL!).href);
+    await expect(newest).toBeVisible();
+    await expect(
+      main.getByRole("link", { name: "View older sentences" }),
+    ).toBeVisible();
+  });
+
   test("offers a retry after the history service fails", async ({ page }, testInfo) => {
     await page.context().addCookies([
       {

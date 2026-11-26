@@ -35,6 +35,10 @@ test.describe("Account deletion confirmation", () => {
     const confirmation = page.getByLabel("Type the confirmation phrase");
     await trigger.click();
     await expect(confirmation).toBeFocused();
+    await expect(confirmation).toHaveAccessibleDescription(/delete my account/i);
+    await expect(
+      page.getByText(/you can sign in again.*reactivate/i),
+    ).toHaveCount(0);
     await page.getByRole("button", { name: "Cancel" }).click();
     await expect(trigger).toBeFocused();
 
@@ -59,10 +63,8 @@ test.describe("Account deletion confirmation", () => {
     await deactivate.click();
     await expect(page.locator("#delete-confirmation-error")).toBeVisible();
     await expect(confirmation).toHaveValue("delete my account");
-    await expect(confirmation).toHaveAttribute(
-      "aria-describedby",
-      "delete-confirmation-helper delete-confirmation-error",
-    );
+    await expect(confirmation).toHaveAccessibleDescription(/delete my account/i);
+    await expect(confirmation).toHaveAccessibleDescription(/try again|temporary_failure/i);
     await expect(deactivate).toBeVisible();
     await page.unroute(deletionEndpoint);
 
@@ -79,9 +81,9 @@ test.describe("Account deletion confirmation", () => {
       timeZone: "UTC",
     }).format(new Date(purgeAfter!));
     await expect(page.getByText(expectedPurgeAfter)).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Go to sign in" }),
-    ).toBeVisible();
+    await expect(page.getByRole("main")).toContainText(
+      /(?:can no longer|cannot|can['’]t) sign in|(?:account access|access to your account) (?:has ended|ends immediately)/i,
+    );
     await expect(page.getByRole("button", { name: "Log out" })).toHaveCount(0);
 
     const cookieNames = (await context.cookies()).map((cookie) => cookie.name);

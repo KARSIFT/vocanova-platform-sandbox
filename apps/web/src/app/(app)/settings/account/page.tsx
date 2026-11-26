@@ -22,7 +22,8 @@ export default async function SettingsAccountPage() {
   }
 
   const currentEmail = meResponse.data.email ?? "";
-  const { passwordEnabled } = await getSignInAuthCapabilities();
+  const { passwordEnabled, emailChangeEnabled } =
+    await getSignInAuthCapabilities();
 
   return (
     <PageContainer>
@@ -36,21 +37,30 @@ export default async function SettingsAccountPage() {
         <h2 id="email-change-heading" className="section-title">
           Sign-in email
         </h2>
-        <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          We&apos;ll send a confirmation link to your new address. Your current
-          sign-in stays active until you confirm.
-        </p>
+        {emailChangeEnabled ? (
+          <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+            We&apos;ll send a confirmation link to your new address. Your
+            current sign-in stays active until you confirm.
+          </p>
+        ) : null}
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-900">
           Current address:{" "}
           <span className="font-medium [overflow-wrap:anywhere]">
             {currentEmail ? currentEmail : "Not available"}
           </span>
         </p>
-        <EmailChangeForm
-          key={meResponse.data.id}
-          userId={meResponse.data.id}
-          currentEmail={currentEmail}
-        />
+        {emailChangeEnabled ? (
+          <EmailChangeForm
+            key={meResponse.data.id}
+            userId={meResponse.data.id}
+            currentEmail={currentEmail}
+          />
+        ) : (
+          <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
+            Changing your sign-in email is currently unavailable. Your current
+            address stays in use.
+          </p>
+        )}
       </Surface>
 
       <PersonalDataExport />
@@ -73,9 +83,8 @@ export default async function SettingsAccountPage() {
           Delete your account
         </h2>
         <p className="mt-[var(--spacing-xs)] text-base text-red-900">
-          We&apos;ll deactivate your account right away, then permanently
-          anonymize your data after 30 days. After 30 days, your data is gone
-          for good.
+          Your account closes immediately. We&apos;ll schedule your data for
+          permanent anonymization after 30 days.
         </p>
         <AccountDeletionForm />
       </section>

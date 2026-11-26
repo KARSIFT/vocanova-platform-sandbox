@@ -24,13 +24,13 @@ import { secondaryAction, textLink } from "./practice-styles";
 
 export function PracticeEntry({
   initialSessions,
-  lessons,
+  lessons: initialLessons,
   initialLessonKey,
   requestedMode,
   initialLists,
   initialListId,
   explicitSelection = false,
-  lessonsUnavailable = false,
+  lessonsUnavailable: initialLessonsUnavailable = false,
 }: {
   initialSessions: PracticeSessionsResponse | null;
   lessons: LessonSummary[];
@@ -47,17 +47,28 @@ export function PracticeEntry({
     initialListId ? `list:${initialListId}` : initialLessonKey,
   );
   const [lists, setLists] = useState(initialLists);
+  const [lessons, setLessons] = useState(initialLessons);
+  const [lessonsUnavailable, setLessonsUnavailable] = useState(
+    initialLessonsUnavailable,
+  );
   const selectedListId = selection.startsWith("list:")
     ? selection.slice(5)
     : "";
   const selectedLesson = lessons.find((lesson) => lesson.key === selection);
   const selectedList = lists?.find((item) => item.id === selectedListId);
+  // An explicitly requested lesson that is unknown, or whose catalog could not
+  // load, stays selected. It never silently becomes a full-course mix.
+  const unavailableLesson = Boolean(
+    selection && !selectedListId && !selectedLesson,
+  );
   const hasVocabularySelection = Boolean(
-    lessons.length > 0 || lists?.length || selectedListId,
+    lessons.length > 0 || lists?.length || selectedListId || unavailableLesson,
   );
-  const unavailableSelection = Boolean(
-    selectedListId && (!selectedList || selectedList.usableMemberCount === 0),
-  );
+  const unavailableSelection =
+    unavailableLesson ||
+    Boolean(
+      selectedListId && (!selectedList || selectedList.usableMemberCount === 0),
+    );
   const expired = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -173,12 +184,32 @@ export function PracticeEntry({
     setBusy(true);
     try {
       const client = createApiClient();
-      const [currentSessions, currentLists] = await Promise.all([
-        client.listPracticeSessions(),
-        client.listWordLists(),
-      ]);
-      setSessions(currentSessions.data);
-      setLists(currentLists.data.items);
+      const [currentSessions, currentLists, currentLessons] =
+        await Promise.allSettled([
+          client.listPracticeSessions(),
+          client.listWordLists(),
+          client.listLessons({ signal: AbortSignal.timeout(5000) }),
+        ]);
+      for (const result of [currentSessions, currentLists, currentLessons]) {
+        if (
+          result.status === "rejected" &&
+          isSessionExpiredError(result.reason)
+        )
+          throw result.reason;
+      }
+      // The lesson catalog recovers independently. A failed read keeps the
+      // previous catalog and the learner's selection, and only reports that
+      // lesson choices are unavailable.
+      if (currentLessons.status === "fulfilled") {
+        setLessons(currentLessons.value.data.items);
+        setLessonsUnavailable(false);
+      } else {
+        setLessonsUnavailable(true);
+      }
+      if (currentSessions.status === "rejected") throw currentSessions.reason;
+      if (currentLists.status === "rejected") throw currentLists.reason;
+      setSessions(currentSessions.value.data);
+      setLists(currentLists.value.data.items);
       pending.current = null;
       setNeedsRetry(false);
       setNeedsRefresh(false);
@@ -249,6 +280,11 @@ export function PracticeEntry({
               {selectedListId && !selectedList && (
                 <option value={selection}>Selected list is unavailable</option>
               )}
+              {unavailableLesson && (
+                <option value={selection}>
+                  Selected lesson is unavailable
+                </option>
+              )}
               {lists && lists.length > 0 && (
                 <optgroup label="Personal lists">
                   {lists.map((list) => (
@@ -315,28 +351,42 @@ export function PracticeEntry({
         )}
         {unavailableSelection && (
           <StatusMessage as="p" role="status" className="mt-3 text-neutral-700">
-            {selectedList
-              ? "This list has no meanings available for focused practice. Add a supported meaning or choose another vocabulary source."
-              : "Your selected list could not be loaded. Load saved sessions to refresh your lists, or explicitly choose another vocabulary source."}
+            {unavailableLesson
+              ? lessonsUnavailable
+                ? "Your selected lesson could not be loaded. Refresh to try again, or explicitly choose another vocabulary source."
+                : "This lesson is not available for focused practice. Choose another vocabulary source."
+              : selectedList
+                ? "This list has no meanings available for focused practice. Add a supported meaning or choose another vocabulary source."
+                : "Your selected list could not be loaded. Load saved sessions to refresh your lists, or explicitly choose another vocabulary source."}
           </StatusMessage>
         )}
-        {!lists && (
+        {(!lists || lessonsUnavailable) && !hasVocabularySelection ? (
           <div className="mt-3">
-            <StatusMessage as="p" role="status" className="text-neutral-700">
+            {!lists && (
+              <StatusMessage as="p" role="status" className="text-neutral-700">
+                Personal lists are unavailable. Refresh to try again.
+              </StatusMessage>
+            )}
+            <button
+              type="button"
+              aria-label="Refresh practice sources"
+              disabled={busy || expired.current}
+              className={`${textLink} text-sm`}
+              onClick={() => void loadSessions()}
+            >
+              Refresh
+            </button>
+          </div>
+        ) : (
+          !lists && (
+            <StatusMessage
+              as="p"
+              role="status"
+              className="mt-3 text-neutral-700"
+            >
               Personal lists are unavailable. Refresh to try again.
             </StatusMessage>
-            {!hasVocabularySelection && (
-              <button
-                type="button"
-                aria-label="Refresh practice sources"
-                disabled={busy || expired.current}
-                className={`${textLink} text-sm`}
-                onClick={() => void loadSessions()}
-              >
-                Refresh
-              </button>
-            )}
-          </div>
+          )
         )}
         <ul className="vn-list mt-4">
           {orderedModes.map((mode) => {

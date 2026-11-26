@@ -1,5 +1,13 @@
 # Vocanova release readiness
 
+## Learner flow quality pass — 26 November 2026
+
+The route inventory, observed issues, fixes, and local acceptance evidence are
+in the [product-wide learner flow audit](agency-quality-2026-11-26.md).
+The staged provider check compares the Account email controls with actual
+sender capability on the reserved synthetic account. The release workflow
+records staging and production identity and smoke results separately.
+
 ## Discovery, Review and scenario practice — 23 November 2026
 
 Manual local browser checks covered the Discovery picker and a saved meaning,

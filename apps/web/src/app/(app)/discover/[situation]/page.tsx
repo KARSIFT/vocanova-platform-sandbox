@@ -15,6 +15,7 @@ import { formatLevelBand } from "../_components/level-band";
 import { UnitGuidebook } from "./_components/unit-guidebook";
 import { getSituationOutcome } from "../../_components/situation-presentation";
 import { unitGuides } from "./_components/unit-guide-content";
+import { meaningAnchor } from "../../_components/meaning-comparison";
 
 interface SituationDiscoverPageProps {
   params: Promise<{ situation: string }>;
@@ -78,6 +79,9 @@ export default async function SituationDiscoverPage({
   );
   const savedCount = meanings.filter((meaning) => meaning.saved).length;
   const nextMeaning = meanings.find((meaning) => !meaning.saved);
+  // Open the exact sense on the word detail, not only its first meaning.
+  const meaningHref = (meaning: { wordSlug: string; meaningId: string }) =>
+    `/discover/${encodeURIComponent(situation)}/${encodeURIComponent(meaning.wordSlug)}#${encodeURIComponent(meaningAnchor(meaning.meaningId))}`;
 
   return (
     <PageContainer>
@@ -191,7 +195,7 @@ export default async function SituationDiscoverPage({
             {nextMeaning ? (
               <ActionLink
                 variant="primary"
-                href={`/discover/${situation}/${nextMeaning.wordSlug}`}
+                href={meaningHref(nextMeaning)}
                 className="text-base text-white"
               >
                 Continue with {nextMeaning.wordText}
@@ -253,7 +257,7 @@ export default async function SituationDiscoverPage({
           {meanings.map((meaning) => (
             <li key={meaning.meaningId}>
               <Link
-                href={`/discover/${situation}/${meaning.wordSlug}`}
+                href={meaningHref(meaning)}
                 className="block min-h-11 rounded-lg py-4 px-2 transition-colors hover:bg-primary-50"
               >
                 <div className="flex items-start justify-between gap-[var(--spacing-md)]">

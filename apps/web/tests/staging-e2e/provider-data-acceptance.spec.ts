@@ -147,6 +147,22 @@ test("fresh AI generation returns the expected verdict and browser export contai
   expect(submissions).toBe(1);
 
   await page.goto("/settings/account");
+  const health = await fetch(`${API}/healthz`, {
+    redirect: "error",
+    signal: AbortSignal.timeout(20_000),
+  });
+  expect(health.status).toBe(200);
+  const emailChangeEnabled = (await health.json()).kill_switches?.email_change_enabled;
+  expect(typeof emailChangeEnabled).toBe("boolean");
+  const emailSection = page.getByRole("region", { name: "Sign-in email", exact: true });
+  await expect(emailSection.getByText(/Current address/)).toBeVisible();
+  const sendConfirmation = emailSection.getByRole("button", { name: "Send confirmation link", exact: true });
+  if (emailChangeEnabled) {
+    await expect(sendConfirmation).toBeVisible();
+  } else {
+    await expect(emailSection.getByText(/Changing your sign-in email is currently unavailable/)).toBeVisible();
+    await expect(sendConfirmation).toHaveCount(0);
+  }
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download my data", exact: true }).click();
   const download = await downloading;

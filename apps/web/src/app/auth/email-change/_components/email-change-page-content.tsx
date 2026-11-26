@@ -11,6 +11,7 @@ import { ApiResponseError } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { AuthShell } from "@/ui/auth-shell";
 
 type ConfirmationState =
@@ -39,14 +40,7 @@ export function EmailChangePageContent() {
       return;
     }
 
-    const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrfToken) {
-      setState({ type: "signin" });
-      return;
-    }
-
     const client = createApiClient();
-    const headers = { "X-CSRF-Token": csrfToken };
     const invalidLinkMessage =
       "This confirmation link is invalid or has expired. Request a new one from account settings.";
 
@@ -68,8 +62,16 @@ export function EmailChangePageContent() {
     inFlight.current = true;
     setState({ type: "loading" });
     try {
+      // Always confirm the signed-in identity with GET /me before consuming
+      // the proof. When the CSRF cookie is missing, the shared recovery helper
+      // performs that same /me check (which also reissues the cookie), so the
+      // session is validated exactly once either way.
+      let csrfToken: string | null;
       try {
-        await client.getCurrentUser();
+        if (getCookieValue(CSRF_COOKIE_NAME)) {
+          await client.getCurrentUser();
+        }
+        csrfToken = await getOrRefreshCSRFToken();
       } catch (error) {
         if (error instanceof ApiResponseError && error.status === 401) {
           setState({ type: "signin" });
@@ -78,6 +80,13 @@ export function EmailChangePageContent() {
         showRecoverableError(error);
         return;
       }
+      if (!csrfToken) {
+        // The session was confirmed, so sign-in would not help; the token can
+        // still appear on an explicit retry.
+        showRecoverableError(undefined);
+        return;
+      }
+      const headers = { "X-CSRF-Token": csrfToken };
 
       try {
         const { data } = await client.consumeEmailChangeLink(

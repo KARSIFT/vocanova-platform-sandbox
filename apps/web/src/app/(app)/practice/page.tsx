@@ -69,12 +69,18 @@ export default async function PracticePage({
         lesson.status === "in_progress" &&
         lesson.completedSteps >= lesson.wordCount,
     );
+  // An explicit lesson is passed through even when it is unknown or the catalog
+  // is unavailable; the entry keeps it selected and gates focused starts.
   const selectedLessonKey =
     query.lesson === undefined
       ? requestedMode
         ? ""
         : (studiedLesson?.key ?? "")
-      : (lessons?.find((lesson) => lesson.key === query.lesson)?.key ?? "");
+      : typeof query.lesson === "string" &&
+          query.lesson.trim() &&
+          !query.lesson.startsWith("list:")
+        ? query.lesson
+        : "invalid-lesson-selection";
   const savedWords = savedResponse?.data.items;
   const firstWord = savedWords?.[0];
 

@@ -63,10 +63,7 @@ import {
   reviewedGapAnswer,
   reviewSeedActions,
 } from "./review-seed";
-import {
-  chooseSituationWordLink,
-  getFirstMeaningSaveControl,
-} from "../e2e/situation-word-navigation";
+import { chooseSituationWordLink } from "../e2e/situation-word-navigation";
 
 import {
   reviewedTodayEvidence,
@@ -1070,6 +1067,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
     });
 
     let openedWordPath = "";
+    let openedMeaningAnchor = "";
     await test.step("3. open situation courses from Journey and discover a word", async () => {
       const journey = page
         .getByRole("navigation", { name: "Primary", exact: true })
@@ -1126,16 +1124,19 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
 
       const wordLink = await chooseSituationWordLink(page);
       await wordLink.click();
-      await expect(page).toHaveURL(/\/discover\/[^/]+\/[^/]+(\?|$)/);
-      openedWordPath = new URL(page.url()).pathname;
+      await expect(page).toHaveURL(/\/discover\/[^/]+\/[^/#]+#meaning-[\w-]+$/);
+      const wordUrl = new URL(page.url());
+      openedWordPath = wordUrl.pathname;
+      openedMeaningAnchor = wordUrl.hash;
     });
 
     await test.step("4. save the word", async () => {
       const meaningCard = page
         .getByRole("main")
-        .locator('li[id^="meaning-"]')
-        .first();
-      const saveButton = getFirstMeaningSaveControl(page);
+        .locator(`li${openedMeaningAnchor}`);
+      const saveButton = meaningCard.getByRole("button", {
+        name: /^(?:Save .+: |Remove .+ from saved words$)/,
+      });
       await expect(saveButton).toBeVisible();
       const meaningId = (await meaningCard.getAttribute("id"))?.slice(
         "meaning-".length,
@@ -1229,12 +1230,16 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       // Recall no longer embeds a compulsory editor. Revisit the saved word
       // deliberately; this gate still exercises real sentence feedback.
       expect(openedWordPath).toMatch(/^\/discover\/[^/]+\/[^/]+$/);
-      await page.goto(`${openedWordPath}#sentence-practice`);
-      const feedbackHeading = page
-        .getByRole("heading", { name: /^Practice with / })
-        .first();
+      const meaningId = openedMeaningAnchor.slice("#meaning-".length);
+      await page.goto(`${openedWordPath}#sentence-practice-${meaningId}`);
+      const meaningCard = page
+        .getByRole("main")
+        .locator(`li${openedMeaningAnchor}`);
+      const feedbackHeading = meaningCard.getByRole("heading", {
+        name: /^Practice with /,
+      });
       await expect(feedbackHeading).toBeVisible();
-      const feedback = page.getByRole("region", {
+      const feedback = meaningCard.getByRole("region", {
         name: await feedbackHeading.innerText(),
         exact: true,
       });

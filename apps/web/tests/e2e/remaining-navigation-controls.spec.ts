@@ -180,18 +180,62 @@ for (const theme of ["light", "dark"] as const) {
       await activate(page, page.getByRole("link", { name: "Explore more situations", exact: true }), "/courses", "Situation courses");
     });
 
-    for (const source of ["/home", "/practice"] as const) {
-      test(`${source} Open practice fallback independently opens its confirmed session without starting again`, async ({ page, context }) => {
-        await visit(page, source, source === "/home" ? "Today" : "Today’s practice");
+    const practiceStart = {
+      start: "Start practice lesson",
+      fallback: "Open practice",
+      startPath: "/api/v1/practice-sessions",
+      sessionPath: "/practice/session",
+      sessionHref: (id: string) => `/practice/session/${encodeURIComponent(id)}`,
+      sessionHeading: "invite",
+      sessionControl: ["button", "Continue"],
+      expectedSession: { mode: "journey" },
+    } as const;
+    for (const flow of [
+      { ...practiceStart, source: "/home", sourceHeading: "Today" },
+      { ...practiceStart, source: "/practice", sourceHeading: "Today’s practice" },
+      {
+        source: "/home",
+        sourceHeading: "Today",
+        start: "Start review",
+        fallback: "Open review",
+        startPath: "/api/v1/daily-lessons",
+        sessionPath: "/review/session",
+        sessionHref: (id: string) => `/review/session?lesson=${encodeURIComponent(id)}`,
+        sessionHeading: "Review word 1",
+        sessionControl: ["radio", "definition for review word 1"],
+        expectedSession: { status: "in_progress" },
+        dueWords: "2",
+      },
+      {
+        source: "/stories/a-quiet-lunch",
+        sourceHeading: "A quiet lunch",
+        start: "Start story",
+        fallback: "Open story",
+        startPath: "/api/v1/story-sessions",
+        sessionPath: "/stories/session",
+        sessionHref: (id: string) => `/stories/session/${encodeURIComponent(id)}`,
+        sessionHeading: "A quiet lunch",
+        sessionControl: ["button", "Continue"],
+        expectedSession: { storyKey: "a-quiet-lunch", status: "in_progress" },
+      },
+    ] as const) {
+      test(`${flow.source} ${flow.fallback} fallback independently opens its confirmed session without starting again`, async ({ page, context, baseURL }) => {
+        if (flow.dueWords) {
+          await context.addCookies([
+            { name: "e2e_review_fixture_count", value: flow.dueWords, url: baseURL! },
+          ]);
+        }
+        await visit(page, flow.source, flow.sourceHeading);
         let release!: () => void;
         let arrived!: () => void;
         const held = new Promise<void>(resolve => { release = resolve; });
         const navigationStarted = new Promise<void>(resolve => { arrived = resolve; });
         let starts = 0;
         context.on("request", request => {
-          if (request.method() === "POST" && new URL(request.url()).pathname === "/api/v1/practice-sessions") starts += 1;
+          if (request.method() === "POST" && new URL(request.url()).pathname === flow.startPath) starts += 1;
         });
-        await page.route("**/practice/session/**", async route => {
+        await page.route((url) => url.pathname === flow.sessionPath
+          || url.pathname.startsWith(`${flow.sessionPath}/`), async route => {
           if (route.request().isNavigationRequest()) {
             await route.continue();
             return;
@@ -200,37 +244,48 @@ for (const theme of ["light", "dark"] as const) {
           await held;
           await route.continue();
         });
-        const created = page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).pathname === "/api/v1/practice-sessions");
-        await page.getByRole("button", { name: "Start practice lesson", exact: true }).click();
-        const response = await created;
-        expect(response.status()).toBe(200);
-        const session = await response.json();
-        const href = `/practice/session/${session.id}`;
-        expect(session.mode).toBe("journey");
+        let sessionURL: string;
+        const main = page.getByRole("main");
+        const heading = main.getByRole("heading", {
+          name: flow.sessionHeading,
+          level: 1,
+          exact: true,
+        });
         try {
+          const created = page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).pathname === flow.startPath);
+          await main.getByRole("button", { name: flow.start, exact: true }).click();
+          const response = await created;
+          expect(response.status()).toBe(200);
+          const session = await response.json();
+          expect(session).toMatchObject(flow.expectedSession);
+          const href = flow.sessionHref(session.id);
+          sessionURL = new URL(href, page.url()).toString();
           await navigationStarted;
           // Keep all client-router requests held until ordinary keyboard
           // activation independently loads the confirmed session document.
           // Releasing the automatic navigation cannot satisfy these assertions.
-          const fallback = page.getByRole("link", { name: "Open practice", exact: true });
+          const fallback = main.getByRole("link", { name: flow.fallback, exact: true });
           await expect(fallback).toHaveAttribute("href", href);
           await fallback.focus();
           await expect(fallback).toBeFocused();
           await Promise.all([
             page.waitForRequest(request => request.isNavigationRequest()
               && request.resourceType() === "document"
-              && new URL(request.url()).pathname === href, { timeout: 5000 }),
+              && request.url() === sessionURL, { timeout: 5000 }),
             page.keyboard.press("Enter"),
           ]);
-          await expect(page).toHaveURL(new URL(href, test.info().project.use.baseURL!).toString());
-          await expect(page.getByRole("heading", { name: "invite", level: 1, exact: true })).toBeVisible();
-          await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
+          await expect(page).toHaveURL(sessionURL);
+          await expect(heading).toBeVisible();
+          await expect(main.getByRole(flow.sessionControl[0], {
+            name: flow.sessionControl[1],
+            exact: true,
+          })).toBeEnabled();
           expect(starts).toBe(1);
         } finally {
           release();
         }
-        await expect(page).toHaveURL(new URL(href, test.info().project.use.baseURL!).toString());
-        await expect(page.getByRole("heading", { name: "invite", level: 1, exact: true })).toBeVisible();
+        await expect(page).toHaveURL(sessionURL);
+        await expect(heading).toBeVisible();
         expect(starts).toBe(1);
       });
     }

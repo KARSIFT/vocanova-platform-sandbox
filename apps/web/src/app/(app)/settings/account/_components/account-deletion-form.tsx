@@ -122,15 +122,18 @@ export function AccountDeletionForm() {
             Are you absolutely sure?
           </h3>
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-800">
-            This will deactivate your account immediately. Your saved words,
-            reviews, and practice history will be permanently anonymized after
-            30 days.
+            This will deactivate your account immediately. You will be signed
+            out everywhere and will no longer be able to sign in with this
+            account.
           </p>
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-800">
-            You can sign in again before then to reactivate, but after 30 days
-            this is irreversible.
+            Your saved words, reviews, and practice history will then be
+            scheduled for permanent anonymization. This cannot be undone.
           </p>
-          <p className="mt-[var(--spacing-sm)] text-base text-neutral-900">
+          <p
+            id="delete-confirmation-instructions"
+            className="mt-[var(--spacing-sm)] text-base text-neutral-900"
+          >
             To continue, type{" "}
             <span className="font-mono font-semibold">
               {CONFIRMATION_PHRASE}
@@ -155,8 +158,8 @@ export function AccountDeletionForm() {
             className="mt-[var(--spacing-xs)] w-full"
             aria-describedby={
               errorMessage
-                ? "delete-confirmation-helper delete-confirmation-error"
-                : "delete-confirmation-helper"
+                ? "delete-confirmation-instructions delete-confirmation-helper delete-confirmation-error"
+                : "delete-confirmation-instructions delete-confirmation-helper"
             }
           />
           <p

@@ -11,7 +11,9 @@ export interface SignInAuthCapabilities {
  * health signal. Fails closed: when the capability probe cannot establish a
  * method is enabled, the screen avoids offering a flow that will fail.
  */
-export async function getSignInAuthCapabilities(): Promise<SignInAuthCapabilities> {
+export async function getSignInAuthCapabilities(): Promise<
+  SignInAuthCapabilities & { emailChangeEnabled: boolean }
+> {
   try {
     const client = await createServerApiClient();
     const { data } = await client.getHealthz();
@@ -19,12 +21,14 @@ export async function getSignInAuthCapabilities(): Promise<SignInAuthCapabilitie
       magicLinkEnabled: data.kill_switches?.magic_link_enabled === true,
       oauthEnabled: data.kill_switches?.oauth_enabled === true,
       passwordEnabled: data.kill_switches?.password_enabled === true,
+      emailChangeEnabled: data.kill_switches?.email_change_enabled === true,
     };
   } catch {
     return {
       magicLinkEnabled: false,
       oauthEnabled: false,
       passwordEnabled: false,
+      emailChangeEnabled: false,
     };
   }
 }

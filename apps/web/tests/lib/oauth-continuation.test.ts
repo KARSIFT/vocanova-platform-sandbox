@@ -40,6 +40,25 @@ describe("OAuth continuation", () => {
     assert.equal(consumeOAuthContinuation(), null);
   });
 
+  for (const destination of [
+    "/plan",
+    "/vocabulary/check?from=plan#main-content",
+    "/knowledge-map?band=2",
+    "/discovery?band=2",
+    "/courses",
+    "/learn/lesson-key",
+    "/writing?topic=work",
+    "/lists/list-id",
+    "/stories/session/story-session-id",
+    "/practice/session/practice-session-id",
+  ]) {
+    it(`returns to ${destination} after Google sign-in`, () => {
+      installBrowserStorage();
+      rememberOAuthContinuation(destination);
+      assert.equal(consumeOAuthContinuation(), destination);
+    });
+  }
+
   it("does not continue to an external destination", () => {
     installBrowserStorage();
     rememberOAuthContinuation("https://evil.example");

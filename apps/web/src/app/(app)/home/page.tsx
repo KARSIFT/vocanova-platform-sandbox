@@ -147,7 +147,15 @@ export default async function HomePage() {
   const practiceRead = Promise.allSettled([client.listPracticeSessions()]).then(
     ([result]) => result,
   );
-  let savedWordsResponse: Awaited<ReturnType<typeof client.listSavedWords>>;
+  // The latest saved word is secondary: capture its outcome so an ordinary
+  // failure cannot take down Today or the primary review action.
+  const savedWordsRead = client
+    .listSavedWords({ limit: 1 }, { signal: AbortSignal.timeout(5000) })
+    .catch((error: unknown) => {
+      if (error instanceof ApiResponseError && error.status < 500) throw error;
+      return null;
+    });
+  let savedWordsResponse: Awaited<typeof savedWordsRead>;
   let dailyLessonResponse: Awaited<
     ReturnType<typeof client.getCurrentDailyLesson>
   >;
@@ -155,15 +163,16 @@ export default async function HomePage() {
   try {
     [savedWordsResponse, dailyLessonResponse, dailyMissionResponse] =
       await Promise.all([
-        client.listSavedWords({ limit: 1 }),
+        savedWordsRead,
         client.getCurrentDailyLesson(),
         client.getDailyMission(),
       ]);
   } catch (error) {
     requireAuthRedirect(error, "/home");
   }
+  const savedWordsUnavailable = savedWordsResponse === null;
   // Saved words arrive newest first, so this is the learner's latest word.
-  const latestWord = savedWordsResponse.data.items[0];
+  const latestWord = savedWordsResponse?.data.items[0];
   const latestRevision = latestWord
     ? spotlightMeaningRevision(latestWord)
     : undefined;
@@ -253,7 +262,10 @@ export default async function HomePage() {
               : discoveryIsNext
                 ? latestWord
                   ? "Keep finding words you would like to use. Save a meaning when it feels useful."
-                  : "Choose a useful word. Learn its meaning, then try it in your own sentence."
+                  : savedWordsUnavailable
+                    ? // Saved state is unknown: claim neither progress nor a fresh start.
+                      "Find words you would like to use. Save a meaning when it feels useful."
+                    : "Choose a useful word. Learn its meaning, then try it in your own sentence."
                 : view.active
                   ? "Pick up where you left off."
                   : `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready to remember.`
@@ -274,13 +286,22 @@ export default async function HomePage() {
               Discover words
             </ActionLink>
           )}
-          {view.canReviewExtra && (
+          {view.complete && view.active && currentLesson ? (
+            // An optional extra set is resumed exactly as the server saved it;
+            // opening it never starts another set.
+            <ActionLink
+              variant="secondary"
+              href={`/review/session?lesson=${encodeURIComponent(currentLesson.id)}`}
+            >
+              Continue optional review
+            </ActionLink>
+          ) : view.canReviewExtra ? (
             <StartDailyLessonButton
               className="vn-btn vn-btn-secondary"
               label="Review more words"
               additional
             />
-          )}
+          ) : null}
           <p className="next-step-meta">
             Reviewed today:{" "}
             <strong>
@@ -490,6 +511,22 @@ export default async function HomePage() {
               </div>
             </div>
           </>
+        ) : savedWordsUnavailable ? (
+          <div className="latest-word-empty">
+            <h2
+              id="latest-word-heading"
+              className="text-sm font-semibold text-neutral-600"
+            >
+              Your latest word
+            </h2>
+            <p className="text-neutral-700">
+              Your latest word is unavailable right now.
+            </p>
+            {/* A normal document request re-reads Home from the server. */}
+            <a href="/home" className="vn-text-link">
+              Try again
+            </a>
+          </div>
         ) : (
           <div className="latest-word-empty">
             <h2

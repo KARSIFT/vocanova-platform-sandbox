@@ -3,6 +3,8 @@
 import { createHash } from "node:crypto";
 
 export function savedVocabularyFixture({ url, cookies, state, canonicalWords }) {
+  if (cookies.e2e_saved_words === "expired")
+    return { status: 401, body: { detail: "Fixture saved-word session expired" } };
   if (cookies.e2e_saved_words === "unavailable")
     return { status: 503, body: { detail: "Fixture saved words unavailable" } };
   const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();

@@ -10,6 +10,7 @@ import { handleApiError } from "@/lib/session";
 import {
   primaryAction,
   secondaryAction,
+  textLink,
 } from "../../practice/_components/practice-styles";
 
 export function StoryStart({
@@ -26,12 +27,15 @@ export function StoryStart({
   const inFlight = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Exact session address once the server confirmed the start.
+  const [openedHref, setOpenedHref] = useState<string | null>(null);
   async function start() {
     if (inFlight.current) return;
     inFlight.current = true;
     setBusy(true);
     setError("");
     key.current ??= crypto.randomUUID();
+    let opened = false;
     try {
       const token = await getOrRefreshCSRFToken();
       if (!token) throw new Error("session not ready");
@@ -40,8 +44,16 @@ export function StoryStart({
         key.current,
         { headers: { "X-CSRF-Token": token } },
       );
-      router.push(`/stories/session/${encodeURIComponent(data.id)}`);
+      if (typeof data?.id !== "string" || !data.id)
+        throw new Error("missing story session id");
+      const href = `/stories/session/${encodeURIComponent(data.id)}`;
+      // Confirmed: stay locked so no second start is sent. If the client
+      // navigation stalls, the native link below opens the same session.
+      opened = true;
+      setOpenedHref(href);
+      router.push(href);
     } catch (cause) {
+      if (opened) return;
       setError(
         handleApiError(
           cause,
@@ -69,6 +81,14 @@ export function StoryStart({
               ? "Practise again"
               : "Start story"}
       </Button>
+      {/* Recover independently if the automatic client navigation stalls. */}
+      {openedHref && (
+        <p className="mt-2">
+          <a href={openedHref} className={textLink}>
+            Open story
+          </a>
+        </p>
+      )}
       {error && (
         <StatusMessage
           as="p"
