@@ -3,7 +3,7 @@
 import { RangeMiniGrid } from "../knowledge-map/range-mini-grid";
 import { rangeProgressLabel } from "../knowledge-map/range-preview-model";
 import { StatusMessage } from "@/ui/status-message";
-import { Select, TextInput } from "@/ui/controls";
+import { Button, Select, TextInput } from "@/ui/controls";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
   WORD_STATES,
@@ -82,6 +82,16 @@ export function DiscoveryNavigation({
           : word.wordText.toLocaleLowerCase().includes(filter))),
   );
   const choosingRange = picker === "range";
+  const resultsEmpty = (choosingRange ? ranges.length : words.length) === 0;
+  const canShowAll =
+    resultsEmpty &&
+    (choosingRange ? data.bands.length : data.currentBand.items.length) > 0;
+
+  function showAll() {
+    search.current?.focus({ preventScroll: true });
+    setQuery("");
+    setStateFilter("");
+  }
 
   return (
     <>
@@ -216,11 +226,26 @@ export function DiscoveryNavigation({
                 </button>
               </div>
             )}
-            {(choosingRange ? ranges.length : words.length) === 0 ? (
-              <StatusMessage as="p" className={styles.empty} role="status">
-                {choosingRange ? "No ranges match." : "No words match."}
-              </StatusMessage>
-            ) : (
+            <StatusMessage
+              as="p"
+              className={resultsEmpty ? styles.empty : "sr-only"}
+            >
+              {resultsEmpty
+                ? choosingRange
+                  ? "No ranges match."
+                  : "No words match."
+                : ""}
+            </StatusMessage>
+            {canShowAll && (
+              <Button
+                variant="secondary"
+                className={styles.emptyAction}
+                onClick={showAll}
+              >
+                {choosingRange ? "Show all ranges" : "Show all words"}
+              </Button>
+            )}
+            {!resultsEmpty && (
               <ul
                 ref={options}
                 className={styles.options}

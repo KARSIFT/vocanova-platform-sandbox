@@ -210,8 +210,13 @@
 }
 
 .empty {
-  padding: 1rem 0.25rem;
-  color: var(--color-neutral-700);
+  padding: 0.25rem 0;
+}
+
+.emptyAction {
+  align-self: flex-start;
+  max-width: 100%;
+  white-space: normal;
 }
 
 .rangeOption {
