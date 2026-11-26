@@ -48,12 +48,8 @@ test.describe("Settings account accessibility (VOC-073-T03)", () => {
         "text=Sign-in email",
         "text=Delete your account",
         "text=Current address:",
-        // The "We'll deactivate your account right away, then
-        // permanently anonymize your data after 30 days" copy
-        // is the most important text on the deletion section -
-        // it is the only signal a screen reader user has that
-        // the deletion is staged and reversible for 30 days.
-        "text=permanently anonymize your data after 30 days",
+        "text=Your account closes immediately.",
+        "text=permanent anonymization after 30 days",
       ],
     });
 
