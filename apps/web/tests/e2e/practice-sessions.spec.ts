@@ -401,7 +401,7 @@ test("a lost start response opens the same practice session on retry", async ({
 async function installAudio(page: Page, unsupported = false) {
   const requests: { text: string; meaningId: string }[] = [];
   let wrongMeaning = false;
-  await page.route("**/api/v1/pronunciation", async (route) => {
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
     const body = route.request().postDataJSON();
     requests.push(body);
     if (unsupported) {

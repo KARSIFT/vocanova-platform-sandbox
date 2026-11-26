@@ -41,8 +41,8 @@ func TestPronunciationAPIAuthCSRFSourceBoundaryAndCache(t *testing.T) {
 	api.UseMiddleware(AuthMiddleware(authSvc))
 	RegisterPronunciation(api, svc, authSvc)
 	u := uuid.New()
-	send := func(body string, user uuid.UUID, csrf bool) *httptest.ResponseRecorder {
-		req := httptest.NewRequest("POST", "/api/v1/pronunciation", strings.NewReader(body))
+	send := func(body string, user uuid.UUID, csrf bool, query ...string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", "/api/v1/pronunciation"+strings.Join(query, ""), strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		if user != uuid.Nil {
 			req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: user}))
@@ -76,6 +76,42 @@ func TestPronunciationAPIAuthCSRFSourceBoundaryAndCache(t *testing.T) {
 	require.Contains(t, w.Body.String(), `"meaningId":"`+meaning+`"`)
 	require.Contains(t, w.Body.String(), `"partOfSpeech":"noun"`)
 	require.Contains(t, w.Body.String(), `"meaningRevision":"`+revision+`"`)
+	require.Zero(t, p.calls)
+	// The published noun and verb recordings share spelling but have independent identities.
+	const recordID = "009949f4-3605-530f-84f4-301a6beeb809"
+	const recordRevision = "ac85897ffcd435c298931efb2cecda765a0ac46eeafbb95cb5c5d9bb8f43127f"
+	const recordSHA = "277db426ed8ac44abf350ff75ae788bec1ae967cdceeb4697f56c84df3ac889f"
+	const recordKey = "ea10ba2f066d9cfff498629929e48a9d2c7351bb00226795c6c46aefc16bdc6b"
+	const recordBody = `{"text":"record","meaningId":"` + recordID + `","meaningRevision":"` + recordRevision + `"}`
+	expectRecord := func(definition string) {
+		mock.ExpectQuery("SELECT EXISTS").WithArgs(u).WillReturnRows(sqlmock.NewRows([]string{"active"}).AddRow(true))
+		mock.ExpectQuery("SELECT wm.id").WithArgs("record", recordID).WillReturnRows(sqlmock.NewRows([]string{"id", "text", "pos", "definition", "example"}).
+			AddRow(recordID, "record", "noun", definition, "Keep a record of every payment."))
+	}
+	const recordDefinition = "Information kept so that it can be checked later."
+	expectRecord(recordDefinition)
+	w = send(recordBody, u, true, "?preferCdn=true")
+	require.Equal(t, 200, w.Code, w.Body.String())
+	require.Contains(t, w.Body.String(), `"audioUrl":"https://audio.vocanova.site/meanings/`+recordID+"/"+recordRevision+"/"+recordKey+"/"+recordSHA+`.mp3"`)
+	require.Contains(t, w.Body.String(), `"audioBase64":""`)
+	require.Contains(t, w.Body.String(), `"meaningRevision":"`+recordRevision+`"`)
+
+	// Omitting opt-in, including a browser retry after CDN failure, keeps the byte response.
+	expectRecord(recordDefinition)
+	mock.ExpectQuery("SELECT audio FROM pronunciation_audio_cache").WithArgs(recordKey).WillReturnRows(sqlmock.NewRows([]string{"audio"}).AddRow(tone))
+	w = send(recordBody, u, true)
+	require.Equal(t, 200, w.Code, w.Body.String())
+	require.NotContains(t, w.Body.String(), `"audioUrl"`)
+	require.NotContains(t, w.Body.String(), `"audioBase64":""`)
+
+	// A current meaning with a changed definition must use a different recording.
+	expectRecord("Saved information.")
+	require.Equal(t, 404, send(recordBody, u, true, "?preferCdn=true").Code)
+	expectRecord("Saved information.")
+	mock.ExpectQuery("SELECT audio FROM pronunciation_audio_cache").WillReturnRows(sqlmock.NewRows([]string{"audio"}).AddRow(tone))
+	w = send(`{"text":"record","meaningId":"`+recordID+`"}`, u, true, "?preferCdn=true")
+	require.Equal(t, 200, w.Code, w.Body.String())
+	require.NotContains(t, w.Body.String(), `"audioUrl"`)
 	require.Zero(t, p.calls)
 	// A valid public spelling cannot be paired with an unrelated selected meaning.
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(u).WillReturnRows(sqlmock.NewRows([]string{"active"}).AddRow(true))

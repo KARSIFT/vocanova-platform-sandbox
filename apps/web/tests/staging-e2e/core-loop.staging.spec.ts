@@ -706,10 +706,36 @@ async function prepareEligibleReview(
           name: `Use ${word.text} in a sentence`,
           exact: true,
         });
-        const writingHref = `/vocabulary/${encodeURIComponent(word.slug)}#sentence-practice-${candidate.meaningId}`;
-        await expect(writingLink).toHaveAttribute("href", writingHref);
+        await expect(writingLink).toHaveAttribute(
+          "href",
+          /^\/vocabulary\/[^?#]+\?fromDiscovery=[1-9]\d{0,4}(?:&finished=1)?#sentence-practice-[\w-]+$/u,
+        );
+        const writingURL = new URL(
+          (await writingLink.getAttribute("href"))!,
+          test.info().project.use.baseURL!,
+        );
+        expect(writingURL.pathname).toBe(
+          `/vocabulary/${encodeURIComponent(word.slug)}`,
+        );
+        expect(writingURL.hash).toBe(
+          `#sentence-practice-${candidate.meaningId}`,
+        );
+        const returnRank = writingURL.searchParams.get("fromDiscovery")!;
+        await expect
+          .poll(() => new URL(page.url()).searchParams.get("word"))
+          .toBe(returnRank);
         await writingLink.click();
-        await expect(page).toHaveURL(new URL(writingHref, test.info().project.use.baseURL!).toString());
+        await expect(page).toHaveURL(writingURL.toString());
+        const returnBand = Math.ceil(Number(returnRank) / 100);
+        const revisit = writingURL.searchParams.has("finished")
+          ? ""
+          : "&revisit=1";
+        await expect(
+          page.getByRole("link", { name: "Back to Discovery", exact: true }),
+        ).toHaveAttribute(
+          "href",
+          `/discovery?band=${returnBand}&word=${returnRank}&active=1${revisit}`,
+        );
         const confirmedWord = await readStagingState<WordDetailResponse>(
           page,
           apiOrigin,

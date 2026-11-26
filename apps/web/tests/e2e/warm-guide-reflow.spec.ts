@@ -101,7 +101,7 @@ for (const theme of ["light", "dark"] as const) {
         { name: "vocanova_theme", value: theme, url: baseURL! },
       ]);
       // Avoid audio in local geometry checks; no playback is part of this task.
-      await page.route("**/api/v1/pronunciation", (route) =>
+      await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, (route) =>
         route.fulfill({ status: 503, json: { title: "Unavailable" } }),
       );
       await page.goto("/discovery?band=1&word=2&active=1");
@@ -176,7 +176,7 @@ for (const theme of ["light", "dark"] as const) {
           url: baseURL!,
         },
       ]);
-      await page.route("**/api/v1/pronunciation", (route) =>
+      await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, (route) =>
         route.fulfill({ status: 503, json: { title: "Unavailable" } }),
       );
       await page.goto("/review");
@@ -299,7 +299,7 @@ for (const theme of ["light", "dark"] as const) {
         { name: "vocanova_csrf", value: randomUUID(), url: baseURL! },
         { name: "vocanova_theme", value: theme, url: baseURL! },
       ]);
-      await page.route("**/api/v1/pronunciation", (route) =>
+      await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, (route) =>
         route.fulfill({ status: 503, json: { title: "Unavailable" } }),
       );
       await page.goto("/discovery?band=1&word=1");

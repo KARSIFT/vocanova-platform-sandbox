@@ -23,8 +23,10 @@ function neuralFixture() {
     signal: AbortSignal;
     meaningId?: string;
     meaningRevision?: string;
+    preferCdn?: boolean;
     resolve: (value: {
       audioBase64: string;
+      audioUrl?: string;
       mimeType: string;
       meaningId?: string;
       meaningRevision?: string;
@@ -39,13 +41,14 @@ function neuralFixture() {
   const deviceCalls: { owner: symbol; text: string; slow: boolean }[] = [];
   const releases: symbol[] = [];
   const environment: NeuralSpeechEnvironment = {
-    request(text, signal, meaningId, meaningRevision) {
+    request(text, signal, meaningId, meaningRevision, preferCdn) {
       return new Promise((resolve, reject) =>
         requests.push({
           text,
           signal,
           meaningId,
           meaningRevision,
+          preferCdn,
           resolve,
           reject,
         }),
@@ -105,9 +108,140 @@ function neuralFixture() {
 }
 
 const audioResponse = { audioBase64: "aWQz", mimeType: "audio/mpeg" };
+const cdnMeaningId = "14b4936b-99d6-50dd-9fea-48b9ad1ada93";
+const cdnRevision = "a".repeat(64);
+const cdnUrl = `https://audio.vocanova.site/meanings/${cdnMeaningId}/${cdnRevision}/${"b".repeat(64)}/${"c".repeat(64)}.mp3`;
+const cdnResponse = {
+  ...audioResponse,
+  audioBase64: "",
+  audioUrl: cdnUrl,
+  meaningId: cdnMeaningId,
+  meaningRevision: cdnRevision,
+};
 async function settleSpeech() {
   await new Promise<void>((resolve) => setImmediate(resolve));
 }
+
+test("a failed CDN clip retries the same meaning via the API and ignores its stale media events", async () => {
+  const f = neuralFixture();
+  const owner = Symbol();
+  const states: PronunciationState[] = [];
+  const create = f.environment.createMedia;
+  let resolveCdnPlay: () => void = () => {};
+  f.environment.createMedia = (response) => {
+    const clip = create(response);
+    if (f.clips.length === 1)
+      clip.media.play = () =>
+        new Promise<void>((resolve) => {
+          resolveCdnPlay = resolve;
+        });
+    return clip;
+  };
+  f.controller.play(
+    owner,
+    "lid",
+    true,
+    (state) => states.push(state),
+    cdnMeaningId,
+    cdnRevision,
+  );
+  assert.equal(f.requests[0]!.preferCdn, true);
+  f.requests[0]!.resolve(cdnResponse);
+  await settleSpeech();
+  const staleError = f.clips[0]!.media.onerror;
+  const staleEnd = f.clips[0]!.media.onended;
+  staleError?.();
+  assert.equal(f.clips[0]!.disposed, 1);
+  assert.equal(f.requests.length, 2);
+  assert.equal(f.requests[1]!.preferCdn, false);
+  assert.equal(f.requests[1]!.meaningId, cdnMeaningId);
+  assert.equal(f.requests[1]!.meaningRevision, cdnRevision);
+  f.requests[1]!.resolve({
+    ...audioResponse,
+    meaningId: cdnMeaningId,
+    meaningRevision: cdnRevision,
+  });
+  await settleSpeech();
+  assert.equal(f.clips[1]!.media.playbackRate, 0.7);
+  assert.deepEqual(states.at(-1), { status: "playing", source: "neural" });
+  resolveCdnPlay();
+  staleError?.();
+  staleEnd?.();
+  await settleSpeech();
+  assert.equal(f.requests.length, 2);
+  assert.equal(states.filter((state) => state.status === "playing").length, 1);
+  assert.equal(f.deviceCalls.length, 0);
+  f.controller.release(owner);
+});
+
+test("stopping after CDN startup times out cancels the pending API retry", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const f = neuralFixture();
+  const owner = Symbol();
+  const create = f.environment.createMedia;
+  f.environment.createMedia = (response) => {
+    const clip = create(response);
+    clip.media.play = () => new Promise<void>(() => {});
+    return clip;
+  };
+  f.controller.play(owner, "lid", false, () => {}, cdnMeaningId);
+  f.requests[0]!.resolve(cdnResponse);
+  await settleSpeech();
+  t.mock.timers.tick(8000);
+  assert.equal(f.requests.length, 2);
+  assert.equal(f.requests[1]!.preferCdn, false);
+  assert.equal(f.requests[1]!.meaningRevision, cdnRevision);
+  assert.equal(f.clips[0]!.disposed, 1);
+  f.controller.stop(owner);
+  assert.equal(f.requests[1]!.signal.aborted, true);
+  f.requests[1]!.resolve({
+    ...audioResponse,
+    meaningId: cdnMeaningId,
+    meaningRevision: cdnRevision,
+  });
+  await settleSpeech();
+  assert.equal(f.clips.length, 1);
+});
+
+test("the media factory uses and releases a direct CDN URL and rejects other origins and identities", () => {
+  const opened: string[] = [];
+  let removed = 0;
+  let loaded = 0;
+  const browser = {
+    Audio: class {
+      crossOrigin = "";
+      constructor(url?: string) {
+        assert.equal(url, undefined);
+      }
+      set src(url: string) {
+        assert.equal(this.crossOrigin, "anonymous");
+        opened.push(url);
+      }
+      removeAttribute(name: string) {
+        assert.equal(name, "src");
+        removed++;
+      }
+      load() {
+        loaded++;
+      }
+    },
+  } as unknown as Pick<typeof globalThis, "atob" | "Audio" | "Blob" | "URL">;
+  createPronunciationMedia(cdnResponse, browser).dispose();
+  assert.deepEqual(opened, [cdnUrl]);
+  assert.equal(removed, 1);
+  assert.equal(loaded, 1);
+  for (const audioUrl of [
+    cdnUrl.replace("audio.vocanova.site", "audio.vocanova.site.example.org"),
+    cdnUrl.replace("https:", "http:"),
+    cdnUrl.replace(cdnRevision, "d".repeat(64)),
+    cdnUrl + "?other=1",
+  ]) {
+    assert.throws(() =>
+      createPronunciationMedia({ ...cdnResponse, audioUrl }, browser),
+    );
+  }
+  assert.deepEqual(opened, [cdnUrl]);
+});
 
 test("the same spelling keeps separate meaning requests and cannot reuse a blocked clip for another sense", async () => {
   const f = neuralFixture();

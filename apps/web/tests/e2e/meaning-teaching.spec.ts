@@ -81,7 +81,7 @@ for (const theme of ["light", "dark"] as const) {
       { name: "vocanova_theme", value: theme, url: baseURL },
     ]);
     const requests: { text: string; meaningId?: string }[] = [];
-    await page.route("**/api/v1/pronunciation", async (route) => {
+    await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
       const body = route.request().postDataJSON();
       requests.push(body);
       await route.fulfill({
@@ -251,7 +251,7 @@ for (const theme of ["light", "dark"] as const) {
 test("unavailable phrase audio keeps the authored guidance readable", async ({
   page,
 }) => {
-  await page.route("**/api/v1/pronunciation", (route) =>
+  await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, (route) =>
     route.fulfill({
       status: 503,
       contentType: "application/json",

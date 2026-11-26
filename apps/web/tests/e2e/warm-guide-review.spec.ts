@@ -71,7 +71,7 @@ for (const theme of ["light", "dark"] as const) {
   }) => {
     await seed(page, 1, theme);
     let audioRequests = 0;
-    await page.route("**/api/v1/pronunciation", async (route) => {
+    await page.route(/\/api\/v1\/pronunciation(?:\?|$)/u, async (route) => {
       audioRequests += 1;
       await route.fulfill({
         status: 503,

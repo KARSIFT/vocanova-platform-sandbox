@@ -196,6 +196,15 @@ jobs:
       - name: Install pinned Playwright browser and system dependencies
         run: pnpm --filter @vocanova/web exec playwright install --with-deps "${{ matrix.browser }}"
 
+      - name: Provide a virtual audio output for Firefox
+        if: matrix.browser == 'firefox'
+        run: |
+          # Native audio playback needs an output device on headless Linux.
+          sudo apt-get install -y --no-install-recommends pulseaudio pulseaudio-utils
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=vocanova_ci
+          pactl set-default-sink vocanova_ci
+
       - name: Run complete browser project suite
         timeout-minutes: 45
         env:

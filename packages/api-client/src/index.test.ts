@@ -15,6 +15,49 @@ import {
 } from "./index.js";
 
 describe("VocanovaClient", () => {
+  it("opts into CDN playback via a query and keeps the fallback request compatible", async () => {
+    const calls: { url: URL; init?: RequestInit }[] = [];
+    const audio = {
+      audioBase64: "",
+      audioUrl: "https://audio.vocanova.site/meanings/example.mp3",
+      mimeType: "audio/mpeg",
+      voice: "marin",
+      cacheHit: true,
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        calls.push({ url: new URL(String(input)), init });
+        return Response.json(audio);
+      },
+    });
+    const init = { headers: { "X-CSRF-Token": "synthetic" } };
+    const result = await client.getPronunciation(
+      "lid",
+      init,
+      "meaning",
+      "revision",
+      true,
+    );
+    await client.getPronunciation("lid", init, "meaning", "revision", false);
+    assert.deepEqual(result.data, audio);
+    assert.equal(calls[0]!.url.pathname, "/api/v1/pronunciation");
+    assert.equal(calls[0]!.url.search, "?preferCdn=true");
+    assert.equal(calls[1]!.url.search, "");
+    for (const call of calls) {
+      assert.equal(call.init?.method, "POST");
+      assert.deepEqual(JSON.parse(call.init?.body as string), {
+        text: "lid",
+        meaningId: "meaning",
+        meaningRevision: "revision",
+      });
+      assert.equal(
+        new Headers(call.init?.headers).get("X-CSRF-Token"),
+        "synthetic",
+      );
+    }
+  });
+
   it("reads and conditionally updates the requester's discovery position", async () => {
     const calls: { url: string; init?: RequestInit }[] = [];
     const client = new VocanovaClient({

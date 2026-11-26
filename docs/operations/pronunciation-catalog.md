@@ -41,6 +41,32 @@ allocated bytes from 90,586,661 to 45,513,037 per audit. Metadata-only auditing
 retained two queries and effectively unchanged allocations. This excludes audio
 decoding and establishes neither production latency nor peak memory.
 
+## Published word audio
+
+The authenticated pronunciation endpoint accepts `?preferCdn=true`. For a
+selected vocabulary meaning with an exact published recording, it returns that
+MP3 URL without reading audio bytes from PostgreSQL. The browser uses anonymous
+CORS so a request to `audio.vocanova.site` does not carry session cookies. An
+unplayable CDN clip is retried once through the ordinary endpoint. Older
+clients, examples, and vocabulary without matching published audio use the
+existing audio response and generation limits.
+
+The embedded index contains only cache keys and MP3 hashes. It ships with the
+API and requires no R2 credentials at runtime. To refresh it after an upload,
+use the canonical public audio manifest and full SHA-256 readback receipts from
+the same publication. Rebuild the index from the repository root:
+
+```sh
+python3 scripts/pronunciation/build-cdn-index.py PUBLIC_MANIFEST.jsonl CDN_READBACK.jsonl \
+  apps/api/business/pronunciation/published_audio_index.bin
+```
+
+The exporter requires a successful matching CDN readback for every manifest
+object. Deploy the API and web together through the normal release. R2 must
+return the requesting origin for both staging and production and support
+byte ranges. Verify that the deployed browser plays audio using the CDN and
+that an opted-out request still returns exact-meaning audio bytes.
+
 ## Explicit bounded generation
 
 After reviewing the audit, costs and a small pilot, an operator can explicitly
