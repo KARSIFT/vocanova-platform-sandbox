@@ -197,6 +197,9 @@ test.describe("Password authentication", () => {
         .getByRole("alert")
         .filter({ hasText: /invalid, expired, or has already been used/ }),
     ).toBeVisible();
+  });
+
+  test("an expired reset link gives keyboard access to request a new one", async ({ page }) => {
     await page.goto("/auth/password/reset?token=invalid-reset-token");
     await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
     await page.getByRole("button", { name: "Save new password" }).click();
@@ -205,5 +208,11 @@ test.describe("Password authentication", () => {
         .getByRole("alert")
         .filter({ hasText: /invalid, expired, or has already been used/ }),
     ).toBeVisible();
+    const requestLink = page.getByRole("link", { name: /request a new (?:password )?reset link/i });
+    await expect(requestLink).toBeFocused();
+    await expect(page.getByRole("button", { name: "Save new password" })).toHaveCount(0);
+    await requestLink.press("Enter");
+    await expect(page).toHaveURL(/\/auth\/password\/reset$/);
+    await expect(page.getByRole("button", { name: "Send password reset link" })).toBeVisible();
   });
 });

@@ -101,6 +101,7 @@ export function WordDetailContent({
                   <p className="pos text-base">{meaning.partOfSpeech}</p>
                   <MeaningSaveButton
                     meaningId={meaning.id}
+                    wordSlug={wordData.slug}
                     source={source}
                     initialSaved={meaning.saved}
                     wordText={wordData.text}

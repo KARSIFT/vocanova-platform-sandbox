@@ -1,6 +1,7 @@
 import Link from "@/ui/link";
 import { discoveryReturnHref } from "../../discovery/discovery-detail-route";
 import { notFound } from "next/navigation";
+import { vocabularySearchReturnHref } from "@/lib/vocabulary-return";
 
 import { ApiResponseError } from "@vocanova/api-client";
 
@@ -18,9 +19,13 @@ export default async function VocabularyWordPage({
   const [{ word }, query] = await Promise.all([params, searchParams]);
   const finished = query.finished === "1";
   const back = discoveryReturnHref(query.fromDiscovery, finished);
+  // Discovery keeps precedence; otherwise restore a validated search state.
+  const searchBack = back ? null : vocabularySearchReturnHref(query.fromSearch);
   const returnQuery = back
     ? `?fromDiscovery=${query.fromDiscovery}${finished ? "&finished=1" : ""}`
-    : "";
+    : searchBack
+      ? `?${new URLSearchParams({ fromSearch: searchBack })}`
+      : "";
   const client = await createServerApiClient();
   let wordResponse: Awaited<ReturnType<typeof client.getCanonicalWord>>;
   let userResponse: Awaited<ReturnType<typeof client.getCurrentUser>>;
@@ -41,7 +46,7 @@ export default async function VocabularyWordPage({
 
   return (
     <PageContainer>
-      <Link href={back ?? "/vocabulary"} className="page-back">
+      <Link href={back ?? searchBack ?? "/vocabulary"} className="page-back">
         <svg aria-hidden="true" viewBox="0 0 24 24">
           <path
             d="m15 5-7 7 7 7"

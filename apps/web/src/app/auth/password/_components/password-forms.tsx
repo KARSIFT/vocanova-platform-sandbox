@@ -2,10 +2,12 @@
 
 import { StatusMessage } from "@/ui/status-message";
 
-import { ActionLink, Button, TextInput } from "@/ui/controls";
+import { ActionLink, Button, TextInput, actionClasses } from "@/ui/controls";
 
 import Link from "@/ui/link";
 import { useEffect, useRef, useState } from "react";
+
+import { ApiResponseError } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { getAuthErrorMessage } from "@/lib/auth-feedback";
@@ -528,10 +530,15 @@ export function PasswordResetRequestForm({
 
 export function PasswordResetForm({ token }: { token: string }) {
   const [password, setPassword] = useState("");
-  const [state, setState] = useState<"idle" | "loading" | "done" | "error">(
-    "idle",
-  );
+  const [state, setState] = useState<
+    "idle" | "loading" | "done" | "error" | "expired"
+  >("idle");
   const [message, setMessage] = useState("");
+  const requestNewLink = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    if (state === "expired") requestNewLink.current?.focus();
+  }, [state]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -552,10 +559,40 @@ export function PasswordResetForm({ token }: { token: string }) {
       );
       setState("done");
     } catch (error) {
-      setState("error");
       setMessage(getAuthErrorMessage(error, "password-reset"));
+      if (error instanceof ApiResponseError && error.status === 401) {
+        // The confirm endpoint definitively rejected this proof as invalid,
+        // expired, or already used. Retrying it cannot succeed, so drop the
+        // typed password and offer a fresh request instead.
+        setPassword("");
+        setState("expired");
+        return;
+      }
+      setState("error");
     }
   }
+
+  if (state === "expired")
+    return (
+      <div className="space-y-[var(--spacing-md)]">
+        <StatusMessage
+          as="p"
+          tone="error"
+          role="alert"
+          aria-live="assertive"
+          className="text-base"
+        >
+          {message}
+        </StatusMessage>
+        <a
+          ref={requestNewLink}
+          href="/auth/password/reset"
+          className={actionClasses("primary")}
+        >
+          Request a new reset link
+        </a>
+      </div>
+    );
 
   if (state === "done")
     return (

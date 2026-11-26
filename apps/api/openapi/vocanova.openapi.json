@@ -10635,6 +10635,9 @@
           },
           "429": {
             "description": "Rate limited"
+          },
+          "503": {
+            "description": "Email change confirmation delivery is unavailable; no link was created"
           }
         },
         "summary": "Request a single-use email-change link",

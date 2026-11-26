@@ -1,6 +1,7 @@
 import { StatusMessage } from "@/ui/status-message";
 import { ActionLink, Button, Select, TextInput } from "@/ui/controls";
 import { getPrimaryDefinition } from "@/lib/word-definition";
+import { vocabularyWordHref } from "@/lib/vocabulary-return";
 import Link from "@/ui/link";
 import Form from "next/form";
 import {
@@ -299,7 +300,10 @@ export default async function VocabularyPage({
               </div>
             )}
             {data.items.length && mapView ? (
-              <VocabularyMap items={data.items} />
+              <VocabularyMap
+                items={data.items}
+                searchReturn={resultURL(after)}
+              />
             ) : data.items.length ? (
               <ul className="vn-list">
                 {data.items.map((item) => (
@@ -308,7 +312,11 @@ export default async function VocabularyPage({
                       <div className="flex flex-wrap items-baseline gap-x-3">
                         <h2 className="headword text-xl">
                           <Link
-                            href={`/vocabulary/${encodeURIComponent(item.wordSlug)}#${meaningAnchor(item.meaningId)}`}
+                            href={vocabularyWordHref(
+                              item.wordSlug,
+                              meaningAnchor(item.meaningId),
+                              resultURL(after),
+                            )}
                             className="vn-text-link"
                           >
                             {item.wordText}
@@ -342,6 +350,7 @@ export default async function VocabularyPage({
                     <div className="min-w-0">
                       <MeaningSaveButton
                         meaningId={item.meaningId}
+                        wordSlug={item.wordSlug}
                         source="search"
                         initialSaved={item.saved}
                         wordText={item.wordText}

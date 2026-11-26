@@ -127,27 +127,37 @@ test.describe("Sign-in accessibility (VOC-073-T00)", () => {
     ).toBeVisible();
   });
 
-  test("continues a Google sign-in to its safe original destination", async ({
-    page,
-    context,
-  }, testInfo) => {
-    const baseURL = testInfo.project.use.baseURL;
-    if (!baseURL) {
-      throw new Error("Expected a configured base URL.");
-    }
-    await context.addCookies([
-      { name: "e2e_oauth_enabled", value: "true", url: baseURL },
-    ]);
-    await page.route("**/api/v1/auth/oauth/google/start", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ url: `${baseURL}/home` }),
+  for (const { label, destination, heading } of [
+    { label: "the reviews queue", destination: "/reviews?mode=due" },
+    {
+      label: "the vocabulary self-check with its query and fragment",
+      destination: "/vocabulary/check?from=plan#main-content",
+      heading: "Find your starting words",
+    },
+  ]) {
+    test(`continues a Google sign-in to ${label}`, async ({
+      page,
+      context,
+      baseURL,
+    }) => {
+      if (!baseURL) throw new Error("Expected a configured base URL.");
+      await context.addCookies([
+        { name: "e2e_oauth_enabled", value: "true", url: baseURL },
+      ]);
+      await page.route("**/api/v1/auth/oauth/google/start", async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ url: `${baseURL}/home` }),
+        });
       });
-    });
 
-    await page.goto("/signin?returnTo=%2Freviews%3Fmode%3Ddue");
-    await page.getByRole("button", { name: "Continue with Google" }).click();
-    await expect(page).toHaveURL(/\/reviews\?mode=due$/);
-  });
+      await page.goto(`/signin?${new URLSearchParams({ returnTo: destination })}`);
+      await page.getByRole("button", { name: "Continue with Google" }).click();
+      await expect(page).toHaveURL(`${baseURL}${destination}`);
+      if (heading) {
+        await expect(page.getByRole("heading", { name: heading, level: 1 })).toBeVisible();
+      }
+    });
+  }
 });

@@ -23,6 +23,21 @@ import { PracticeAudio } from "./practice-audio";
 import { practiceModeHref, practiceModes } from "./practice-modes";
 import { primaryAction, secondaryAction, textLink } from "./practice-styles";
 
+/** Every displayed token is placed exactly once, and nothing else is. */
+function sentenceComplete(
+  tokenIds: readonly string[],
+  choices: readonly { id: string }[],
+): boolean {
+  const displayed = new Set(choices.map((choice) => choice.id));
+  const placed = new Set(tokenIds);
+  return (
+    displayed.size > 0 &&
+    tokenIds.length === displayed.size &&
+    placed.size === tokenIds.length &&
+    tokenIds.every((id) => displayed.has(id))
+  );
+}
+
 export function PracticePlayer({
   initialSession,
 }: {
@@ -51,6 +66,7 @@ export function PracticePlayer({
   const answerId = useId();
   const answerFormId = useId();
   const helpId = useId();
+  const assemblyNoticeId = useId();
   const step = session.currentStep;
   const checked =
     session.feedback?.stepId === step?.id ? session.feedback : null;
@@ -67,6 +83,13 @@ export function PracticePlayer({
     : tokenIds;
   const answerLocked =
     locked || Boolean(checked?.correct || (journey && session.canContinue));
+  // The server checks a full ordering, so every displayed token must be placed
+  // exactly once before an answer can be sent.
+  const assemblyChoices = assembly ? (step?.choices ?? []) : [];
+  const assemblyTotal = new Set(assemblyChoices.map((choice) => choice.id))
+    .size;
+  const assemblyComplete =
+    assembly && sentenceComplete(tokenIds, assemblyChoices);
 
   useEffect(() => {
     if (!focusAfterResponse.current) return;
@@ -104,6 +127,12 @@ export function PracticePlayer({
     if (!pending.current) {
       if (!step || !action) return;
       if (action === "answer" && step.kind === "typed_recall" && !answer.trim())
+        return;
+      if (
+        action === "answer" &&
+        step.kind === "sentence_build" &&
+        !sentenceComplete(tokenIds, step.choices)
+      )
         return;
       // Capture the exact answer before CSRF/network work. Retry reuses both
       // identities and the expected revision even after a lost response.
@@ -303,7 +332,7 @@ export function PracticePlayer({
               className="mt-5"
               onSubmit={(event) => {
                 event.preventDefault();
-                if (tokenIds.length) void submit("answer");
+                if (assemblyComplete) void submit("answer");
               }}
             >
               {step.speechText && (
@@ -371,7 +400,11 @@ export function PracticePlayer({
                     type="button"
                     disabled={answerLocked || shownTokens.includes(token.id)}
                     onClick={() =>
-                      setTokenIds((previous) => [...previous, token.id])
+                      setTokenIds((previous) =>
+                        previous.includes(token.id)
+                          ? previous
+                          : [...previous, token.id],
+                      )
                     }
                     className={`${secondaryAction} disabled:opacity-40`}
                   >
@@ -399,6 +432,16 @@ export function PracticePlayer({
                   Start over
                 </button>
               </div>
+              {!checked?.correct && !(journey && session.canContinue) && (
+                <p
+                  id={assemblyNoticeId}
+                  className="mt-3 text-sm text-neutral-600"
+                >
+                  {assemblyComplete
+                    ? "All words placed. Check your answer when the order looks right."
+                    : `Use all ${assemblyTotal} words to check your answer (${Math.min(tokenIds.length, assemblyTotal)} of ${assemblyTotal} placed).`}
+                </p>
+              )}
             </form>
           ) : step.kind === "typed_recall" ? (
             <form
@@ -564,9 +607,10 @@ export function PracticePlayer({
                     (step.kind === "typed_recall"
                       ? !answer.trim()
                       : assembly
-                        ? !tokenIds.length
+                        ? !assemblyComplete
                         : !selectedChoice)
                   }
+                  aria-describedby={assembly ? assemblyNoticeId : undefined}
                   className={`${session.canContinue ? secondaryAction : primaryAction} grow`}
                 >
                   {busy ? "Checking…" : "Check answer"}

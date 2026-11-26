@@ -1,6 +1,6 @@
 import { ActionLink } from "@/ui/controls";
 
-import type { LearnerSentence } from "@vocanova/api-client";
+import { ApiResponseError, type LearnerSentence } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer, PageHeader } from "@/ui/surface";
@@ -26,6 +26,11 @@ export default async function SentenceHistoryPage({
       { cache: "no-store" },
     );
   } catch (error) {
+    // Only a rejected cursor gets inline guidance; outages still reach the
+    // route error boundary and expired sessions still redirect.
+    if (after && error instanceof ApiResponseError && error.status === 400) {
+      return <InvalidSentenceHistoryCursor />;
+    }
     requireAuthRedirect(
       error,
       `/progress/sentences${after ? `?after=${encodeURIComponent(after)}` : ""}`,
@@ -62,6 +67,40 @@ export default async function SentenceHistoryPage({
           View older sentences
         </ActionLink>
       ) : null}
+    </PageContainer>
+  );
+}
+
+function InvalidSentenceHistoryCursor() {
+  return (
+    <PageContainer>
+      <PageHeader
+        title="Sentence history"
+        eyebrow="Your writing practice"
+        back={{ href: "/progress", label: "Back to Progress" }}
+        lede="Look back at your sentences and the feedback you received."
+      />
+      <section
+        className="vn-empty"
+        aria-labelledby="invalid-sentence-history-heading"
+      >
+        <h2
+          id="invalid-sentence-history-heading"
+          className="text-xl font-semibold text-neutral-900"
+        >
+          This page of your history is no longer available
+        </h2>
+        <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+          The link may be out of date. Start again from your newest sentences.
+        </p>
+        <ActionLink
+          variant="primary"
+          href="/progress/sentences"
+          className="mt-[var(--spacing-md)]"
+        >
+          View newest sentences
+        </ActionLink>
+      </section>
     </PageContainer>
   );
 }

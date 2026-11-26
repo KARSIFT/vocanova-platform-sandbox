@@ -15,6 +15,30 @@ for (const theme of ["light", "dark"] as const) {
       ]);
     });
 
+    test("unavailable confirmation delivery leaves the current address and account controls visible", async ({
+      page,
+      context,
+      baseURL,
+    }) => {
+      if (!baseURL) throw new Error("Expected a configured base URL.");
+      await context.addCookies([
+        { name: "e2e_email_change_enabled", value: "false", url: baseURL },
+        { name: "e2e_magic_link_enabled", value: "false", url: baseURL },
+        { name: "e2e_password_enabled", value: "false", url: baseURL },
+        { name: "e2e_oauth_enabled", value: "true", url: baseURL },
+      ]);
+
+      await page.goto("/settings/account");
+
+      const email = page.getByRole("region", { name: "Sign-in email" });
+      await expect(email).toContainText("core-loop-fixture@example.test");
+      await expect(email.getByText(/unavailable/i)).toBeVisible();
+      await expect(email.getByRole("textbox", { name: "New sign-in email" })).toHaveCount(0);
+      await expect(email.getByRole("button", { name: "Send confirmation link" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Download my data" })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "I want to delete my account" })).toBeEnabled();
+    });
+
     test("email request remains pending until acknowledged, recovers from failure and permits another address", async ({ page }) => {
       let release!: () => void;
       const held = new Promise<void>((resolve) => { release = resolve; });

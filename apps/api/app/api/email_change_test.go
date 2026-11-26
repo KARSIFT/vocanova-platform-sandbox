@@ -30,7 +30,7 @@ import (
 // service's pre-seeded user is also mirrored into the
 // accounts.MemoryRepository so the duplicate-email discipline
 // observes the right state.
-func testEmailChangeAPI(t *testing.T) (huma.API, *auth.Service, *accounts.Service, *accounts.MemoryRepository, *auth.MemoryRepository, *email.Fake) {
+func testEmailChangeAPI(t *testing.T, configure ...func(*accounts.Config)) (huma.API, *auth.Service, *accounts.Service, *accounts.MemoryRepository, *auth.MemoryRepository, *email.Fake) {
 	t.Helper()
 	now := testNow()
 	c := &clock.Fixed{T: now}
@@ -65,14 +65,18 @@ func testEmailChangeAPI(t *testing.T) (huma.API, *auth.Service, *accounts.Servic
 	fake := &email.Fake{}
 	accountsLimiter := auth.NewFixedWindowRateLimiter(c, time.Hour, 100)
 	accountsIdem := accounts.NewMemoryIdempotencyStore()
-	accountsSvc := accounts.NewService(accountsRepo, authRepo, fake, accountsIdem, c, accountsLimiter, accounts.Config{
+	accountsConfig := accounts.Config{
 		Environment: "test", BaseURL: "https://test.example.com",
 		EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute,
 		RateLimit: accounts.EmailChangeRateLimitConfig{
 			RequestWindow: time.Hour, RequestLimit: 100,
 			ConsumeWindow: time.Hour, ConsumeLimit: 100,
 		},
-	})
+	}
+	for _, apply := range configure {
+		apply(&accountsConfig)
+	}
+	accountsSvc := accounts.NewService(accountsRepo, authRepo, fake, accountsIdem, c, accountsLimiter, accountsConfig)
 
 	config := huma.DefaultConfig("Vocanova API", "0.1.0")
 	api := humachi.New(chi.NewMux(), config)
@@ -186,6 +190,49 @@ func TestRequestEmailChangeLinkHappyPathGenericResponse(t *testing.T) {
 	require.Len(t, fake.Sent, 1, "email dispatched to the NEW address, not the existing owner")
 	assert.Equal(t, "taken@example.com", fake.Sent[0].To[0].Email)
 	assert.Contains(t, fake.Sent[0].BodyText, "/auth/email-change")
+}
+
+func TestRequestEmailChangeLinkRejectsUnavailableDelivery(t *testing.T) {
+	api, authSvc, _, accountsRepo, authRepo, fake := testEmailChangeAPI(t, func(cfg *accounts.Config) {
+		cfg.EmailChangeSendingDisabled = true
+	})
+	userID := seedUserForEmailChange(t, authRepo, accountsRepo, "old@example.com")
+
+	csrfToken, csrfCookie := authSvc.IssueCSRFCookie()
+	req := ecRequesterRequest(t, http.MethodPost, "/api/v1/settings/email-change-links",
+		`{"newEmail":"new@example.com"}`, userID)
+	req.AddCookie(csrfCookie)
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	w := httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assert.Empty(t, accountsRepo.LinksForUser(userID), "unavailable delivery must not create a confirmation proof")
+	assert.Empty(t, fake.Sent, "unavailable delivery must not attempt dispatch")
+}
+
+func TestConsumeEmailChangeLinkRemainsAvailableWhenSendingIsDisabled(t *testing.T) {
+	api, authSvc, _, accountsRepo, authRepo, _ := testEmailChangeAPI(t, func(cfg *accounts.Config) {
+		cfg.EmailChangeSendingDisabled = true
+	})
+	userID := seedUserForEmailChange(t, authRepo, accountsRepo, "old@example.com")
+	token, hash, err := auth.NewTokenAndHash()
+	require.NoError(t, err)
+	now := testNow()
+	_, err = accountsRepo.CreateEmailChangeLink(context.Background(), userID,
+		"new@example.com", hash, "test", now, now.Add(15*time.Minute))
+	require.NoError(t, err)
+
+	csrfToken, csrfCookie := authSvc.IssueCSRFCookie()
+	req := ecRequesterRequest(t, http.MethodPost, "/api/v1/settings/email-change-links/consume",
+		`{"token":"`+token+`"}`, userID)
+	req.AddCookie(csrfCookie)
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	w := httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "new@example.com", accountsRepo.UserEmail(userID))
 }
 
 // TestConsumeEmailChangeLinkRequiresAuthentication covers the

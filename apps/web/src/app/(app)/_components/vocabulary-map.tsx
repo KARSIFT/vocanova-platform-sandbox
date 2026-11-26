@@ -1,4 +1,5 @@
 import { getPrimaryDefinition } from "@/lib/word-definition";
+import { vocabularyWordHref } from "@/lib/vocabulary-return";
 import Link from "@/ui/link";
 import type { VocabularySearchItem } from "@vocanova/api-client";
 import { meaningAnchor } from "./meaning-comparison";
@@ -23,7 +24,14 @@ function stage(item: VocabularySearchItem) {
   };
 }
 
-export function VocabularyMap({ items }: { items: VocabularySearchItem[] }) {
+export function VocabularyMap({
+  items,
+  searchReturn,
+}: {
+  items: VocabularySearchItem[];
+  /** Normalized relative /vocabulary URL of the current results page. */
+  searchReturn?: string;
+}) {
   return (
     <section aria-label="Word knowledge map">
       <p className="mb-4 text-sm text-neutral-600">
@@ -37,7 +45,11 @@ export function VocabularyMap({ items }: { items: VocabularySearchItem[] }) {
           return (
             <li key={item.meaningId}>
               <Link
-                href={`/vocabulary/${encodeURIComponent(item.wordSlug)}#${meaningAnchor(item.meaningId)}`}
+                href={vocabularyWordHref(
+                  item.wordSlug,
+                  meaningAnchor(item.meaningId),
+                  searchReturn,
+                )}
                 className={`flex h-full min-h-40 flex-col rounded-2xl border p-4 text-neutral-900 transition-colors hover:border-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 ${status.color}`}
               >
                 <span

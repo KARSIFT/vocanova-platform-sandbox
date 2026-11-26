@@ -384,7 +384,10 @@ export async function handlePracticeSessions({
         correct = normalize(body.typedAnswer) === normalize(step.word.wordText);
       } else if (step.public.kind === "sentence_build") {
         if (
+          body.typedAnswer ||
+          body.choiceId ||
           !Array.isArray(body.tokenIds) ||
+          body.tokenIds.length !== step.correctTokenIds.length ||
           body.tokenIds.some(
             (id) => !step.public.choices.some((token) => token.id === id),
           ) ||

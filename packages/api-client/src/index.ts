@@ -286,6 +286,8 @@ export interface KillSwitchStatus {
   new_signups_enabled?: boolean;
   ai_enabled?: boolean;
   password_enabled?: boolean;
+  /** True only when email-change confirmation links can be delivered. */
+  email_change_enabled?: boolean;
 }
 
 /**

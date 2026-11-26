@@ -26,12 +26,17 @@ async function startOnboarding(
   await expect(page).toHaveURL(/\/onboarding(\?|$)/);
 }
 
-test("staging onboarding helper waits for delayed completion and lets the app reach home", async ({
-  page,
-  context,
-  baseURL,
-}) => {
+async function expectDelayedOnboardingSave(
+  { page, context, baseURL }: { page: Page; context: BrowserContext; baseURL?: string },
+  csrfCookie: "present" | "missing",
+) {
   await startOnboarding(page, context, baseURL);
+  if (csrfCookie === "missing") {
+    await context.clearCookies({ name: "vocanova_csrf" });
+    const cookieNames = (await context.cookies()).map(({ name }) => name);
+    expect(cookieNames).toContain("vocanova_session");
+    expect(cookieNames).not.toContain("vocanova_csrf");
+  }
   let completionPending = false;
   let prematureHomeNavigation = false;
   let onboardingResponse: unknown;
@@ -52,6 +57,7 @@ test("staging onboarding helper waits for delayed completion and lets the app re
       return;
     }
     submissionCount++;
+    expect(route.request().headers()["x-csrf-token"]).toBeTruthy();
     completionPending = true;
     // Simulate a slow mutation before forwarding it to the existing backend.
     // This delay is transport behavior, not synchronization of the UI test.
@@ -98,6 +104,22 @@ test("staging onboarding helper waits for delayed completion and lets the app re
       .getByRole("region", { name: "Review words", exact: true })
       .getByText(/^Reviewed today:/),
   ).toHaveText("Reviewed today: 0 of 15");
+}
+
+test("staging onboarding helper waits for delayed completion and lets the app reach home", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await expectDelayedOnboardingSave({ page, context, baseURL }, "present");
+});
+
+test("onboarding recovers a missing CSRF cookie and waits for the save before going home", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await expectDelayedOnboardingSave({ page, context, baseURL }, "missing");
 });
 
 test("staging onboarding helper rejects a failed save and preserves the retry form", async ({

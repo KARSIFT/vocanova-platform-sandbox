@@ -1,5 +1,12 @@
 # Vocanova current product state
 
+## Learner flow quality pass — 26 November 2026
+
+Navigation, recovery, and state handling were reviewed across all 44 page
+patterns. The [audit record](agency-quality-2026-11-26.md) lists the improvements
+to sign-in, onboarding, account settings, Home, the learner activities, and the
+vocabulary and writing flows.
+
 ## Discovery, Review and scenario practice — 23 November 2026
 
 Discovery offers a card-by-card path and a browsable grid with progress filters.

@@ -25,6 +25,8 @@ export function StartDailyLessonButton({
   const inFlight = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Exact session address once the server confirmed the start.
+  const [openedHref, setOpenedHref] = useState<string | null>(null);
 
   async function start() {
     if (inFlight.current) return;
@@ -33,6 +35,7 @@ export function StartDailyLessonButton({
     setBusy(true);
     setError("");
     deviceSpeech.prepare();
+    let opened = false;
     try {
       const token = await getOrRefreshCSRFToken();
       if (!token) throw new Error("session not ready");
@@ -43,8 +46,16 @@ export function StartDailyLessonButton({
         },
         { additional },
       );
-      router.push(`/review/session?lesson=${encodeURIComponent(data.id)}`);
+      if (typeof data?.id !== "string" || !data.id)
+        throw new Error("missing lesson id");
+      const href = `/review/session?lesson=${encodeURIComponent(data.id)}`;
+      // Confirmed: never POST again from this control. If the client
+      // navigation stalls, the native link below opens the same session.
+      opened = true;
+      setOpenedHref(href);
+      router.push(href);
     } catch (cause) {
+      if (opened) return;
       if (cause instanceof ApiResponseError && cause.status === 409) {
         // Another tab may have started or finished the current queue.
         router.push("/review");
@@ -58,8 +69,10 @@ export function StartDailyLessonButton({
         );
       }
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      if (!opened) {
+        inFlight.current = false;
+        setBusy(false);
+      }
     }
   }
 
@@ -72,8 +85,16 @@ export function StartDailyLessonButton({
         className={className}
         onClick={() => void start()}
       >
-        {busy ? "Starting…" : label}
+        {openedHref ? "Opening review…" : busy ? "Starting…" : label}
       </button>
+      {/* Recover independently if the automatic client navigation stalls. */}
+      {openedHref && (
+        <p className="mt-2">
+          <a href={openedHref} className="vn-text-link">
+            Open review
+          </a>
+        </p>
+      )}
       {error && (
         <StatusMessage
           as="p"

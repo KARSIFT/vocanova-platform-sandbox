@@ -966,6 +966,7 @@ const server = createServer(async (req, res) => {
           MOCK_OAUTH_ENABLED || cookies.e2e_oauth_enabled === "true",
         new_signups_enabled: false,
         password_enabled: cookies.e2e_password_enabled !== "false",
+        email_change_enabled: cookies.e2e_email_change_enabled !== "false",
         ai_enabled: true,
       },
     });
@@ -1680,6 +1681,12 @@ const server = createServer(async (req, res) => {
       jsonResponse(res, 500, { error: "temporary_failure" });
       return;
     }
+    const after = url.searchParams.get("after");
+    if (after && !/^\d+$/.test(after)) {
+      logLine(req, 400, { reason: "invalid-cursor" });
+      jsonResponse(res, 400, { detail: "invalid cursor" });
+      return;
+    }
     const state = getSessionState(cookies);
     const requestedLimit = Number.parseInt(
       url.searchParams.get("limit") ?? "20",
@@ -1689,7 +1696,7 @@ const server = createServer(async (req, res) => {
       ? Math.min(Math.max(requestedLimit, 1), 50)
       : 20;
     const historyParams = {
-      after: url.searchParams.get("after"),
+      after,
       limit,
     };
     const history =
@@ -1747,11 +1754,26 @@ const server = createServer(async (req, res) => {
     const slug = decodeURIComponent(
       url.pathname.slice("/api/v1/journey-situations/".length),
     );
-    const response = buildSituationResponse(slug, getSessionState(cookies));
+    const state = getSessionState(cookies);
+    const response = buildSituationResponse(slug, state);
     if (!response) {
       logLine(req, 404, { slug });
       jsonResponse(res, 404, { error: "not_found", slug });
       return;
+    }
+    if (
+      slug === "ordering-at-a-cafe" &&
+      cookies.e2e_vocabulary === "secondary-saved-meaning"
+    ) {
+      response.meanings.push({
+        ...response.meanings[0],
+        meaningId: SECONDARY_POUR_MEANING.id,
+        shortDefinition: SECONDARY_POUR_MEANING.shortDefinition,
+        saved: state.savedMeaningIds.has(SECONDARY_POUR_MEANING.id),
+        selfReportedKnown:
+          state.wordKnowledge?.get(SECONDARY_POUR_MEANING.id)
+            ?.selfReportedKnown ?? false,
+      });
     }
     if (
       slug === "daily-conversation" &&

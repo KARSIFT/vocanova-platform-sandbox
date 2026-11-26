@@ -74,6 +74,7 @@ func RegisterEmailChangeLinks(api huma.API, svc *accounts.Service, authSvc *auth
 			"401": {Description: "Authentication is required"},
 			"403": {Description: "Invalid CSRF token"},
 			"429": {Description: "Rate limited"},
+			"503": {Description: "Email change confirmation delivery is unavailable; no link was created"},
 		},
 	}, func(ctx context.Context, input *RequestEmailChangeLinkInput) (*RequestEmailChangeLinkOutput, error) {
 		uid := RequesterUserID(ctx)
@@ -133,6 +134,8 @@ func mapEmailChangeError(err error) huma.StatusError {
 		return huma.Error429TooManyRequests("email change rate limited")
 	case errors.Is(err, accounts.ErrEmailChangeInvalidEmail):
 		return huma.Error400BadRequest("invalid email address")
+	case errors.Is(err, accounts.ErrEmailChangeDeliveryUnavailable):
+		return huma.Error503ServiceUnavailable("email change is temporarily unavailable")
 	}
 	return huma.Error500InternalServerError("internal error")
 }

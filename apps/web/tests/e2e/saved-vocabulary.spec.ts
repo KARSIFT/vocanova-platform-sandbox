@@ -179,4 +179,129 @@ test.describe("Saved vocabulary library", () => {
       });
     }
   });
+
+  test.describe("Meaning save confirmation", () => {
+    test.beforeEach(async ({ page, context, baseURL }) => {
+      await context.addCookies([
+        { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+        { name: "vocanova_csrf", value: randomUUID(), url: baseURL! },
+      ]);
+      await page.goto("/vocabulary/pour");
+    });
+
+    for (const recoverCsrf of [false, true]) {
+      test(`a lost meaning-save response retries the exact request${recoverCsrf ? " after CSRF recovery" : ""}`, async ({
+        page,
+        context,
+      }) => {
+        const main = page.getByRole("main");
+        const saved = main.getByRole("button", {
+          name: "Remove pour from saved words",
+        });
+        const writes: { key: string | undefined; body: string | null }[] = [];
+        await page.route("**/api/v1/user-words", async (route) => {
+          const request = route.request();
+          if (request.method() !== "POST") return route.continue();
+          writes.push({
+            key: request.headers()["idempotency-key"],
+            body: request.postData(),
+          });
+          if (writes.length === 1) {
+            const accepted = await route.fetch();
+            expect(accepted.ok()).toBe(true);
+            return route.abort("failed");
+          }
+          return route.continue();
+        });
+
+        await main.getByRole("button", { name: /^Save pour:/ }).click();
+        await expect(main.getByRole("alert")).toBeVisible();
+        expect(writes).toHaveLength(1);
+        await expect(saved).toHaveCount(0);
+        if (recoverCsrf) await context.clearCookies({ name: "vocanova_csrf" });
+        await main
+          .getByRole("button", { name: /^(?:Retry.*save|Save pour:)/i })
+          .and(main.locator(':enabled:not([aria-disabled="true"])'))
+          .click();
+        await expect(saved).toHaveAttribute("aria-pressed", "true");
+        await expect(
+          main.getByText("Optional writing", { exact: true }),
+        ).toBeVisible();
+        expect(writes).toHaveLength(2);
+        expect(writes[0]!.key).toBeTruthy();
+        expect(JSON.parse(writes[0]!.body!)).toEqual({
+          meaningId: "mean-pour",
+          source: "search",
+        });
+        expect(writes[1]).toEqual(writes[0]);
+      });
+    }
+
+    test("a newer removal wins over a delayed successful save receipt", async ({
+      page,
+      context,
+    }) => {
+      const main = page.getByRole("main");
+      const save = main.getByRole("button", { name: /^Save pour:/ });
+      let writes = 0;
+      let releaseReceipt!: () => void;
+      const heldReceipt = new Promise<void>((resolve) => {
+        releaseReceipt = resolve;
+      });
+      await page.route("**/api/v1/user-words", async (route) => {
+        const request = route.request();
+        if (request.method() !== "POST") return route.continue();
+        writes += 1;
+        if (writes !== 1) return route.continue();
+        const receipt = await route.fetch();
+        expect(receipt.ok()).toBe(true);
+        const removed = await context.request.delete(
+          new URL("/api/v1/user-words/mean-pour", request.url()).href,
+          { headers: { "X-CSRF-Token": request.headers()["x-csrf-token"]! } },
+        );
+        expect(removed.status()).toBe(204);
+        await heldReceipt;
+        return route.fulfill({ response: receipt });
+      });
+
+      try {
+        await save.click();
+        await expect.poll(() => writes).toBe(1);
+        await expect(save).toHaveAttribute("aria-busy", "true");
+      } finally {
+        releaseReceipt();
+      }
+
+      await expect(save).toBeEnabled();
+      await expect(save).toHaveAttribute("aria-pressed", "false");
+      await expect(
+        main.getByText("Optional writing", { exact: true }),
+      ).toHaveCount(0);
+      expect(writes).toBe(1);
+    });
+
+    test("a receipt for another meaning leaves the requested meaning unsaved", async ({
+      page,
+    }) => {
+      const main = page.getByRole("main");
+      await page.route("**/api/v1/user-words", async (route) => {
+        const request = route.request();
+        if (request.method() !== "POST") return route.continue();
+        const response = await route.fetch({
+          postData: { ...request.postDataJSON(), meaningId: "mean-pour-second" },
+        });
+        expect(response.ok()).toBe(true);
+        return route.fulfill({ response });
+      });
+
+      await main.getByRole("button", { name: /^Save pour:/ }).click();
+      await expect(main.getByRole("alert")).toBeVisible();
+      await expect(
+        main.getByRole("button", { name: "Remove pour from saved words" }),
+      ).toHaveCount(0);
+      await expect(
+        main.getByText("Optional writing", { exact: true }),
+      ).toHaveCount(0);
+    });
+  });
 });

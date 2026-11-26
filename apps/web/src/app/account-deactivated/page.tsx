@@ -43,21 +43,28 @@ export default async function AccountDeactivatedPage({
       >
         <div>
           <h1 className="page-title">Your account has been deactivated.</h1>
+          <p className="page-lede">
+            Access to your account has ended, and you can no longer sign in with
+            it.
+          </p>
           {formattedPurgeAfter ? (
             <p className="page-lede">
-              We&apos;ll permanently anonymize your saved words, reviews, and
-              practice history on{" "}
-              <span className="font-medium">{formattedPurgeAfter}</span>. After
-              that, your data is gone for good.
+              Your saved words, reviews, and practice history are scheduled to
+              be permanently anonymized on{" "}
+              <span className="font-medium">{formattedPurgeAfter}</span>.
             </p>
-          ) : null}
+          ) : (
+            <p className="page-lede">
+              Your saved words, reviews, and practice history are scheduled to
+              be permanently anonymized.
+            </p>
+          )}
           <p className="page-lede">
-            You can sign in again before then to reactivate, and your data will
-            be restored.
+            If you have questions about your account, our support team can help.
           </p>
         </div>
-        <a href="/login" className={actionClasses("primary")}>
-          Go to sign in
+        <a href="/help" className={actionClasses("primary")}>
+          Get help and support
         </a>
       </StatusMessage>
     </AuthShell>

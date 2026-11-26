@@ -11,6 +11,16 @@ const CONTINUATION_PATH_PREFIXES = [
   "/reviews",
   "/progress",
   "/settings",
+  "/plan",
+  "/vocabulary",
+  "/knowledge-map",
+  "/discovery",
+  "/courses",
+  "/learn",
+  "/writing",
+  "/lists",
+  "/stories",
+  "/practice",
 ] as const;
 
 interface OAuthContinuation {

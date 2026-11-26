@@ -118,3 +118,65 @@ test("a learner without saved words gets an invitation, not an empty card", asyn
     latest.getByRole("link", { name: "Search for a word", exact: true }),
   ).toHaveAttribute("href", "/vocabulary");
 });
+
+test("Home keeps review usable when its latest saved word is unavailable", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  if (!baseURL) throw new Error("Missing app URL");
+  await context.addCookies([
+    { name: "vocanova_session", value: `today-${randomUUID()}`, url: baseURL },
+    { name: "vocanova_csrf", value: randomUUID(), url: baseURL },
+    { name: "e2e_review_fixture_count", value: "2", url: baseURL },
+    { name: "e2e_saved_words", value: "unavailable", url: baseURL },
+  ]);
+  await page.goto("/home");
+  const main = page.getByRole("main");
+  await expect(
+    main.getByRole("heading", { name: "Today", exact: true }),
+  ).toBeVisible();
+  const start = main
+    .getByRole("region", { name: "Review words", exact: true })
+    .getByRole("button", { name: "Start review", exact: true });
+  await expect(start).toBeInViewport();
+  await expect(start).toBeEnabled();
+
+  const latest = main.getByRole("region", {
+    name: "Your latest word",
+    exact: true,
+  });
+  await expect(
+    latest.getByText(/unavailable|could(?: not|n['’]t) load/i),
+  ).toBeVisible();
+  await expect(
+    latest.getByText("Nothing saved yet", { exact: true }),
+  ).toHaveCount(0);
+
+  await start.focus();
+  await expect(start).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/review\/session\?lesson=[^&]+$/);
+  await expect(
+    main.getByRole("heading", { name: "Review word 1", exact: true }),
+  ).toBeVisible();
+});
+
+test("Home sends a saved-word session expiry to sign-in", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  if (!baseURL) throw new Error("Missing app URL");
+  await context.addCookies([
+    { name: "vocanova_session", value: `today-${randomUUID()}`, url: baseURL },
+    { name: "e2e_saved_words", value: "expired", url: baseURL },
+  ]);
+  await page.goto("/home");
+  await expect(page).toHaveURL(
+    (url) =>
+      url.pathname === "/login" &&
+      url.searchParams.get("reason") === "session-expired" &&
+      url.searchParams.get("returnTo") === "/home",
+  );
+});

@@ -13,9 +13,10 @@ import type {
   LearningGoal,
   MainUseCase,
 } from "@vocanova/api-client";
+import { ApiResponseError } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
-import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import {
   clearOnboardingDraft,
@@ -90,6 +91,9 @@ const MAIN_USE_CASES: { value: MainUseCase; label: string }[] = [
   { value: "social", label: "Social" },
 ];
 
+const SECURE_REQUEST_RETRY_MESSAGE =
+  "We couldn't prepare your answers to save securely. Your answers are still here. Please try again.";
+
 const DAILY_REVIEW_TARGETS = [5, 10, 15, 20, 30, 50, 75, 100];
 
 interface FormState {
@@ -134,6 +138,7 @@ export function OnboardingForm({
   const mounted = useRef(false);
   const stepContentRef = useRef<HTMLDivElement>(null);
   const shouldMoveFocus = useRef(false);
+  const submitInFlight = useRef(false);
 
   const totalSteps = 5;
   const canGoBack = step > 0 && status.type !== "submitting";
@@ -212,19 +217,62 @@ export function OnboardingForm({
   }
 
   async function handleSubmit() {
-    if (!isPreferencesDraftDocumentActive() || !isFormComplete(state)) {
+    if (
+      submitInFlight.current ||
+      !isPreferencesDraftDocumentActive() ||
+      !isFormComplete(state)
+    ) {
       return;
     }
-    const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrfToken) {
-      setStatus({
-        type: "error",
-        message:
-          "Your session is missing a security token. Please refresh the page and try again.",
-      });
-      return;
+    // Synchronous guard: React state alone cannot block a second click that
+    // lands before the "submitting" render, including during token recovery.
+    submitInFlight.current = true;
+    try {
+      await submitOnboarding();
+    } finally {
+      submitInFlight.current = false;
     }
+  }
+
+  async function submitOnboarding() {
     setStatus({ type: "submitting" });
+    const tokenScope = recoveryScope.current;
+    saveOnboardingDraft({ userId, ...currentDraft.current });
+    let csrfToken: string | null;
+    try {
+      csrfToken = await getOrRefreshCSRFToken();
+    } catch (error) {
+      if (
+        !isPreferencesDraftDocumentActive() ||
+        !mounted.current ||
+        recoveryScope.current !== tokenScope
+      )
+        return;
+      saveOnboardingDraft({ userId, ...currentDraft.current });
+      if (error instanceof ApiResponseError && error.status === 401) {
+        // Only a confirmed expired session uses the shared sign-in handling.
+        setStatus({
+          type: "error",
+          message: handleApiError(
+            error,
+            "We couldn't save your answers. Please try again.",
+          ),
+        });
+        return;
+      }
+      setStatus({ type: "error", message: SECURE_REQUEST_RETRY_MESSAGE });
+      return;
+    }
+    if (
+      !isPreferencesDraftDocumentActive() ||
+      !mounted.current ||
+      recoveryScope.current !== tokenScope
+    )
+      return;
+    if (!csrfToken) {
+      setStatus({ type: "error", message: SECURE_REQUEST_RETRY_MESSAGE });
+      return;
+    }
     const body: CompleteOnboardingBody = {
       englishLevel: state.englishLevel!,
       nativeLanguage: state.nativeLanguage.trim(),
@@ -351,9 +399,10 @@ export function OnboardingForm({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={!isFormComplete(state) || status.type === "submitting"}
+            disabled={!isFormComplete(state)}
+            aria-disabled={status.type === "submitting" || undefined}
             aria-busy={status.type === "submitting"}
-            className="min-w-[var(--spacing-2xl)]"
+            className="min-w-[var(--spacing-2xl)] aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
           >
             {status.type === "submitting" ? "Saving..." : "Finish setup"}
           </Button>
